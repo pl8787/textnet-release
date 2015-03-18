@@ -67,7 +67,7 @@ class ConvolutionLayer : public Layer<xpu> {
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
-    mshadow::Tensor<xpu, 2> weight_data = this->params[0].data_mat();
+    mshadow::Tensor<xpu, 2> weight_data = this->params[0].data_d2();
     mshadow::Tensor<xpu, 1> bias_data = this->params[1].data_d1();
     const index_t nbatch = bottom_data.size(0);
     for (index_t i = 0; i < nbatch; ++i) {
@@ -93,8 +93,8 @@ class ConvolutionLayer : public Layer<xpu> {
     mshadow::Tensor<xpu, 3> top_diff = top[0]->diff_d3();
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
     mshadow::Tensor<xpu, 4> bottom_diff = bottom[0]->diff;
-    mshadow::Tensor<xpu, 2> weight_data = this->params[0].data_mat();
-    mshadow::Tensor<xpu, 2> weight_diff = this->params[0].diff_mat();
+    mshadow::Tensor<xpu, 2> weight_data = this->params[0].data_d2();
+    mshadow::Tensor<xpu, 2> weight_diff = this->params[0].diff_d2();
     mshadow::Tensor<xpu, 1> bias_diff = this->params[1].diff_d1();
     const index_t nbatch = bottom_data.size(0);
         

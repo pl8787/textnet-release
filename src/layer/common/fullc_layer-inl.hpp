@@ -25,7 +25,7 @@ class FullConnectLayer : public Layer<xpu> {
     num_hidden = setting["num_hidden"].i_val;
     no_bias = setting["no_bias"].b_val;
 
-    mshadow::Tensor<xpu, 2> bottom_data = bottom[0]->data_mat();
+    mshadow::Tensor<xpu, 2> bottom_data = bottom[0]->data_d2();
     num_input = bottom_data.size(1);
 
     this->params.resize(2);
@@ -47,7 +47,7 @@ class FullConnectLayer : public Layer<xpu> {
     utils::Check(top.size() == TopNodeNum(),
                   "FullConnectionLayer:top size problem.");
     
-    mshadow::Tensor<xpu, 2> bottom_data = bottom[0]->data_mat();
+    mshadow::Tensor<xpu, 2> bottom_data = bottom[0]->data_d2();
     
     top[0]->Resize(bottom_data.size(0), num_hidden, 1, 1);
   }
@@ -55,31 +55,31 @@ class FullConnectLayer : public Layer<xpu> {
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
-    mshadow::Tensor<xpu, 2> bottom_data = bottom[0]->data_mat();
+    mshadow::Tensor<xpu, 2> bottom_data = bottom[0]->data_d2();
 
-    top[0]->data_mat() = dot(bottom_data, this->params[0].data_mat().T());
+    top[0]->data_d2() = dot(bottom_data, this->params[0].data_d2().T());
     if (!no_bias) {
       int nbatch = bottom_data.size(0);
-      top[0]->data_mat() += repmat(this->params[1].data_d1(), nbatch);
+      top[0]->data_d2() += repmat(this->params[1].data_d1(), nbatch);
     }
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
                         const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
-    mshadow::Tensor<xpu, 2> top_diff = top[0]->diff_mat();
-    mshadow::Tensor<xpu, 2> bottom_data = bottom[0]->data_mat();
-    mshadow::Tensor<xpu, 2> bottom_diff = bottom[0]->diff_mat();
+    mshadow::Tensor<xpu, 2> top_diff = top[0]->diff_d2();
+    mshadow::Tensor<xpu, 2> bottom_data = bottom[0]->data_d2();
+    mshadow::Tensor<xpu, 2> bottom_diff = bottom[0]->diff_d2();
     
     if (this->prop_grad[0]) {
-      this->params[0].diff_mat() = dot(top_diff.T(), bottom_data);
+      this->params[0].diff_d2() = dot(top_diff.T(), bottom_data);
     }
     if (!no_bias && this->prop_grad[1]) {
       this->params[1].diff_d1() = sum_rows(top_diff);
     }
     
     if (this->prop_error[0]) {
-      bottom_diff = dot(top_diff, this->params[0].data_mat());
+      bottom_diff = dot(top_diff, this->params[0].data_d2());
     }
   }
   

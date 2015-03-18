@@ -173,6 +173,7 @@ struct SettingV {
   bool b_val;
   int i_val;
   float f_val;
+  std::string s_val;
   std::map<std::string, SettingV>* m_val;
   
   // Constructor
@@ -180,6 +181,8 @@ struct SettingV {
   SettingV(int i) { i_val = i; }
   SettingV(float f) { f_val = f; }
   SettingV(bool b) { b_val = b; }
+  SettingV(std::string s) { s_val = s; }
+  SettingV(const char* c) { s_val = c; }
   SettingV(std::map<std::string, SettingV>* m) { m_val = m; }
 }; // struct SettingV
 

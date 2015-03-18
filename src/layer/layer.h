@@ -91,12 +91,13 @@ const int kConcat = 18;
 const int kChConcat = 19;
 const int kSplit = 20;
 
-// Loss Layer 51-
+// Loss Layer 51-70
 const int kSoftmax = 51;
 const int kL2Loss = 52;
 const int kMultiLogistic = 53;
 
-
+// Input Layer 71-
+const int kTextData = 71;
 
 template<typename xpu>
 Layer<xpu>* CreateLayer(LayerType type);
