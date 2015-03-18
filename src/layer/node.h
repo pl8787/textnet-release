@@ -33,18 +33,10 @@ struct Node {
   Node(bool need_diff_ = true) : must_contiguous(false), need_diff(need_diff_) {
     data.shape_ = mshadow::Shape4(0,0,0,0);
     diff.shape_ = mshadow::Shape4(0,0,0,0);
-	// data.set_pad(false);
-	// diff.set_pad(false);
+    // data.set_pad(false);
+    // diff.set_pad(false);
     inited_data = false;
     inited_diff = false;
-  }
-
-  inline mshadow::Tensor<xpu, 2> data_mat(void) {
-    return data.FlatTo2D();
-  }
-  
-  inline mshadow::Tensor<xpu, 2> diff_mat(void) {
-    return diff.FlatTo2D();
   }
   
   inline void FreeSpace(void) {
@@ -62,18 +54,18 @@ struct Node {
       // do nothing
     } else if (init) {
       data.Resize(new_size, 0.0);
-	  inited_data = true;
+      inited_data = true;
       if (need_diff) {
-	    diff.Resize(new_size, 0.0);
-		inited_diff = true;
-	  }
+        diff.Resize(new_size, 0.0);
+        inited_diff = true;
+      }
     } else {
       data.Resize(new_size);
-	  inited_data = true;
+      inited_data = true;
       if (need_diff) {
-		diff.Resize(new_size);
-		inited_diff = true;
-	  }
+        diff.Resize(new_size);
+        inited_diff = true;
+      }
     }
   }
   
@@ -82,51 +74,55 @@ struct Node {
       // do nothing
     } else if (init) {
       data.Resize(new_size, 0.0);
-	  inited_data = true;
+      inited_data = true;
       if (need_diff) {
-	    diff.Resize(new_size, 0.0);
-		inited_diff = true;
-	  }
+        diff.Resize(new_size, 0.0);
+        inited_diff = true;
+      }
     } else {
       data.Resize(new_size);
-	  inited_data = true;
+      inited_data = true;
       if (need_diff) {
-		diff.Resize(new_size);
-		inited_diff = true;
-	  }
+        diff.Resize(new_size);
+        inited_diff = true;
+      }
     }
   }
   
   inline mshadow::Tensor<xpu, 1> data_d1() {
-	return mshadow::Tensor<xpu, 1>(data.dptr_, mshadow::Shape1(data.shape_.Size()));
+    return mshadow::Tensor<xpu, 1>(data.dptr_, mshadow::Shape1(data.shape_.Size()));
   }
 
   inline mshadow::Tensor<xpu, 1> diff_d1() {
-	return mshadow::Tensor<xpu, 1>(diff.dptr_, mshadow::Shape1(diff.shape_.Size()));
+    return mshadow::Tensor<xpu, 1>(diff.dptr_, mshadow::Shape1(diff.shape_.Size()));
   }
 
+  inline mshadow::Tensor<xpu, 1> idx_d1() {
+    return mshadow::Tensor<xpu, 1>(idx.dptr_, mshadow::Shape1(idx.shape_.Size()));
+  }
+  
   inline mshadow::Tensor<xpu, 2> data_d2() {
-	mshadow::Shape<4> s = data.shape_;
-	index_t  ymax = s[1]*s[2]*s[3];
-	return mshadow::Tensor<xpu, 2>(data.dptr_, mshadow::Shape2(s[0], ymax));
+    mshadow::Shape<4> s = data.shape_;
+    index_t  ymax = s[1]*s[2]*s[3];
+    return mshadow::Tensor<xpu, 2>(data.dptr_, mshadow::Shape2(s[0], ymax));
   }
 
   inline mshadow::Tensor<xpu, 2> diff_d2() {
-	mshadow::Shape<4> s = diff.shape_;
-	index_t  ymax = s[1]*s[2]*s[3];
-	return mshadow::Tensor<xpu, 2>(diff.dptr_, mshadow::Shape2(s[0], ymax));
+    mshadow::Shape<4> s = diff.shape_;
+    index_t  ymax = s[1]*s[2]*s[3];
+    return mshadow::Tensor<xpu, 2>(diff.dptr_, mshadow::Shape2(s[0], ymax));
   }
  
   inline mshadow::Tensor<xpu, 3> data_d3() {
-	mshadow::Shape<4> s = data.shape_;
-	index_t  ymax = s[2]*s[3];
-	return mshadow::Tensor<xpu, 3>(data.dptr_, mshadow::Shape3(s[0], s[1], ymax));
+    mshadow::Shape<4> s = data.shape_;
+    index_t  ymax = s[2]*s[3];
+    return mshadow::Tensor<xpu, 3>(data.dptr_, mshadow::Shape3(s[0], s[1], ymax));
   }
 
   inline mshadow::Tensor<xpu, 3> diff_d3() {
-	mshadow::Shape<4> s = diff.shape_;
-	index_t  ymax = s[2]*s[3];
-	return mshadow::Tensor<xpu, 3>(diff.dptr_, mshadow::Shape3(s[0], s[1], ymax));
+    mshadow::Shape<4> s = diff.shape_;
+    index_t  ymax = s[2]*s[3];
+    return mshadow::Tensor<xpu, 3>(diff.dptr_, mshadow::Shape3(s[0], s[1], ymax));
   }
   
   inline void Init(bool init_diff = false) {

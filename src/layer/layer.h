@@ -90,6 +90,8 @@ const int kAvgPooling = 17;
 const int kConcat = 18;
 const int kChConcat = 19;
 const int kSplit = 20;
+const int kEmbedding = 21;
+const int kCross = 22;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;

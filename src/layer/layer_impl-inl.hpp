@@ -6,6 +6,9 @@
 #include "./common/convolution_layer-inl.hpp"
 #include "./common/fullc_layer-inl.hpp"
 #include "./common/pooling_layer-inl.hpp"
+#include "./common/embedding_layer-inl.hpp"
+#include "./common/cross_layer-inl.hpp"
+#include "./common/split_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 //#include "./loss/softmax_layer-inl.hpp"
 
@@ -21,7 +24,10 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kFullConnect: return new FullConnectLayer<xpu>(type);
     case kMaxPooling: return new PoolingLayer<mshadow::red::maximum, xpu>(kMaxPooling);
     case kAvgPooling: return new PoolingLayer<mshadow::red::sum, xpu>(kAvgPooling);
-	case kTextData: return new TextDataLayer<xpu>(kTextData);
+    case kEmbedding: return new EmbeddingLayer<xpu>(kEmbedding);
+    case kCross: return new CrossLayer<xpu>(kCross);
+    case kSplit: return new SplitLayer<xpu>(kSplit);
+    case kTextData: return new TextDataLayer<xpu>(kTextData);
     //case kSoftmax: return new SoftmaxLayer<xpu>(setting);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }

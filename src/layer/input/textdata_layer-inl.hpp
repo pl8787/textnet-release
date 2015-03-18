@@ -48,8 +48,9 @@ class TextDataLayer : public Layer<xpu>{
     fin.close();
     
     line_count = lines.size();
-    data_set.Resize(mshadow::Shape3(line_count, 2, max_doc_len), 0);
+    data_set.Resize(mshadow::Shape3(line_count, 2, max_doc_len));
     label_set.Resize(mshadow::Shape1(line_count), 0);
+    data_set = -1;
     
 	utils::Printf("Line count in file: %d\n", line_count);
 
@@ -58,7 +59,7 @@ class TextDataLayer : public Layer<xpu>{
     int len_s2 = 0;
     for (int i = 0; i < line_count; ++i) {
       iss.clear();
-	  iss.seekg(0, iss.beg);
+	    iss.seekg(0, iss.beg);
       iss.str(lines[i]);
       iss >> label_set[i] >> len_s1 >> len_s2;
       for (int j = 0; j < len_s1; ++j) {
