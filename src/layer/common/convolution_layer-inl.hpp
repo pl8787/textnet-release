@@ -21,6 +21,11 @@ class ConvolutionLayer : public Layer<xpu> {
   virtual void SetupLayer(std::map<std::string, SettingV> &setting,
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top) {
+    utils::Check(bottom.size() == BottomNodeNum(),
+                  "ConvolutionLayer:bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(),
+                  "ConvolutionLayer:top size problem.");
+                  
     kernel_x = setting["kernel_x"].i_val;
     kernel_y = setting["kernel_y"].i_val;
     pad_x = setting["pad_x"].i_val;
