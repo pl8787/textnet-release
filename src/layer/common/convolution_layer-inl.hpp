@@ -1,6 +1,8 @@
 #ifndef TEXTNET_LAYER_CONVOLUTION_LAYER_INL_HPP_
 #define TEXTNET_LAYER_CONVOLUTION_LAYER_INL_HPP_
 
+#include <iostream>
+
 #include <mshadow/tensor.h>
 #include "../layer.h"
 #include "../../utils/utils.h"
@@ -22,7 +24,7 @@ class ConvolutionLayer : public Layer<xpu> {
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
-    Layer::SetupLayer(setting, bottom, top, prnd);                        
+    Layer<xpu>::SetupLayer(setting, bottom, top, prnd);                        
     
     utils::Check(bottom.size() == BottomNodeNum(),
                   "ConvolutionLayer:bottom size problem."); 
@@ -42,12 +44,14 @@ class ConvolutionLayer : public Layer<xpu> {
     this->params[0].Resize(channel_out, channel_in * kernel_x * kernel_y, 1, 1);
     this->params[1].Resize(channel_out, 1, 1, 1);
     
+	std::map<std::string, SettingV> &w_setting = *setting["w_filler"].m_val;
+	std::map<std::string, SettingV> &b_setting = *setting["b_filler"].m_val;
     this->params[0].initializer_ = 
-        initializer::CreateInitializer<xpu, 4>(setting["w_filler"].i_val,
-          *setting["w_filler"].m_val, this->prnd_);
+        initializer::CreateInitializer<xpu, 4>(w_setting["init_type"].i_val,
+          w_setting, this->prnd_);
     this->params[1].initializer_ = 
-        initializer::CreateInitializer<xpu, 4>(setting["b_filler"].i_val, 
-          *setting["b_filler"].m_val, this->prnd_);
+        initializer::CreateInitializer<xpu, 4>(b_setting["init_type"].i_val, 
+          b_setting, this->prnd_);
     this->params[0].Init();
     this->params[1].Init();
   }
@@ -63,6 +67,10 @@ class ConvolutionLayer : public Layer<xpu> {
     mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in[0], channel_out, 
                    (shape_in[2] + pad_y * 2 - kernel_y) / stride + 1,
                    (shape_in[3] + pad_x * 2 - kernel_x) / stride + 1);
+
+	std::cout << shape_in[0] << "x" << shape_in[1] << "x" << shape_in[2] << "x" << shape_in[3] << std::endl;
+	std::cout << shape_out[0] << "x" << shape_out[1] << "x" << shape_out[2] << "x" << shape_out[3] << std::endl;
+
     top[0]->Resize(shape_out);
     temp_col_.Resize(mshadow::Shape2(channel_in*kernel_x*kernel_y, shape_out[2]*shape_out[3]));
     // Share the memory
@@ -82,12 +90,11 @@ class ConvolutionLayer : public Layer<xpu> {
     const index_t nbatch = bottom_data.size(0);
     for (index_t i = 0; i < nbatch; ++i) {
       if (pad_x == 0 && pad_y == 0) {
-        temp_col_ = unpack_patch2col(top_data[i], kernel_y, kernel_x, stride);
+        temp_col_ = unpack_patch2col(bottom_data[i], kernel_y, kernel_x, stride);
       } else {
-        temp_col_ = unpack_patch2col(pad(top_data[i], pad_y, pad_x),
+        temp_col_ = unpack_patch2col(pad(bottom_data[i], pad_y, pad_x),
                                      kernel_y, kernel_x, stride);
       }
-	  //mshadow::Tensor<xpu, 2> one_data(top_data[i].dptr_, mshadow::Shape2(channel_out, top_data.size(2)*top_data.size(3)), top_data[i].stride_, top_data[i].stream_);
 	  temp_data_ = dot(weight_data, temp_col_);
 	  top_data.Slice(i,i+1) = reshape(temp_data_, top_data.Slice(i,i+1).shape_);
     }

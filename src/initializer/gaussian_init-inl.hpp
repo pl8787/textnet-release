@@ -11,7 +11,7 @@ template<typename xpu, int dim>
 class GaussianInitializer : public Initializer<xpu, dim>{
  public:
   GaussianInitializer(std::map<std::string, SettingV> &setting, 
-                      mshadow::Random<xpu>* prnd): {
+                      mshadow::Random<xpu>* prnd) {
     this->prnd_ = prnd;
     SetupInitializer(setting);
   }

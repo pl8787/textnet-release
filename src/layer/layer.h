@@ -65,6 +65,10 @@ class Layer {
     }
   }
   
+  virtual std::vector<Node<xpu> >& GetParams() {
+    return params;
+  }
+ 
  protected:
   std::vector<Node<xpu> > params;
   std::vector<bool> prop_error;

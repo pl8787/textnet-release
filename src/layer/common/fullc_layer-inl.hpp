@@ -23,7 +23,7 @@ class FullConnectLayer : public Layer<xpu> {
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
-    Layer::SetupLayer(setting, bottom, top, prnd);
+    Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
     
     utils::Check(bottom.size() == BottomNodeNum(),
                   "FullConnectionLayer:bottom size problem."); 
@@ -40,12 +40,14 @@ class FullConnectLayer : public Layer<xpu> {
     this->params[0].Resize(num_hidden, num_input, 1, 1);
     this->params[1].Resize(num_hidden, 1, 1, 1);
     
+	std::map<std::string, SettingV> &w_setting = *setting["w_filler"].m_val;
+	std::map<std::string, SettingV> &b_setting = *setting["b_filler"].m_val;
     this->params[0].initializer_ = 
-        initializer::CreateInitializer<xpu, 4>(setting["w_filler"].i_val,
-          *setting["w_filler"].m_val, this->prnd_);
+        initializer::CreateInitializer<xpu, 4>(w_setting["init_type"].i_val,
+          w_setting, this->prnd_);
     this->params[1].initializer_ = 
-        initializer::CreateInitializer<xpu, 4>(setting["b_filler"].i_val, 
-          *setting["b_filler"].m_val, this->prnd_);
+        initializer::CreateInitializer<xpu, 4>(b_setting["init_type"].i_val, 
+          b_setting, this->prnd_);
     this->params[0].Init();
     this->params[1].Init();
   }

@@ -22,7 +22,7 @@ class PoolingLayer : public Layer<xpu> {
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
-    Layer::SetupLayer(setting, bottom, top, prnd);
+    Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
 
     utils::Check(bottom.size() == BottomNodeNum(),
                   "PoolingLayer:bottom size problem."); 
@@ -75,7 +75,7 @@ class PoolingLayer : public Layer<xpu> {
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
     mshadow::Tensor<xpu, 4> bottom_diff = bottom[0]->diff;
     
-    if (this->prop_grad[0]) {
+    if (this->prop_error[0]) {
       if (this->layer_type == kMaxPooling || this->layer_type == kSumPooling) {
         bottom_diff = unpool<Reducer>(bottom_data, top_data, top_diff, kernel_y, kernel_x, stride);
       }else if (this->layer_type == kAvgPooling) {

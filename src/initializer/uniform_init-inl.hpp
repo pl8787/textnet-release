@@ -11,7 +11,7 @@ template<typename xpu, int dim>
 class UniformInitializer : public Initializer<xpu, dim>{
  public:
   UniformInitializer(std::map<std::string, SettingV> &setting, 
-                      mshadow::Random<xpu>* prnd): {
+                      mshadow::Random<xpu>* prnd) {
     this->prnd_ = prnd;
     SetupInitializer(setting);
   }

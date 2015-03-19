@@ -27,14 +27,14 @@ class DropoutLayer : public Layer<xpu>{
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
-    Layer::SetupLayer(setting, bottom, top, prnd);
+    Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
     
     utils::Check(bottom.size() == BottomNodeNum(),
                   "DropoutLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "DropoutLayer:top size problem.");
                   
-    rate = setting["rate"]; 
+    rate = setting["rate"].f_val; 
     utils::Check(rate >= 0.0 && rate <= 1.0, 
                   "Dropout rate must between 0.0 and 1.0.");    
   }
@@ -47,6 +47,7 @@ class DropoutLayer : public Layer<xpu>{
                   "DropoutLayer:top size problem.");
                   
     top[0]->Resize(bottom[0]->data.shape_, true);
+	mask.Resize(bottom[0]->data.shape_);
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
@@ -55,7 +56,7 @@ class DropoutLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
     const float pkeep = 1.0f - rate;
-    if (this->phrase_type = kTrain) {
+    if (this->phrase_type == kTrain) {
       mask = F<op::threshold>(this->prnd_->uniform(mask.shape_), pkeep)  
                 * (1.0f/pkeep);
       top_data = bottom_data * mask;

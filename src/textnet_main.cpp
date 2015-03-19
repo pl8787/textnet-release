@@ -90,11 +90,200 @@ void TestCrossLayer(mshadow::Random<cpu>* prnd) {
   PrintTensor("bottom2 diff", bottom2.diff);
 }
 
+void TestDropoutLayer(mshadow::Random<cpu>* prnd) {
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.data.Resize(Shape4(2,1,5,5), 1.0);
+  bottom.diff.Resize(Shape4(2,1,5,5), 0.0);
+  
+  map<string, SettingV> setting;
+  setting["rate"] = SettingV(0.5f);
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_dropout = CreateLayer<cpu>(kDropout);
+  layer_dropout->PropAll();
+  layer_dropout->SetupLayer(setting, bottoms, tops, prnd);
+  layer_dropout->Reshape(bottoms, tops);
+  layer_dropout->Forward(bottoms, tops);
+  top.diff.Resize(Shape4(2,1,5,5), 1.0);
+  layer_dropout->Backprop(bottoms, tops);
+  
+  PrintTensor("top data", top.data);
+  PrintTensor("bottom diff", bottom.diff);
+}
+
+void TestHingeLossLayer(mshadow::Random<cpu>* prnd) {
+  Node<cpu> bottom0;
+  Node<cpu> bottom1;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom0);
+  bottoms.push_back(&bottom1);
+  tops.push_back(&top);
+  
+  bottom0.Resize(Shape4(4,1,1,1));
+  bottom1.Resize(Shape4(4,1,1,1));
+
+  bottom0.data[0][0][0][0] = 0.2;
+  bottom0.data[1][0][0][0] = 0.3;
+  bottom0.data[2][0][0][0] = 1.5;
+  bottom0.data[3][0][0][0] = 0.4;
+
+  bottom1.data[0][0][0][0] = 1;
+  bottom1.data[1][0][0][0] = 0;
+  bottom1.data[2][0][0][0] = 1;
+  bottom1.data[3][0][0][0] = 0;
+  
+  map<string, SettingV> setting;
+  setting["delta"] = SettingV(1.0f);
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_hingeloss = CreateLayer<cpu>(kHingeLoss);
+  layer_hingeloss->PropAll();
+  layer_hingeloss->SetupLayer(setting, bottoms, tops, prnd);
+  layer_hingeloss->Reshape(bottoms, tops);
+  layer_hingeloss->Forward(bottoms, tops);
+  layer_hingeloss->Backprop(bottoms, tops);
+  
+  PrintTensor("top data", top.data);
+  PrintTensor("bottom diff", bottom0.diff);
+}
+
 void TestConvLayer(mshadow::Random<cpu>* prnd) {
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(2,1,5,5), true);
+  bottom.data = 1.0;
+  
+  map<string, SettingV> setting;
+  setting["kernel_x"] = SettingV(3);
+  setting["kernel_y"] = SettingV(3);
+  setting["pad_x"] = SettingV(1);
+  setting["pad_y"] = SettingV(1);
+  setting["stride"] = SettingV(1);
+  setting["channel_out"] = SettingV(2);
+  setting["no_bias"] = SettingV(false);
+    map<string, SettingV> w_setting;
+	w_setting["init_type"] = SettingV(initializer::kGaussian);
+	w_setting["mu"] = SettingV(0.0f);
+	w_setting["sigma"] = SettingV(1.0f);
+    map<string, SettingV> b_setting;
+	b_setting["init_type"] = SettingV(initializer::kZero);
+  setting["w_filler"] = SettingV(&w_setting);
+  setting["b_filler"] = SettingV(&b_setting);
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_conv = CreateLayer<cpu>(kConv);
+  layer_conv->PropAll();
+  layer_conv->SetupLayer(setting, bottoms, tops, prnd);
+  layer_conv->Reshape(bottoms, tops);
+  PrintTensor("param", layer_conv->GetParams()[0].data);
+  layer_conv->Forward(bottoms, tops);
+  top.diff = 1.0;
+  layer_conv->Backprop(bottoms, tops);
+  
+  PrintTensor("top data", top.data);
+  PrintTensor("bottom diff", bottom.diff);
 
 }
 
 void TestPoolLayer(mshadow::Random<cpu>* prnd) {
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.data.Resize(Shape4(2,1,5,5), 1.0);
+  bottom.diff.Resize(Shape4(2,1,5,5), 0.0);
+  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+  
+  map<string, SettingV> setting;
+  setting["kernel_x"] = SettingV(2);
+  setting["kernel_y"] = SettingV(2);
+  setting["stride"] = SettingV(2);
+  
+  /// Test MaxPooling Layer
+  Layer<cpu> * layer_pool = CreateLayer<cpu>(kMaxPooling);
+  layer_pool->PropAll();
+  layer_pool->SetupLayer(setting, bottoms, tops, prnd);
+  layer_pool->Reshape(bottoms, tops);
+  layer_pool->Forward(bottoms, tops);
+  prnd->SampleUniform(&top.diff, -1.0, 1.0);
+  layer_pool->Backprop(bottoms, tops);
+  
+  PrintTensor("bottom data", bottom.data);
+  PrintTensor("top data", top.data);
+  PrintTensor("bottom diff", bottom.diff);
+  
+  /// Test MaxPooling Layer
+  Layer<cpu> * layer_pool1 = CreateLayer<cpu>(kAvgPooling);
+  layer_pool1->PropAll();
+  layer_pool1->SetupLayer(setting, bottoms, tops, prnd);
+  layer_pool1->Reshape(bottoms, tops);
+  layer_pool1->Forward(bottoms, tops);
+  prnd->SampleUniform(&top.diff, -1.0, 1.0);
+  layer_pool1->Backprop(bottoms, tops);
+  
+  PrintTensor("bottom data", bottom.data);
+  PrintTensor("top data", top.data);
+  PrintTensor("bottom diff", bottom.diff);
+
+
+}
+
+void TestFcLayer(mshadow::Random<cpu>* prnd) {
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(2,1,5,5), true);
+  bottom.data = 1.0;
+  
+  map<string, SettingV> setting;
+  setting["num_hidden"] = SettingV(10);
+  setting["no_bias"] = SettingV(false);
+    map<string, SettingV> w_setting;
+	w_setting["init_type"] = SettingV(initializer::kGaussian);
+	w_setting["mu"] = SettingV(0.0f);
+	w_setting["sigma"] = SettingV(1.0f);
+    map<string, SettingV> b_setting;
+	b_setting["init_type"] = SettingV(initializer::kZero);
+  setting["w_filler"] = SettingV(&w_setting);
+  setting["b_filler"] = SettingV(&b_setting);
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_fc = CreateLayer<cpu>(kFullConnect);
+  layer_fc->PropAll();
+  layer_fc->SetupLayer(setting, bottoms, tops, prnd);
+  layer_fc->Reshape(bottoms, tops);
+  PrintTensor("param", layer_fc->GetParams()[0].data);
+  layer_fc->Forward(bottoms, tops);
+  top.diff = 1.0;
+  layer_fc->Backprop(bottoms, tops);
+  
+  PrintTensor("top data", top.data);
+  PrintTensor("bottom diff", bottom.diff);
 
 }
 
@@ -193,7 +382,7 @@ void TestActivationLayer(mshadow::Random<cpu>* prnd) {
   
   map<string, SettingV> setting;
   //setting["layer_type"] = SettingV(kRectifiedLinear);
-  
+
   /// Test Activation Layer
   Layer<cpu> * layer_rectify = CreateLayer<cpu>(kRectifiedLinear);
   layer_rectify->PropAll();
@@ -226,7 +415,7 @@ void TestActivationLayer(mshadow::Random<cpu>* prnd) {
 
 int main(int argc, char *argv[]) {
   mshadow::Random<cpu> rnd(37);
-  TestCrossLayer(&rnd);
+  TestPoolLayer(&rnd);
   return 0;
 }
 

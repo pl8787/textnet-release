@@ -26,7 +26,7 @@ class TextDataLayer : public Layer<xpu>{
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
-    Layer::SetupLayer(setting, bottom, top, prnd);
+    Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
     
     utils::Check(bottom.size() == BottomNodeNum(),
                   "TextDataLayer:bottom size problem."); 

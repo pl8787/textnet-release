@@ -27,7 +27,7 @@ class HingeLossLayer : public Layer<xpu>{
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
-    Layer::SetupLayer(setting, bottom, top, prnd);
+    Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
                             
     utils::Check(bottom.size() == BottomNodeNum(),
                   "HingeLossLayer:bottom size problem."); 
@@ -56,9 +56,9 @@ class HingeLossLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 1> top_data = top[0]->data_d1();
     
     for (int i = 0; i < nbatch; i += 2) {
-      utils::Check(bottom0_data[i] == 1 && bottom0_data[i+1] == 0, 
+      utils::Check(bottom1_data[i] == 1 && bottom1_data[i+1] == 0, 
                     "Instances come like 1 0 1 0 ...");
-      top_data[0] += max(0.0, delta + bottom0_data[i+1] - bottom0_data[i])
+      top_data[0] += std::max(0.0f, delta + bottom0_data[i+1] - bottom0_data[i]);
     }
     
     top_data[0] /= (nbatch/2);
@@ -69,13 +69,12 @@ class HingeLossLayer : public Layer<xpu>{
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 1> bottom0_data = bottom[0]->data_d1();
     mshadow::Tensor<xpu, 1> bottom0_diff = bottom[0]->diff_d1();
-    mshadow::Tensor<xpu, 1> top_diff = top[0]->diff_d1();
     
     if (this->prop_error[0]) {
       for (int i = 0; i < nbatch; i+=2) {
         float gate = (delta + bottom0_data[i+1] - bottom0_data[i]) > 0 ? 1 : 0;
-        bottom_diff[i] = -top_diff[i] * gate;
-        bottom_diff[i+1] = top_diff[i+1] * gate;
+        bottom0_diff[i] = -gate;
+        bottom0_diff[i+1] = gate;
       }
     }
   }
