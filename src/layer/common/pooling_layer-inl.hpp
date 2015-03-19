@@ -20,7 +20,15 @@ class PoolingLayer : public Layer<xpu> {
   
   virtual void SetupLayer(std::map<std::string, SettingV> &setting,
                           const std::vector<Node<xpu>*> &bottom,
-                          const std::vector<Node<xpu>*> &top) {
+                          const std::vector<Node<xpu>*> &top,
+                          mshadow::Random<xpu> *prnd) {
+    Layer::SetupLayer(setting, bottom, top, prnd);
+
+    utils::Check(bottom.size() == BottomNodeNum(),
+                  "PoolingLayer:bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(),
+                  "PoolingLayer:top size problem.");    
+                           
     kernel_x = setting["kernel_x"].i_val;
     kernel_y = setting["kernel_y"].i_val;
     stride = setting["stride"].i_val;

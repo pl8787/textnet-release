@@ -25,7 +25,10 @@ class EmbeddingLayer : public Layer<xpu>{
   
   virtual void SetupLayer(std::map<std::string, SettingV> &setting,
                           const std::vector<Node<xpu>*> &bottom,
-                          const std::vector<Node<xpu>*> &top) {
+                          const std::vector<Node<xpu>*> &top,
+                          mshadow::Random<xpu> *prnd) {
+    Layer::SetupLayer(setting, bottom, top, prnd);
+                            
     utils::Check(bottom.size() == BottomNodeNum(),
                   "EmbeddingLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
@@ -42,8 +45,9 @@ class EmbeddingLayer : public Layer<xpu>{
     this->params[0].need_diff = false;
     this->params[0].Resize(word_count, feat_size, 1, 1);
     
-    this->params[0].initializer_ =
-        initializer::CreateInitializer<xpu, 4>(setting["w_filler"].i_val, *setting["w_filler"].m_val);
+    this->params[0].initializer_ = 
+        initializer::CreateInitializer<xpu, 4>(setting["w_filler"].i_val,
+          *setting["w_filler"].m_val, this->prnd_);
     this->params[0].Init();    
     
     ReadInitEmbedding();

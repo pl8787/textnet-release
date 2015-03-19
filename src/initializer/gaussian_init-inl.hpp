@@ -10,7 +10,9 @@ namespace initializer {
 template<typename xpu, int dim>
 class GaussianInitializer : public Initializer<xpu, dim>{
  public:
-  GaussianInitializer(std::map<std::string, SettingV> &setting, int seed = 37) : rnd(seed) {
+  GaussianInitializer(std::map<std::string, SettingV> &setting, 
+                      mshadow::Random<xpu>* prnd): {
+    this->prnd_ = prnd;
     SetupInitializer(setting);
   }
   virtual ~GaussianInitializer(void) {}
@@ -26,12 +28,11 @@ class GaussianInitializer : public Initializer<xpu, dim>{
   }
   
   virtual void DoInitialize(mshadow::Tensor<xpu, dim> data) {
-    this->rnd.SampleGaussian(&data, mu, sigma);
+    this->prnd_->SampleGaussian(&data, mu, sigma);
   }
   
   float mu;
   float sigma;
-  mshadow::Random<xpu> rnd;
 };
 }  // namespace initializer
 }  // namespace textnet

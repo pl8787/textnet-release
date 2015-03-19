@@ -33,6 +33,7 @@ class Initializer {
   
  protected:
   InitType init_type;
+  mshadow::Random<xpu>* prnd_;
   
 };
 
@@ -45,7 +46,9 @@ const int kXavier = 4;
 const int kKaiming = 5;
 
 template<typename xpu, int dim>
-Initializer<xpu, dim>* CreateInitializer(InitType type, std::map<std::string, SettingV> &setting);
+Initializer<xpu, dim>* CreateInitializer(InitType type, 
+                             std::map<std::string, SettingV> &setting,
+                             mshadow::Random<xpu>* prnd);
 
 }  // namespace initializer
 }  // namespace textnet

@@ -9,14 +9,17 @@
 namespace textnet {
 namespace initializer {
 template<typename xpu, int dim>
-Initializer<xpu, dim>* CreateInitializer_(InitType type, std::map<std::string, SettingV> &setting) {
+Initializer<xpu, dim>* CreateInitializer_(
+                             InitType type,
+                             std::map<std::string, SettingV> &setting,
+                             mshadow::Random<xpu>* prnd) {
   switch(type) {
-    case kZero: return new ConstantInitializer<xpu, dim>(setting);
-    case kConstant: return new ConstantInitializer<xpu, dim>(setting);
-    case kUniform: return new UniformInitializer<xpu, dim>(setting);
-    case kGaussian: return new GaussianInitializer<xpu, dim>(setting);
-    case kXavier: return new UniformInitializer<xpu, dim>(setting);
-    case kKaiming: return new GaussianInitializer<xpu, dim>(setting);
+    case kZero: return new ConstantInitializer<xpu, dim>(setting, prnd);
+    case kConstant: return new ConstantInitializer<xpu, dim>(setting, prnd);
+    case kUniform: return new UniformInitializer<xpu, dim>(setting, prnd);
+    case kGaussian: return new GaussianInitializer<xpu, dim>(setting, prnd);
+    case kXavier: return new UniformInitializer<xpu, dim>(setting, prnd);
+    case kKaiming: return new GaussianInitializer<xpu, dim>(setting, prnd);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }

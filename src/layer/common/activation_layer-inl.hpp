@@ -19,8 +19,10 @@ class ActivationLayer : public Layer<xpu>{
   virtual int ParamNodeNum() { return 0; }
   
   virtual void SetupLayer(std::map<std::string, SettingV> &setting,
-		                  const std::vector<Node<xpu>*> &bottom,
-						  const std::vector<Node<xpu>*> &top) {
+                          const std::vector<Node<xpu>*> &bottom,
+                          const std::vector<Node<xpu>*> &top,
+                          mshadow::Random<xpu> *prnd) {
+    Layer::SetupLayer(setting, bottom, top, prnd);
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,

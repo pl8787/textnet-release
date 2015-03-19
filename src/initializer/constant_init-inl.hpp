@@ -10,7 +10,9 @@ namespace initializer {
 template<typename xpu, int dim>
 class ConstantInitializer : public Initializer<xpu, dim>{
  public:
-  ConstantInitializer(std::map<std::string, SettingV> &setting) {
+  ConstantInitializer(std::map<std::string, SettingV> &setting, 
+                      mshadow::Random<xpu>* prnd): {
+    this->prnd_ = prnd;
     SetupInitializer(setting);
   }
   virtual ~ConstantInitializer(void) {}

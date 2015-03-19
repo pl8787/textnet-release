@@ -7,20 +7,32 @@
 namespace textnet {
 namespace initializer {
 template<>
-Initializer<gpu, 1>* CreateInitializer<gpu, 1>(InitType type, std::map<std::string, SettingV> &setting) {
-  return CreateInitializer_<gpu, 1>(type, setting); 
+Initializer<gpu, 1>* CreateInitializer<gpu, 1>(
+                             InitType type,
+                             std::map<std::string, SettingV> &setting,
+                             mshadow::Random<xpu>* prnd) {
+  return CreateInitializer_<gpu, 1>(type, setting, prnd); 
 }
 template<>
-Initializer<gpu, 2>* CreateInitializer<gpu, 2>(InitType type, std::map<std::string, SettingV> &setting) {
-  return CreateInitializer_<gpu, 2>(type, setting); 
+Initializer<gpu, 2>* CreateInitializer<gpu, 2>(
+                             InitType type,
+                             std::map<std::string, SettingV> &setting,
+                             mshadow::Random<xpu>* prnd) {
+  return CreateInitializer_<gpu, 2>(type, setting, prnd); 
 }
 template<>
-Initializer<gpu, 3>* CreateInitializer<gpu, 3>(InitType type, std::map<std::string, SettingV> &setting) {
-  return CreateInitializer_<gpu, 3>(type, setting); 
+Initializer<gpu, 3>* CreateInitializer<gpu, 3>(
+                             InitType type,
+                             std::map<std::string, SettingV> &setting,
+                             mshadow::Random<xpu>* prnd) {
+  return CreateInitializer_<gpu, 3>(type, setting, prnd); 
 }
 template<>
-Initializer<gpu, 4>* CreateInitializer<gpu, 4>(InitType type, std::map<std::string, SettingV> &setting) {
-  return CreateInitializer_<gpu, 4>(type, setting); 
+Initializer<gpu, 4>* CreateInitializer<gpu, 4>(
+                             InitType type,
+                             std::map<std::string, SettingV> &setting,
+                             mshadow::Random<xpu>* prnd) {
+  return CreateInitializer_<gpu, 4>(type, setting, prnd); 
 }
 }  // namespace initializer
 }  // namespace textnet

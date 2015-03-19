@@ -10,7 +10,9 @@ namespace initializer {
 template<typename xpu, int dim>
 class UniformInitializer : public Initializer<xpu, dim>{
  public:
-  UniformInitializer(std::map<std::string, SettingV> &setting, int seed = 37) : rnd(seed) {
+  UniformInitializer(std::map<std::string, SettingV> &setting, 
+                      mshadow::Random<xpu>* prnd): {
+    this->prnd_ = prnd;
     SetupInitializer(setting);
   }
   virtual ~UniformInitializer(void) {}
@@ -25,11 +27,10 @@ class UniformInitializer : public Initializer<xpu, dim>{
   }
   
   virtual void DoInitialize(mshadow::Tensor<xpu, dim> data) {
-    this->rnd.SampleUniform(&data, -range, range);
+    this->prnd_->SampleUniform(&data, -range, range);
   }
   
   float range;
-  mshadow::Random<xpu> rnd;
 };
 }  // namespace initializer
 }  // namespace textnet

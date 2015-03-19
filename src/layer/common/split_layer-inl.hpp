@@ -25,7 +25,10 @@ class SplitLayer : public Layer<xpu>{
   
   virtual void SetupLayer(std::map<std::string, SettingV> &setting,
                           const std::vector<Node<xpu>*> &bottom,
-                          const std::vector<Node<xpu>*> &top) {
+                          const std::vector<Node<xpu>*> &top,
+                          mshadow::Random<xpu> *prnd) {
+    Layer::SetupLayer(setting, bottom, top, prnd);
+    
     utils::Check(bottom.size() == BottomNodeNum(),
                   "SplitLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
@@ -69,10 +72,11 @@ class SplitLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 4> bottom_diff = bottom[0]->diff;
     mshadow::Tensor<xpu, 4> top0_diff = top[0]->diff;
     mshadow::Tensor<xpu, 4> top1_diff = top[1]->diff;
-    
-    for (int i = 0; i < nbatch; i++) {
-      bottom_diff[i].Slice(0, 1) = F<op::identity>(top0_diff[i]); 
-      bottom_diff[i].Slice(1, 2) = F<op::identity>(top1_diff[i]);
+    if (this->prop_error[0]) {
+      for (int i = 0; i < nbatch; i++) {
+        bottom_diff[i].Slice(0, 1) = F<op::identity>(top0_diff[i]); 
+        bottom_diff[i].Slice(1, 2) = F<op::identity>(top1_diff[i]);
+      }
     }
   }
   

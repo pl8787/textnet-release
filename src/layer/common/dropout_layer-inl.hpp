@@ -1,5 +1,5 @@
-#ifndef TEXTNET_LAYER_CROSS_LAYER_INL_HPP_
-#define TEXTNET_LAYER_CROSS_LAYER_INL_HPP_
+#ifndef TEXTNET_LAYER_DROPOUT_LAYER_INL_HPP_
+#define TEXTNET_LAYER_DROPOUT_LAYER_INL_HPP_
 
 #include <iostream>
 #include <fstream>
@@ -14,12 +14,12 @@ namespace textnet {
 namespace layer {
 
 template<typename xpu>
-class CrossLayer : public Layer<xpu>{
+class DropoutLayer : public Layer<xpu>{
  public:
-  CrossLayer(LayerType type) { this->layer_type = type; }
-  virtual ~CrossLayer(void) {}
+  DropoutLayer(LayerType type) { this->layer_type = type; }
+  virtual ~DropoutLayer(void) {}
   
-  virtual int BottomNodeNum() { return 2; }
+  virtual int BottomNodeNum() { return 1; }
   virtual int TopNodeNum() { return 1; }
   virtual int ParamNodeNum() { return 0; }
   
@@ -30,38 +30,35 @@ class CrossLayer : public Layer<xpu>{
     Layer::SetupLayer(setting, bottom, top, prnd);
     
     utils::Check(bottom.size() == BottomNodeNum(),
-                  "CrossLayer:bottom size problem."); 
+                  "DropoutLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
-                  "CrossLayer:top size problem.");
+                  "DropoutLayer:top size problem.");
                   
-    nbatch = bottom[0]->data.size(0); 
-    channel = bottom[0]->data.size(1);
-    doc_len = bottom[0]->data.size(3);    
-    
+    rate = setting["rate"]; 
+    utils::Check(rate >= 0.0 && rate <= 1.0, 
+                  "Dropout rate must between 0.0 and 1.0.");    
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     utils::Check(bottom.size() == BottomNodeNum(),
-                  "CrossLayer:bottom size problem."); 
+                  "DropoutLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
-                  "CrossLayer:top size problem.");
+                  "DropoutLayer:top size problem.");
                   
-    top[0]->Resize(nbatch, channel, doc_len, doc_len, true);
+    top[0]->Resize(bottom[0]->data.shape_, true);
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
-    mshadow::Tensor<xpu, 3> bottom0_data = bottom[0]->data_d3();
-    mshadow::Tensor<xpu, 3> bottom1_data = bottom[1]->data_d3();
+    mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
-    
-    for (int i = 0; i < nbatch; i++) {
-        for (int j = 0; j < channel; j++) {
-        top_data[i][j] = broadcast<0>(bottom0_data[i][j], top_data[i][j].shape_) + 
-                         broadcast<1>(bottom1_data[i][j], top_data[i][j].shape_);
-      }
+    const float pkeep = 1.0f - rate;
+    if (this->phrase_type = kTrain) {
+      mask = F<op::threshold>(this->prnd_->uniform(mask.shape_), pkeep)  
+                * (1.0f/pkeep);
+      top_data = bottom_data * mask;
     }
     
   }
@@ -69,25 +66,19 @@ class CrossLayer : public Layer<xpu>{
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
                         const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
-    mshadow::Tensor<xpu, 3> bottom0_diff = bottom[0]->diff_d3();
-    mshadow::Tensor<xpu, 3> bottom1_diff = bottom[1]->diff_d3();
+    mshadow::Tensor<xpu, 4> bottom_diff = bottom[0]->diff;
     mshadow::Tensor<xpu, 4> top_diff = top[0]->diff;
-    
-    for (int i = 0; i < nbatch; i++) {
-      for (int j = 0; j < channel; j++) {
-        bottom0_diff[i][j] = sumall_except_dim<1>(top_diff[i][j]); 
-        bottom1_diff[i][j] = sumall_except_dim<0>(top_diff[i][j]);
-      }
+    if (this->prop_error[0]) {
+      bottom_diff = top_diff * mask;
     }
   }
   
  protected:
-  int doc_len;
-  int nbatch;
-  int channel;
+  float rate;
+  mshadow::TensorContainer<xpu, 4> mask;
 
 };
 }  // namespace layer
 }  // namespace textnet
-#endif  // LAYER_CROSS_LAYER_INL_HPP_
+#endif  // LAYER_DROPOUT_LAYER_INL_HPP_
 

@@ -23,8 +23,16 @@ class TextDataLayer : public Layer<xpu>{
   virtual int ParamNodeNum() { return 0; }
   
   virtual void SetupLayer(std::map<std::string, SettingV> &setting,
-                      const std::vector<Node<xpu>*> &bottom,
-                      const std::vector<Node<xpu>*> &top) {
+                          const std::vector<Node<xpu>*> &bottom,
+                          const std::vector<Node<xpu>*> &top,
+                          mshadow::Random<xpu> *prnd) {
+    Layer::SetupLayer(setting, bottom, top, prnd);
+    
+    utils::Check(bottom.size() == BottomNodeNum(),
+                  "TextDataLayer:bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(),
+                  "TextDataLayer:top size problem.");
+                  
     data_file = setting["data_file"].s_val;
     batch_size = setting["batch_size"].i_val;
     max_doc_len = setting["max_doc_len"].i_val;

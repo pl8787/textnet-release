@@ -17,18 +17,23 @@ namespace layer {
 
 /*! \brief use integer to encode layer types */
 typedef int LayerType;
+typedef int PhraseType;
 
 template<typename xpu>
 class Layer {
  public:
   Layer(void) {
     layer_type = 0;
+    phrase_type = 0;
   }
   virtual ~Layer(void) {}
   
   virtual void SetupLayer(std::map<std::string, SettingV> &setting, 
-		                  const std::vector<Node<xpu>*> &bottom,
-                          const std::vector<Node<xpu>*> &top) {
+                          const std::vector<Node<xpu>*> &bottom,
+                          const std::vector<Node<xpu>*> &top,
+                          mshadow::Random<xpu> *prnd) {
+    phrase_type = setting["phrase_type"].i_val;
+    prnd_ = prnd;
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -54,10 +59,10 @@ class Layer {
   virtual void PropAll() {
     for (int i = 0; i < this->BottomNodeNum(); ++i) {
       prop_error.push_back(true);
-	}
-	for (int i = 0; i < this->ParamNodeNum(); ++i) {
+    }
+    for (int i = 0; i < this->ParamNodeNum(); ++i) {
       prop_grad.push_back(true);
-	}
+    }
   }
   
  protected:
@@ -67,6 +72,8 @@ class Layer {
   LayerType layer_type;
   std::string layer_name;
   int layer_idx;
+  PhraseType phrase_type;
+  mshadow::Random<xpu> *prnd_;
   
 };
 
@@ -97,9 +104,17 @@ const int kCross = 22;
 const int kSoftmax = 51;
 const int kL2Loss = 52;
 const int kMultiLogistic = 53;
+const int kHingeLoss = 54;
 
 // Input Layer 71-
 const int kTextData = 71;
+
+
+/*! \brief these are enumeration */
+const int kTrain = 0;
+const int kValidation = 1;
+const int kTest = 2;
+
 
 template<typename xpu>
 Layer<xpu>* CreateLayer(LayerType type);
