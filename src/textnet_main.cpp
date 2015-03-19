@@ -17,45 +17,57 @@ using namespace textnet;
 using namespace textnet::layer;
 using namespace mshadow;
 
-void PrintTensor(Tensor<cpu, 3> x) {
-	Shape<3> s = x.shape_;
-	for (unsigned int d1 = 0; d1 < s[0]; ++d1) {
-		for (unsigned int d2 = 0; d2 < s[1]; ++d2) {
-			for (unsigned int d3 = 0; d3 < s[2]; ++d3) {
-					cout << x[d1][d2][d3] << " ";
-			}
-			cout << ";";
-		}
-		cout << endl;
+void PrintTensor(const char * name, Tensor<cpu, 1> x) {
+    Shape<1> s = x.shape_;
+    cout << name << " shape " << s[0] << endl;
+    for (unsigned int d1 = 0; d1 < s[0]; ++d1) {
+      cout << x[d1] << " ";
     }
+    cout << endl;
 }
 
+void PrintTensor(const char * name, Tensor<cpu, 2> x) {
+    Shape<2> s = x.shape_;
+    cout << name << " shape " << s[0] << "x" << s[1] << endl;
+    for (unsigned int d1 = 0; d1 < s[0]; ++d1) {
+      for (unsigned int d2 = 0; d2 < s[1]; ++d2) {
+        cout << x[d1][d2] << " ";
+      }
+      cout << endl;
+    }
+    cout << endl;
+}
+
+void PrintTensor(const char * name, Tensor<cpu, 3> x) {
+    Shape<3> s = x.shape_;
+    cout << name << " shape " << s[0] << "x" << s[1] << "x" << s[2] << endl;
+    for (unsigned int d1 = 0; d1 < s[0]; ++d1) {
+        for (unsigned int d2 = 0; d2 < s[1]; ++d2) {
+            for (unsigned int d3 = 0; d3 < s[2]; ++d3) {
+                    cout << x[d1][d2][d3] << " ";
+            }
+            cout << ";";
+        }
+        cout << endl;
+    }
+}
 
 void PrintTensor(const char * name, Tensor<cpu, 4> x) {
-	Shape<4> s = x.shape_;
-	cout << name << " shape " << s[0] << "x" << s[1] << "x" << s[2] << "x" << s[3] << endl;
-	for (unsigned int d1 = 0; d1 < s[0]; ++d1) {
-		for (unsigned int d2 = 0; d2 < s[1]; ++d2) {
-			for (unsigned int d3 = 0; d3 < s[2]; ++d3) {
-				for (unsigned int d4 = 0; d4 < s[3]; ++d4) {
-					cout << x[d1][d2][d3][d4] << " ";
-				}
-				cout << "|";
-			}
-			cout << ";";
-		}
-		cout << endl;
+    Shape<4> s = x.shape_;
+    cout << name << " shape " << s[0] << "x" << s[1] << "x" << s[2] << "x" << s[3] << endl;
+    for (unsigned int d1 = 0; d1 < s[0]; ++d1) {
+        for (unsigned int d2 = 0; d2 < s[1]; ++d2) {
+            for (unsigned int d3 = 0; d3 < s[2]; ++d3) {
+                for (unsigned int d4 = 0; d4 < s[3]; ++d4) {
+                    cout << x[d1][d2][d3][d4] << " ";
+                }
+                cout << "|";
+            }
+            cout << ";";
+        }
+        cout << endl;
     }
-	cout << endl;
-}
-
-void PrintTensorP(Tensor<cpu, 4> x) {
-	Shape<4> s = x.shape_;
-	float * p = x.dptr_;
-	for (int i = 0; i < x.shape_.Size(); ++i) {
-		cout << *p << " ";
-		p++;
-	}
+    cout << endl;
 }
 
 void TestCrossLayer(mshadow::Random<cpu>* prnd) {
@@ -178,13 +190,25 @@ void TestConvLayer(mshadow::Random<cpu>* prnd) {
   setting["channel_out"] = SettingV(2);
   setting["no_bias"] = SettingV(false);
     map<string, SettingV> w_setting;
-	w_setting["init_type"] = SettingV(initializer::kGaussian);
-	w_setting["mu"] = SettingV(0.0f);
-	w_setting["sigma"] = SettingV(1.0f);
+    w_setting["init_type"] = SettingV(initializer::kGaussian);
+    w_setting["mu"] = SettingV(0.0f);
+    w_setting["sigma"] = SettingV(1.0f);
     map<string, SettingV> b_setting;
-	b_setting["init_type"] = SettingV(initializer::kZero);
+    b_setting["init_type"] = SettingV(initializer::kZero);
   setting["w_filler"] = SettingV(&w_setting);
   setting["b_filler"] = SettingV(&b_setting);
+    map<string, SettingV> w_updater;
+    w_updater["init_type"] = SettingV(updater::kSGD);
+    w_updater["momentum"] = SettingV(0.0f);
+    w_updater["lr"] = SettingV(0.001f);
+    w_updater["decay"] = SettingV(0.001f);
+    map<string, SettingV> b_updater;
+    b_updater["init_type"] = SettingV(updater::kSGD);
+    b_updater["momentum"] = SettingV(0.0f);
+    b_updater["lr"] = SettingV(0.001f);
+    b_updater["decay"] = SettingV(0.001f);
+  setting["w_updater"] = SettingV(&w_updater);
+  setting["b_updater"] = SettingV(&b_updater);
   
   /// Test Activation Layer
   Layer<cpu> * layer_conv = CreateLayer<cpu>(kConv);
@@ -264,24 +288,41 @@ void TestFcLayer(mshadow::Random<cpu>* prnd) {
   setting["num_hidden"] = SettingV(10);
   setting["no_bias"] = SettingV(false);
     map<string, SettingV> w_setting;
-	w_setting["init_type"] = SettingV(initializer::kGaussian);
-	w_setting["mu"] = SettingV(0.0f);
-	w_setting["sigma"] = SettingV(1.0f);
+    w_setting["init_type"] = SettingV(initializer::kGaussian);
+    w_setting["mu"] = SettingV(0.0f);
+    w_setting["sigma"] = SettingV(1.0f);
     map<string, SettingV> b_setting;
-	b_setting["init_type"] = SettingV(initializer::kZero);
+    b_setting["init_type"] = SettingV(initializer::kZero);
   setting["w_filler"] = SettingV(&w_setting);
   setting["b_filler"] = SettingV(&b_setting);
+  map<string, SettingV> w_updater;
+    w_updater["init_type"] = SettingV(updater::kSGD);
+    w_updater["momentum"] = SettingV(0.0f);
+    w_updater["lr"] = SettingV(0.001f);
+    w_updater["decay"] = SettingV(0.001f);
+    map<string, SettingV> b_updater;
+    b_updater["init_type"] = SettingV(updater::kSGD);
+    b_updater["momentum"] = SettingV(0.0f);
+    b_updater["lr"] = SettingV(0.001f);
+    b_updater["decay"] = SettingV(0.001f);
+  setting["w_updater"] = SettingV(&w_updater);
+  setting["b_updater"] = SettingV(&b_updater);
   
   /// Test Activation Layer
   Layer<cpu> * layer_fc = CreateLayer<cpu>(kFullConnect);
   layer_fc->PropAll();
   layer_fc->SetupLayer(setting, bottoms, tops, prnd);
   layer_fc->Reshape(bottoms, tops);
-  PrintTensor("param", layer_fc->GetParams()[0].data);
+  PrintTensor("param_before", layer_fc->GetParams()[0].data);
   layer_fc->Forward(bottoms, tops);
   top.diff = 1.0;
   layer_fc->Backprop(bottoms, tops);
   
+  layer_fc->GetParams()[0].Update();
+  layer_fc->GetParams()[1].Update();
+
+  PrintTensor("param_after", layer_fc->GetParams()[0].data);
+
   PrintTensor("top data", top.data);
   PrintTensor("bottom diff", bottom.diff);
 
@@ -329,6 +370,12 @@ void TestTextDataLayer(mshadow::Random<cpu>* prnd) {
   setting_wfiller["mu"] = SettingV(0.0f);
   setting_wfiller["sigma"] = SettingV(1.0f);
   setting_wv["w_filler"] = SettingV(&setting_wfiller);
+  map<string, SettingV> w_updater;
+    w_updater["init_type"] = SettingV(updater::kSGD);
+    w_updater["momentum"] = SettingV(0.0f);
+    w_updater["lr"] = SettingV(0.001f);
+    w_updater["decay"] = SettingV(0.001f);
+  setting_wv["w_updater"] = SettingV(&w_updater);
 
   // Test Embedding Layer
   Layer<cpu> * layer_embedding = CreateLayer<cpu>(kEmbedding);
@@ -415,7 +462,13 @@ void TestActivationLayer(mshadow::Random<cpu>* prnd) {
 
 int main(int argc, char *argv[]) {
   mshadow::Random<cpu> rnd(37);
-  TestPoolLayer(&rnd);
+  //TestActivationLayer(&rnd);
+  TestFcLayer(&rnd);
+  //TestConvLayer(&rnd);
+  //TestPoolLayer(&rnd);
+  //TestCrossLayer(&rnd);
+  //TestDropoutLayer(&rnd);
+  //TestHingeLossLayer(&rnd);
   return 0;
 }
 

@@ -7,20 +7,24 @@
 namespace textnet {
 namespace updater {
 template<>
-Updater<cpu, 1>* CreateUpdater<cpu, 1>(UpdaterType type, std::map<std::string, SettingV> &setting) {
-  return CreateUpdater_<cpu, 1>(type, setting); 
+Updater<cpu, 1>* CreateUpdater<cpu, 1>(UpdaterType type, std::map<std::string, SettingV> &setting, 
+                      mshadow::Random<cpu>* prnd) {
+  return CreateUpdater_<cpu, 1>(type, setting, prnd); 
 }
 template<>
-Updater<cpu, 2>* CreateUpdater<cpu, 2>(UpdaterType type, std::map<std::string, SettingV> &setting) {
-  return CreateUpdater_<cpu, 2>(type, setting); 
+Updater<cpu, 2>* CreateUpdater<cpu, 2>(UpdaterType type, std::map<std::string, SettingV> &setting, 
+                      mshadow::Random<cpu>* prnd) {
+  return CreateUpdater_<cpu, 2>(type, setting, prnd); 
 }
 template<>
-Updater<cpu, 3>* CreateUpdater<cpu, 3>(UpdaterType type, std::map<std::string, SettingV> &setting) {
-  return CreateUpdater_<cpu, 3>(type, setting); 
+Updater<cpu, 3>* CreateUpdater<cpu, 3>(UpdaterType type, std::map<std::string, SettingV> &setting, 
+                      mshadow::Random<cpu>* prnd) {
+  return CreateUpdater_<cpu, 3>(type, setting, prnd); 
 }
 template<>
-Updater<cpu, 4>* CreateUpdater<cpu, 4>(UpdaterType type, std::map<std::string, SettingV> &setting) {
-  return CreateUpdater_<cpu, 4>(type, setting); 
+Updater<cpu, 4>* CreateUpdater<cpu, 4>(UpdaterType type, std::map<std::string, SettingV> &setting, 
+                      mshadow::Random<cpu>* prnd) {
+  return CreateUpdater_<cpu, 4>(type, setting, prnd); 
 }
 }  // namespace updater
 }  // namespace textnet

@@ -45,17 +45,23 @@ class EmbeddingLayer : public Layer<xpu>{
     this->params[0].need_diff = false;
     this->params[0].Resize(word_count, feat_size, 1, 1);
     
-	std::map<std::string, SettingV> &w_setting = *setting["w_filler"].m_val;
+    std::map<std::string, SettingV> &w_setting = *setting["w_filler"].m_val;
     this->params[0].initializer_ = 
         initializer::CreateInitializer<xpu, 4>(w_setting["init_type"].i_val,
           w_setting, this->prnd_);
-    this->params[0].Init();    
+    this->params[0].Init();   
+
+    std::map<std::string, SettingV> &w_updater = *setting["w_updater"].m_val;
+    this->params[0].updater_ = 
+        updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].i_val,
+          w_updater, this->prnd_);
+    this->params[0].updater_->is_sparse = true;          
     
     ReadInitEmbedding();
   }
   
   void ReadInitEmbedding() {
-    utils::Printf("Open embedding file: %s\n", embedding_file.c_str());	
+    utils::Printf("Open embedding file: %s\n", embedding_file.c_str());    
     std::vector<std::string> lines;
     std::ifstream fin(embedding_file.c_str());
     std::string s;
@@ -135,9 +141,9 @@ class EmbeddingLayer : public Layer<xpu>{
       }
       
       this->params[0].diff.Resize(mshadow::Shape4(inc, feat_size, 1, 1), 0);
-      this->params[0].idx.Resize(mshadow::Shape4(inc, 1, 1, 1), 0);
+      this->params[0].idx.Resize(mshadow::Shape1(inc), 0);
       mshadow::Tensor<xpu, 2> weight_diff = this->params[0].diff_d2();
-      mshadow::Tensor<xpu, 1> weight_idx = this->params[0].idx_d1();
+      mshadow::Tensor<xpu, 1> weight_idx = this->params[0].idx;
       
       for (std::map<int,int>::iterator it=idx_map.begin(); 
             it!=idx_map.end(); ++it) {

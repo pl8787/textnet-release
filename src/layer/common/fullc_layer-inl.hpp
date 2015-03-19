@@ -40,8 +40,8 @@ class FullConnectLayer : public Layer<xpu> {
     this->params[0].Resize(num_hidden, num_input, 1, 1);
     this->params[1].Resize(num_hidden, 1, 1, 1);
     
-	std::map<std::string, SettingV> &w_setting = *setting["w_filler"].m_val;
-	std::map<std::string, SettingV> &b_setting = *setting["b_filler"].m_val;
+    std::map<std::string, SettingV> &w_setting = *setting["w_filler"].m_val;
+    std::map<std::string, SettingV> &b_setting = *setting["b_filler"].m_val;
     this->params[0].initializer_ = 
         initializer::CreateInitializer<xpu, 4>(w_setting["init_type"].i_val,
           w_setting, this->prnd_);
@@ -50,6 +50,16 @@ class FullConnectLayer : public Layer<xpu> {
           b_setting, this->prnd_);
     this->params[0].Init();
     this->params[1].Init();
+    
+    std::map<std::string, SettingV> &w_updater = *setting["w_updater"].m_val;
+    std::map<std::string, SettingV> &b_updater = *setting["b_updater"].m_val;
+    this->params[0].updater_ = 
+        updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].i_val,
+          w_updater, this->prnd_);
+    this->params[1].updater_ = 
+        updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].i_val,
+          b_updater, this->prnd_);
+    
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,

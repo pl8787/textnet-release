@@ -19,7 +19,7 @@ template<typename xpu>
 struct Node {
   mshadow::TensorContainer<xpu, 4> data;
   mshadow::TensorContainer<xpu, 4> diff;
-  mshadow::TensorContainer<xpu, 4> idx;
+  mshadow::TensorContainer<xpu, 1> idx;
   bool must_contiguous;
   bool inited_data;
   bool inited_diff;

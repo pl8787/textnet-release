@@ -28,15 +28,22 @@ class Updater {
     is_sparse = false;
   }
   
-  virtual void Update(mshadow::Tensor<xpu, dim> data, mshadow::Tensor<xpu, dim> diff) {}
+  virtual void Update(mshadow::Tensor<xpu, dim> data, 
+                      mshadow::Tensor<xpu, dim> diff) {}
   
-  virtual void UpdateSparse(mshadow::Tensor<xpu, dim> data, mshadow::Tensor<xpu, dim> diff, mshadow::Tensor<xpu, dim> idx) {}
+  virtual void UpdateSparse(mshadow::Tensor<xpu, dim> data, 
+                            mshadow::Tensor<xpu, dim> diff, 
+                            mshadow::Tensor<xpu, 1> idx) {}
+                            
   
   virtual UpdaterType GetUpdaterType() { return updater_type; }
   
+  // whether use sparse update
+  bool is_sparse;
+  
  protected:
   UpdaterType updater_type;
-  bool is_sparse;
+  mshadow::Random<xpu>* prnd_;
   
 };
 
@@ -47,7 +54,8 @@ const int kAdam = 2;
 const int kSGDSparse = 3;
 
 template<typename xpu, int dim>
-Updater<xpu, dim>* CreateUpdater(UpdaterType type, std::map<std::string, SettingV> &setting);
+Updater<xpu, dim>* CreateUpdater(UpdaterType type, std::map<std::string, SettingV> &setting, 
+                      mshadow::Random<xpu>* prnd);
 
 }  // namespace updater
 }  // namespace textnet

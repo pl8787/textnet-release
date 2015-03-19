@@ -44,8 +44,8 @@ class ConvolutionLayer : public Layer<xpu> {
     this->params[0].Resize(channel_out, channel_in * kernel_x * kernel_y, 1, 1);
     this->params[1].Resize(channel_out, 1, 1, 1);
     
-	std::map<std::string, SettingV> &w_setting = *setting["w_filler"].m_val;
-	std::map<std::string, SettingV> &b_setting = *setting["b_filler"].m_val;
+    std::map<std::string, SettingV> &w_setting = *setting["w_filler"].m_val;
+    std::map<std::string, SettingV> &b_setting = *setting["b_filler"].m_val;
     this->params[0].initializer_ = 
         initializer::CreateInitializer<xpu, 4>(w_setting["init_type"].i_val,
           w_setting, this->prnd_);
@@ -54,6 +54,16 @@ class ConvolutionLayer : public Layer<xpu> {
           b_setting, this->prnd_);
     this->params[0].Init();
     this->params[1].Init();
+    
+    std::map<std::string, SettingV> &w_updater = *setting["w_updater"].m_val;
+    std::map<std::string, SettingV> &b_updater = *setting["b_updater"].m_val;
+    this->params[0].updater_ = 
+        updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].i_val,
+          w_updater, this->prnd_);
+    this->params[1].updater_ = 
+        updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].i_val,
+          b_updater, this->prnd_);
+          
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -68,15 +78,15 @@ class ConvolutionLayer : public Layer<xpu> {
                    (shape_in[2] + pad_y * 2 - kernel_y) / stride + 1,
                    (shape_in[3] + pad_x * 2 - kernel_x) / stride + 1);
 
-	std::cout << shape_in[0] << "x" << shape_in[1] << "x" << shape_in[2] << "x" << shape_in[3] << std::endl;
-	std::cout << shape_out[0] << "x" << shape_out[1] << "x" << shape_out[2] << "x" << shape_out[3] << std::endl;
+    std::cout << shape_in[0] << "x" << shape_in[1] << "x" << shape_in[2] << "x" << shape_in[3] << std::endl;
+    std::cout << shape_out[0] << "x" << shape_out[1] << "x" << shape_out[2] << "x" << shape_out[3] << std::endl;
 
     top[0]->Resize(shape_out);
     temp_col_.Resize(mshadow::Shape2(channel_in*kernel_x*kernel_y, shape_out[2]*shape_out[3]));
     // Share the memory
     temp_dif_ = temp_col_;
 
-	temp_data_.Resize(mshadow::Shape2(channel_out, shape_out[2]*shape_out[3]));
+    temp_data_.Resize(mshadow::Shape2(channel_out, shape_out[2]*shape_out[3]));
     
   }
   
@@ -95,8 +105,8 @@ class ConvolutionLayer : public Layer<xpu> {
         temp_col_ = unpack_patch2col(pad(bottom_data[i], pad_y, pad_x),
                                      kernel_y, kernel_x, stride);
       }
-	  temp_data_ = dot(weight_data, temp_col_);
-	  top_data.Slice(i,i+1) = reshape(temp_data_, top_data.Slice(i,i+1).shape_);
+      temp_data_ = dot(weight_data, temp_col_);
+      top_data.Slice(i,i+1) = reshape(temp_data_, top_data.Slice(i,i+1).shape_);
     }
     if (no_bias == 0) {
       // add bias, broadcast bias to dim 1: channel
