@@ -29,11 +29,11 @@ class Updater {
   }
   
   virtual void Update(mshadow::Tensor<xpu, dim> data, 
-                      mshadow::Tensor<xpu, dim> diff) {}
+                      mshadow::Tensor<xpu, dim> diff) = 0;
   
   virtual void UpdateSparse(mshadow::Tensor<xpu, dim> data, 
                             mshadow::Tensor<xpu, dim> diff, 
-                            mshadow::Tensor<xpu, 1> idx) {}
+                            mshadow::Tensor<xpu, 1> idx) = 0;
                             
   
   virtual UpdaterType GetUpdaterType() { return updater_type; }

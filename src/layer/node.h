@@ -1,6 +1,7 @@
 #ifndef TEXTNET_LAYER_NODE_H_
 #define TEXTNET_LAYER_NODE_H_
 
+#include <iostream>
 #include <vector>
 #include <map>
 #include <string>

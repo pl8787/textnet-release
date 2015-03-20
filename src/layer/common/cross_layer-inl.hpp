@@ -36,7 +36,7 @@ class CrossLayer : public Layer<xpu>{
                   
     nbatch = bottom[0]->data.size(0); 
     channel = bottom[0]->data.size(1);
-    doc_len = bottom[0]->data.size(3);    
+    doc_len = bottom[0]->data.size(2);    
     
   }
   

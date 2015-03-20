@@ -41,8 +41,8 @@ class ConvolutionLayer : public Layer<xpu> {
     no_bias = setting["no_bias"].b_val;
     
     this->params.resize(2);
-    this->params[0].Resize(channel_out, channel_in * kernel_x * kernel_y, 1, 1);
-    this->params[1].Resize(channel_out, 1, 1, 1);
+    this->params[0].Resize(channel_out, channel_in * kernel_x * kernel_y, 1, 1, true);
+    this->params[1].Resize(channel_out, 1, 1, 1, true);
     
     std::map<std::string, SettingV> &w_setting = *setting["w_filler"].m_val;
     std::map<std::string, SettingV> &b_setting = *setting["b_filler"].m_val;
@@ -126,7 +126,7 @@ class ConvolutionLayer : public Layer<xpu> {
     const index_t nbatch = bottom_data.size(0);
         
     if (!no_bias && this->prop_grad[1]) {
-      bias_diff += sumall_except_dim<1>(top_diff);
+      bias_diff = sumall_except_dim<1>(top_diff);
     }
     
     for (int i = 0; i < nbatch; ++i) {

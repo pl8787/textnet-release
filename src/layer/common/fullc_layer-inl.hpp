@@ -37,8 +37,8 @@ class FullConnectLayer : public Layer<xpu> {
     num_input = bottom_data.size(1);
 
     this->params.resize(2);
-    this->params[0].Resize(num_hidden, num_input, 1, 1);
-    this->params[1].Resize(num_hidden, 1, 1, 1);
+    this->params[0].Resize(num_hidden, num_input, 1, 1, true);
+    this->params[1].Resize(num_hidden, 1, 1, 1, true);
     
     std::map<std::string, SettingV> &w_setting = *setting["w_filler"].m_val;
     std::map<std::string, SettingV> &b_setting = *setting["b_filler"].m_val;

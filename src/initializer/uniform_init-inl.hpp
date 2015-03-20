@@ -1,6 +1,7 @@
 #ifndef TEXTNET_UNIFORM_INIT_INL_HPP_
 #define TEXTNET_UNIFORM_INIT_INL_HPP_
 
+#include <iostream>
 #include <mshadow/tensor.h>
 #include "./initializer.h"
 

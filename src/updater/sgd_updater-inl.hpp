@@ -1,6 +1,7 @@
 #ifndef TEXTNET_SGD_UPDATER_INL_HPP_
 #define TEXTNET_SGD_UPDATER_INL_HPP_
 
+#include <iostream>
 #include <mshadow/tensor.h>
 #include "./updater.h"
 
@@ -13,16 +14,19 @@ class SGDUpdater : public Updater<xpu, dim>{
   SGDUpdater(std::map<std::string, SettingV> &setting, 
                       mshadow::Random<xpu>* prnd) {
     this->prnd_ = prnd;
+	this->is_sparse = false;
     SetupUpdater(setting);
   }
   virtual ~SGDUpdater(void) {}
   
   virtual void SetupUpdater(std::map<std::string, SettingV> &setting) {
     this->updater_type = setting["updater_type"].i_val;
-    lr = setting["lr"].f_val;
+    base_lr = setting["lr"].f_val;
     decay = setting["decay"].f_val;
     momentum = setting["momentum"].f_val;
     iteration = 0;
+	wd = 0.04;
+	lr = base_lr;
   }
   
   virtual void Update(mshadow::Tensor<xpu, dim> data, 
@@ -35,10 +39,10 @@ class SGDUpdater : public Updater<xpu, dim>{
     iteration++;
     
     if (momentum == 0.0) {
-      data -= lr * diff;
+      data -= lr * (diff + wd * data);
     } else {
-      history = diff + momentum * history;
-      data -= lr * history;
+      history = lr * (diff + wd * data) + momentum * history;
+      data -= history;
     }
   }
   
@@ -56,20 +60,21 @@ class SGDUpdater : public Updater<xpu, dim>{
       int w_idx = -1;
       for (int i = 0; i < idx.size(0); ++i) {
         w_idx = idx[i];
-        data[w_idx] -= lr * diff[i];
+        data[w_idx] -= lr * (diff[i] + wd * data[w_idx]);
       }
     } else {
       int w_idx = -1;
       for (int i = 0; i < idx.size(0); ++i) {
         w_idx = idx[i];
-        history[w_idx] = diff[i] + momentum * history[w_idx];
-        data[w_idx] -= lr * history[w_idx];
+        history[w_idx] = lr * (diff[i] + wd * data[w_idx]) + momentum * history[w_idx];
+        data[w_idx] -= history[w_idx];
       }
     }
   }
   
   virtual void AdaptLearningRate() {
-    lr = lr - decay * iteration;
+	if (lr < 0.1 * base_lr) return;
+    lr = base_lr * (1.0 - decay * iteration);
   }
   
  protected: 
@@ -77,7 +82,9 @@ class SGDUpdater : public Updater<xpu, dim>{
   mshadow::TensorContainer<xpu, dim> history;
   int iteration;
   float lr;
+  float base_lr;
   float decay;
+  float wd;
 };
 }  // namespace updater
 }  // namespace textnet

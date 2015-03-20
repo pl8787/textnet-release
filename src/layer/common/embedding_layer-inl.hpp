@@ -45,7 +45,8 @@ class EmbeddingLayer : public Layer<xpu>{
     this->params[0].need_diff = false;
     this->params[0].Resize(word_count, feat_size, 1, 1);
     
-    std::map<std::string, SettingV> &w_setting = *setting["w_filler"].m_val;
+    std::map<std::string, SettingV> w_setting = *setting["w_filler"].m_val;
+	std::cout << w_setting["init_type"].i_val << std::endl;
     this->params[0].initializer_ = 
         initializer::CreateInitializer<xpu, 4>(w_setting["init_type"].i_val,
           w_setting, this->prnd_);
