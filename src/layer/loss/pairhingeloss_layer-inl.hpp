@@ -1,5 +1,5 @@
-#ifndef TEXTNET_LAYER_HINGELOSS_LAYER_INL_HPP_
-#define TEXTNET_LAYER_HINGELOSS_LAYER_INL_HPP_
+#ifndef TEXTNET_LAYER_PAIRHINGELOSS_LAYER_INL_HPP_
+#define TEXTNET_LAYER_PAIRHINGELOSS_LAYER_INL_HPP_
 
 #include <iostream>
 #include <fstream>
@@ -14,10 +14,10 @@ namespace textnet {
 namespace layer {
 
 template<typename xpu>
-class HingeLossLayer : public Layer<xpu>{
+class PairHingeLossLayer : public Layer<xpu>{
  public:
-  HingeLossLayer(LayerType type) { this->layer_type = type; }
-  virtual ~HingeLossLayer(void) {}
+  PairHingeLossLayer(LayerType type) { this->layer_type = type; }
+  virtual ~PairHingeLossLayer(void) {}
   
   virtual int BottomNodeNum() { return 2; }
   virtual int TopNodeNum() { return 1; }
@@ -30,20 +30,22 @@ class HingeLossLayer : public Layer<xpu>{
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
                             
     utils::Check(bottom.size() == BottomNodeNum(),
-                  "HingeLossLayer:bottom size problem."); 
+                  "PairHingeLossLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
-                  "HingeLossLayer:top size problem.");
+                  "PairHingeLossLayer:top size problem.");
+    delta = setting["delta"].f_val;
     nbatch = bottom[0]->data.size(0);    
+    utils::Check(nbatch % 2 == 0, "nBatch must be even.");
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     utils::Check(bottom.size() == BottomNodeNum(),
-                  "HingeLossLayer:bottom size problem."); 
+                  "PairHingeLossLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
-                  "HingeLossLayer:top size problem.");
+                  "PairHingeLossLayer:top size problem.");
                   
-    top[0]->Resize(nbatch, 1, 1, 1, true);
+    top[0]->Resize(1, 1, 1, 1, true);
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
@@ -53,33 +55,36 @@ class HingeLossLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 1> bottom1_data = bottom[1]->data_d1();
     mshadow::Tensor<xpu, 1> top_data = top[0]->data_d1();
     
-    bottom1_data = 2 * (bottom1_data - 0.5);
-    top_data = F<op::relu>(1.0f - bottom0_data * bottom1_data);
-    
-    for (int i = 1; i < nbatch; ++i) {
-      top_data[0] += top_data[i];
+    for (int i = 0; i < nbatch; i += 2) {
+      utils::Check(bottom1_data[i] == 1 && bottom1_data[i+1] == 0, 
+                    "Instances come like 1 0 1 0 ...");
+      top_data[0] += std::max(0.0f, delta + bottom0_data[i+1] - bottom0_data[i]);
     }
-
-    top_data[0] /= nbatch;
+    
+    top_data[0] /= (nbatch/2);
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
                         const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 1> bottom0_data = bottom[0]->data_d1();
-    mshadow::Tensor<xpu, 1> bottom1_data = bottom[1]->data_d1();
     mshadow::Tensor<xpu, 1> bottom0_diff = bottom[0]->diff_d1();
     
     if (this->prop_error[0]) {
-      bottom0_diff = -1.0f * F<op::relu_grad>(1.0f - bottom0_data * bottom1_data) * bottom1_data;
+      for (int i = 0; i < nbatch; i+=2) {
+        float gate = (delta + bottom0_data[i+1] - bottom0_data[i]) > 0 ? 1 : 0;
+        bottom0_diff[i] = -gate;
+        bottom0_diff[i+1] = gate;
+      }
     }
   }
   
  protected:
   int nbatch;
+  float delta;
 
 };
 }  // namespace layer
 }  // namespace textnet
-#endif  // LAYER_HINGELOSS_LAYER_INL_HPP_
+#endif  // LAYER_PAIRHINGELOSS_LAYER_INL_HPP_
 

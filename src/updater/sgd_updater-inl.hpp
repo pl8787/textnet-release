@@ -25,7 +25,7 @@ class SGDUpdater : public Updater<xpu, dim>{
     decay = setting["decay"].f_val;
     momentum = setting["momentum"].f_val;
     iteration = 0;
-	wd = 0.04;
+	wd = 0.0;
 	lr = base_lr;
   }
   

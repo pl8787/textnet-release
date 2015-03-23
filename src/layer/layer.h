@@ -109,6 +109,7 @@ const int kSoftmax = 51;
 const int kL2Loss = 52;
 const int kMultiLogistic = 53;
 const int kHingeLoss = 54;
+const int kPairHingeLoss = 55;
 
 // Input Layer 71-
 const int kTextData = 71;

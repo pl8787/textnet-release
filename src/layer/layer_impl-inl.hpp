@@ -12,6 +12,8 @@
 #include "./common/dropout_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./loss/hingeloss_layer-inl.hpp"
+#include "./loss/pairhingeloss_layer-inl.hpp"
+#include "./loss/softmax_layer-inl.hpp"
 
 namespace textnet {
 namespace layer {
@@ -29,9 +31,10 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kCross: return new CrossLayer<xpu>(kCross);
     case kSplit: return new SplitLayer<xpu>(kSplit);
     case kDropout: return new DropoutLayer<xpu>(kDropout);
-	case kHingeLoss: return new HingeLossLayer<xpu>(kHingeLoss);
+    case kHingeLoss: return new HingeLossLayer<xpu>(kHingeLoss);
+    case kPairHingeLoss: return new PairHingeLossLayer<xpu>(kPairHingeLoss);
     case kTextData: return new TextDataLayer<xpu>(kTextData);
-    //case kSoftmax: return new SoftmaxLayer<xpu>(setting);
+    case kSoftmax: return new SoftmaxLayer<xpu>(kSoftmax);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }

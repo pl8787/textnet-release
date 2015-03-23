@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
   matching_net.push_back(CreateLayer<cpu>(kRectifiedLinear));
   matching_net.push_back(CreateLayer<cpu>(kDropout));
   matching_net.push_back(CreateLayer<cpu>(kFullConnect));
-  matching_net.push_back(CreateLayer<cpu>(kHingeLoss));
+  matching_net.push_back(CreateLayer<cpu>(kSoftmax));
   
   for (int i = 0; i < matching_net.size(); ++i) {
     vector<Node<cpu>*> bottoms;
@@ -196,15 +196,15 @@ int main(int argc, char *argv[]) {
   bottom_vecs[18].push_back(nodes[1]);
   top_vecs[18].push_back(nodes[20]);
   
-  float base_lr = 0.005;
-  float decay = 0.005;
+  float base_lr = 0.001;
+  float decay = 0.001;
   // Fill Settings vector
   vector<map<string, SettingV> > setting_vec;
   // kTextData
   {
     map<string, SettingV> setting;
-    setting["data_file"] = SettingV("/home/pangliang/matching/data/msr_paraphrase_train_wid_1w.txt");
-    setting["batch_size"] = SettingV(100);
+    setting["data_file"] = SettingV("/home/pangliang/matching/data/msr_paraphrase_train_wid.txt");
+    setting["batch_size"] = SettingV(50);
     setting["max_doc_len"] = SettingV(31);
     setting["min_doc_len"] = SettingV(5);
     setting_vec.push_back(setting);
@@ -328,13 +328,13 @@ int main(int argc, char *argv[]) {
     setting["pad_x"] = SettingV(0);
     setting["pad_y"] = SettingV(0);
     setting["stride"] = SettingV(1);
-    setting["channel_out"] = SettingV(200);
+    setting["channel_out"] = SettingV(300);
     setting["no_bias"] = SettingV(false);
 
     map<string, SettingV> &w_setting = *(new map<string, SettingV>());
       w_setting["init_type"] = SettingV(initializer::kGaussian);
       w_setting["mu"] = SettingV(0.0f);
-      w_setting["sigma"] = SettingV(0.02f);
+      w_setting["sigma"] = SettingV(0.01f);
     map<string, SettingV> &b_setting = *(new map<string, SettingV>());
       b_setting["init_type"] = SettingV(initializer::kZero);
     setting["w_filler"] = SettingV(&w_setting);
@@ -375,13 +375,13 @@ int main(int argc, char *argv[]) {
     setting["pad_x"] = SettingV(0);
     setting["pad_y"] = SettingV(0);
     setting["stride"] = SettingV(1);
-    setting["channel_out"] = SettingV(200);
+    setting["channel_out"] = SettingV(400);
     setting["no_bias"] = SettingV(false);
 
     map<string, SettingV> &w_setting = *(new map<string, SettingV>());
       w_setting["init_type"] = SettingV(initializer::kGaussian);
       w_setting["mu"] = SettingV(0.0f);
-      w_setting["sigma"] = SettingV(0.02f);
+      w_setting["sigma"] = SettingV(0.01f);
     map<string, SettingV> &b_setting = *(new map<string, SettingV>());
       b_setting["init_type"] = SettingV(initializer::kZero);
     setting["w_filler"] = SettingV(&w_setting);
@@ -423,7 +423,7 @@ int main(int argc, char *argv[]) {
     map<string, SettingV> &w_setting = *(new map<string, SettingV>());
       w_setting["init_type"] = SettingV(initializer::kGaussian);
       w_setting["mu"] = SettingV(0.0f);
-      w_setting["sigma"] = SettingV(0.01f);
+      w_setting["sigma"] = SettingV(0.005f);
     map<string, SettingV> &b_setting = *(new map<string, SettingV>());
       b_setting["init_type"] = SettingV(initializer::kZero);
     setting["w_filler"] = SettingV(&w_setting);
@@ -457,13 +457,13 @@ int main(int argc, char *argv[]) {
   // kFullConnect 
   {
     map<string, SettingV> setting;
-    setting["num_hidden"] = SettingV(1);
+    setting["num_hidden"] = SettingV(2);
     setting["no_bias"] = SettingV(false);
 
     map<string, SettingV> &w_setting = *(new map<string, SettingV>());
       w_setting["init_type"] = SettingV(initializer::kGaussian);
       w_setting["mu"] = SettingV(0.0f);
-      w_setting["sigma"] = SettingV(0.001f);
+      w_setting["sigma"] = SettingV(0.1f);
     map<string, SettingV> &b_setting = *(new map<string, SettingV>());
       b_setting["init_type"] = SettingV(initializer::kZero);
     setting["w_filler"] = SettingV(&w_setting);

@@ -147,7 +147,7 @@ void TestHingeLossLayer(mshadow::Random<cpu>* prnd) {
   bottom0.data[0][0][0][0] = 0.2;
   bottom0.data[1][0][0][0] = 0.3;
   bottom0.data[2][0][0][0] = 1.5;
-  bottom0.data[3][0][0][0] = 0.4;
+  bottom0.data[3][0][0][0] = -0.5;
 
   bottom1.data[0][0][0][0] = 1;
   bottom1.data[1][0][0][0] = 0;
@@ -463,12 +463,12 @@ void TestActivationLayer(mshadow::Random<cpu>* prnd) {
 int main(int argc, char *argv[]) {
   mshadow::Random<cpu> rnd(37);
   //TestActivationLayer(&rnd);
-  TestFcLayer(&rnd);
+  //TestFcLayer(&rnd);
   //TestConvLayer(&rnd);
   //TestPoolLayer(&rnd);
   //TestCrossLayer(&rnd);
   //TestDropoutLayer(&rnd);
-  //TestHingeLossLayer(&rnd);
+  TestHingeLossLayer(&rnd);
   return 0;
 }
 
