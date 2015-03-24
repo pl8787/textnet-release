@@ -506,7 +506,8 @@ int main(int argc, char *argv[]) {
   }
   
   // Save Initial Model
-  ofstream _of("matching0.model");
+  {
+  ofstream _of("model/matching0.model");
   Json::StyledWriter writer;
   Json::Value net_root;
   net_root["net_name"] = "matching_net";
@@ -520,7 +521,8 @@ int main(int argc, char *argv[]) {
   string json_file = writer.write(net_root);
   _of << json_file;
   _of.close();
-  
+  }
+
   // Begin Training 
   int max_iters = 10000;
   for (int iter = 0; iter < max_iters; ++iter) {
@@ -561,6 +563,23 @@ int main(int argc, char *argv[]) {
     cout << "###### Iter " << iter << ": error = " << nodes[20]->data_d1()[0] << endl;
   }
   
+  // Save Initial Model
+  {
+  ofstream _of("model/matching1.model");
+  Json::StyledWriter writer;
+  Json::Value net_root;
+  net_root["net_name"] = "matching_net";
+  Json::Value layers_root;
+  for (int i = 0; i < matching_net.size(); ++i) {
+	  Json::Value layer_root;
+	  matching_net[i]->SaveModel(layer_root);
+	  layers_root.append(layer_root);
+  }
+  net_root["layers"] = layers_root;
+  string json_file = writer.write(net_root);
+  _of << json_file;
+  _of.close();
+  }
   return 0;
 }
 

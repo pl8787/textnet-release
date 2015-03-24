@@ -57,37 +57,80 @@ class Layer {
     for (std::map<std::string, SettingV>::iterator it = setting.begin(); 
          it != setting.end(); ++it) {
       switch ( it->second.value_type ) {
-		  case SET_INT:
-			  {
-			    root[it->first] = it->second.i_val;
-			  }
-			  break;
-		  case SET_FLOAT:
-			  {
-                root[it->first] = it->second.f_val;
-			  }
-			  break;
-		  case SET_BOOL:
-			  {
-                root[it->first] = it->second.b_val;
-			  }
-			  break;
-		  case SET_STRING:
-			  {
-                root[it->first] = it->second.s_val;
-			  }
-			  break;
-		  case SET_MAP:
-			  {
-			    Json::Value sub_root;
-			    SaveSetting(*(it->second.m_val), sub_root);
-                root[it->first] = sub_root;
-			  }
-			  break;
-		  case SET_NONE:
-			  break;
-	  }
-	}
+        case SET_INT:
+          {
+            root[it->first] = it->second.i_val;
+          }
+          break;
+        case SET_FLOAT:
+          {
+            root[it->first] = it->second.f_val;
+          }
+          break;
+        case SET_BOOL:
+          {
+            root[it->first] = it->second.b_val;
+          }
+          break;
+        case SET_STRING:
+          {
+            root[it->first] = it->second.s_val;
+          }
+          break;
+        case SET_MAP:
+          {
+            Json::Value sub_root;
+            SaveSetting(*(it->second.m_val), sub_root);
+            root[it->first] = sub_root;
+          }
+          break;
+        case SET_NONE:
+          break;
+      }
+    }
+  }
+  
+  void LoadSetting(std::map<std::string, SettingV> &setting, Json::Value &root) {
+    Json::Value::Members member = root.getMemberNames();
+    for (Json::Value::Members::iterator it = member.begin();
+         it != member.end(); ++it) {
+      std::string name = *it;
+      Json::Value value = root[name];
+      switch (value.type()) {
+        case Json::intValue:
+          {
+            setting[name] = SettingV(value.asInt());
+          }
+          break;
+        case Json::realValue:
+          {
+            setting[name] = SettingV(value.asFloat());
+          }
+          break;
+        case Json::booleanValue:
+          {
+            setting[name] = SettingV(value.asBool());
+          }
+          break;
+        case Json::stringValue:
+          {
+            setting[name] = SettingV(value.asString());
+          }
+          break;
+        case Json::objectValue:
+          {
+            std::map<std::string, SettingV> *sub_setting = new std::map<std::string, SettingV>();
+            LoadSetting(*sub_setting, value);
+            setting[name] = SettingV(sub_setting);
+          }
+          break;
+        case Json::arrayValue:
+        case Json::nullValue:
+          break;
+        default:
+          break;
+      }
+    }
   }
 
   virtual void SaveModel(Json::Value &layer_root) {
@@ -102,19 +145,58 @@ class Layer {
     layer_root["setting"] = setting_root;
     
     // Set layer weights
+    Json::Value params_root;
     for (int i = 0; i < params.size(); ++i) {
       Json::Value param_root;
+      Json::Value param_value_root;
+      Json::Value param_shape_root;
+      
+      param_shape_root.append(params[i].data.size(0));
+      param_shape_root.append(params[i].data.size(1));
+      param_shape_root.append(params[i].data.size(2));
+      param_shape_root.append(params[i].data.size(3));
+      
       for (int j = 0; j < params[i].data.shape_.Size(); ++j) {
-        param_root.append(params[i].data.dptr_[j]);
+        param_value_root.append(params[i].data.dptr_[j]);
       }
-      char param_name[100] = "param";
-      param_name[5] = i + '0';
-      param_name[6] = '\0';
-      layer_root[param_name] = param_root;
+      
+      param_root["shape"] = param_shape_root;
+      param_root["value"] = param_value_root;
+      
+      params_root.append(param_root);
     }
+    layer_root["param"] = params_root;
   }
 
   virtual void LoadModel(Json::Value &layer_root) {
+    // Set layer type 
+    layer_type = layer_root["layer_type"].asInt();
+    layer_name = layer_root["layer_name"].asString();
+    layer_idx = layer_root["layer_idx"].asInt();
+    
+    // Set layer settings
+    Json::Value setting_root = layer_root["setting"];
+    LoadSetting(settings, setting_root);
+    
+    // Set layer weights
+    if (!layer_root["param"]) 
+      return;
+    Json::Value params_root = layer_root["param"];
+    params.resize(params_root.size());
+    
+    for (int i = 0; i < params_root.size(); ++i) {
+      Json::Value param_root = params_root[i];
+      Json::Value param_value_root = param_root["value"];
+      Json::Value param_shape_root = param_root["shape"];
+      
+      params[i].Resize(param_shape_root[0].asInt(), param_shape_root[1].asInt(), 
+                       param_shape_root[2].asInt(), param_shape_root[3].asInt(),
+                       true);
+                        
+      for (int j = 0; j < params[i].data.shape_.Size(); ++j) {
+        params[i].data.dptr_[j] = param_value_root[j].asFloat();
+      }
+    }
     
   }
   
@@ -141,6 +223,8 @@ class Layer {
   LayerType layer_type;
   std::string layer_name;
   int layer_idx;
+  std::vector<int> bottom_node;
+  std::vector<int> top_node;
   PhraseType phrase_type;
   mshadow::Random<xpu> *prnd_;
   
