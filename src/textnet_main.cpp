@@ -110,6 +110,31 @@ int main(int argc, char *argv[]) {
     }
   }
   
+  // Name the layers
+  matching_net[0]->layer_name = "textdata";
+  matching_net[1]->layer_name = "embedding";
+  matching_net[2]->layer_name = "split";
+  matching_net[3]->layer_name = "conv11";
+  matching_net[4]->layer_name = "conv12";
+  matching_net[5]->layer_name = "cross";
+  matching_net[6]->layer_name = "maxpool1";
+  matching_net[7]->layer_name = "relu1";
+  matching_net[8]->layer_name = "conv2";
+  matching_net[9]->layer_name = "maxpool2";
+  matching_net[10]->layer_name = "relu2";
+  matching_net[11]->layer_name = "conv3";
+  matching_net[12]->layer_name = "maxpool3";
+  matching_net[13]->layer_name = "relu3";
+  matching_net[14]->layer_name = "fc1";
+  matching_net[15]->layer_name = "relu4";
+  matching_net[16]->layer_name = "dropout";
+  matching_net[17]->layer_name = "fc2";
+  matching_net[18]->layer_name = "softmax";
+  
+  for (int i = 0; i < matching_net.size(); ++i) {
+    matching_net[i]->layer_idx = i;
+  }
+  
   // Name the nodes
   nodes[0]->node_name = "data";
   nodes[1]->node_name = "label";
@@ -132,7 +157,10 @@ int main(int argc, char *argv[]) {
   nodes[18]->node_name = "drop";
   nodes[19]->node_name = "fc2";
   nodes[20]->node_name = "loss";
-
+  
+  for (int i = 0; i < matching_net.size(); ++i) {
+    nodes[i]->node_idx = i;
+  }
 
   cout << "Total node count: " << nodes.size() << endl;
   
@@ -197,6 +225,68 @@ int main(int argc, char *argv[]) {
   bottom_vecs[18].push_back(nodes[19]);
   bottom_vecs[18].push_back(nodes[1]);
   top_vecs[18].push_back(nodes[20]);
+  
+  // Manual connect layers node name
+  // kTextData
+  matching_net[0]->top_nodes.push_back(nodes[0]->node_name);
+  matching_net[0]->top_nodes.push_back(nodes[1]->node_name);
+  // kEmbedding
+  matching_net[1]->bottom_nodes.push_back(nodes[0]->node_name);
+  matching_net[1]->top_nodes.push_back(nodes[2]->node_name);
+  // kSplit
+  matching_net[2]->bottom_nodes.push_back(nodes[2]->node_name);
+  matching_net[2]->top_nodes.push_back(nodes[3]->node_name);
+  matching_net[2]->top_nodes.push_back(nodes[4]->node_name);
+  // kConv
+  matching_net[3]->bottom_nodes.push_back(nodes[3]->node_name);
+  matching_net[3]->top_nodes.push_back(nodes[5]->node_name);
+  // kConv
+  matching_net[4]->bottom_nodes.push_back(nodes[4]->node_name);
+  matching_net[4]->top_nodes.push_back(nodes[6]->node_name);
+  // kCross
+  matching_net[5]->bottom_nodes.push_back(nodes[5]->node_name);
+  matching_net[5]->bottom_nodes.push_back(nodes[6]->node_name);
+  matching_net[5]->top_nodes.push_back(nodes[7]->node_name);
+  // kMaxPooling
+  matching_net[6]->bottom_nodes.push_back(nodes[7]->node_name);
+  matching_net[6]->top_nodes.push_back(nodes[8]->node_name);
+  // kRectifiedLinear 
+  matching_net[7]->bottom_nodes.push_back(nodes[8]->node_name);
+  matching_net[7]->top_nodes.push_back(nodes[9]->node_name);
+  // kConv 
+  matching_net[8]->bottom_nodes.push_back(nodes[9]->node_name);
+  matching_net[8]->top_nodes.push_back(nodes[10]->node_name);
+  // kMaxPooling
+  matching_net[9]->bottom_nodes.push_back(nodes[10]->node_name);
+  matching_net[9]->top_nodes.push_back(nodes[11]->node_name);
+  // kRectifiedLinear 
+  matching_net[10]->bottom_nodes.push_back(nodes[11]->node_name);
+  matching_net[10]->top_nodes.push_back(nodes[12]->node_name);
+  // kConv 
+  matching_net[11]->bottom_nodes.push_back(nodes[12]->node_name);
+  matching_net[11]->top_nodes.push_back(nodes[13]->node_name);
+  // kMaxPooling 
+  matching_net[12]->bottom_nodes.push_back(nodes[13]->node_name);
+  matching_net[12]->top_nodes.push_back(nodes[14]->node_name);
+  // kRectifiedLinear 
+  matching_net[13]->bottom_nodes.push_back(nodes[14]->node_name);
+  matching_net[13]->top_nodes.push_back(nodes[15]->node_name);
+  // kFullConnect
+  matching_net[14]->bottom_nodes.push_back(nodes[15]->node_name);
+  matching_net[14]->top_nodes.push_back(nodes[16]->node_name);
+  // kRectifiedLinear
+  matching_net[15]->bottom_nodes.push_back(nodes[16]->node_name);
+  matching_net[15]->top_nodes.push_back(nodes[17]->node_name);
+  // kDropout
+  matching_net[16]->bottom_nodes.push_back(nodes[17]->node_name);
+  matching_net[16]->top_nodes.push_back(nodes[18]->node_name);
+  // kFullConnect 
+  matching_net[17]->bottom_nodes.push_back(nodes[18]->node_name);
+  matching_net[17]->top_nodes.push_back(nodes[19]->node_name);
+  // kHingeLoss
+  matching_net[18]->bottom_nodes.push_back(nodes[19]->node_name);
+  matching_net[18]->bottom_nodes.push_back(nodes[1]->node_name);
+  matching_net[18]->top_nodes.push_back(nodes[20]->node_name);
   
   float base_lr = 0.01;
   float decay = 0.01;

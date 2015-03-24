@@ -25,7 +25,7 @@ struct Node {
   bool inited_data;
   bool inited_diff;
   std::string node_name;
-  int node_index;
+  int node_idx;
   bool need_diff;
   updater::Updater<xpu, 4>* updater_;
   initializer::Initializer<xpu, 4>* initializer_;
