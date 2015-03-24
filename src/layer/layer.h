@@ -1,6 +1,7 @@
 #ifndef TEXTNET_LAYER_LAYER_H_
 #define TEXTNET_LAYER_LAYER_H_
 
+#include <sstream>
 #include <vector>
 #include <map>
 #include <string>
@@ -9,6 +10,7 @@
 #include "node.h"
 #include "../utils/utils.h"
 #include "../utils/io.h"
+#include "../io/json/json.h"
 
 /*! \brief namespace of textnet */
 namespace textnet {
@@ -32,6 +34,7 @@ class Layer {
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
+    this->settings = setting;
     phrase_type = setting["phrase_type"].i_val;
     prnd_ = prnd;
   }
@@ -50,9 +53,70 @@ class Layer {
 
   virtual int ParamNodeNum() = 0;
 
-  virtual void SaveModel(utils::IStream &fo) {}
+  void SaveSetting(std::map<std::string, SettingV> &setting, Json::Value &root) {
+    for (std::map<std::string, SettingV>::iterator it = setting.begin(); 
+         it != setting.end(); ++it) {
+      switch ( it->second.value_type ) {
+		  case SET_INT:
+			  {
+			    root[it->first] = it->second.i_val;
+			  }
+			  break;
+		  case SET_FLOAT:
+			  {
+                root[it->first] = it->second.f_val;
+			  }
+			  break;
+		  case SET_BOOL:
+			  {
+                root[it->first] = it->second.b_val;
+			  }
+			  break;
+		  case SET_STRING:
+			  {
+                root[it->first] = it->second.s_val;
+			  }
+			  break;
+		  case SET_MAP:
+			  {
+			    Json::Value sub_root;
+			    SaveSetting(*(it->second.m_val), sub_root);
+                root[it->first] = sub_root;
+			  }
+			  break;
+		  case SET_NONE:
+			  break;
+	  }
+	}
+  }
 
-  virtual void LoadModel(utils::IStream &fi) {}
+  virtual void SaveModel(Json::Value &layer_root) {
+    // Set layer type
+    layer_root["layer_type"] = layer_type;
+    layer_root["layer_name"] = layer_name;
+    layer_root["layer_idx"] = layer_idx;
+    
+    // Set layer settings
+    Json::Value setting_root;
+    SaveSetting(settings, setting_root);
+    layer_root["setting"] = setting_root;
+    
+    // Set layer weights
+    for (int i = 0; i < params.size(); ++i) {
+      Json::Value param_root;
+      for (int j = 0; j < params[i].data.shape_.Size(); ++j) {
+        param_root.append(params[i].data.dptr_[j]);
+      }
+      char param_name[100] = "param";
+      param_name[5] = i + '0';
+      param_name[6] = '\0';
+      layer_root[param_name] = param_root;
+    }
+  }
+
+  virtual void LoadModel(Json::Value &layer_root) {
+    
+  }
   
   virtual LayerType GetLayerType() { return layer_type; }
   
@@ -71,6 +135,7 @@ class Layer {
  
  protected:
   std::vector<Node<xpu> > params;
+  std::map<std::string, SettingV> settings;
   std::vector<bool> prop_error;
   std::vector<bool> prop_grad;
   LayerType layer_type;

@@ -33,10 +33,10 @@ export NVCCFLAGS = --use_fast_math -g -O3 -ccbin $(CXX)
 
 
 # specify tensor path
-BIN = bin/textnet
-OBJ = layer_cpu.o initializer_cpu.o updater_cpu.o
-#  nnet_cpu.o data.o
-CUOBJ = layer_gpu.o initializer_gpu.o updater_gpu.o
+BIN = bin/textnet bin/grad_check
+OBJ = layer_cpu.o initializer_cpu.o updater_cpu.o checker_cpu.o io.o
+#  nnet_cpu.o 
+CUOBJ = layer_gpu.o initializer_gpu.o updater_gpu.o checker_gpu.o
 #  nnet_gpu.o
 
 all: $(BIN)
@@ -49,13 +49,19 @@ updater_cpu.o updater_gpu.o: src/updater/updater_impl.cpp src/updater/updater_im
   
 initializer_cpu.o initializer_gpu.o: src/initializer/initializer_impl.cpp src/initializer/initializer_impl.cu\
   src/initializer/*.hpp src/initializer/*.h src/utils/*.h
+  
+checker_cpu.o checker_gpu.o: src/checker/checker_impl.cpp src/checker/checker_impl.cu\
+  src/checker/*.hpp src/checker/*.h src/utils/*.h
+  
+io.o: src/io/jsoncpp.cpp src/io/json/*.*
 
 # nnet_cpu.o nnet_gpu.o: src/nnet/nnet_impl.cpp src/nnet/nnet_impl.cu src/layer/layer.h\
 	# src/updater/updater.h src/utils/*.h src/nnet/*.hpp src/nnet/*.h
 
-# data.o: src/io/data.cpp src/io/*.hpp
+
 
 bin/textnet: src/textnet_main.cpp $(OBJ) $(CUOBJ)
+bin/grad_check: src/grad_check.cpp $(OBJ) $(CUOBJ)
 
 $(BIN) :
 	$(CXX) $(CXXFLAGS)  -o $@ $(filter %.cpp %.o %.c %.a, $^) $(LDFLAGS)

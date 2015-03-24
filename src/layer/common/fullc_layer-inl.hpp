@@ -104,13 +104,6 @@ class FullConnectLayer : public Layer<xpu> {
       bottom_diff = dot(top_diff, this->params[0].data_d2());
     }
   }
-  
-  virtual void SaveModel(utils::IStream &fo) const {
-
-  }
-  virtual void LoadModel(utils::IStream &fi) {
-
-  }
 
  protected:
   /*! \brief random number generator */

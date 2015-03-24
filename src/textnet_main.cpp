@@ -2,6 +2,7 @@
 #define _CRT_SECURE_NO_DEPRECATE
 
 #include <iostream>
+#include <fstream>
 #include <ctime>
 #include <string>
 #include <cstring>
@@ -10,6 +11,7 @@
 #include <climits>
 
 #include "./layer/layer.h"
+#include "./io/json/json.h"
 #include "global.h"
 
 using namespace std;
@@ -196,8 +198,8 @@ int main(int argc, char *argv[]) {
   bottom_vecs[18].push_back(nodes[1]);
   top_vecs[18].push_back(nodes[20]);
   
-  float base_lr = 0.001;
-  float decay = 0.001;
+  float base_lr = 0.01;
+  float decay = 0.01;
   // Fill Settings vector
   vector<map<string, SettingV> > setting_vec;
   // kTextData
@@ -502,6 +504,22 @@ int main(int argc, char *argv[]) {
     matching_net[i]->Reshape(bottom_vecs[i], top_vecs[i]);
 	cout << "\tReshape" << endl;
   }
+  
+  // Save Initial Model
+  ofstream _of("matching0.model");
+  Json::StyledWriter writer;
+  Json::Value net_root;
+  net_root["net_name"] = "matching_net";
+  Json::Value layers_root;
+  for (int i = 0; i < matching_net.size(); ++i) {
+	  Json::Value layer_root;
+	  matching_net[i]->SaveModel(layer_root);
+	  layers_root.append(layer_root);
+  }
+  net_root["layers"] = layers_root;
+  string json_file = writer.write(net_root);
+  _of << json_file;
+  _of.close();
   
   // Begin Training 
   int max_iters = 10000;

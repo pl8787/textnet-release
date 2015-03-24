@@ -129,6 +129,8 @@ class ConvolutionLayer : public Layer<xpu> {
       bias_diff = sumall_except_dim<1>(top_diff);
     }
     
+	weight_diff = 0.0f;
+
     for (int i = 0; i < nbatch; ++i) {
       if (pad_x == 0 && pad_y == 0) {
         temp_col_ = unpack_patch2col(bottom_data[i], kernel_y, kernel_x, stride);
@@ -158,13 +160,6 @@ class ConvolutionLayer : public Layer<xpu> {
       
     }
       
-    
-  }
-  
-  virtual void SaveModel(utils::IStream &fo) const {
-    
-  }
-  virtual void LoadModel(utils::IStream &fi) {
     
   }
 
