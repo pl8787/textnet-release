@@ -75,6 +75,7 @@ void PrintTensor(const char * name, Tensor<cpu, 4> x) {
 int main(int argc, char *argv[]) {
   mshadow::Random<cpu> rnd(37);
   vector<Layer<cpu>*> matching_net;
+  vector<Layer<cpu>*> matching_net_test;
   vector<vector<Node<cpu>*> > bottom_vecs;
   vector<vector<Node<cpu>*> > top_vecs;
   vector<Node<cpu>*> nodes;
@@ -98,6 +99,9 @@ int main(int argc, char *argv[]) {
   matching_net.push_back(CreateLayer<cpu>(kDropout));
   matching_net.push_back(CreateLayer<cpu>(kFullConnect));
   matching_net.push_back(CreateLayer<cpu>(kSoftmax));
+  
+  matching_net_test = matching_net;
+  matching_net_test[0] = CreateLayer<cpu>(kTextData);
   
   for (int i = 0; i < matching_net.size(); ++i) {
     vector<Node<cpu>*> bottoms;
@@ -131,6 +135,9 @@ int main(int argc, char *argv[]) {
   matching_net[17]->layer_name = "fc2";
   matching_net[18]->layer_name = "softmax";
   
+  matching_net_test[0]->layer_name = "textdata_test";
+  matching_net_test[0]->layer_idx = 0;
+  
   for (int i = 0; i < matching_net.size(); ++i) {
     matching_net[i]->layer_idx = i;
   }
@@ -158,7 +165,7 @@ int main(int argc, char *argv[]) {
   nodes[19]->node_name = "fc2";
   nodes[20]->node_name = "loss";
   
-  for (int i = 0; i < matching_net.size(); ++i) {
+  for (int i = 0; i < nodes.size(); ++i) {
     nodes[i]->node_idx = i;
   }
 
@@ -287,6 +294,10 @@ int main(int argc, char *argv[]) {
   matching_net[18]->bottom_nodes.push_back(nodes[19]->node_name);
   matching_net[18]->bottom_nodes.push_back(nodes[1]->node_name);
   matching_net[18]->top_nodes.push_back(nodes[20]->node_name);
+  
+  // kTextData Test
+  matching_net_test[0]->top_nodes.push_back(nodes[0]->node_name);
+  matching_net_test[0]->top_nodes.push_back(nodes[1]->node_name);
   
   float base_lr = 0.01;
   float decay = 0.01;
@@ -582,18 +593,31 @@ int main(int argc, char *argv[]) {
     setting_vec.push_back(setting);
   }
   
+  // kTextData
+  {
+    map<string, SettingV> setting;
+    setting["data_file"] = SettingV("/home/pangliang/matching/data/msr_paraphrase_test_wid.txt");
+    setting["batch_size"] = SettingV(50);//1725);
+    setting["max_doc_len"] = SettingV(31);
+    setting["min_doc_len"] = SettingV(5);
+    setting_vec.push_back(setting);
+  }
+  
   cout << "Setting Vector Filled." << endl;
 
   // Set up Layers
   for (int i = 0; i < matching_net.size(); ++i) {
-	cout << "Begin set up layer " << i << endl;
+    cout << "Begin set up layer " << i << endl;
     matching_net[i]->PropAll();
-	cout << "\tPropAll" << endl;
+    cout << "\tPropAll" << endl;
     matching_net[i]->SetupLayer(setting_vec[i], bottom_vecs[i], top_vecs[i], &rnd);
-	cout << "\tSetup Layer" << endl;
+    cout << "\tSetup Layer" << endl;
     matching_net[i]->Reshape(bottom_vecs[i], top_vecs[i]);
-	cout << "\tReshape" << endl;
+    cout << "\tReshape" << endl;
   }
+  matching_net_test[0]->PropAll();
+  matching_net_test[0]->SetupLayer(setting_vec[setting_vec.size()-1], bottom_vecs[0], top_vecs[0], &rnd);
+  matching_net_test[0]->Reshape(bottom_vecs[0], top_vecs[0]);
   
   // Save Initial Model
   {
@@ -603,9 +627,9 @@ int main(int argc, char *argv[]) {
   net_root["net_name"] = "matching_net";
   Json::Value layers_root;
   for (int i = 0; i < matching_net.size(); ++i) {
-	  Json::Value layer_root;
-	  matching_net[i]->SaveModel(layer_root);
-	  layers_root.append(layer_root);
+      Json::Value layer_root;
+      matching_net[i]->SaveModel(layer_root);
+      layers_root.append(layer_root);
   }
   net_root["layers"] = layers_root;
   string json_file = writer.write(net_root);
@@ -616,41 +640,54 @@ int main(int argc, char *argv[]) {
   // Begin Training 
   int max_iters = 10000;
   for (int iter = 0; iter < max_iters; ++iter) {
-	cout << "Begin iter " << iter << endl;
+    cout << "Begin iter " << iter << endl;
     for (int i = 0; i < matching_net.size(); ++i) {
-	  //cout << "Forward layer " << i << endl;
+      //cout << "Forward layer " << i << endl;
       matching_net[i]->Forward(bottom_vecs[i], top_vecs[i]);
     }
-	
-	for (int i = 0; i < nodes.size(); ++i) {
-	  cout << "# Data " << nodes[i]->node_name << " : ";
+    
+    for (int i = 0; i < nodes.size(); ++i) {
+      cout << "# Data " << nodes[i]->node_name << " : ";
       for (int j = 0; j < 5; ++j) {
-		  cout << nodes[i]->data[0][0][0][j] << "\t";
-	  }
-	  cout << endl;
-	  cout << "# Diff " << nodes[i]->node_name << " : ";
+          cout << nodes[i]->data[0][0][0][j] << "\t";
+      }
+      cout << endl;
+      cout << "# Diff " << nodes[i]->node_name << " : ";
       for (int j = 0; j < 5; ++j) {
-		  cout << nodes[i]->diff[0][0][0][j] << "\t";
-	  }
-	  cout << endl;
-	}
+          cout << nodes[i]->diff[0][0][0][j] << "\t";
+      }
+      cout << endl;
+    }
 
     for (int i = matching_net.size()-1; i >= 0; --i) {
-	  //cout << "Backprop layer " << i << endl;
+      //cout << "Backprop layer " << i << endl;
       matching_net[i]->Backprop(bottom_vecs[i], top_vecs[i]);
     }
     for (int i = 0; i < matching_net.size(); ++i) {
       for (int j = 0; j < matching_net[i]->ParamNodeNum(); ++j) {
-		//cout << "Update param in layer " << i << " params " << j << endl;
-		cout << "param data" << i << " , " << j << ": " << matching_net[i]->GetParams()[j].data[0][0][0][0] << endl;
-		cout << "param diff" << i << " , " << j << ": " << matching_net[i]->GetParams()[j].diff[0][0][0][0] << endl;
+        //cout << "Update param in layer " << i << " params " << j << endl;
+        cout << "param data" << i << " , " << j << ": " << matching_net[i]->GetParams()[j].data[0][0][0][0] << endl;
+        cout << "param diff" << i << " , " << j << ": " << matching_net[i]->GetParams()[j].diff[0][0][0][0] << endl;
         matching_net[i]->GetParams()[j].Update();
-		cout << "param data" << i << " , " << j << ": " << matching_net[i]->GetParams()[j].data[0][0][0][0] << endl<<endl;
+        cout << "param data" << i << " , " << j << ": " << matching_net[i]->GetParams()[j].data[0][0][0][0] << endl<<endl;
       }
     }
     
     // Output informations
     cout << "###### Iter " << iter << ": error = " << nodes[20]->data_d1()[0] << endl;
+    
+    if (iter % 100 == 0) {
+      float loss = 0.0;
+      int max_test_iter = 34;
+      for (int test_iter = 0; test_iter < max_test_iter; ++test_iter) {
+        for (int i = 0; i < matching_net.size(); ++i) {
+          matching_net_test[i]->Forward(bottom_vecs[i], top_vecs[i]);
+        }
+        loss += nodes[20]->data_d1()[0];
+      }
+      loss /= max_test_iter;
+      cout << endl << "****** Test error = " << loss << endl;
+    }
   }
   
   // Save Initial Model
@@ -661,9 +698,9 @@ int main(int argc, char *argv[]) {
   net_root["net_name"] = "matching_net";
   Json::Value layers_root;
   for (int i = 0; i < matching_net.size(); ++i) {
-	  Json::Value layer_root;
-	  matching_net[i]->SaveModel(layer_root);
-	  layers_root.append(layer_root);
+      Json::Value layer_root;
+      matching_net[i]->SaveModel(layer_root);
+      layers_root.append(layer_root);
   }
   net_root["layers"] = layers_root;
   string json_file = writer.write(net_root);
