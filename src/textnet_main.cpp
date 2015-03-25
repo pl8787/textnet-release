@@ -327,7 +327,7 @@ int main(int argc, char *argv[]) {
   // kTextData
   {
     map<string, SettingV> setting;
-    setting["data_file"] = SettingV("/home/pangliang/matching/data/msr_paraphrase_train_wid.txt");
+    setting["data_file"] = SettingV("/home/pangliang/matching/data/msr_paraphrase_train_wid_dup.txt");
     setting["batch_size"] = SettingV(50);
     setting["max_doc_len"] = SettingV(31);
     setting["min_doc_len"] = SettingV(5);
@@ -636,11 +636,11 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < matching_net.size(); ++i) {
     cout << "Begin set up layer " << i << endl;
     matching_net[i]->PropAll();
-    cout << "\tPropAll" << endl;
+    // cout << "\tPropAll" << endl;
     matching_net[i]->SetupLayer(setting_vec[i], bottom_vecs[i], top_vecs[i], &rnd);
-    cout << "\tSetup Layer" << endl;
+    // cout << "\tSetup Layer" << endl;
     matching_net[i]->Reshape(bottom_vecs[i], top_vecs[i]);
-    cout << "\tReshape" << endl;
+    // cout << "\tReshape" << endl;
   }
   matching_net_test[0]->PropAll();
   matching_net_test[0]->SetupLayer(setting_vec[setting_vec.size()-2], bottom_vecs[0], top_vecs[0], &rnd);
@@ -669,7 +669,7 @@ int main(int argc, char *argv[]) {
   }
 
   // Begin Training 
-  int max_iters = 10000;
+  int max_iters = 4000;
   for (int iter = 0; iter < max_iters; ++iter) {
     cout << "Begin iter " << iter << endl;
     for (int i = 0; i < matching_net.size(); ++i) {
@@ -677,6 +677,7 @@ int main(int argc, char *argv[]) {
       matching_net[i]->Forward(bottom_vecs[i], top_vecs[i]);
     }
     
+#if 0
     for (int i = 0; i < nodes.size(); ++i) {
       cout << "# Data " << nodes[i]->node_name << " : ";
       for (int j = 0; j < 5; ++j) {
@@ -689,6 +690,7 @@ int main(int argc, char *argv[]) {
       }
       cout << endl;
     }
+#endif
 
     for (int i = matching_net.size()-1; i >= 0; --i) {
       //cout << "Backprop layer " << i << endl;
@@ -697,15 +699,15 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < matching_net.size(); ++i) {
       for (int j = 0; j < matching_net[i]->ParamNodeNum(); ++j) {
         //cout << "Update param in layer " << i << " params " << j << endl;
-        cout << "param data" << i << " , " << j << ": " << matching_net[i]->GetParams()[j].data[0][0][0][0] << endl;
-        cout << "param diff" << i << " , " << j << ": " << matching_net[i]->GetParams()[j].diff[0][0][0][0] << endl;
+        // cout << "param data" << i << " , " << j << ": " << matching_net[i]->GetParams()[j].data[0][0][0][0] << endl;
+        // cout << "param diff" << i << " , " << j << ": " << matching_net[i]->GetParams()[j].diff[0][0][0][0] << endl;
         matching_net[i]->GetParams()[j].Update();
-        cout << "param data" << i << " , " << j << ": " << matching_net[i]->GetParams()[j].data[0][0][0][0] << endl<<endl;
+        // cout << "param data" << i << " , " << j << ": " << matching_net[i]->GetParams()[j].data[0][0][0][0] << endl<<endl;
       }
     }
     
     // Output informations
-    cout << "###### Iter " << iter << ": error = " << nodes[20]->data_d1()[0] << endl;
+    cout << "###### Iter " << iter << ": error =\t" << nodes[20]->data_d1()[0] << endl;
     
     if (iter % 100 == 0) {
       float loss = 0.0;
@@ -721,8 +723,8 @@ int main(int argc, char *argv[]) {
       loss /= max_test_iter;
       acc /= max_test_iter;
       cout << endl;
-      cout << "****** Test loss = " << loss << endl;
-      cout << "****** Test accuracy = " << acc << endl;
+      cout << "****** Test loss =\t" << loss << endl;
+      cout << "****** Test accuracy =\t" << acc << endl;
     }
   }
   
