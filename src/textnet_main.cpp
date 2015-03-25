@@ -321,7 +321,7 @@ int main(int argc, char *argv[]) {
   matching_net_test[19]->top_nodes.push_back(nodes[21]->node_name);
   
   float base_lr = 0.01;
-  float ADA_GRAD_EPS = 0.0001;
+  float ADA_GRAD_EPS = 0.01;
   float decay = 0.01;
   // Fill Settings vector
   vector<map<string, SettingV> > setting_vec;
@@ -697,7 +697,7 @@ int main(int argc, char *argv[]) {
       matching_net[i]->Forward(bottom_vecs[i], top_vecs[i]);
     }
     
-#if 0
+#if 1
     for (int i = 0; i < nodes.size(); ++i) {
       cout << "# Data " << nodes[i]->node_name << " : ";
       for (int j = 0; j < 5; ++j) {
@@ -719,10 +719,10 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < matching_net.size(); ++i) {
       for (int j = 0; j < matching_net[i]->ParamNodeNum(); ++j) {
         //cout << "Update param in layer " << i << " params " << j << endl;
-        // cout << "param data" << i << " , " << j << ": " << matching_net[i]->GetParams()[j].data[0][0][0][0] << endl;
-        // cout << "param diff" << i << " , " << j << ": " << matching_net[i]->GetParams()[j].diff[0][0][0][0] << endl;
+         cout << "param data" << i << " , " << j << ": " << matching_net[i]->GetParams()[j].data[0][0][0][0] << endl;
+         cout << "param diff" << i << " , " << j << ": " << matching_net[i]->GetParams()[j].diff[0][0][0][0] << endl;
         matching_net[i]->GetParams()[j].Update();
-        // cout << "param data" << i << " , " << j << ": " << matching_net[i]->GetParams()[j].data[0][0][0][0] << endl<<endl;
+         cout << "param data" << i << " , " << j << ": " << matching_net[i]->GetParams()[j].data[0][0][0][0] << endl<<endl;
       }
     }
     
