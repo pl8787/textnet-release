@@ -14,6 +14,7 @@
 #include "./loss/hingeloss_layer-inl.hpp"
 #include "./loss/pairhingeloss_layer-inl.hpp"
 #include "./loss/softmax_layer-inl.hpp"
+#include "./loss/accuracy_layer-inl.hpp"
 
 namespace textnet {
 namespace layer {
@@ -35,6 +36,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kPairHingeLoss: return new PairHingeLossLayer<xpu>(kPairHingeLoss);
     case kTextData: return new TextDataLayer<xpu>(kTextData);
     case kSoftmax: return new SoftmaxLayer<xpu>(kSoftmax);
+    case kAccuracy: return new AccuracyLayer<xpu>(kAccuracy);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }

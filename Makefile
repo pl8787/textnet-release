@@ -25,7 +25,7 @@ LINKFLAGS += -fPIC $(COMMON_FLAGS) $(WARNINGS)
 LDFLAGS += $(foreach librarydir,$(LIBRARY_DIRS),-L$(librarydir)) \
         $(foreach library,$(LIBRARIES),-l$(library))
 
-CXXFLAGS += -Wall -g -O3 -msse3 -Wno-unknown-pragmas -funroll-loops -I../mshadow/
+CXXFLAGS += -Wall -g -O3 -msse3 -Wno-unknown-pragmas -funroll-loops -I./mshadow/
 
 LDFLAGS += -lm -lcudart -lcublas -lmkl_core -lmkl_intel_lp64 -lmkl_intel_thread -liomp5 -lpthread -lcurand -lz `pkg-config --libs opencv`
 
@@ -33,7 +33,7 @@ export NVCCFLAGS = --use_fast_math -g -O3 -ccbin $(CXX)
 
 
 # specify tensor path
-BIN = bin/textnet bin/grad_check
+BIN = bin/textnet bin/grad_check bin/textnet_test
 OBJ = layer_cpu.o initializer_cpu.o updater_cpu.o checker_cpu.o io.o
 #  nnet_cpu.o 
 CUOBJ = layer_gpu.o initializer_gpu.o updater_gpu.o checker_gpu.o
@@ -62,6 +62,7 @@ io.o: src/io/jsoncpp.cpp src/io/json/*.*
 
 bin/textnet: src/textnet_main.cpp $(OBJ) $(CUOBJ)
 bin/grad_check: src/grad_check.cpp $(OBJ) $(CUOBJ)
+bin/textnet_test: src/textnet_test.cpp $(OBJ) $(CUOBJ)
 
 $(BIN) :
 	$(CXX) $(CXXFLAGS)  -o $@ $(filter %.cpp %.o %.c %.a, $^) $(LDFLAGS)

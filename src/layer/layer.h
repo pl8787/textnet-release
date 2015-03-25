@@ -139,6 +139,18 @@ class Layer {
     layer_root["layer_name"] = layer_name;
     layer_root["layer_idx"] = layer_idx;
     
+    // Set bottom / top Nodes
+    Json::Value bottoms_root;
+    Json::Value tops_root;
+    for (int i = 0; i < bottom_nodes.size(); ++i) {
+      bottoms_root.append(bottom_nodes[i]);
+    }
+    for (int i = 0; i < top_nodes.size(); ++i) {
+      tops_root.append(top_nodes[i]);
+    }
+    layer_root["bottom_nodes"] = bottoms_root;
+    layer_root["top_nodes"] = tops_root;
+    
     // Set layer settings
     Json::Value setting_root;
     SaveSetting(settings, setting_root);
@@ -173,6 +185,16 @@ class Layer {
     layer_type = layer_root["layer_type"].asInt();
     layer_name = layer_root["layer_name"].asString();
     layer_idx = layer_root["layer_idx"].asInt();
+    
+    // Set bottom / top nodes
+    Json::Value bottoms_root = layer_root["bottom_nodes"];
+    Json::Value tops_root = layer_root["top_nodes"];
+    for (int i = 0; i < bottoms_root.size(); ++i) {
+      bottom_nodes.push_back(bottoms_root[i].asString());
+    }
+    for (int i = 0; i < tops_root.size(); ++i) {
+      top_nodes.push_back(tops_root[i].asString());
+    }
     
     // Set layer settings
     Json::Value setting_root = layer_root["setting"];
@@ -215,16 +237,19 @@ class Layer {
     return params;
   }
  
+  // For Debug
+  // If implement net.hpp move to protected
+  std::string layer_name;
+  int layer_idx;
+  std::vector<std::string> bottom_nodes;
+  std::vector<std::string> top_nodes; 
+ 
  protected:
   std::vector<Node<xpu> > params;
   std::map<std::string, SettingV> settings;
   std::vector<bool> prop_error;
   std::vector<bool> prop_grad;
   LayerType layer_type;
-  std::string layer_name;
-  int layer_idx;
-  std::vector<int> bottom_node;
-  std::vector<int> top_node;
   PhraseType phrase_type;
   mshadow::Random<xpu> *prnd_;
   
@@ -259,6 +284,7 @@ const int kL2Loss = 52;
 const int kMultiLogistic = 53;
 const int kHingeLoss = 54;
 const int kPairHingeLoss = 55;
+const int kAccuracy = 56;
 
 // Input Layer 71-
 const int kTextData = 71;
