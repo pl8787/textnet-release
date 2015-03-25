@@ -320,8 +320,9 @@ int main(int argc, char *argv[]) {
   matching_net_test[19]->bottom_nodes.push_back(nodes[1]->node_name);
   matching_net_test[19]->top_nodes.push_back(nodes[21]->node_name);
   
-  float base_lr = 0.01;
+  float base_lr = 0.0001;
   float decay = 0.01;
+  float eps = 0.0001;
   // Fill Settings vector
   vector<map<string, SettingV> > setting_vec;
   // kTextData
@@ -346,7 +347,9 @@ int main(int argc, char *argv[]) {
     setting["w_filler"] = SettingV(&w_setting);
       
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-      w_updater["updater_type"] = SettingV(updater::kSGD);
+      // w_updater["updater_type"] = SettingV(updater::kSGD);
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+	  w_updater["eps"] = SettingV(eps);
       w_updater["momentum"] = SettingV(0.0f);
       w_updater["lr"] = SettingV(base_lr);
       w_updater["decay"] = SettingV(decay);  
@@ -379,12 +382,16 @@ int main(int argc, char *argv[]) {
     setting["b_filler"] = SettingV(&b_setting);
 
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-      w_updater["updater_type"] = SettingV(updater::kSGD);
+      // w_updater["updater_type"] = SettingV(updater::kSGD);
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+	  w_updater["eps"] = SettingV(eps);
       w_updater["momentum"] = SettingV(0.0f);
       w_updater["lr"] = SettingV(base_lr);
       w_updater["decay"] = SettingV(decay);
     map<string, SettingV> &b_updater = *(new map<string, SettingV>());
-      b_updater["updater_type"] = SettingV(updater::kSGD);
+      // b_updater["updater_type"] = SettingV(updater::kSGD);
+      b_updater["updater_type"] = SettingV(updater::kAdagrad);
+	  b_updater["eps"] = SettingV(eps);
       b_updater["momentum"] = SettingV(0.0f);
       b_updater["lr"] = SettingV(base_lr);
       b_updater["decay"] = SettingV(decay);
@@ -413,12 +420,16 @@ int main(int argc, char *argv[]) {
     setting["b_filler"] = SettingV(&b_setting);
 
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-      w_updater["updater_type"] = SettingV(updater::kSGD);
+      // w_updater["updater_type"] = SettingV(updater::kSGD);
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+	  w_updater["eps"] = SettingV(eps);
       w_updater["momentum"] = SettingV(0.0f);
       w_updater["lr"] = SettingV(base_lr);
       w_updater["decay"] = SettingV(decay);
     map<string, SettingV> &b_updater = *(new map<string, SettingV>());
-      b_updater["updater_type"] = SettingV(updater::kSGD);
+      //b_updater["updater_type"] = SettingV(updater::kSGD);
+      b_updater["updater_type"] = SettingV(updater::kAdagrad);
+	  b_updater["eps"] = SettingV(eps);
       b_updater["momentum"] = SettingV(0.0f);
       b_updater["lr"] = SettingV(base_lr);
       b_updater["decay"] = SettingV(decay);
@@ -465,12 +476,16 @@ int main(int argc, char *argv[]) {
     setting["b_filler"] = SettingV(&b_setting);
 
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-      w_updater["updater_type"] = SettingV(updater::kSGD);
+      // w_updater["updater_type"] = SettingV(updater::kSGD);
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+	  w_updater["eps"] = SettingV(eps);
       w_updater["momentum"] = SettingV(0.0f);
       w_updater["lr"] = SettingV(base_lr);
       w_updater["decay"] = SettingV(decay);
     map<string, SettingV> &b_updater = *(new map<string, SettingV>());
-      b_updater["updater_type"] = SettingV(updater::kSGD);
+      // b_updater["updater_type"] = SettingV(updater::kSGD);
+      b_updater["updater_type"] = SettingV(updater::kAdagrad);
+	  b_updater["eps"] = SettingV(eps);
       b_updater["momentum"] = SettingV(0.0f);
       b_updater["lr"] = SettingV(base_lr);
       b_updater["decay"] = SettingV(decay);
@@ -512,12 +527,16 @@ int main(int argc, char *argv[]) {
     setting["b_filler"] = SettingV(&b_setting);
 
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-      w_updater["updater_type"] = SettingV(updater::kSGD);
+      // w_updater["updater_type"] = SettingV(updater::kSGD);
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+	  w_updater["eps"] = SettingV(eps);
       w_updater["momentum"] = SettingV(0.0f);
       w_updater["lr"] = SettingV(base_lr);
       w_updater["decay"] = SettingV(decay);
     map<string, SettingV> &b_updater = *(new map<string, SettingV>());
-      b_updater["updater_type"] = SettingV(updater::kSGD);
+      // b_updater["updater_type"] = SettingV(updater::kSGD);
+      b_updater["updater_type"] = SettingV(updater::kAdagrad);
+	  b_updater["eps"] = SettingV(eps);
       b_updater["momentum"] = SettingV(0.0f);
       b_updater["lr"] = SettingV(base_lr);
       b_updater["decay"] = SettingV(decay);
@@ -554,12 +573,16 @@ int main(int argc, char *argv[]) {
     setting["b_filler"] = SettingV(&b_setting);
 
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-      w_updater["updater_type"] = SettingV(updater::kSGD);
+      // w_updater["updater_type"] = SettingV(updater::kSGD);
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+	  w_updater["eps"] = SettingV(eps);
       w_updater["momentum"] = SettingV(0.0f);
       w_updater["lr"] = SettingV(base_lr);
       w_updater["decay"] = SettingV(decay);
     map<string, SettingV> &b_updater = *(new map<string, SettingV>());
-      b_updater["updater_type"] = SettingV(updater::kSGD);
+      // b_updater["updater_type"] = SettingV(updater::kSGD);
+      b_updater["updater_type"] = SettingV(updater::kAdagrad);
+	  b_updater["eps"] = SettingV(eps);
       b_updater["momentum"] = SettingV(0.0f);
       b_updater["lr"] = SettingV(base_lr);
       b_updater["decay"] = SettingV(decay);
@@ -594,12 +617,16 @@ int main(int argc, char *argv[]) {
     setting["b_filler"] = SettingV(&b_setting);
 
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-      w_updater["updater_type"] = SettingV(updater::kSGD);
+      // w_updater["updater_type"] = SettingV(updater::kSGD);
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+	  w_updater["eps"] = SettingV(eps);
       w_updater["momentum"] = SettingV(0.0f);
       w_updater["lr"] = SettingV(base_lr);
       w_updater["decay"] = SettingV(decay);
     map<string, SettingV> &b_updater = *(new map<string, SettingV>());
-      b_updater["updater_type"] = SettingV(updater::kSGD);
+      // b_updater["updater_type"] = SettingV(updater::kSGD);
+      b_updater["updater_type"] = SettingV(updater::kAdagrad);
+	  b_updater["eps"] = SettingV(eps);
       b_updater["momentum"] = SettingV(0.0f);
       b_updater["lr"] = SettingV(base_lr);
       b_updater["decay"] = SettingV(decay);
@@ -699,10 +726,10 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < matching_net.size(); ++i) {
       for (int j = 0; j < matching_net[i]->ParamNodeNum(); ++j) {
         //cout << "Update param in layer " << i << " params " << j << endl;
-        // cout << "param data" << i << " , " << j << ": " << matching_net[i]->GetParams()[j].data[0][0][0][0] << endl;
-        // cout << "param diff" << i << " , " << j << ": " << matching_net[i]->GetParams()[j].diff[0][0][0][0] << endl;
+        //cout << "param data" << i << " , " << j << ": " << matching_net[i]->GetParams()[j].data[0][0][0][0] << endl;
+        //cout << "param diff" << i << " , " << j << ": " << matching_net[i]->GetParams()[j].diff[0][0][0][0] << endl;
         matching_net[i]->GetParams()[j].Update();
-        // cout << "param data" << i << " , " << j << ": " << matching_net[i]->GetParams()[j].data[0][0][0][0] << endl<<endl;
+        //cout << "param data" << i << " , " << j << ": " << matching_net[i]->GetParams()[j].data[0][0][0][0] << endl<<endl;
       }
     }
     
@@ -730,7 +757,7 @@ int main(int argc, char *argv[]) {
   
   // Save Initial Model
   {
-  ofstream _of("model/matching1.model");
+  ofstream _of("model/matching2.model");
   Json::StyledWriter writer;
   Json::Value net_root;
   net_root["net_name"] = "matching_net";
