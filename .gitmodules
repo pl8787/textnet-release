@@ -1,3 +1,3 @@
 [submodule "mshadow"]
 	path = mshadow
-	url = git@github.com:pl8787/mshadow.git
+	url = https://github.com/pl8787/mshadow.git
