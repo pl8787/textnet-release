@@ -102,6 +102,7 @@ int main(int argc, char *argv[]) {
   
   matching_net_test = matching_net;
   matching_net_test[0] = CreateLayer<cpu>(kTextData);
+  matching_net_test.push_back(CreateLayer<cpu>(kAccuracy));
   
   for (int i = 0; i < matching_net.size(); ++i) {
     vector<Node<cpu>*> bottoms;
@@ -112,6 +113,14 @@ int main(int argc, char *argv[]) {
       Node<cpu>* node = new Node<cpu>();
       nodes.push_back(node);
     }
+  }
+  
+  {
+    vector<Node<cpu>*> bottoms;
+    vector<Node<cpu>*> tops;
+    bottom_vecs.push_back(bottoms);
+    top_vecs.push_back(tops);
+    nodes.push_back(new Node<cpu>());
   }
   
   // Name the layers
@@ -137,6 +146,8 @@ int main(int argc, char *argv[]) {
   
   matching_net_test[0]->layer_name = "textdata_test";
   matching_net_test[0]->layer_idx = 0;
+  matching_net_test[19]->layer_name = "accuracy_test";
+  matching_net_test[19]->layer_idx = 19;
   
   for (int i = 0; i < matching_net.size(); ++i) {
     matching_net[i]->layer_idx = i;
@@ -164,6 +175,8 @@ int main(int argc, char *argv[]) {
   nodes[18]->node_name = "drop";
   nodes[19]->node_name = "fc2";
   nodes[20]->node_name = "loss";
+  
+  nodes[21]->node_name = "acc";
   
   for (int i = 0; i < nodes.size(); ++i) {
     nodes[i]->node_idx = i;
@@ -233,6 +246,11 @@ int main(int argc, char *argv[]) {
   bottom_vecs[18].push_back(nodes[1]);
   top_vecs[18].push_back(nodes[20]);
   
+  //kAccuracy
+  bottom_vecs[19].push_back(nodes[19]);
+  bottom_vecs[19].push_back(nodes[1]);
+  top_vecs[19].push_back(nodes[21]);
+  
   // Manual connect layers node name
   // kTextData
   matching_net[0]->top_nodes.push_back(nodes[0]->node_name);
@@ -298,6 +316,9 @@ int main(int argc, char *argv[]) {
   // kTextData Test
   matching_net_test[0]->top_nodes.push_back(nodes[0]->node_name);
   matching_net_test[0]->top_nodes.push_back(nodes[1]->node_name);
+  matching_net_test[19]->bottom_nodes.push_back(nodes[19]->node_name);
+  matching_net_test[19]->bottom_nodes.push_back(nodes[1]->node_name);
+  matching_net_test[19]->top_nodes.push_back(nodes[21]->node_name);
   
   float base_lr = 0.01;
   float decay = 0.01;
@@ -602,6 +623,12 @@ int main(int argc, char *argv[]) {
     setting["min_doc_len"] = SettingV(5);
     setting_vec.push_back(setting);
   }
+  // kAccuracy
+  {
+    map<string, SettingV> setting;
+    setting["topk"] = SettingV(1);
+    setting_vec.push_back(setting);
+  }
   
   cout << "Setting Vector Filled." << endl;
 
@@ -616,8 +643,12 @@ int main(int argc, char *argv[]) {
     cout << "\tReshape" << endl;
   }
   matching_net_test[0]->PropAll();
-  matching_net_test[0]->SetupLayer(setting_vec[setting_vec.size()-1], bottom_vecs[0], top_vecs[0], &rnd);
+  matching_net_test[0]->SetupLayer(setting_vec[setting_vec.size()-2], bottom_vecs[0], top_vecs[0], &rnd);
   matching_net_test[0]->Reshape(bottom_vecs[0], top_vecs[0]);
+  
+  matching_net_test[19]->PropAll();
+  matching_net_test[19]->SetupLayer(setting_vec[setting_vec.size()-1], bottom_vecs[19], top_vecs[19], &rnd);
+  matching_net_test[19]->Reshape(bottom_vecs[19], top_vecs[19]);
   
   // Save Initial Model
   {
@@ -678,15 +709,20 @@ int main(int argc, char *argv[]) {
     
     if (iter % 100 == 0) {
       float loss = 0.0;
+      float acc = 0.0;
       int max_test_iter = 34;
       for (int test_iter = 0; test_iter < max_test_iter; ++test_iter) {
-        for (int i = 0; i < matching_net.size(); ++i) {
+        for (int i = 0; i < matching_net_test.size(); ++i) {
           matching_net_test[i]->Forward(bottom_vecs[i], top_vecs[i]);
         }
         loss += nodes[20]->data_d1()[0];
+        acc += nodes[21]->data_d1()[0];
       }
       loss /= max_test_iter;
-      cout << endl << "****** Test error = " << loss << endl;
+      acc /= max_test_iter;
+      cout << endl;
+      cout << "****** Test loss = " << loss << endl;
+      cout << "****** Test accuracy = " << acc << endl;
     }
   }
   

@@ -81,8 +81,8 @@ void TestCrossLayer(mshadow::Random<cpu>* prnd) {
   bottoms.push_back(&bottom2);
   tops.push_back(&top);
 
-  bottom1.Resize(2, 1, 1, 5);
-  bottom2.Resize(2, 1, 1, 5);
+  bottom1.Resize(2, 1, 5, 1);
+  bottom2.Resize(2, 1, 5, 1);
   bottom1.data = 1.0;
   bottom2.data = 2.0;
 
@@ -164,6 +164,49 @@ void TestHingeLossLayer(mshadow::Random<cpu>* prnd) {
   layer_hingeloss->Reshape(bottoms, tops);
   layer_hingeloss->Forward(bottoms, tops);
   layer_hingeloss->Backprop(bottoms, tops);
+  
+  PrintTensor("top data", top.data);
+  PrintTensor("bottom diff", bottom0.diff);
+}
+
+void TestAccuracyLayer(mshadow::Random<cpu>* prnd) {
+  Node<cpu> bottom0;
+  Node<cpu> bottom1;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom0);
+  bottoms.push_back(&bottom1);
+  tops.push_back(&top);
+  
+  bottom0.Resize(Shape4(4,2,1,1));
+  bottom1.Resize(Shape4(4,1,1,1));
+
+  bottom0.data[0][0][0][0] = 0.2;
+  bottom0.data[0][1][0][0] = 0.8;
+  bottom0.data[1][0][0][0] = 0.3;
+  bottom0.data[1][1][0][0] = 0.7;
+  bottom0.data[2][0][0][0] = 0.9;
+  bottom0.data[2][1][0][0] = 0.1;
+  bottom0.data[3][0][0][0] = 0.7;
+  bottom0.data[3][1][0][0] = 0.3;
+
+  bottom1.data[0][0][0][0] = 1;
+  bottom1.data[1][0][0][0] = 0;
+  bottom1.data[2][0][0][0] = 1;
+  bottom1.data[3][0][0][0] = 0;
+  
+  map<string, SettingV> setting;
+  setting["topk"] = SettingV(1);
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_acc = CreateLayer<cpu>(kAccuracy);
+  layer_acc->PropAll();
+  layer_acc->SetupLayer(setting, bottoms, tops, prnd);
+  layer_acc->Reshape(bottoms, tops);
+  layer_acc->Forward(bottoms, tops);
+  layer_acc->Backprop(bottoms, tops);
   
   PrintTensor("top data", top.data);
   PrintTensor("bottom diff", bottom0.diff);
@@ -468,7 +511,8 @@ int main(int argc, char *argv[]) {
   //TestPoolLayer(&rnd);
   //TestCrossLayer(&rnd);
   //TestDropoutLayer(&rnd);
-  TestHingeLossLayer(&rnd);
+  //TestHingeLossLayer(&rnd);
+  TestAccuracyLayer(&rnd);
   return 0;
 }
 
