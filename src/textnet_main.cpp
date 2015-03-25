@@ -321,13 +321,16 @@ int main(int argc, char *argv[]) {
   matching_net_test[19]->top_nodes.push_back(nodes[21]->node_name);
   
   float base_lr = 0.01;
+  float ADA_GRAD_EPS = 0.0001;
   float decay = 0.01;
   // Fill Settings vector
   vector<map<string, SettingV> > setting_vec;
   // kTextData
   {
     map<string, SettingV> setting;
-    setting["data_file"] = SettingV("/home/pangliang/matching/data/msr_paraphrase_train_wid_dup.txt");
+    // orc
+    // setting["data_file"] = SettingV("/home/pangliang/matching/data/msr_paraphrase_train_wid_dup.txt");
+    setting["data_file"] = SettingV("/home/wsx/repo.other/textnet/data/msr_paraphrase_train_wid_dup.txt");
     setting["batch_size"] = SettingV(50);
     setting["max_doc_len"] = SettingV(31);
     setting["min_doc_len"] = SettingV(5);
@@ -336,7 +339,9 @@ int main(int argc, char *argv[]) {
   // kEmbedding
   {
     map<string, SettingV> setting;
-    setting["embedding_file"] = SettingV("/home/pangliang/matching/data/wikicorp_50_msr.txt");
+    // orc
+    // setting["embedding_file"] = SettingV("/home/pangliang/matching/data/wikicorp_50_msr.txt");
+    setting["embedding_file"] = SettingV("/home/wsx/repo.other/textnet/data/wikicorp_50_msr.txt");
     setting["word_count"] = SettingV(14727);
     setting["feat_size"] = SettingV(50);
       
@@ -346,8 +351,9 @@ int main(int argc, char *argv[]) {
     setting["w_filler"] = SettingV(&w_setting);
       
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-      w_updater["updater_type"] = SettingV(updater::kSGD);
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
       w_updater["momentum"] = SettingV(0.0f);
+      w_updater["eps"] = SettingV(ADA_GRAD_EPS);
       w_updater["lr"] = SettingV(base_lr);
       w_updater["decay"] = SettingV(decay);  
     setting["w_updater"] = SettingV(&w_updater);
@@ -379,12 +385,14 @@ int main(int argc, char *argv[]) {
     setting["b_filler"] = SettingV(&b_setting);
 
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-      w_updater["updater_type"] = SettingV(updater::kSGD);
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["eps"] = SettingV(ADA_GRAD_EPS);
       w_updater["momentum"] = SettingV(0.0f);
       w_updater["lr"] = SettingV(base_lr);
       w_updater["decay"] = SettingV(decay);
     map<string, SettingV> &b_updater = *(new map<string, SettingV>());
-      b_updater["updater_type"] = SettingV(updater::kSGD);
+      b_updater["updater_type"] = SettingV(updater::kAdagrad);
+      b_updater["eps"] = SettingV(ADA_GRAD_EPS);
       b_updater["momentum"] = SettingV(0.0f);
       b_updater["lr"] = SettingV(base_lr);
       b_updater["decay"] = SettingV(decay);
@@ -413,12 +421,14 @@ int main(int argc, char *argv[]) {
     setting["b_filler"] = SettingV(&b_setting);
 
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-      w_updater["updater_type"] = SettingV(updater::kSGD);
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["eps"] = SettingV(ADA_GRAD_EPS);
       w_updater["momentum"] = SettingV(0.0f);
       w_updater["lr"] = SettingV(base_lr);
       w_updater["decay"] = SettingV(decay);
     map<string, SettingV> &b_updater = *(new map<string, SettingV>());
-      b_updater["updater_type"] = SettingV(updater::kSGD);
+      b_updater["updater_type"] = SettingV(updater::kAdagrad);
+      b_updater["eps"] = SettingV(ADA_GRAD_EPS);
       b_updater["momentum"] = SettingV(0.0f);
       b_updater["lr"] = SettingV(base_lr);
       b_updater["decay"] = SettingV(decay);
@@ -465,12 +475,14 @@ int main(int argc, char *argv[]) {
     setting["b_filler"] = SettingV(&b_setting);
 
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-      w_updater["updater_type"] = SettingV(updater::kSGD);
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["eps"] = SettingV(ADA_GRAD_EPS);
       w_updater["momentum"] = SettingV(0.0f);
       w_updater["lr"] = SettingV(base_lr);
       w_updater["decay"] = SettingV(decay);
     map<string, SettingV> &b_updater = *(new map<string, SettingV>());
-      b_updater["updater_type"] = SettingV(updater::kSGD);
+      b_updater["updater_type"] = SettingV(updater::kAdagrad);
+      b_updater["eps"] = SettingV(ADA_GRAD_EPS);
       b_updater["momentum"] = SettingV(0.0f);
       b_updater["lr"] = SettingV(base_lr);
       b_updater["decay"] = SettingV(decay);
@@ -512,12 +524,14 @@ int main(int argc, char *argv[]) {
     setting["b_filler"] = SettingV(&b_setting);
 
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-      w_updater["updater_type"] = SettingV(updater::kSGD);
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["eps"] = SettingV(ADA_GRAD_EPS);
       w_updater["momentum"] = SettingV(0.0f);
       w_updater["lr"] = SettingV(base_lr);
       w_updater["decay"] = SettingV(decay);
     map<string, SettingV> &b_updater = *(new map<string, SettingV>());
-      b_updater["updater_type"] = SettingV(updater::kSGD);
+      b_updater["updater_type"] = SettingV(updater::kAdagrad);
+      b_updater["eps"] = SettingV(ADA_GRAD_EPS);
       b_updater["momentum"] = SettingV(0.0f);
       b_updater["lr"] = SettingV(base_lr);
       b_updater["decay"] = SettingV(decay);
@@ -554,12 +568,14 @@ int main(int argc, char *argv[]) {
     setting["b_filler"] = SettingV(&b_setting);
 
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-      w_updater["updater_type"] = SettingV(updater::kSGD);
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["eps"] = SettingV(ADA_GRAD_EPS);
       w_updater["momentum"] = SettingV(0.0f);
       w_updater["lr"] = SettingV(base_lr);
       w_updater["decay"] = SettingV(decay);
     map<string, SettingV> &b_updater = *(new map<string, SettingV>());
-      b_updater["updater_type"] = SettingV(updater::kSGD);
+      b_updater["updater_type"] = SettingV(updater::kAdagrad);
+      b_updater["eps"] = SettingV(ADA_GRAD_EPS);
       b_updater["momentum"] = SettingV(0.0f);
       b_updater["lr"] = SettingV(base_lr);
       b_updater["decay"] = SettingV(decay);
@@ -594,12 +610,14 @@ int main(int argc, char *argv[]) {
     setting["b_filler"] = SettingV(&b_setting);
 
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-      w_updater["updater_type"] = SettingV(updater::kSGD);
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["eps"] = SettingV(ADA_GRAD_EPS);
       w_updater["momentum"] = SettingV(0.0f);
       w_updater["lr"] = SettingV(base_lr);
       w_updater["decay"] = SettingV(decay);
     map<string, SettingV> &b_updater = *(new map<string, SettingV>());
-      b_updater["updater_type"] = SettingV(updater::kSGD);
+      b_updater["updater_type"] = SettingV(updater::kAdagrad);
+      b_updater["eps"] = SettingV(ADA_GRAD_EPS);
       b_updater["momentum"] = SettingV(0.0f);
       b_updater["lr"] = SettingV(base_lr);
       b_updater["decay"] = SettingV(decay);
@@ -617,7 +635,9 @@ int main(int argc, char *argv[]) {
   // kTextData
   {
     map<string, SettingV> setting;
-    setting["data_file"] = SettingV("/home/pangliang/matching/data/msr_paraphrase_test_wid.txt");
+    // orc
+    // setting["data_file"] = SettingV("/home/pangliang/matching/data/msr_paraphrase_test_wid.txt");
+    setting["data_file"] = SettingV("/home/wsx/repo.other/textnet/data/msr_paraphrase_test_wid.txt");
     setting["batch_size"] = SettingV(50);//1725);
     setting["max_doc_len"] = SettingV(31);
     setting["min_doc_len"] = SettingV(5);

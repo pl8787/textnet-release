@@ -1,5 +1,5 @@
-#ifndef TEXTNET_SGD_UPDATER_INL_HPP_
-#define TEXTNET_SGD_UPDATER_INL_HPP_
+#ifndef TEXTNET_ADAGRAD_UPDATER_INL_HPP_
+#define TEXTNET_ADAGRAD_UPDATER_INL_HPP_
 
 #include <iostream>
 #include <mshadow/tensor.h>
@@ -9,15 +9,15 @@ namespace textnet {
 namespace updater {
 
 template<typename xpu, int dim>
-class AdaGradUpdater : public Updater<xpu, dim>{
+class AdagradUpdater : public Updater<xpu, dim>{
  public:
-  AdaGradUpdater(std::map<std::string, SettingV> &setting, 
+  AdagradUpdater(std::map<std::string, SettingV> &setting, 
                       mshadow::Random<xpu>* prnd) {
     this->prnd_ = prnd;
 	this->is_sparse = false;
     SetupUpdater(setting);
   }
-  virtual ~AdaUpdater(void) {}
+  virtual ~AdagradUpdater(void) {}
   
   virtual void SetupUpdater(std::map<std::string, SettingV> &setting) {
     this->updater_type = setting["updater_type"].i_val;
@@ -31,14 +31,18 @@ class AdaGradUpdater : public Updater<xpu, dim>{
 	// wd = 0.0;
 	// lr = base_lr;
   }
-
+  struct square_root {
+    MSHADOW_XINLINE static real_t Map(real_t a) {
+        return sqrt(a);
+    }
+  };
   virtual void Update(mshadow::Tensor<xpu, dim> data, 
                       mshadow::Tensor<xpu, dim> diff) {
 
     iteration %= maxIteration;
     if (iteration == 0) {
       sumGradSquare.Resize(data.shape_, 0);
-      adaGrad.Resize(data.shape_, 0);
+      // adaGrad.Resize(data.shape_, 0);
     }
     ++iteration;
                         
@@ -47,7 +51,7 @@ class AdaGradUpdater : public Updater<xpu, dim>{
 
     // mshadow::Tensor<xpu, dim> ada();
     // adaGrad = diff / (F<square_root>(sumGradSquare) + eps);
-    data -= lr * (diff / (F<square_root>(sumGradSquare) + eps));
+    data -= lr * (diff / (mshadow::expr::F<square_root>(sumGradSquare) + eps));
     // adaGrad += eps;
     // data -= lr * adaGrad;
     
@@ -75,11 +79,12 @@ class AdaGradUpdater : public Updater<xpu, dim>{
       w_idx = idx[i];
       sumGradSquare[w_idx] += diff[i] * diff[i];
 
-      data[w_idx] -= (lr * diff[i]) / (F<square_root>(sumGradSquare[w_idx]) + eps);
+      data.Slice(w_idx, w_idx+1) -= (lr * diff.Slice(i, i+1)) /  \
+          (mshadow::expr::F<square_root>(sumGradSquare.Slice(w_idx, w_idx+1)) + eps);
       // adaGrad[w_idx] = diff[i] / (F<square_root>(sumGradSquare[w_idx]) + eps);
       // data[w_idx] -= lr * adaGrad[w_idx]; 
     }
-  
+  }
  protected: 
   // float momentum;
   // mshadow::TensorContainer<xpu, dim> history;
