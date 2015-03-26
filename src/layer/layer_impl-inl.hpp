@@ -10,6 +10,7 @@
 #include "./common/cross_layer-inl.hpp"
 #include "./common/split_layer-inl.hpp"
 #include "./common/dropout_layer-inl.hpp"
+#include "./common/match_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./loss/hingeloss_layer-inl.hpp"
 #include "./loss/pairhingeloss_layer-inl.hpp"
@@ -37,6 +38,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kTextData: return new TextDataLayer<xpu>(kTextData);
     case kSoftmax: return new SoftmaxLayer<xpu>(kSoftmax);
     case kAccuracy: return new AccuracyLayer<xpu>(kAccuracy);
+    case kMatch: return new MatchLayer<xpu>(kMatch);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }

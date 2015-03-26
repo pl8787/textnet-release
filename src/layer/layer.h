@@ -277,6 +277,7 @@ const int kChConcat = 19;
 const int kSplit = 20;
 const int kEmbedding = 21;
 const int kCross = 22;
+const int kMatch = 23;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;

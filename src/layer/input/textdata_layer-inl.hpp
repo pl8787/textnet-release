@@ -44,7 +44,7 @@ class TextDataLayer : public Layer<xpu>{
   }
   
   void ReadTextData() {
-    utils::Printf("Open data file: %s\n", data_file.c_str());	
+    utils::Printf("Open data file: %s\n", data_file.c_str());    
     std::vector<std::string> lines;
     std::ifstream fin(data_file.c_str());
     std::string s;
@@ -60,14 +60,14 @@ class TextDataLayer : public Layer<xpu>{
     label_set.Resize(mshadow::Shape1(line_count), 0);
     data_set = -1;
     
-	utils::Printf("Line count in file: %d\n", line_count);
+    utils::Printf("Line count in file: %d\n", line_count);
 
     std::istringstream iss;
     int len_s1 = 0;
     int len_s2 = 0;
     for (int i = 0; i < line_count; ++i) {
       iss.clear();
-	    iss.seekg(0, iss.beg);
+        iss.seekg(0, iss.beg);
       iss.str(lines[i]);
       iss >> label_set[i] >> len_s1 >> len_s2;
       for (int j = 0; j < len_s1; ++j) {
