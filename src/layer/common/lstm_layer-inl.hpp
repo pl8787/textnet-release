@@ -1,5 +1,5 @@
-#ifndef TEXTNET_LAYER_CONVOLUTION_LAYER_INL_HPP_
-#define TEXTNET_LAYER_CONVOLUTION_LAYER_INL_HPP_
+#ifndef TEXTNET_LAYER_LSTM_LAYER_INL_HPP_
+#define TEXTNET_LAYER_LSTM_LAYER_INL_HPP_
 
 #include <iostream>
 
@@ -98,16 +98,39 @@ class LstmLayer : public Layer<xpu> {
       return;
   }
 
-  virtual void ForwardOneStep(mshadow::Tensor<xpu, 2> 
+  typedef mshadow::Tensor<xpu, 1> Tensor1D;
+  typedef mshadow::Tensor<xpu, 2> Tensor2D;
+  typedef mshadow::Tensor<xpu, 3> Tensor3D;
+  typedef mshadow::Tensor<xpu, 4> Tensor4D;
+
+  virtual void ForwardOneStep(Tensor1D pre_c, 
+                              Tensor1D pre_h,
+                              Tensor1D x,
+                              Tensor1D cur_g,
+                              Tensor1D cur_c,
+                              Tensor1D cur_h) {
+      assert(false); // check again
+      Tensor2D w_data = this->params[0].data_d2();
+      Tensor2D u_data = this->params[1].data_d2();
+      Tensor1D b_data = this->params[2].data_d1();
+
+      Tensor1D i, f, o, cc;
+      cur_g = dot(x, w_data) + dot(pre_h, u_data) + b;
+      splitGate(i, f, o, cc);
+      i = F<ForwardOp>(i);  // logi
+      f = F<ForwardOp>(f);  // logi
+      o = F<ForwardOp>(o);  // logi
+      cc= F<ForwardOp>(cc); // tanh 
+
+      cur_c = f * cur_c + i * cc;
+      cur_h = o * F<ForwardOp>(cur_c); // tanh
+  }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
-    mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
-    mshadow::Tensor<xpu, 4> top_data = top[0]->data;
-    mshadow::Tensor<xpu, 2> w_data = this->params[0].data_d2();
-    mshadow::Tensor<xpu, 2> u_data = this->params[1].data_d2();
-    mshadow::Tensor<xpu, 1> b_data = this->params[2].data_d1();
+    Tensor4D bottom_data = bottom[0]->data;
+    Tensor4D top_data = top[0]->data;
     const index_t nbatch = bottom_data.size(0); 
     for (index_t i = 0; i < nbatch; ++i) {
         mshadow::Tensor<xpu, 2> seq = bottom_data[i].data_d2();
@@ -115,24 +138,58 @@ class LstmLayer : public Layer<xpu> {
         locateBeginEnd(seq, begin, end);
         assert(begin > 0 && begin < end); 
         for (index_t row_idx = begin; row_idx < end; ++row_idx) {
-            
-        } 
+            // shoude use slice？
+            ForwardOneStep(c[i][0][row_idx-1], h[i][0][row_idx-1], seq[row_idx]
+                           g[i][0][row_idx], c[i][0][row_idx], h[i][0][row_idx]);
+        }
         
-        // const index_t  = bottom_data.size(0); 
-
-      if (pad_x == 0 && pad_y == 0) {
-        temp_col_ = unpack_patch2col(bottom_data[i], kernel_y, kernel_x, stride);
-      } else {
-        temp_col_ = unpack_patch2col(pad(bottom_data[i], pad_y, pad_x),
-                                     kernel_y, kernel_x, stride);
-      }
-      temp_data_ = dot(weight_data, temp_col_);
-      top_data.Slice(i,i+1) = reshape(temp_data_, top_data.Slice(i,i+1).shape_);
     }
-    if (no_bias == 0) {
+    top[0]->data = h;
+    //if (no_bias == 0) {
       // add bias, broadcast bias to dim 1: channel
-      top_data += broadcast<1>(bias_data, top_data.shape_);
-    }
+      // top_data += broadcast<1>(bias_data, top_data.shape_);
+    // }
+  }
+
+  void SplitGate(Tensor1D gate, Tensor1D i, Tensor1D f, Tensor1D o) {
+      assert(false);
+  }
+
+  void BpOneStep(Tensor1D cur_h_er,
+                 Tensor1D pre_c,
+                 Tensor1D pre_h,
+                 Tensor1D x,
+                 Tensor1D cur_g,
+                 Tensor1D cur_c,
+                 Tensor1D cur_h,
+                 Tensor1D cur_c_er,
+                 Tensor1D cur_g_er,
+                 Tensor1D x_er,
+                 Tensor1D pre_h_er,
+                 Tensor1D pre_c_er,
+                 Tensor1D w_er,
+                 Tensor1D u_er,
+                 Tensor1D b_er) {
+    Tensor1D i, f, o, cc, tanhc, i_er, f_er, o_er, cc_er, tanhc_er,;
+    splitGate(cur_g, i, f, o, cc);
+    splitGate(cur_g_er, i_er, f_er, o_er, cc_er);
+
+    tanhc = F<tanh>(cur_c);
+    o_er = F<BackOp>(o) * (cur_h_er * tanhc); // logi
+    cur_c_er += F<BackOp>(tanh_c) * (cur_h_er * o);
+
+    i_er = F<BackOp>(i) * (cur_c_er * cc);    // logi
+    cc_er = F<BackOp>(cc) * (cur_c_er * i);   // tanh
+    pre_c_er = cur_c_er * f;
+    f_er = F<BackOp>(f) * (cur_c_er * pre_c); // logi
+
+    pre_h_er += cur_g_er * u;
+    x_er = cur_g_er * w;
+
+    // grad
+    b_er += cur_g_er;
+    w_er += dot(x.T(), cur_g_er); 
+    u_er += dot(pre_h.T(), cur_g_er);
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
@@ -152,56 +209,40 @@ class LstmLayer : public Layer<xpu> {
     
 	weight_diff = 0.0f;
 
-    for (int i = 0; i < nbatch; ++i) {
-      if (pad_x == 0 && pad_y == 0) {
-        temp_col_ = unpack_patch2col(bottom_data[i], kernel_y, kernel_x, stride);
-      }else{
-        temp_col_ = unpack_patch2col(pad(bottom_data[i], pad_y, pad_x),
-                                     kernel_y, kernel_x, stride);
+    for (index_t i = 0; i < nbatch; ++i) {
+      Tensor2D seq = bottom_data[i].data_d2();
+      index_t begin = 0, end = 0;
+      locateBeginEnd(seq, begin, end);
+      assert(begin > 0 && begin < end); 
+      for (index_t row_idx = begin; row_idx < end; ++row_idx) {
+          // shoude use slice？
+          BpOneStep(h_er[i][0][row_idx], 
+                    c[i][0][row_idx-1], 
+                    h[i][0][row_idx-1],
+                    seq[row_idx], 
+                    g[i][0][row_idx], 
+                    c[i][0][row_idx], 
+                    h[i][0][row_idx],
+                    c_er[i][0][row_idx],
+                    g_er[i][0][row_idx], 
+                    x_er[i][0][row_idx], 
+                    h_er[i][0][row_idx-1], 
+                    c_er[i][0][row_idx-1],
+                    w_er, u_er, b_er);
       }
-      
-      if (this->prop_grad[0]) {
-        weight_diff += dot(top_diff[i], temp_col_.T());
-      }
-
-      if (this->prop_error[0]) {
-        temp_dif_ = dot(weight_data.T(), top_diff[i]);
-        mshadow::Tensor<xpu, 3> one_diff = bottom_diff[i];
-        if (pad_x == 0 && pad_y == 0) {
-          one_diff = pack_col2patch(temp_dif_, one_diff.shape_, 
-              kernel_y, kernel_x, stride);
-        } else {
-          mshadow::Shape<3> pshape = one_diff.shape_;
-          pshape[1] += 2*pad_y; 
-          pshape[2] += 2*pad_x;
-          one_diff = crop(pack_col2patch(temp_dif_, pshape, 
-              kernel_y, kernel_x, stride), one_diff[0].shape_);
-        }
-      }
-      
     }
-      
-    
+    bottom[0]->data = x_er;
   }
 
  protected:
   int d_mem, d_input;
-  // mshadow::TensorContainer<xpu, 2> temp_col_;
-  mshadow::TensorContainer<xpu, 4> w, u, b;
-  mshadow::TensorContainer<xpu, 4> h, c, g, h_er, c_er, g_er;
+  bool no_bias; // to do 
+  mshadow::TensorContainer<xpu, 4> h, c, g, h_er, c_er, g_er, x_er;
 
-  int kernel_x;
-  int kernel_y;
-  int pad_x;
-  int pad_y;
-  int stride;
-  int channel_in;
-  int channel_out;
-  bool no_bias;
   // mshadow::TensorContainer<xpu, 2> temp_col_;
   // mshadow::TensorContainer<xpu, 2> temp_dif_;
   // mshadow::TensorContainer<xpu, 2> temp_data_;
 };
 }  // namespace layer
 }  // namespace textnet
-#endif  // LAYER_CONVOLUTION_LAYER_INL_HPP_
+#endif  // LAYER_LSTM_LAYER_INL_HPP_
