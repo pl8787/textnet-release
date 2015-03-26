@@ -70,6 +70,35 @@ void PrintTensor(const char * name, Tensor<cpu, 4> x) {
     cout << endl;
 }
 
+void TestMatchLayer(mshadow::Random<cpu>* prnd) {
+  Node<cpu> bottom1;
+  Node<cpu> bottom2;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+
+  bottoms.push_back(&bottom1);
+  bottoms.push_back(&bottom2);
+  tops.push_back(&top);
+
+  bottom1.Resize(2, 1, 1, 5);
+  bottom2.Resize(2, 1, 1, 5);
+  bottom1.data = 1.0;
+  bottom2.data = 2.0;
+
+  bottom1.data[0][0][0][1] = 2.0;
+
+  map<string, SettingV> setting;
+  // Test Match Layer
+  Layer<cpu> * layer_match = CreateLayer<cpu>(kMatch);
+  layer_match->PropAll();
+  layer_match->SetupLayer(setting, bottoms, tops, prnd);
+  layer_match->Reshape(bottoms, tops);
+  layer_match->Forward(bottoms, tops);
+  
+  PrintTensor("top", top.data);
+}
+
 void TestCrossLayer(mshadow::Random<cpu>* prnd) {
   Node<cpu> bottom1;
   Node<cpu> bottom2;
@@ -512,7 +541,8 @@ int main(int argc, char *argv[]) {
   //TestCrossLayer(&rnd);
   //TestDropoutLayer(&rnd);
   //TestHingeLossLayer(&rnd);
-  TestAccuracyLayer(&rnd);
+  //TestAccuracyLayer(&rnd);
+  TestMatchLayer(&rnd);
   return 0;
 }
 

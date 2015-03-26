@@ -54,15 +54,15 @@ class MatchLayer : public Layer<xpu>{
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 2> bottom0_data = bottom[0]->data_d2();
     mshadow::Tensor<xpu, 2> bottom1_data = bottom[1]->data_d2();
-    mshadow::Tensor<xpu, 3> top_data = top[0]->data_d3();
+    mshadow::Tensor<xpu, 4> top_data = top[0]->data;
     
     for (int i = 0; i < nbatch; i++) {
       for (int j = 0; j < doc_len; j++) {
         for (int k = 0; k < doc_len; k++) {
-          if (bottom0_data[i][j]==-1 or bottom1_data[i][k]==-1) {
-            top_data[i][j][k] = 0;
+          if (bottom0_data[i][j]==-1 || bottom1_data[i][k]==-1) {
+            top_data[i][0][j][k] = 0;
           } else {
-            top_data[i][j][k] = (bottom0_data[i][j] == bottom1_data[i][k]) ? 1 : 0;
+            top_data[i][0][j][k] = (bottom0_data[i][j] == bottom1_data[i][k]) ? 1 : 0;
           }
         }
       }
