@@ -36,7 +36,7 @@ class TextDataLayer : public Layer<xpu>{
     data_file = setting["data_file"].s_val;
     batch_size = setting["batch_size"].i_val;
     max_doc_len = setting["max_doc_len"].i_val;
-    min_doc_len = setting["min_doc_len"].i_val;
+    // min_doc_len = setting["min_doc_len"].i_val;
     
     ReadTextData();
     
@@ -51,33 +51,29 @@ class TextDataLayer : public Layer<xpu>{
     utils::Check(fin, "Open data file problem.");
     while (!fin.eof()) {
       std::getline(fin, s);
+      if (s.empty()) break;
       lines.push_back(s);
     }
     fin.close();
     
     line_count = lines.size();
-    data_set.Resize(mshadow::Shape3(line_count, 2, max_doc_len));
+    data_set.Resize(mshadow::Shape4(line_count, 1, 1, max_doc_len));
     label_set.Resize(mshadow::Shape1(line_count), 0);
-    data_set = -1;
+    data_set = NAN;
     
 	utils::Printf("Line count in file: %d\n", line_count);
 
     std::istringstream iss;
-    int len_s1 = 0;
-    int len_s2 = 0;
     for (int i = 0; i < line_count; ++i) {
       iss.clear();
 	    iss.seekg(0, iss.beg);
       iss.str(lines[i]);
-      iss >> label_set[i] >> len_s1 >> len_s2;
-      for (int j = 0; j < len_s1; ++j) {
-        iss >> data_set[i][0][j];
-      }
-      for (int j = 0; j < len_s2; ++j) {
-        iss >> data_set[i][1][j];
+      iss >> label_set[i];
+      int j = 0;
+      while (!iss.eof()) {
+        iss >> data_set[i][0][0][j++];
       }
     }
-    
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -86,14 +82,14 @@ class TextDataLayer : public Layer<xpu>{
                   "TextDataLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "TextDataLayer:top size problem.");
-    top[0]->Resize(batch_size, 2, 1, max_doc_len, true);
+    top[0]->Resize(batch_size, 1, 1, max_doc_len, true);
     top[1]->Resize(batch_size, 1, 1, 1, true);
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
-    mshadow::Tensor<xpu, 3> top0_data = top[0]->data_d3();
+    mshadow::Tensor<xpu, 4> top0_data = top[0]->data;
     mshadow::Tensor<xpu, 1> top1_data = top[1]->data_d1();
     for (int i = 0; i < batch_size; ++i) {
       top0_data[i] = F<op::identity>(data_set[line_ptr]);
@@ -105,15 +101,14 @@ class TextDataLayer : public Layer<xpu>{
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
                         const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
-    
   }
   
  protected:
   std::string data_file;
   int batch_size;
   int max_doc_len;
-  int min_doc_len;
-  mshadow::TensorContainer<xpu, 3> data_set;
+  // int min_doc_len;
+  mshadow::TensorContainer<xpu, 4> data_set;
   mshadow::TensorContainer<xpu, 1> label_set;
   int line_count;
   int line_ptr;

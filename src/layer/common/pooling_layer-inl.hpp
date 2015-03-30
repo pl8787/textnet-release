@@ -89,7 +89,6 @@ class PoolingLayer : public Layer<xpu> {
       }
     }
   }
-
  protected:
   int kernel_x;
   int kernel_y;

@@ -58,6 +58,8 @@ class EmbeddingLayer : public Layer<xpu>{
           w_updater, this->prnd_);
     this->params[0].updater_->is_sparse = true;          
     
+    // orc
+    std::cout << "ORC WARNING: without READ_INIT_EMBEDDING." << std::endl;
     ReadInitEmbedding();
   }
   
@@ -69,6 +71,7 @@ class EmbeddingLayer : public Layer<xpu>{
     utils::Check(fin, "Open embedding file problem.");
     while (!fin.eof()) {
       std::getline(fin, s);
+      if (s.empty()) break;
       lines.push_back(s);
     }
     fin.close();
@@ -106,6 +109,8 @@ class EmbeddingLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
     mshadow::Tensor<xpu, 2> weight_data = this->params[0].data_d2();
     
+    // orc
+    top_data = NAN;
     int w_idx = -1;
     for (int i = 0; i < nbatch; ++i) {
       for (int j = 0; j < doc_count; ++j) {
@@ -153,7 +158,11 @@ class EmbeddingLayer : public Layer<xpu>{
       
       for (int i = 0; i < nbatch; ++i) {
         for (int j = 0; j < doc_count; ++j) {
-          for (int k = 0; k < doc_len; ++k) {
+          int begin, end;
+          // orc
+          LocateBeginEnd(bottom_data[i][j], begin, end);
+          // for (int k = 0; k < doc_len; ++k) {
+          for (int k = begin; k < end; ++k) {
             w_idx = (int)bottom_data[i][j][0][k];
             if (w_idx != -1) {
               weight_diff[idx_map[w_idx]] += top_diff[i][j][k];
@@ -161,10 +170,23 @@ class EmbeddingLayer : public Layer<xpu>{
           }
         }
       }
-      
     }
   }
-  
+  void LocateBeginEnd(mshadow::Tensor<xpu, 2> seq, 
+                      index_t &begin, index_t &end) { // input a 2D tensor, out put a sub 2d tensor, with 0 padding
+    for (index_t i = 0; i < seq.size(0); ++i) {
+      if (!isnan(seq[i][0])) {
+          begin = i;
+          break;
+      }
+    }
+    for (int i = seq.size(0)-1; i >= 0; --i) {
+      if (!isnan(seq[i][0])) {
+          end = i + 1;
+          break;
+      }
+    }
+  }
  protected:
   std::string embedding_file;
   int feat_size;

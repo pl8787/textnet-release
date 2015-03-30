@@ -80,9 +80,9 @@ int main(int argc, char *argv[]) {
   vector<vector<Node<cpu>*> > top_vecs;
   vector<Node<cpu>*> nodes;
 
-  int lstm_hidden_dim = 10;
+  int lstm_hidden_dim = 2;
   // int lstm_input_dim = 50;
-  int word_rep_dim = 50;
+  int word_rep_dim = 3;
   int max_doc_len = 100;
   int min_doc_len = 4;
   int batch_size = 1;
@@ -90,7 +90,7 @@ int main(int argc, char *argv[]) {
   senti_net.push_back(CreateLayer<cpu>(kTextData));
   senti_net.push_back(CreateLayer<cpu>(kEmbedding));
   senti_net.push_back(CreateLayer<cpu>(kLstm));
-  senti_net.push_back(CreateLayer<cpu>(kMaxPooling));
+  senti_net.push_back(CreateLayer<cpu>(kWholeMaxPooling));
   senti_net.push_back(CreateLayer<cpu>(kSoftmax));
   
   senti_net_test = senti_net;
