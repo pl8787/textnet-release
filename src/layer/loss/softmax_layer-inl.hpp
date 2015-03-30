@@ -55,7 +55,7 @@ class SoftmaxLayer : public Layer<xpu>{
     
     mshadow::Softmax(bottom0_data, bottom0_data);
     
-    for (int i = 1; i < nbatch; ++i) {
+    for (int i = 0; i < nbatch; ++i) {
       int k = static_cast<int>(bottom1_data[i]);
       top_data[0] += -log(bottom0_data[i][k]);
     }
