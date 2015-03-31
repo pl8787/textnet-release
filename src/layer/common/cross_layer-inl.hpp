@@ -32,11 +32,7 @@ class CrossLayer : public Layer<xpu>{
     utils::Check(bottom.size() == BottomNodeNum(),
                   "CrossLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
-                  "CrossLayer:top size problem.");
-                  
-    nbatch = bottom[0]->data.size(0); 
-    channel = bottom[0]->data.size(1);
-    doc_len = bottom[0]->data.size(2);    
+                  "CrossLayer:top size problem.");   
     
   }
   
@@ -47,11 +43,15 @@ class CrossLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(),
                   "CrossLayer:top size problem.");
                   
+    nbatch = bottom[0]->data.size(0); 
+    channel = bottom[0]->data.size(1);
+    doc_len = bottom[0]->data.size(2); 
+                  
     top[0]->Resize(nbatch, channel, doc_len, doc_len, true);
 
-	bottom[0]->PrintShape("bottom0");
-	bottom[1]->PrintShape("bottom1");
-	top[0]->PrintShape("top0");
+	  bottom[0]->PrintShape("bottom0");
+	  bottom[1]->PrintShape("bottom1");
+	  top[0]->PrintShape("top0");
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

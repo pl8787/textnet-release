@@ -34,8 +34,7 @@ class AccuracyLayer : public Layer<xpu>{
                   "AccuracyLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "AccuracyLayer:top size problem.");
-    nbatch = bottom[0]->data.size(0);  
-    ncategory = bottom[0]->data.size(1);   
+       
     topk = setting["topk"].i_val;
   }
   
@@ -45,7 +44,8 @@ class AccuracyLayer : public Layer<xpu>{
                   "AccuracyLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "AccuracyLayer:top size problem.");
-                  
+    nbatch = bottom[0]->data.size(0);  
+    ncategory = bottom[0]->data.size(1);              
     top[0]->Resize(1, 1, 1, 1, true);
   }
   

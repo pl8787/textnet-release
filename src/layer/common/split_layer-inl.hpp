@@ -32,12 +32,7 @@ class SplitLayer : public Layer<xpu>{
     utils::Check(bottom.size() == BottomNodeNum(),
                   "SplitLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
-                  "SplitLayer:top size problem.");
-                  
-    nbatch = bottom[0]->data.size(0); 
-    doc_count = bottom[0]->data.size(1);
-    doc_len = bottom[0]->data.size(2);  
-    feat_size = bottom[0]->data.size(3);    
+                  "SplitLayer:top size problem.");    
     
   }
   
@@ -48,12 +43,17 @@ class SplitLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(),
                   "SplitLayer:top size problem.");
                   
+    nbatch = bottom[0]->data.size(0); 
+    doc_count = bottom[0]->data.size(1);
+    doc_len = bottom[0]->data.size(2);  
+    feat_size = bottom[0]->data.size(3);
+                  
     top[0]->Resize(nbatch, 1, doc_len, feat_size, true);
     top[1]->Resize(nbatch, 1, doc_len, feat_size, true);
 
-	bottom[0]->PrintShape("bottom0");
-	top[0]->PrintShape("top0");
-	top[1]->PrintShape("top1");
+    bottom[0]->PrintShape("bottom0");
+    top[0]->PrintShape("top0");
+    top[1]->PrintShape("top1");
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

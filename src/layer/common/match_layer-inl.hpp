@@ -33,9 +33,6 @@ class MatchLayer : public Layer<xpu>{
                   "MatchLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "MatchLayer:top size problem.");
-                  
-    nbatch = bottom[0]->data.size(0); 
-    doc_len = bottom[0]->data.size(3);    
     
   }
   
@@ -46,9 +43,12 @@ class MatchLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(),
                   "MatchLayer:top size problem.");
                   
+    nbatch = bottom[0]->data.size(0); 
+    doc_len = bottom[0]->data.size(3);    
+                  
     top[0]->Resize(nbatch, 1, doc_len, doc_len, true);
-	bottom[0]->PrintShape("bottom0");
-	top[0]->PrintShape("top0");
+	  bottom[0]->PrintShape("bottom0");
+	  top[0]->PrintShape("top0");
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

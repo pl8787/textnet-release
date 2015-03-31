@@ -33,7 +33,7 @@ class PoolingLayer : public Layer<xpu> {
     kernel_x = setting["kernel_x"].i_val;
     kernel_y = setting["kernel_y"].i_val;
     stride = setting["stride"].i_val;
-    channel = bottom[0]->data.size(1);
+    
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -42,6 +42,8 @@ class PoolingLayer : public Layer<xpu> {
                   "PoolingLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "PoolingLayer:top size problem.");
+                  
+    channel = bottom[0]->data.size(1);
     
     mshadow::Shape<4> shape_in = bottom[0]->data.shape_;
     mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in[0], shape_in[1], 

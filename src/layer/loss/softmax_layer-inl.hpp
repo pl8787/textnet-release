@@ -33,7 +33,7 @@ class SoftmaxLayer : public Layer<xpu>{
                   "SoftmaxLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "SoftmaxLayer:top size problem.");
-    nbatch = bottom[0]->data.size(0);    
+      
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -42,7 +42,7 @@ class SoftmaxLayer : public Layer<xpu>{
                   "SoftmaxLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "SoftmaxLayer:top size problem.");
-                  
+    nbatch = bottom[0]->data.size(0);  
     top[0]->Resize(1, 1, 1, 1, true);
   }
   

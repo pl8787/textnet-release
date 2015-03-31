@@ -88,8 +88,8 @@ class ConvolutionLayer : public Layer<xpu> {
 
     temp_data_.Resize(mshadow::Shape2(channel_out, shape_out[2]*shape_out[3]));
     
-	bottom[0]->PrintShape("bottom0");
-	top[0]->PrintShape("top0");
+	  bottom[0]->PrintShape("bottom0");
+	  top[0]->PrintShape("top0");
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

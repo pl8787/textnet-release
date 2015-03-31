@@ -33,8 +33,8 @@ class ActivationLayer : public Layer<xpu>{
                   "ActivationLayer:top size problem.");
     top[0]->Resize(bottom[0]->data.shape_);
 
-	bottom[0]->PrintShape("bottom0");
-	top[0]->PrintShape("top0");
+	  bottom[0]->PrintShape("bottom0");
+	  top[0]->PrintShape("top0");
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

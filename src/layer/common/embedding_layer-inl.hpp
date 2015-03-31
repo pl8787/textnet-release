@@ -37,9 +37,6 @@ class EmbeddingLayer : public Layer<xpu>{
     embedding_file = setting["embedding_file"].s_val;
     feat_size = setting["feat_size"].i_val;
     word_count = setting["word_count"].i_val;
-    doc_len = bottom[0]->data.size(3);
-    doc_count = bottom[0]->data.size(1);
-    nbatch = bottom[0]->data.size(0);
     
     this->params.resize(1);
     this->params[0].need_diff = false;
@@ -95,11 +92,15 @@ class EmbeddingLayer : public Layer<xpu>{
                   "EmbeddingLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "EmbeddingLayer:top size problem.");
+    
+    doc_len = bottom[0]->data.size(3);
+    doc_count = bottom[0]->data.size(1);
+    nbatch = bottom[0]->data.size(0);
                   
     top[0]->Resize(nbatch, doc_count, doc_len, feat_size, true);
 
-	bottom[0]->PrintShape("bottom0");
-	top[0]->PrintShape("top0");
+	  bottom[0]->PrintShape("bottom0");
+	  top[0]->PrintShape("top0");
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

@@ -109,7 +109,7 @@ class Layer {
         case Json::intValue:
           {
             setting[name] = SettingV(value.asInt());
-			setting[name].f_val = value.asFloat();
+            std::cout << name << std::endl;
           }
           break;
         case Json::realValue:

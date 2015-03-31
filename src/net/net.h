@@ -71,11 +71,11 @@ class Net {
       
       // Reset layer index
       layer_root["layer_idx"] = i;
-	  new_layer->layer_idx = i;
+    new_layer->layer_idx = i;
 
-	  if (!layer_root["setting"]["phrase_type"]) 
-		 layer_root["setting"]["phrase_type"] = 2; 
-	  
+    if (!layer_root["setting"]["phrase_type"]) 
+     layer_root["setting"]["phrase_type"] = 2; 
+    
       if (layer_root["setting"]["phrase_type"].asInt() == 0) {
         train_net.push_back(new_layer);
       } else if (layer_root["setting"]["phrase_type"].asInt() == 1) {
@@ -91,8 +91,8 @@ class Net {
       utils::Printf("\t Layer Type: %d\t Layer Name: %s\n", layer_type, layer_name.c_str());
     }
     
-	utils::Printf("Train Layer Deep: %d\n", train_net.size());
-	utils::Printf("Test Layer Deep: %d\n", test_net.size());
+    utils::Printf("Train Layer Deep: %d\n", train_net.size());
+    utils::Printf("Test Layer Deep: %d\n", test_net.size());
     
     // ******** Create Nodes ********
     utils::Printf("Creating Nodes.\n");
@@ -104,7 +104,7 @@ class Net {
         string node_name = bottoms_root[j].asString();
         if (!nodes.count(node_name)) {
           nodes[node_name] = new Node<xpu>();
-		  nodes[node_name]->node_name = node_name;
+      nodes[node_name]->node_name = node_name;
           utils::Printf("\t Node Name: %s\n", node_name.c_str());
         }
       }
@@ -112,19 +112,19 @@ class Net {
         string node_name = tops_root[j].asString();
         if (!nodes.count(node_name)) {
           nodes[node_name] = new Node<xpu>();
-		  nodes[node_name]->node_name = node_name;
+      nodes[node_name]->node_name = node_name;
           utils::Printf("\t Node Name: %s\n", node_name.c_str());
         }
       }
     }
 
-	utils::Printf("Nodes count: %d\n", nodes.size());
+    utils::Printf("Nodes count: %d\n", nodes.size());
     
     // ******** Connect layers ********
     utils::Printf("Connecting Layers.\n");
 
-	bottom_vecs.resize(layers_root.size());
-	top_vecs.resize(layers_root.size());
+    bottom_vecs.resize(layers_root.size());
+    top_vecs.resize(layers_root.size());
 
     for (int i = 0; i < layers_root.size(); ++i) {
       Json::Value &layer_root = layers_root[i];
@@ -153,29 +153,29 @@ class Net {
   virtual void SetupReshape() {
     utils::Printf("Setup Layers.\n");
     Json::Value &layers_root = root["layers"];
-      for (int i = 0; i < test_net.size(); ++i) {
-		int layer_idx = test_net[i]->layer_idx;
-        test_net[i]->SetupLayer(layers_root[layer_idx], 
-				bottom_vecs[layer_idx], top_vecs[layer_idx], prnd);
-        test_net[i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
-      }
-	  for (int i = 0; i < train_net.size(); ++i) {
-		int layer_idx = train_net[i]->layer_idx;
-        train_net[i]->SetupLayer(layers_root[layer_idx], 
-				bottom_vecs[layer_idx], top_vecs[layer_idx], prnd);
-        train_net[i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
-      }
+    for (int i = 0; i < test_net.size(); ++i) {
+      int layer_idx = test_net[i]->layer_idx;
+      test_net[i]->SetupLayer(layers_root[layer_idx], 
+      bottom_vecs[layer_idx], top_vecs[layer_idx], prnd);
+      test_net[i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+    }
+    for (int i = 0; i < train_net.size(); ++i) {
+      int layer_idx = train_net[i]->layer_idx;
+      train_net[i]->SetupLayer(layers_root[layer_idx], 
+      bottom_vecs[layer_idx], top_vecs[layer_idx], prnd);
+      train_net[i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+    }
   }
 
   virtual void Reshape() {
     if (phrase_type == kTrain) {
       for (int i = 0; i < train_net.size(); ++i) {
-		int layer_idx = train_net[i]->layer_idx;
+        int layer_idx = train_net[i]->layer_idx;
         train_net[i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
       }
     } else if (phrase_type == kTest) {
       for (int i = 0; i < test_net.size(); ++i) {
-		int layer_idx = test_net[i]->layer_idx;
+        int layer_idx = test_net[i]->layer_idx;
         test_net[i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
       }
     }
@@ -184,12 +184,12 @@ class Net {
   virtual void Forward() {
     if (phrase_type == kTrain) {
       for (int i = 0; i < train_net.size(); ++i) {
-		int layer_idx = train_net[i]->layer_idx;
+        int layer_idx = train_net[i]->layer_idx;
         train_net[i]->Forward(bottom_vecs[layer_idx], top_vecs[layer_idx]);
       }
     } else if (phrase_type == kTest) {
       for (int i = 0; i < test_net.size(); ++i) {
-		int layer_idx = test_net[i]->layer_idx;
+        int layer_idx = test_net[i]->layer_idx;
         test_net[i]->Forward(bottom_vecs[layer_idx], top_vecs[layer_idx]);
       }
     }
@@ -200,7 +200,7 @@ class Net {
                   "Only call in Train Phrase.");
     if (phrase_type == kTrain) {
       for (int i = train_net.size()-1; i>=0; --i) {
-		int layer_idx = train_net[i]->layer_idx;
+        int layer_idx = train_net[i]->layer_idx;
         train_net[i]->Backprop(bottom_vecs[layer_idx], top_vecs[layer_idx]);
       }
     }
@@ -243,9 +243,11 @@ class Net {
       }
       
       if (test_interval > 0 && iter % test_interval == 0) {
-		TestOne(iter);
+        if (need_reshape) Reshape();
+        TestOne(iter);
+        if (need_reshape) Reshape();
       }
-	}
+  }
   }
 
   virtual void TestOne(int iter) {
@@ -343,6 +345,8 @@ class Net {
   vector<string> train_out;
   // test output nodes
   vector<string> test_out;
+  // need reshape
+  bool need_reshape;
   
 };
 
