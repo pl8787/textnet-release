@@ -1,6 +1,7 @@
 #ifndef TEXTNET_LAYER_LAYER_H_
 #define TEXTNET_LAYER_LAYER_H_
 
+#include <iostream>
 #include <sstream>
 #include <vector>
 #include <map>
@@ -26,7 +27,7 @@ class Layer {
  public:
   Layer(void) {
     layer_type = 0;
-    phrase_type = 0;
+    phrase_type = -1;
   }
   virtual ~Layer(void) {}
   
@@ -35,7 +36,7 @@ class Layer {
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
     this->settings = setting;
-    phrase_type = setting["phrase_type"].i_val;
+    phrase_type = this->settings["phrase_type"].i_val;
     prnd_ = prnd;
   }
   
@@ -44,7 +45,7 @@ class Layer {
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
     LoadModel(root);
-    this->SetupLayer(settings, bottom, top, prnd);                      
+    this->SetupLayer(this->settings, bottom, top, prnd);                      
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -108,6 +109,7 @@ class Layer {
         case Json::intValue:
           {
             setting[name] = SettingV(value.asInt());
+			setting[name].f_val = value.asFloat();
           }
           break;
         case Json::realValue:
@@ -208,7 +210,7 @@ class Layer {
     
     // Set layer settings
     Json::Value setting_root = layer_root["setting"];
-    LoadSetting(settings, setting_root);
+    LoadSetting(this->settings, setting_root);
     
     // Set layer weights
     if (!layer_root["param"]) 
@@ -303,8 +305,8 @@ const int kTextData = 71;
 
 /*! \brief these are enumeration */
 const int kTrain = 0;
-const int kValidation = 1;
-const int kTest = 2;
+const int kTest = 1;
+const int kBoth = 2;
 
 
 template<typename xpu>

@@ -26,16 +26,17 @@ using namespace mshadow;
 template<typename xpu>
 class Net {
  public:
-  Net(void) {
-
+  Net(Random<xpu>* prnd_) {
+    prnd = prnd_;
   }
+
   
   virtual ~Net(void) {
     
   }
   
   virtual void InitNet(string config_file) {
-    ifstream _if(config_file);
+    ifstream _if(config_file.c_str());
     _if >> root;
     InitNet(root);
   }
@@ -58,43 +59,52 @@ class Net {
     
     // ******** Create Layers ********
     utils::Printf("Creating Layers.\n");
-    Json::Value layers_root = net_root["layers"];
+    Json::Value &layers_root = net_root["layers"];
     
     for (int i = 0; i < layers_root.size(); ++i) {
-      Json::Value layer_root = layers_root[i];
+      Json::Value &layer_root = layers_root[i];
       // Get Layer type
       LayerType layer_type = layer_root["layer_type"].asInt();
-      // Reset layer index
-      layer_root["layer_idx"] = i;
       
       Layer<xpu> * new_layer = CreateLayer<xpu>(layer_type);
       string layer_name = layer_root["layer_name"].asString();
       
-      if (layer_root["phrase_type"] == "TRAIN") {
+      // Reset layer index
+      layer_root["layer_idx"] = i;
+	  new_layer->layer_idx = i;
+
+	  if (!layer_root["setting"]["phrase_type"]) 
+		 layer_root["setting"]["phrase_type"] = 2; 
+	  
+      if (layer_root["setting"]["phrase_type"].asInt() == 0) {
         train_net.push_back(new_layer);
-      } else if (layer_root["phrase_type"] == "TEST") {
+      } else if (layer_root["setting"]["phrase_type"].asInt() == 1) {
         test_net.push_back(new_layer);
       } else {
         train_net.push_back(new_layer);
         test_net.push_back(new_layer);
-      }
-      
+      }  
+
       name2layer[layer_name] = new_layer;
       layers.push_back(new_layer);
       
-      utils::Printf("\t Layer Type: %d\n", layer_type);
+      utils::Printf("\t Layer Type: %d\t Layer Name: %s\n", layer_type, layer_name.c_str());
     }
+    
+	utils::Printf("Train Layer Deep: %d\n", train_net.size());
+	utils::Printf("Test Layer Deep: %d\n", test_net.size());
     
     // ******** Create Nodes ********
     utils::Printf("Creating Nodes.\n");
     for (int i = 0; i < layers_root.size(); ++i) {
-      Json::Value layer_root = layers_root[i];
-      Json::Value bottoms_root = layer_root["bottom_nodes"];
-      Json::Value tops_root = layer_root["top_nodes"];
+      Json::Value &layer_root = layers_root[i];
+      Json::Value &bottoms_root = layer_root["bottom_nodes"];
+      Json::Value &tops_root = layer_root["top_nodes"];
       for (int j = 0; j < bottoms_root.size(); ++j) {
         string node_name = bottoms_root[j].asString();
         if (!nodes.count(node_name)) {
           nodes[node_name] = new Node<xpu>();
+		  nodes[node_name]->node_name = node_name;
           utils::Printf("\t Node Name: %s\n", node_name.c_str());
         }
       }
@@ -102,17 +112,25 @@ class Net {
         string node_name = tops_root[j].asString();
         if (!nodes.count(node_name)) {
           nodes[node_name] = new Node<xpu>();
+		  nodes[node_name]->node_name = node_name;
           utils::Printf("\t Node Name: %s\n", node_name.c_str());
         }
       }
     }
+
+	utils::Printf("Nodes count: %d\n", nodes.size());
     
     // ******** Connect layers ********
     utils::Printf("Connecting Layers.\n");
+
+	bottom_vecs.resize(layers_root.size());
+	top_vecs.resize(layers_root.size());
+
     for (int i = 0; i < layers_root.size(); ++i) {
-      Json::Value layer_root = layers_root[i];
-      Json::Value bottoms_root = layer_root["bottom_nodes"];
-      Json::Value tops_root = layer_root["top_nodes"];
+      Json::Value &layer_root = layers_root[i];
+      Json::Value &bottoms_root = layer_root["bottom_nodes"];
+      Json::Value &tops_root = layer_root["top_nodes"];
+
       for (int j = 0; j < bottoms_root.size(); ++j) {
         string node_name = bottoms_root[j].asString();
         bottom_vecs[i].push_back(nodes[node_name]);
@@ -132,35 +150,47 @@ class Net {
     }
   }
   
-  virtual void Setup() {
+  virtual void SetupReshape() {
     utils::Printf("Setup Layers.\n");
-    Json::Value layers_root = net_root["layers"];
-    for (int i = 0; i < layers.size(); ++i) {
-      layers[i]->SetupLayer(layers_root[i], bottom_vecs[i], top_vecs[i]);
+    Json::Value &layers_root = root["layers"];
+      for (int i = 0; i < test_net.size(); ++i) {
+		int layer_idx = test_net[i]->layer_idx;
+        test_net[i]->SetupLayer(layers_root[layer_idx], 
+				bottom_vecs[layer_idx], top_vecs[layer_idx], prnd);
+        test_net[i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+      }
+	  for (int i = 0; i < train_net.size(); ++i) {
+		int layer_idx = train_net[i]->layer_idx;
+        train_net[i]->SetupLayer(layers_root[layer_idx], 
+				bottom_vecs[layer_idx], top_vecs[layer_idx], prnd);
+        train_net[i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+      }
+  }
+
+  virtual void Reshape() {
+    if (phrase_type == kTrain) {
+      for (int i = 0; i < train_net.size(); ++i) {
+		int layer_idx = train_net[i]->layer_idx;
+        train_net[i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+      }
+    } else if (phrase_type == kTest) {
+      for (int i = 0; i < test_net.size(); ++i) {
+		int layer_idx = test_net[i]->layer_idx;
+        test_net[i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+      }
     }
   }
   
-  virtual void Reshape() {
-    utils::Printf("Reshape Layers.\n");
-    if (phrase_type == kTrain) {
-      for (int i = 0; i < train_net.size(); ++i) {
-        train_net[i]->Reshape(bottom_vecs[i], top_vecs[i]);
-      }
-    } else if (phrase_type == kTest) {
-      for (int i = 0; i < test_net.size(); ++i) {
-        test_net[i]->Reshape(bottom_vecs[i], top_vecs[i]);
-      }
-    }
-  }
-
   virtual void Forward() {
     if (phrase_type == kTrain) {
       for (int i = 0; i < train_net.size(); ++i) {
-        train_net[i]->Forward(bottom_vecs[i], top_vecs[i]);
+		int layer_idx = train_net[i]->layer_idx;
+        train_net[i]->Forward(bottom_vecs[layer_idx], top_vecs[layer_idx]);
       }
     } else if (phrase_type == kTest) {
       for (int i = 0; i < test_net.size(); ++i) {
-        test_net[i]->Forward(bottom_vecs[i], top_vecs[i]);
+		int layer_idx = test_net[i]->layer_idx;
+        test_net[i]->Forward(bottom_vecs[layer_idx], top_vecs[layer_idx]);
       }
     }
   }
@@ -169,8 +199,9 @@ class Net {
     utils::Check(phrase_type == kTrain, 
                   "Only call in Train Phrase.");
     if (phrase_type == kTrain) {
-      for (int i = 0; i < train_net.size(); ++i) {
-        train_net[i]->Backprop(bottom_vecs[i], top_vecs[i]);
+      for (int i = train_net.size()-1; i>=0; --i) {
+		int layer_idx = train_net[i]->layer_idx;
+        train_net[i]->Backprop(bottom_vecs[layer_idx], top_vecs[layer_idx]);
       }
     }
   }
@@ -178,7 +209,7 @@ class Net {
   virtual void Update() {
     utils::Check(phrase_type == kTrain, 
                   "Only call in Train Phrase.");
-    if (phtase_type == kTrain) {
+    if (phrase_type == kTrain) {
       for (int i = 0; i < train_net.size(); ++i) {
         for (int j = 0; j < train_net[i]->ParamNodeNum(); ++j) {
           train_net[i]->GetParams()[j].Update();
@@ -192,9 +223,8 @@ class Net {
     
     // Prepare
     PropAll();
-    Setup();
-    Reshape();
-    
+    SetupReshape();
+
     for (int iter = 0; iter < max_iters; ++iter) {
       phrase_type = kTrain;
       
@@ -213,36 +243,40 @@ class Net {
       }
       
       if (test_interval > 0 && iter % test_interval == 0) {
-        phrase_type = kTest;
-        
-        // Initial test loss
-        vector<float> test_loss;
-        for (int i = 0; i < test_out.size(); ++i) {
-          test_loss.push_back(0.0f);
-        }
-        
-        for (int test_iter = 0; test_iter < max_test_iters; ++test_iter) {
-          Forward();
-          for (int i = 0; i < test_out.size(); ++i) {
-            test_loss[i] += nodes[test_out[i]]->data_d1()[0];
-          }
-        }
-        
-        for (int i = 0; i < test_out.size(); ++i) {
-          test_loss[i] /= max_test_iters;
-        }
-        
-        // Output
-        for (int i = 0; i < test_out.size(); ++i) {
-          cout << "[Test]\tIter\t" << iter 
-               << ":\terror[" << i << "] =\t" 
-               << nodes[test_loss[i]]->data_d1()[0] << endl; 
-        }
-        
+		TestOne(iter);
       }
-    }
+	}
   }
 
+  virtual void TestOne(int iter) {
+      phrase_type = kTest;
+
+      // Initial test loss
+      vector<float> test_loss;
+      for (int i = 0; i < test_out.size(); ++i) {
+        test_loss.push_back(0.0f);
+      }
+      
+      for (int test_iter = 0; test_iter < max_test_iters; ++test_iter) {
+        Forward();
+        for (int i = 0; i < test_out.size(); ++i) {
+          test_loss[i] += nodes[test_out[i]]->data_d1()[0];
+        }
+      }
+      
+      for (int i = 0; i < test_out.size(); ++i) {
+        test_loss[i] /= max_test_iters;
+      }
+      
+      // Output
+      for (int i = 0; i < test_out.size(); ++i) {
+        cout << "[Test]\tIter\t" << iter 
+             << ":\terror[" << i << "] =\t" 
+             << test_loss[i] << endl; 
+      }
+        
+      phrase_type = kTrain;
+  }
   virtual void SaveModel(string model_name) {
     ofstream _of(model_name.c_str());
     Json::StyledWriter writer;
@@ -279,7 +313,7 @@ class Net {
   // Net name 
   string net_name;
   // Random Machine for all
-  mshadow::Random<xpu> rnd;
+  mshadow::Random<xpu>* prnd;
   // Net for train model
   vector<Layer<xpu>*> train_net;
   // Net for test model
@@ -304,7 +338,7 @@ class Net {
   // train display interval
   int display_interval;
   // test interval
-  int test_interval
+  int test_interval;
   // train output nodes
   vector<string> train_out;
   // test output nodes

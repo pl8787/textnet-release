@@ -49,6 +49,11 @@ struct Node {
     }
   }
 
+  inline void PrintShape(std::string text) {
+	mshadow::Shape<4> s = data.shape_;
+	// utils::Printf("\t%s Shape: %d x %d x %d x %d\n", text.c_str(), s[0], s[1], s[2], s[3]);
+  }
+
   inline void Resize(int d1, int d2, int d3, int d4, bool init=false) {
     mshadow::Shape<4> new_size = mshadow::Shape4(d1, d2, d3, d4);
     if (4 == data.shape_.kDimension && new_size == data.shape_ && !init) {

@@ -72,6 +72,9 @@ class FullConnectLayer : public Layer<xpu> {
     mshadow::Tensor<xpu, 2> bottom_data = bottom[0]->data_d2();
     
     top[0]->Resize(bottom_data.size(0), num_hidden, 1, 1);
+
+	bottom[0]->PrintShape("bottom0");
+	top[0]->PrintShape("top0");
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

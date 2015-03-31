@@ -48,6 +48,10 @@ class CrossLayer : public Layer<xpu>{
                   "CrossLayer:top size problem.");
                   
     top[0]->Resize(nbatch, channel, doc_len, doc_len, true);
+
+	bottom[0]->PrintShape("bottom0");
+	bottom[1]->PrintShape("bottom1");
+	top[0]->PrintShape("top0");
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

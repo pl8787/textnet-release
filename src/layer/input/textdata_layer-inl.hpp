@@ -86,8 +86,15 @@ class TextDataLayer : public Layer<xpu>{
                   "TextDataLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "TextDataLayer:top size problem.");
+	
+	utils::Check(batch_size > 0, "batch_size <= 0");
+	utils::Check(max_doc_len > 0, "max_doc_len <= 0");
+
     top[0]->Resize(batch_size, 2, 1, max_doc_len, true);
     top[1]->Resize(batch_size, 1, 1, 1, true);
+	
+	top[0]->PrintShape("top0");
+	top[1]->PrintShape("top1");
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

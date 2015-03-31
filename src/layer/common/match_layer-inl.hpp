@@ -47,6 +47,8 @@ class MatchLayer : public Layer<xpu>{
                   "MatchLayer:top size problem.");
                   
     top[0]->Resize(nbatch, 1, doc_len, doc_len, true);
+	bottom[0]->PrintShape("bottom0");
+	top[0]->PrintShape("top0");
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

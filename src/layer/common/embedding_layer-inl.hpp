@@ -97,6 +97,9 @@ class EmbeddingLayer : public Layer<xpu>{
                   "EmbeddingLayer:top size problem.");
                   
     top[0]->Resize(nbatch, doc_count, doc_len, feat_size, true);
+
+	bottom[0]->PrintShape("bottom0");
+	top[0]->PrintShape("top0");
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
