@@ -35,6 +35,29 @@ class Net {
     
   }
   
+  virtual void ExpandConfig(Json::Value &net_root) {
+    Json::Value &global_root = net_root["global"];
+    Json::Value &layers_root = net_root["layers"];
+    Json::Value::Members member = global_root.getMemberNames();
+    for (Json::Value::Members::iterator it = member.begin();
+           it != member.end(); ++it) {
+      std::string name = *it;
+      Json::Value &value = global_root[name];
+      Json::Value::Members sub_member = value.getMemberNames();
+      
+      for (int i = 0; i < layers_root.size(); ++i) {
+        if (layers_root[i]["setting"][name]) {
+          layers_root[i]["setting"][name].clear();
+          for (Json::Value::Members::iterator it = sub_member.begin();
+                 it != sub_member.end(); ++it) {
+            std::string sub_name = *it;
+            layers_root[i]["setting"][sub_name] = value[sub_name];
+          }
+        }
+      }
+    }
+  }
+  
   virtual void InitNet(string config_file) {
     ifstream _if(config_file.c_str());
     _if >> root;
@@ -43,6 +66,7 @@ class Net {
   
   virtual void InitNet(Json::Value &net_root) {
     root = net_root;
+    ExpandConfig(root);
     net_name = net_root["net_name"].asString();
     max_iters = net_root["max_iters"].asInt();
     max_test_iters = net_root["max_test_iters"].asInt();
