@@ -39,6 +39,14 @@ class Layer {
     prnd_ = prnd;
   }
   
+  virtual void SetupLayer(Json::Value &root,
+                          const std::vector<Node<xpu>*> &bottom,
+                          const std::vector<Node<xpu>*> &top,
+                          mshadow::Random<xpu> *prnd) {
+    LoadModel(root);
+    this->SetupLayer(settings, bottom, top, prnd);                      
+  }
+  
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {}
 
@@ -133,7 +141,7 @@ class Layer {
     }
   }
 
-  virtual void SaveModel(Json::Value &layer_root) {
+  virtual void SaveModel(Json::Value &layer_root, bool need_param = true) {
     // Set layer type
     layer_root["layer_type"] = layer_type;
     layer_root["layer_name"] = layer_name;
@@ -155,6 +163,8 @@ class Layer {
     Json::Value setting_root;
     SaveSetting(settings, setting_root);
     layer_root["setting"] = setting_root;
+    
+    if (!need_param) return;
     
     // Set layer weights
     Json::Value params_root;
