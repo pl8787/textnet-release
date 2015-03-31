@@ -54,6 +54,8 @@ class SoftmaxLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 1> top_data = top[0]->data_d1();
     
     mshadow::Softmax(bottom0_data, bottom0_data);
+	
+	top_data[0] = 0.0f;
     
     for (int i = 0; i < nbatch; ++i) {
       int k = static_cast<int>(bottom1_data[i]);
