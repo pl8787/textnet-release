@@ -686,7 +686,7 @@ int main(int argc, char *argv[]) {
   Json::Value layers_root;
   for (int i = 0; i < matching_net.size(); ++i) {
       Json::Value layer_root;
-      matching_net[i]->SaveModel(layer_root);
+      matching_net[i]->SaveModel(layer_root, false);
       layers_root.append(layer_root);
   }
   net_root["layers"] = layers_root;
