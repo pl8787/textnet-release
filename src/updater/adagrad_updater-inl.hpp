@@ -23,7 +23,7 @@ class AdagradUpdater : public Updater<xpu, dim>{
     this->updater_type = setting["updater_type"].i_val;
     eps = setting["eps"].f_val;
     lr = setting["lr"].f_val;
-    maxIteration = setting["max_iter"].f_val; 
+    maxIteration = setting["max_iter"].i_val; 
     // base_lr = setting["lr"].f_val;
     // decay = setting["decay"].f_val;
     // momentum = setting["momentum"].f_val;

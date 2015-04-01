@@ -91,11 +91,6 @@ void eval(vector<Layer<cpu> *> senti_net,
       for (int j = 0; j < senti_net.size(); ++j) {
           senti_net[j]->Forward(bottoms[j], tops[j]);
       }
-      // if (bottoms[bottoms.size()-1][0]->data.dptr_[0] == 1. ||
-      //     bottoms[bottoms.size()-1][0]->data.dptr_[0] == 0.) {
-      //     assert(false);
-      // }
-
       ret.loss += tops[tops.size()-2][0]->data_d1()[0];
       ret.acc  += tops[tops.size()-1][0]->data_d1()[0];
   }
@@ -109,12 +104,13 @@ int main(int argc, char *argv[]) {
   vector<Layer<cpu>*> senti_net, senti_valid, senti_test;
 
   int lstm_hidden_dim = 2;
-  int word_rep_dim = 100;
+  int word_rep_dim = 300;
   int max_doc_len = 100;
   int min_doc_len = 1;
   int batch_size = 1;
   int vocab_size = 200000;
   int num_class = 2;
+  int ADA_GRAD_MAX_ITER = 100000000;
   float base_lr = 0.1;
   float ADA_GRAD_EPS = 0.01;
   float decay = 0.00;
@@ -166,8 +162,6 @@ int main(int argc, char *argv[]) {
   bottom_vecs[senti_net.size()-2].push_back(nodes[1]); // softmax
   bottom_vecs[senti_net.size()-1].push_back(nodes[1]); // accuracy
   cout << "Total node count: " << nodes.size() << endl;
-  // senti_net_test[0]->top_nodes.push_back(nodes[0]);
-  // senti_net_test[0]->top_nodes.push_back(nodes[1]);
   
   // Fill Settings vector
   vector<map<string, SettingV> > setting_vec;
@@ -176,7 +170,7 @@ int main(int argc, char *argv[]) {
     map<string, SettingV> setting;
     // orc
     // setting["data_file"] = SettingV("/home/pangliang/matching/data/msr_paraphrase_train_wid_dup.txt");
-    setting["data_file"] = SettingV("/home/wsx/dl.shengxian/data/mr/all.lstm.shuffle");
+    setting["data_file"] = SettingV("/home/wsx/dl.shengxian/data/mr/lstm.train");
     // setting["data_file"] = SettingV("/home/wsx/dl.shengxian/data/treebank/trees/train.seq.allnode.unique.pad.binary.shuffle");
     setting["batch_size"] = SettingV(batch_size);
     setting["max_doc_len"] = SettingV(max_doc_len);
@@ -186,15 +180,16 @@ int main(int argc, char *argv[]) {
     // valid
     // setting["batch_size"] = SettingV(1);
     // setting["data_file"] = SettingV("/home/wsx/dl.shengxian/data/treebank/trees/dev.seq.pad.binary");
-    // senti_valid[0]->PropAll();
-    // senti_valid[0]->SetupLayer(setting, bottom_vecs[0], top_vecs[0], &rnd);
-    // senti_valid[0]->Reshape(bottom_vecs[0], top_vecs[0]);
-    // // test 
-    // // setting["batch_size"] = SettingV(1);
-    // setting["data_file"] = SettingV("/home/wsx/dl.shengxian/data/treebank/trees/test.seq.pad.binary");
-    // senti_test[0]->PropAll();
-    // senti_test[0]->SetupLayer(setting, bottom_vecs[0], top_vecs[0], &rnd);
-    // senti_test[0]->Reshape(bottom_vecs[0], top_vecs[0]);
+    setting["data_file"] = SettingV("/home/wsx/dl.shengxian/data/mr/lstm.dev");
+    senti_valid[0]->PropAll();
+    senti_valid[0]->SetupLayer(setting, bottom_vecs[0], top_vecs[0], &rnd);
+    senti_valid[0]->Reshape(bottom_vecs[0], top_vecs[0]);
+    // test 
+    // setting["batch_size"] = SettingV(1);
+    setting["data_file"] = SettingV("/home/wsx/dl.shengxian/data/mr/lstm.test");
+    senti_test[0]->PropAll();
+    senti_test[0]->SetupLayer(setting, bottom_vecs[0], top_vecs[0], &rnd);
+    senti_test[0]->Reshape(bottom_vecs[0], top_vecs[0]);
   }
   // kEmbedding
   {
@@ -202,7 +197,7 @@ int main(int argc, char *argv[]) {
     // orc
     // setting["embedding_file"] = SettingV("/home/pangliang/matching/data/wikicorp_50_msr.txt");
     // setting["embedding_file"] = SettingV("/home/wsx/repo.other/textnet/data/wikicorp_50_msr.txt");
-    // setting["embedding_file"] = SettingV("/home/wsx/dl.shengxian/data/mr/embedding.test");
+    setting["embedding_file"] = SettingV("/home/wsx/dl.shengxian/data/mr/word_rep_w2v.plpl");
     setting["word_count"] = SettingV(vocab_size);
     setting["feat_size"] = SettingV(word_rep_dim);
       
@@ -212,9 +207,10 @@ int main(int argc, char *argv[]) {
     setting["w_filler"] = SettingV(&w_setting);
       
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-      // w_updater["updater_type"] = SettingV(updater::kAdagrad);
-      w_updater["updater_type"] = SettingV(updater::kSGD);
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      // w_updater["updater_type"] = SettingV(updater::kSGD);
       w_updater["momentum"] = SettingV(0.0f);
+      w_updater["max_iter"] = SettingV(ADA_GRAD_MAX_ITER);
       w_updater["eps"] = SettingV(ADA_GRAD_EPS);
       w_updater["lr"] = SettingV(base_lr);
       w_updater["decay"] = SettingV(decay);  
@@ -288,15 +284,17 @@ int main(int argc, char *argv[]) {
     setting["b_filler"] = SettingV(&b_setting);
 
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-      // w_updater["updater_type"] = SettingV(updater::kAdagrad);
-      w_updater["updater_type"] = SettingV(updater::kSGD);
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["max_iter"] = SettingV(ADA_GRAD_MAX_ITER);
+      // w_updater["updater_type"] = SettingV(updater::kSGD);
       w_updater["eps"] = SettingV(ADA_GRAD_EPS);
       w_updater["momentum"] = SettingV(0.0f);
       w_updater["lr"] = SettingV(base_lr);
       w_updater["decay"] = SettingV(decay);
     map<string, SettingV> &b_updater = *(new map<string, SettingV>());
-      // b_updater["updater_type"] = SettingV(updater::kAdagrad);
-      b_updater["updater_type"] = SettingV(updater::kSGD);
+      b_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["max_iter"] = SettingV(ADA_GRAD_MAX_ITER);
+      // _updater["updater_type"] = SettingV(updater::kSGD);
       b_updater["eps"] = SettingV(ADA_GRAD_EPS);
       b_updater["momentum"] = SettingV(0.0f);
       b_updater["lr"] = SettingV(base_lr);
@@ -336,12 +334,12 @@ int main(int argc, char *argv[]) {
   setting_checker["range_max"] = SettingV(0.1f);
   setting_checker["delta"] = SettingV(0.0001f);
   cker->SetupChecker(setting_checker, &rnd);
-  // for (index_t i = 0; i < senti_net.size(); ++i) {
-  //   // cout << "Forward layer " << i << endl;
+  // check gradient, uncheck last two layers (softmax and accuracy)
+  // for (index_t i = 0; i < senti_net.size()-2; ++i) {
+  //   cout << "Check gradient of layer " << i << endl;
   //   senti_net[i]->Forward(bottom_vecs[i], top_vecs[i]);
-  //   // cker->CheckError(senti_net[i], bottom_vecs[i], top_vecs[i]);
+  //   cker->CheckError(senti_net[i], bottom_vecs[i], top_vecs[i]);
   // }
-  // exit(0);
 
   // Begin Training 
   int max_iters = 300000;
@@ -350,8 +348,8 @@ int main(int argc, char *argv[]) {
     if (iter % 10000 == 0) {
       EvalRet train_ret, valid_ret, test_ret;
       eval(senti_net, bottom_vecs, top_vecs, (10000/batch_size), train_ret);
-      // eval(senti_valid, bottom_vecs, top_vecs, (872/batch_size), valid_ret);
-      // eval(senti_test,  bottom_vecs, top_vecs, (1821/batch_size), test_ret);
+      eval(senti_valid, bottom_vecs, top_vecs, (872/batch_size), valid_ret);
+      eval(senti_test,  bottom_vecs, top_vecs, (1821/batch_size), test_ret);
       fprintf(stdout, "****%f,%f,%f,%f,%f,%f", train_ret.loss, valid_ret.loss, test_ret.loss, train_ret.acc, valid_ret.acc, test_ret.acc);
       if (valid_ret.acc > maxValidAcc) {
           maxValidAcc = valid_ret.acc;
@@ -366,9 +364,6 @@ int main(int argc, char *argv[]) {
       // cout << "Forward layer " << i << endl;
       senti_net[i]->Forward(bottom_vecs[i], top_vecs[i]);
     }
-    assert(true);
-    
-    int tmp = 1;
 #if 0
     for (index_t i = 0; i < nodes.size(); ++i) {
       cout << "# Data " << nodes[i]->node_name << " : ";
@@ -389,30 +384,18 @@ int main(int argc, char *argv[]) {
       // cout << "Backprop layer " << i << endl;
       senti_net[i]->Backprop(bottom_vecs[i], top_vecs[i]);
     }
-    // cout << "HELLO" << endl;
-    tmp = 2;
-    assert(true);
     for (index_t i = 0; i < senti_net.size(); ++i) {
       for (index_t j = 0; j < senti_net[i]->ParamNodeNum(); ++j) {
         // cout << "Update param in layer " << i << " params " << j << endl;
         // cout << "param data" << i << " , " << j << ": " << senti_net[i]->GetParams()[j].data[0][0][0][0] << endl;
         // cout << "param diff" << i << " , " << j << ": " << senti_net[i]->GetParams()[j].diff[0][0][0][0] << endl;
-        if (i == 3 && j == 1) continue;
+        if (i == 3 && j == 1) continue; // bias is shit
         senti_net[i]->GetParams()[j].Update();
         // cout << "param data" << i << " , " << j << ": " << senti_net[i]->GetParams()[j].data[0][0][0][0] << endl<<endl;
       }
     }
-    // if (iter % 10000 == 0) {
-    //   cout << "Average loss:" << aveAcc/10000 << endl;
-    //   aveAcc = 0.;
-    // }
-    // aveAcc += nodes[nodes.size()-1]->data_d1()[0];
-    
     // Output informations
     // cout << "###### Iter " << iter << ": error =\t" << nodes[nodes.size()-2]->data_d1()[0] << endl;
-
-    
-          // cout << "****" << valid_ret.loss << test_ret.loss << 
   }
   
   // Save Initial Model
