@@ -4,7 +4,7 @@
         "w_updater" : {
            "decay" : 0.01,
            "eps" : 1e-04,
-           "lr" : 1e-04,
+           "lr" : 1e-01,
            "momentum" : 0.0,
            "updater_type" : 0
         }
@@ -13,14 +13,14 @@
         "b_updater" : {
            "decay" : 0.01,
            "eps" : 1e-04,
-           "lr" : 1e-04,
+           "lr" : 1e-01,
            "momentum" : 0.0,
            "updater_type" : 0
         },
         "w_updater" : {
            "decay" : 0.01,
            "eps" : 1e-04,
-           "lr" : 1e-04,
+           "lr" : 1e-01,
            "momentum" : 0.0,
            "updater_type" : 0
         }
@@ -28,7 +28,7 @@
    },
    
    "net_name" : "matching_net",
-   "max_iters" : 2000,
+   "max_iters" : 10000,
    "max_test_iters" : 34,
    "display_interval": 1,
    "test_interval" : 100,

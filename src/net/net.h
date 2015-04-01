@@ -46,8 +46,8 @@ class Net {
       Json::Value::Members sub_member = value.getMemberNames();
       
       for (int i = 0; i < layers_root.size(); ++i) {
-        if (layers_root[i]["setting"][name]) {
-          layers_root[i]["setting"][name].clear();
+        if (layers_root[i]["setting"].isMember(name)) {
+          layers_root[i]["setting"].removeMember(name);
           for (Json::Value::Members::iterator it = sub_member.begin();
                  it != sub_member.end(); ++it) {
             std::string sub_name = *it;
