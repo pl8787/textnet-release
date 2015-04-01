@@ -37,9 +37,6 @@ class EmbeddingLayer : public Layer<xpu>{
     embedding_file = setting["embedding_file"].s_val;
     feat_size = setting["feat_size"].i_val;
     word_count = setting["word_count"].i_val;
-    doc_len = bottom[0]->data.size(3);
-    doc_count = bottom[0]->data.size(1);
-    nbatch = bottom[0]->data.size(0);
     
     this->params.resize(1);
     // orc
@@ -101,8 +98,15 @@ class EmbeddingLayer : public Layer<xpu>{
                   "EmbeddingLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "EmbeddingLayer:top size problem.");
+    
+    doc_len = bottom[0]->data.size(3);
+    doc_count = bottom[0]->data.size(1);
+    nbatch = bottom[0]->data.size(0);
                   
     top[0]->Resize(nbatch, doc_count, doc_len, feat_size, true);
+
+	  bottom[0]->PrintShape("bottom0");
+	  top[0]->PrintShape("top0");
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
@@ -127,10 +131,8 @@ class EmbeddingLayer : public Layer<xpu>{
             top_data[i][j][k] = F<op::identity>(weight_data[w_idx]);
           }
         }
-        int tmp = 1;
       }
     }
-    int tmp = 1;
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
@@ -187,19 +189,22 @@ class EmbeddingLayer : public Layer<xpu>{
   }
   void LocateBeginEnd(mshadow::Tensor<xpu, 2> seq, 
                       int &begin, int &end) { // input a 2D tensor, out put a sub 2d tensor, with 0 padding
-    utils::Check(seq.size(0) == 1, "EmbeddingLayer: input error for LocateBeginEnd()");
+    utils::Check(seq.size(0) == 1, "EmbeddingLayer: input error.");
+    begin = seq.size(1);
     for (int i = 0; i < seq.size(1); ++i) {
-      if (!isnan(seq[0][i])) {
+      if (!isnan(seq[0][i])) { // the first number
           begin = i;
           break;
       }
     }
-    for (int i = seq.size(1)-1; i >= 0; --i) {
-      if (!isnan(seq[0][i])) {
-          end = i + 1;
+    end = seq.size(1);
+    for (int i = begin; i < seq.size(1); ++i) {
+      if (isnan(seq[0][i])) { // the first NAN
+          end = i;
           break;
       }
     }
+    utils::Check(begin < end && begin >= 0, "EmbeddingLayer: input error.");
   }
  protected:
   std::string embedding_file;

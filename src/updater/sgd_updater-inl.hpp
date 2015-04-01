@@ -26,6 +26,7 @@ class SGDUpdater : public Updater<xpu, dim>{
     momentum = setting["momentum"].f_val;
     iteration = 0;
 	wd = 0.0;
+    if (setting.count("l2")) wd = setting["l2"].f_val;
 	lr = base_lr;
   }
   

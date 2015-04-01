@@ -41,6 +41,8 @@ class LstmLayer : public Layer<xpu> {
     begin_h_er.Resize(mshadow::Shape2(1, d_mem));
     begin_c_er.Resize(mshadow::Shape2(1, d_mem));
 
+    begin_h = 0.; begin_c = 0.; begin_h_er = 0.; begin_c_er = 0.;
+
     this->params.resize(3);
     this->params[0].Resize(1, 1, d_input, 4*d_mem, true); // w
     this->params[1].Resize(1, 1, d_mem,   4*d_mem, true); // u
@@ -98,31 +100,20 @@ class LstmLayer : public Layer<xpu> {
 
   void LocateBeginEnd(mshadow::Tensor<xpu, 2> seq, 
                       int &begin, int &end) { // input a 2D tensor, out put a sub 2d tensor, with 0 padding
+    begin = seq.size(0);
     for (int i = 0; i < seq.size(0); ++i) {
-      if (!isnan(seq[i][0])) {
+      if (!isnan(seq[i][0])) { // the first number
           begin = i;
           break;
       }
     }
-    for (int i = seq.size(0)-1; i >= 0; --i) {
-      if (!isnan(seq[i][0])) {
-          end = i + 1;
+    end = seq.size(0);
+    for (int i = begin; i < seq.size(0); ++i) {
+      if (isnan(seq[i][0])) { // the first NAN
+          end = i;
           break;
       }
     }
-    // for (index_t i = 0; i < seq.shape_[0]*seq.shape_[1]; ++i) {
-    //   if (seq.dptr_[i] != 0.) {
-    //     begin = i / seq.shape_[1];
-    //     break;
-    //   }
-    // }
-
-    // for (int i = (seq.shape_[0]*seq.shape_[1]-1); i >= 0; --i) {
-    //   if (seq.dptr_[i] != 0.) {
-    //     end = (i / seq.shape_[1]) + 1;
-    //     break;
-    //   }
-    // }
     utils::Check(begin < end && begin >= 0, "LstmLayer: input error."); 
   }
 

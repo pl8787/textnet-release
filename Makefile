@@ -32,7 +32,6 @@ NVCCFLAGS += -ccbin=$(CXX) -Xcompiler -fPIC $(COMMON_FLAGS) --use_fast_math -g -
 LINKFLAGS += -fPIC $(COMMON_FLAGS) $(WARNINGS)
 LDFLAGS += $(foreach librarydir,$(LIBRARY_DIRS),-L$(librarydir)) \
         $(foreach library,$(LIBRARIES),-l$(library))
-
  
 # orc
 # CXXFLAGS += -Wall -g -O3 -msse3 -Wno-unknown-pragmas -funroll-loops -I./mshadow/
@@ -43,13 +42,10 @@ export NVCCFLAGS = --use_fast_math -g -O3 -ccbin $(CXX)
 
 
 # specify tensor path
-# BIN = bin/textnet bin/grad_check bin/textnet_test bin/textnet_senti
-BIN = bin/textnet_senti
-# BIN = bin/textnet_test
-OBJ = layer_cpu.o initializer_cpu.o updater_cpu.o checker_cpu.o io.o
-#  nnet_cpu.o 
-CUOBJ = layer_gpu.o initializer_gpu.o updater_gpu.o checker_gpu.o
-#  nnet_gpu.o
+# BIN = bin/textnet bin/grad_check bin/textnet_test bin/textnet_matching bin/textnet_senti
+BIN = bin/textnet bin/grad_check bin/textnet_matching bin/textnet_senti
+OBJ = layer_cpu.o initializer_cpu.o updater_cpu.o checker_cpu.o io.o #net_cpu.o 
+CUOBJ = layer_gpu.o initializer_gpu.o updater_gpu.o checker_gpu.o #net_gpu.o
 
 all: $(BIN)
 
@@ -67,12 +63,11 @@ checker_cpu.o checker_gpu.o: src/checker/checker_impl.cpp src/checker/checker_im
   
 io.o: src/io/jsoncpp.cpp src/io/json/*.*
 
-# nnet_cpu.o nnet_gpu.o: src/nnet/nnet_impl.cpp src/nnet/nnet_impl.cu src/layer/layer.h\
-	# src/updater/updater.h src/utils/*.h src/nnet/*.hpp src/nnet/*.h
-
+#net_cpu.o net_gpu.o: src/net/net.h src/layer/*.h src/utils/*.h
 
 
 bin/textnet: src/textnet_main.cpp $(OBJ) $(CUOBJ)
+bin/textnet_matching: src/textnet_matching.cpp $(OBJ) $(CUOBJ)
 bin/textnet_senti: src/textnet_senti.cpp $(OBJ) $(CUOBJ)
 bin/grad_check: src/grad_check.cpp $(OBJ) $(CUOBJ)
 bin/textnet_test: src/textnet_test.cpp $(OBJ) $(CUOBJ)
@@ -93,5 +88,4 @@ clean:
 	$(RM) $(OBJ) $(BIN) $(CUBIN) $(CUOBJ) *~ */*~ */*/*~
 
 
-# hello
 

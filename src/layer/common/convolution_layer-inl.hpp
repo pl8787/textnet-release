@@ -78,8 +78,8 @@ class ConvolutionLayer : public Layer<xpu> {
                    (shape_in[2] + pad_y * 2 - kernel_y) / stride + 1,
                    (shape_in[3] + pad_x * 2 - kernel_x) / stride + 1);
 
-    std::cout << shape_in[0] << "x" << shape_in[1] << "x" << shape_in[2] << "x" << shape_in[3] << std::endl;
-    std::cout << shape_out[0] << "x" << shape_out[1] << "x" << shape_out[2] << "x" << shape_out[3] << std::endl;
+    // std::cout << shape_in[0] << "x" << shape_in[1] << "x" << shape_in[2] << "x" << shape_in[3] << std::endl;
+    // std::cout << shape_out[0] << "x" << shape_out[1] << "x" << shape_out[2] << "x" << shape_out[3] << std::endl;
 
     top[0]->Resize(shape_out);
     temp_col_.Resize(mshadow::Shape2(channel_in*kernel_x*kernel_y, shape_out[2]*shape_out[3]));
@@ -88,6 +88,8 @@ class ConvolutionLayer : public Layer<xpu> {
 
     temp_data_.Resize(mshadow::Shape2(channel_out, shape_out[2]*shape_out[3]));
     
+	  bottom[0]->PrintShape("bottom0");
+	  top[0]->PrintShape("top0");
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

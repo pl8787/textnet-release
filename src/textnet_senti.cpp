@@ -103,11 +103,11 @@ int main(int argc, char *argv[]) {
   mshadow::Random<cpu> rnd(37);
   vector<Layer<cpu>*> senti_net, senti_valid, senti_test;
 
-  int lstm_hidden_dim = 2;
+  int lstm_hidden_dim = 50;
   int word_rep_dim = 300;
   int max_doc_len = 100;
   int min_doc_len = 1;
-  int batch_size = 1;
+  int batch_size = 50;
   int vocab_size = 200000;
   int num_class = 2;
   int ADA_GRAD_MAX_ITER = 100000000;
@@ -118,12 +118,12 @@ int main(int argc, char *argv[]) {
     base_lr = atof(argv[1]);
   }
   
-  senti_net.push_back(CreateLayer<cpu>(kTextData));
+  senti_net.push_back(CreateLayer<cpu>(kSequenceClassificationData));
   senti_net[senti_net.size()-1]->layer_name = "text";
   senti_net.push_back(CreateLayer<cpu>(kEmbedding));
   senti_net[senti_net.size()-1]->layer_name = "embedding";
-  // senti_net.push_back(CreateLayer<cpu>(kLstm));
-  // senti_net[senti_net.size()-1].name == "kLstm";
+  senti_net.push_back(CreateLayer<cpu>(kLstm));
+  senti_net[senti_net.size()-1]->layer_name == "lstm";
   senti_net.push_back(CreateLayer<cpu>(kWholeMaxPooling));
   senti_net[senti_net.size()-1]->layer_name = "wholepooling";
   senti_net.push_back(CreateLayer<cpu>(kFullConnect));
@@ -135,8 +135,8 @@ int main(int argc, char *argv[]) {
 
   senti_test = senti_net;
   senti_valid = senti_net;
-  senti_test[0] = CreateLayer<cpu>(kTextData);
-  senti_valid[0]= CreateLayer<cpu>(kTextData);
+  senti_test[0] = CreateLayer<cpu>(kSequenceClassificationData);
+  senti_valid[0]= CreateLayer<cpu>(kSequenceClassificationData);
   
   vector<vector<Node<cpu>*> > bottom_vecs(senti_net.size(), vector<Node<cpu>*>());
   vector<vector<Node<cpu>*> > top_vecs(senti_net.size(), vector<Node<cpu>*>());
@@ -165,7 +165,7 @@ int main(int argc, char *argv[]) {
   
   // Fill Settings vector
   vector<map<string, SettingV> > setting_vec;
-  // kTextData
+  // kSequenceClassificationData
   {
     map<string, SettingV> setting;
     // orc
@@ -174,7 +174,6 @@ int main(int argc, char *argv[]) {
     // setting["data_file"] = SettingV("/home/wsx/dl.shengxian/data/treebank/trees/train.seq.allnode.unique.pad.binary.shuffle");
     setting["batch_size"] = SettingV(batch_size);
     setting["max_doc_len"] = SettingV(max_doc_len);
-    setting["min_doc_len"] = SettingV(1);
     setting_vec.push_back(setting);
     
     // valid
@@ -218,51 +217,35 @@ int main(int argc, char *argv[]) {
     setting_vec.push_back(setting);
   }
   // kLstm
-  // {
-  //   map<string, SettingV> setting;
-  //   setting["d_input"] = SettingV(word_rep_dim);
-  //   setting["d_mem"] = SettingV(lstm_hidden_dim);
-  //   setting["no_bias"] = SettingV(true);
-  //     
-  //   map<string, SettingV> &w_filler = *(new map<string, SettingV>());
-  //     w_filler["init_type"] = SettingV(initializer::kUniform);
-  //     w_filler["range"] = SettingV(0.01f);
-  //   setting["w_filler"] = SettingV(&w_filler);
-  //   setting["u_filler"] = SettingV(&w_filler);
-  //   // map<string, SettingV> &u_filler = *(new map<string, SettingV>());
-  //   //   u_filler["init_type"] = SettingV(initializer::kUniform);
-  //   //   u_filler["range"] = SettingV(0.01f);
-  //   // setting["u_filler"] = SettingV(&u_filler);
-  //   map<string, SettingV> &b_filler = *(new map<string, SettingV>());
-  //     b_filler["init_type"] = SettingV(initializer::kZero);
-  //   setting["b_filler"] = SettingV(&b_filler);
-  //     
-  //   map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-  //     w_updater["updater_type"] = SettingV(updater::kAdagrad);
-  //     w_updater["momentum"] = SettingV(0.0f);
-  //     w_updater["eps"] = SettingV(ADA_GRAD_EPS);
-  //     w_updater["lr"] = SettingV(base_lr);
-  //     w_updater["decay"] = SettingV(decay);  
-  //   setting["w_updater"] = SettingV(&w_updater);
-  //   setting["u_updater"] = SettingV(&w_updater);
-  //   setting["b_updater"] = SettingV(&w_updater);
-  //   // map<string, SettingV> &u_updater = *(new map<string, SettingV>());
-  //   //   u_updater["updater_type"] = SettingV(updater::kAdagrad);
-  //   //   u_updater["momentum"] = SettingV(0.0f);
-  //   //   u_updater["eps"] = SettingV(ADA_GRAD_EPS);
-  //   //   u_updater["lr"] = SettingV(base_lr);
-  //   //   u_updater["decay"] = SettingV(decay);  
-  //   // setting["u_updater"] = SettingV(&u_updater);
-  //   // map<string, SettingV> &b_updater = *(new map<string, SettingV>());
-  //   //   b_updater["updater_type"] = SettingV(updater::kAdagrad);
-  //   //   b_updater["momentum"] = SettingV(0.0f);
-  //   //   b_updater["eps"] = SettingV(ADA_GRAD_EPS);
-  //   //   b_updater["lr"] = SettingV(base_lr);
-  //   //   b_updater["decay"] = SettingV(decay);  
-  //   // setting["b_updater"] = SettingV(&b_updater);
-  //   
-  //   setting_vec.push_back(setting);
-  // }
+  {
+    map<string, SettingV> setting;
+    setting["d_input"] = SettingV(word_rep_dim);
+    setting["d_mem"] = SettingV(lstm_hidden_dim);
+    setting["no_bias"] = SettingV(true);
+      
+    map<string, SettingV> &w_filler = *(new map<string, SettingV>());
+      w_filler["init_type"] = SettingV(initializer::kUniform);
+      w_filler["range"] = SettingV(0.01f);
+    setting["w_filler"] = SettingV(&w_filler);
+    setting["u_filler"] = SettingV(&w_filler);
+
+    map<string, SettingV> &b_filler = *(new map<string, SettingV>());
+      b_filler["init_type"] = SettingV(initializer::kZero);
+    setting["b_filler"] = SettingV(&b_filler);
+      
+    map<string, SettingV> &w_updater = *(new map<string, SettingV>());
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["momentum"] = SettingV(0.0f);
+      w_updater["eps"] = SettingV(ADA_GRAD_EPS);
+      w_updater["mat_iter"] = SettingV(ADA_GRAD_MAX_ITER);
+      w_updater["lr"] = SettingV(base_lr);
+      w_updater["decay"] = SettingV(decay); 
+    setting["w_updater"] = SettingV(&w_updater);
+    setting["u_updater"] = SettingV(&w_updater);
+    setting["b_updater"] = SettingV(&w_updater);
+    
+    setting_vec.push_back(setting);
+  }
   // kWholeMaxPooling
   {
     map<string, SettingV> setting;
@@ -345,12 +328,14 @@ int main(int argc, char *argv[]) {
   int max_iters = 300000;
   float maxValidAcc = 0., testAccByValid = 0.;
   for (int iter = 0; iter < max_iters; ++iter) {
-    if (iter % 10000 == 0) {
+    // if (iter % 100 == 0) { cout << "iter:" << iter << endl; }
+    if (iter % (8500/batch_size) == 0) {
       EvalRet train_ret, valid_ret, test_ret;
-      eval(senti_net, bottom_vecs, top_vecs, (10000/batch_size), train_ret);
-      eval(senti_valid, bottom_vecs, top_vecs, (872/batch_size), valid_ret);
-      eval(senti_test,  bottom_vecs, top_vecs, (1821/batch_size), test_ret);
-      fprintf(stdout, "****%f,%f,%f,%f,%f,%f", train_ret.loss, valid_ret.loss, test_ret.loss, train_ret.acc, valid_ret.acc, test_ret.acc);
+      eval(senti_net, bottom_vecs, top_vecs, (8500/batch_size), train_ret);
+      eval(senti_valid, bottom_vecs, top_vecs, (1060/batch_size), valid_ret);
+      eval(senti_test,  bottom_vecs, top_vecs, (1060/batch_size), test_ret);
+      fprintf(stdout, "****%d,%f,%f,%f,%f,%f,%f", iter, train_ret.loss, valid_ret.loss, test_ret.loss, 
+                                                        train_ret.acc,  valid_ret.acc,  test_ret.acc);
       if (valid_ret.acc > maxValidAcc) {
           maxValidAcc = valid_ret.acc;
           testAccByValid = test_ret.acc;
@@ -389,7 +374,8 @@ int main(int argc, char *argv[]) {
         // cout << "Update param in layer " << i << " params " << j << endl;
         // cout << "param data" << i << " , " << j << ": " << senti_net[i]->GetParams()[j].data[0][0][0][0] << endl;
         // cout << "param diff" << i << " , " << j << ": " << senti_net[i]->GetParams()[j].diff[0][0][0][0] << endl;
-        if (i == 3 && j == 1) continue; // bias is shit
+        if (senti_net[i]->layer_name == "softmax" && j == 1) continue; // bias is shit
+        if (senti_net[i]->layer_name == "lstm" && j == 2) continue; // bias is shit
         senti_net[i]->GetParams()[j].Update();
         // cout << "param data" << i << " , " << j << ": " << senti_net[i]->GetParams()[j].data[0][0][0][0] << endl<<endl;
       }

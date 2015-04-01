@@ -1,5 +1,5 @@
-#ifndef TEXTNET_LAYER_DROPOUT_LAYER_INL_HPP_
-#define TEXTNET_LAYER_DROPOUT_LAYER_INL_HPP_
+#ifndef TEXTNET_LAYER_MATCH_LAYER_INL_HPP_
+#define TEXTNET_LAYER_MATCH_LAYER_INL_HPP_
 
 #include <iostream>
 #include <fstream>
@@ -14,12 +14,12 @@ namespace textnet {
 namespace layer {
 
 template<typename xpu>
-class DropoutLayer : public Layer<xpu>{
+class MatchLayer : public Layer<xpu>{
  public:
-  DropoutLayer(LayerType type) { this->layer_type = type; }
-  virtual ~DropoutLayer(void) {}
+  MatchLayer(LayerType type) { this->layer_type = type; }
+  virtual ~MatchLayer(void) {}
   
-  virtual int BottomNodeNum() { return 1; }
+  virtual int BottomNodeNum() { return 2; }
   virtual int TopNodeNum() { return 1; }
   virtual int ParamNodeNum() { return 0; }
   
@@ -30,25 +30,23 @@ class DropoutLayer : public Layer<xpu>{
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
     
     utils::Check(bottom.size() == BottomNodeNum(),
-                  "DropoutLayer:bottom size problem."); 
+                  "MatchLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
-                  "DropoutLayer:top size problem.");
-                  
-    rate = setting["rate"].f_val; 
-    utils::Check(rate >= 0.0 && rate <= 1.0, 
-                  "Dropout rate must between 0.0 and 1.0.");    
+                  "MatchLayer:top size problem.");
+    
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     utils::Check(bottom.size() == BottomNodeNum(),
-                  "DropoutLayer:bottom size problem."); 
+                  "MatchLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
-                  "DropoutLayer:top size problem.");
+                  "MatchLayer:top size problem.");
                   
-    top[0]->Resize(bottom[0]->data.shape_, true);
-	  mask.Resize(bottom[0]->data.shape_);
-
+    nbatch = bottom[0]->data.size(0); 
+    doc_len = bottom[0]->data.size(3);    
+                  
+    top[0]->Resize(nbatch, 1, doc_len, doc_len, true);
 	  bottom[0]->PrintShape("bottom0");
 	  top[0]->PrintShape("top0");
   }
@@ -56,13 +54,20 @@ class DropoutLayer : public Layer<xpu>{
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
-    mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
+    mshadow::Tensor<xpu, 2> bottom0_data = bottom[0]->data_d2();
+    mshadow::Tensor<xpu, 2> bottom1_data = bottom[1]->data_d2();
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
-    const float pkeep = 1.0f - rate;
-    if (this->phrase_type == kTrain) {
-      mask = F<op::threshold>(this->prnd_->uniform(mask.shape_), pkeep)  
-                * (1.0f/pkeep);
-      top_data = bottom_data * mask;
+    
+    for (int i = 0; i < nbatch; i++) {
+      for (int j = 0; j < doc_len; j++) {
+        for (int k = 0; k < doc_len; k++) {
+          if (bottom0_data[i][j]==-1 || bottom1_data[i][k]==-1) {
+            top_data[i][0][j][k] = 0;
+          } else {
+            top_data[i][0][j][k] = (bottom0_data[i][j] == bottom1_data[i][k]) ? 1 : 0;
+          }
+        }
+      }
     }
     
   }
@@ -70,19 +75,15 @@ class DropoutLayer : public Layer<xpu>{
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
                         const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
-    mshadow::Tensor<xpu, 4> bottom_diff = bottom[0]->diff;
-    mshadow::Tensor<xpu, 4> top_diff = top[0]->diff;
-    if (this->prop_error[0]) {
-      bottom_diff = top_diff * mask;
-    }
+    
   }
   
  protected:
-  float rate;
-  mshadow::TensorContainer<xpu, 4> mask;
+  int doc_len;
+  int nbatch;
 
 };
 }  // namespace layer
 }  // namespace textnet
-#endif  // LAYER_DROPOUT_LAYER_INL_HPP_
+#endif  // LAYER_MATCH_LAYER_INL_HPP_
 

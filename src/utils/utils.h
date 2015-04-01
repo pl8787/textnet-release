@@ -12,6 +12,7 @@
 #include <vector>
 #include <map>
 #include <cstdarg>
+#include <cassert> // orc
 
 #if !defined(__GNUC__)
 #define fopen64 std::fopen
@@ -67,6 +68,7 @@ const int kPrintBuffer = 1 << 12;
  */
 inline void HandleAssertError(const char *msg) {
   fprintf(stderr, "AssertError:%s\n", msg);
+  assert(false); // orc for looking stack
   exit(-1);
 }
 /*!
@@ -75,6 +77,7 @@ inline void HandleAssertError(const char *msg) {
  */
 inline void HandleCheckError(const char *msg) {
   fprintf(stderr, "%s\n", msg);
+  assert(false); // orc for looking stack
   exit(-1);
 }
 inline void HandlePrint(const char *msg) {

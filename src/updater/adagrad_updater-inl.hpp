@@ -20,59 +20,58 @@ class AdagradUpdater : public Updater<xpu, dim>{
   virtual ~AdagradUpdater(void) {}
   
   virtual void SetupUpdater(std::map<std::string, SettingV> &setting) {
+    utils::Check(setting.count("updater_type"), "AdaGradUpdater: parameter error.");
+    utils::Check(setting.count("eps"), "AdaGradUpdater: parameter error.");
+    utils::Check(setting.count("lr"), "AdaGradUpdater: parameter error.");
+
     this->updater_type = setting["updater_type"].i_val;
     eps = setting["eps"].f_val;
     lr = setting["lr"].f_val;
-    maxIteration = setting["max_iter"].i_val; 
-    // base_lr = setting["lr"].f_val;
-    // decay = setting["decay"].f_val;
-    // momentum = setting["momentum"].f_val;
-    iteration = 0;
-	// wd = 0.0;
-	// lr = base_lr;
+
+    max_iter = -1; 
+    wd = 0.;
+    if (setting.count("max_iter")) max_iter = setting["max_iter"].i_val; 
+    if (setting.count("l2")) wd = setting["l2"].f_val; 
+    
+    iter = 0;
   }
+
   struct square_root {
     MSHADOW_XINLINE static real_t Map(real_t a) {
         return sqrt(a);
     }
   };
+
   virtual void Update(mshadow::Tensor<xpu, dim> data, 
                       mshadow::Tensor<xpu, dim> diff) {
 
-    iteration %= maxIteration;
-    if (iteration == 0) {
-      sumGradSquare.Resize(data.shape_, 0);
-      // adaGrad.Resize(data.shape_, 0);
+    if (iter == 0) {
+      sumGradSquare.Resize(data.shape_, 0.);
     }
-    ++iteration;
-                        
-    // AdaptLearningRate();
-    sumGradSquare += diff * diff;
+    ++iter;
+    if (max_iter > 0) {
+      iter %= max_iter;
+    } 
 
-    // mshadow::Tensor<xpu, dim> ada();
-    // adaGrad = diff / (F<square_root>(sumGradSquare) + eps);
+                        
+    sumGradSquare += diff * diff;
     data -= lr * (diff / (mshadow::expr::F<square_root>(sumGradSquare) + eps));
-    // adaGrad += eps;
-    // data -= lr * adaGrad;
-    
-    // if (momentum == 0.0) {
-    //   data -= lr * (diff + wd * data);
-    // } else {
-    //   history = lr * (diff + wd * data) + momentum * history;
-    //   data -= history;
-    // }
+    if (wd > 0.) {
+      data -= (wd*lr) * data;
+    }
   }
   
   virtual void UpdateSparse(mshadow::Tensor<xpu, dim> data, 
                             mshadow::Tensor<xpu, dim> diff, 
                             mshadow::Tensor<xpu, 1> idx) {
 
-    iteration %= maxIteration;
-    if (iteration == 0) {
-      sumGradSquare.Resize(data.shape_, 0);
-      // adaGrad.Resize(data.shape_, 0);
+    if (iter == 0) {
+      sumGradSquare.Resize(data.shape_, 0.0f);
     }
-    ++iteration;
+    ++iter;
+    if (max_iter > 0) {
+      iter %= max_iter;
+    } 
 
     int w_idx = -1;
     for (int i = 0; i < idx.size(0); ++i) {
@@ -81,22 +80,16 @@ class AdagradUpdater : public Updater<xpu, dim>{
 
       data.Slice(w_idx, w_idx+1) -= (lr * diff.Slice(i, i+1)) /  \
           (mshadow::expr::F<square_root>(sumGradSquare.Slice(w_idx, w_idx+1)) + eps);
-      // adaGrad[w_idx] = diff[i] / (F<square_root>(sumGradSquare[w_idx]) + eps);
-      // data[w_idx] -= lr * adaGrad[w_idx]; 
+      if (wd > 0.) {
+        data.Slice(w_idx, w_idx+1) -= (wd*lr) * data.Slice(w_idx, w_idx+1);
+      }
     }
   }
  protected: 
-  // float momentum;
-  // mshadow::TensorContainer<xpu, dim> history;
-  int iteration, maxIteration;
-  // float lr;
-  // float base_lr;
-  // float decay;
-  // float wd;
-
+  int iter, max_iter;
   mshadow::TensorContainer<xpu, dim> sumGradSquare;
-  // mshadow::TensorContainer<xpu, dim> adaGrad;
-  float eps, lr;
+  float eps, lr, wd;
+
 };
 }  // namespace updater
 }  // namespace textnet

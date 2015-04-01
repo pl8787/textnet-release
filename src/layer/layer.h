@@ -1,6 +1,7 @@
 #ifndef TEXTNET_LAYER_LAYER_H_
 #define TEXTNET_LAYER_LAYER_H_
 
+#include <iostream>
 #include <sstream>
 #include <vector>
 #include <map>
@@ -26,7 +27,7 @@ class Layer {
  public:
   Layer(void) {
     layer_type = 0;
-    phrase_type = 0;
+    phrase_type = -1;
   }
   virtual ~Layer(void) {}
   
@@ -35,8 +36,16 @@ class Layer {
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
     this->settings = setting;
-    phrase_type = setting["phrase_type"].i_val;
+    phrase_type = this->settings["phrase_type"].i_val;
     prnd_ = prnd;
+  }
+  
+  virtual void SetupLayer(Json::Value &root,
+                          const std::vector<Node<xpu>*> &bottom,
+                          const std::vector<Node<xpu>*> &top,
+                          mshadow::Random<xpu> *prnd) {
+    LoadModel(root);
+    this->SetupLayer(this->settings, bottom, top, prnd);                      
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -133,7 +142,7 @@ class Layer {
     }
   }
 
-  virtual void SaveModel(Json::Value &layer_root) {
+  virtual void SaveModel(Json::Value &layer_root, bool need_param = true) {
     // Set layer type
     layer_root["layer_type"] = layer_type;
     layer_root["layer_name"] = layer_name;
@@ -155,6 +164,8 @@ class Layer {
     Json::Value setting_root;
     SaveSetting(settings, setting_root);
     layer_root["setting"] = setting_root;
+    
+    if (!need_param) return;
     
     // Set layer weights
     Json::Value params_root;
@@ -198,7 +209,7 @@ class Layer {
     
     // Set layer settings
     Json::Value setting_root = layer_root["setting"];
-    LoadSetting(settings, setting_root);
+    LoadSetting(this->settings, setting_root);
     
     // Set layer weights
     if (!layer_root["param"]) 
@@ -277,9 +288,10 @@ const int kChConcat = 19;
 const int kSplit = 20;
 const int kEmbedding = 21;
 const int kCross = 22;
-const int kLstm = 23;
-const int kWholeMaxPooling = 24;
-const int kWholeAvePooling = 25;
+const int kMatch = 23;
+const int kLstm = 24;
+const int kWholeMaxPooling = 25;
+const int kWholeAvePooling = 26;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;
@@ -291,12 +303,13 @@ const int kAccuracy = 56;
 
 // Input Layer 71-
 const int kTextData = 71;
+const int kSequenceClassificationData = 72;
 
 
 /*! \brief these are enumeration */
 const int kTrain = 0;
-const int kValidation = 1;
-const int kTest = 2;
+const int kTest = 1;
+const int kBoth = 2;
 
 
 template<typename xpu>

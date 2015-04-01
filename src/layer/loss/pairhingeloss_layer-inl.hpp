@@ -34,8 +34,7 @@ class PairHingeLossLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(),
                   "PairHingeLossLayer:top size problem.");
     delta = setting["delta"].f_val;
-    nbatch = bottom[0]->data.size(0);    
-    utils::Check(nbatch % 2 == 0, "nBatch must be even.");
+    
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -44,7 +43,8 @@ class PairHingeLossLayer : public Layer<xpu>{
                   "PairHingeLossLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "PairHingeLossLayer:top size problem.");
-                  
+    nbatch = bottom[0]->data.size(0);    
+    utils::Check(nbatch % 2 == 0, "nBatch must be even.");              
     top[0]->Resize(1, 1, 1, 1, true);
   }
   

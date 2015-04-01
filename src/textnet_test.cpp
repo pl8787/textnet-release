@@ -593,7 +593,8 @@ int main(int argc, char *argv[]) {
   // TestCrossLayer(&rnd);
   // TestDropoutLayer(&rnd);
   // TestHingeLossLayer(&rnd);
-  // TestAccuracyLayer(&rnd);
+  //TestAccuracyLayer(&rnd);
+  TestMatchLayer(&rnd);
   return 0;
 }
 
