@@ -11,4 +11,4 @@ Layer<cpu>* CreateLayer<cpu>(LayerType type) {
   return CreateLayer_<cpu>(type); 
 }
 }  // namespace layer
-}  // namespace textnet
+}

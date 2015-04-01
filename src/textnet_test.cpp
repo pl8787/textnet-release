@@ -70,35 +70,6 @@ void PrintTensor(const char * name, Tensor<cpu, 4> x) {
     cout << endl;
 }
 
-void TestMatchLayer(mshadow::Random<cpu>* prnd) {
-  Node<cpu> bottom1;
-  Node<cpu> bottom2;
-  Node<cpu> top;
-  vector<Node<cpu>*> bottoms;
-  vector<Node<cpu>*> tops;
-
-  bottoms.push_back(&bottom1);
-  bottoms.push_back(&bottom2);
-  tops.push_back(&top);
-
-  bottom1.Resize(2, 1, 1, 5);
-  bottom2.Resize(2, 1, 1, 5);
-  bottom1.data = 1.0;
-  bottom2.data = 2.0;
-
-  bottom1.data[0][0][0][1] = 2.0;
-
-  map<string, SettingV> setting;
-  // Test Match Layer
-  Layer<cpu> * layer_match = CreateLayer<cpu>(kMatch);
-  layer_match->PropAll();
-  layer_match->SetupLayer(setting, bottoms, tops, prnd);
-  layer_match->Reshape(bottoms, tops);
-  layer_match->Forward(bottoms, tops);
-  
-  PrintTensor("top", top.data);
-}
-
 void TestCrossLayer(mshadow::Random<cpu>* prnd) {
   Node<cpu> bottom1;
   Node<cpu> bottom2;
@@ -270,12 +241,12 @@ void TestConvLayer(mshadow::Random<cpu>* prnd) {
   setting["w_filler"] = SettingV(&w_setting);
   setting["b_filler"] = SettingV(&b_setting);
     map<string, SettingV> w_updater;
-    w_updater["init_type"] = SettingV(updater::kSGD);
+    w_updater["updater_type"] = SettingV(updater::kSGD);
     w_updater["momentum"] = SettingV(0.0f);
     w_updater["lr"] = SettingV(0.001f);
     w_updater["decay"] = SettingV(0.001f);
     map<string, SettingV> b_updater;
-    b_updater["init_type"] = SettingV(updater::kSGD);
+    b_updater["updater_type"] = SettingV(updater::kSGD);
     b_updater["momentum"] = SettingV(0.0f);
     b_updater["lr"] = SettingV(0.001f);
     b_updater["decay"] = SettingV(0.001f);
@@ -343,6 +314,80 @@ void TestPoolLayer(mshadow::Random<cpu>* prnd) {
 
 
 }
+void TestLstmLayer(mshadow::Random<cpu>* prnd) {
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(1,1,4,3), true);
+  bottom.data = 1.0;
+  PrintTensor("input", bottom.data);
+  mshadow::Tensor<cpu, 2> pad_beg = bottom.data[0][0].Slice(0,1);
+  mshadow::Tensor<cpu, 2> pad_end = bottom.data[0][0].Slice(3,4);
+  pad_beg = 0.;
+  pad_end = 0.;
+  PrintTensor("input", bottom.data);
+  
+  map<string, SettingV> setting;
+  setting["d_input"] = SettingV(3);
+  setting["d_mem"] = SettingV(2);
+  setting["no_bias"] = SettingV(false);
+    map<string, SettingV> w_setting;
+    w_setting["init_type"] = SettingV(initializer::kGaussian);
+    w_setting["mu"] = SettingV(0.0f);
+    w_setting["sigma"] = SettingV(1.0f);
+    map<string, SettingV> u_setting;
+    u_setting["init_type"] = SettingV(initializer::kGaussian);
+    u_setting["mu"] = SettingV(0.0f);
+    u_setting["sigma"] = SettingV(1.0f);
+    map<string, SettingV> b_setting;
+    b_setting["init_type"] = SettingV(initializer::kZero);
+  setting["w_filler"] = SettingV(&w_setting);
+  setting["u_filler"] = SettingV(&u_setting);
+  setting["b_filler"] = SettingV(&b_setting);
+    map<string, SettingV> w_updater;
+    w_updater["updater_type"] = SettingV(updater::kSGD);
+    w_updater["momentum"] = SettingV(0.0f);
+    w_updater["lr"] = SettingV(0.001f);
+    w_updater["decay"] = SettingV(0.001f);
+    map<string, SettingV> u_updater;
+    u_updater["updater_type"] = SettingV(updater::kSGD);
+    u_updater["momentum"] = SettingV(0.0f);
+    u_updater["lr"] = SettingV(0.001f);
+    u_updater["decay"] = SettingV(0.001f);
+    map<string, SettingV> b_updater;
+    b_updater["updater_type"] = SettingV(updater::kSGD);
+    b_updater["momentum"] = SettingV(0.0f);
+    b_updater["lr"] = SettingV(0.001f);
+    b_updater["decay"] = SettingV(0.001f);
+  setting["w_updater"] = SettingV(&w_updater);
+  setting["u_updater"] = SettingV(&u_updater);
+  setting["b_updater"] = SettingV(&b_updater);
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_lstm = CreateLayer<cpu>(kLstm);
+  layer_lstm->PropAll();
+  layer_lstm->SetupLayer(setting, bottoms, tops, prnd);
+  layer_lstm->Reshape(bottoms, tops);
+  PrintTensor("param_before", layer_lstm->GetParams()[0].data);
+  layer_lstm->Forward(bottoms, tops);
+  top.diff = 1.0;
+  layer_lstm->Backprop(bottoms, tops);
+  
+  layer_lstm->GetParams()[0].Update();
+  layer_lstm->GetParams()[1].Update();
+
+  PrintTensor("param_after", layer_lstm->GetParams()[0].data);
+
+  PrintTensor("top data", top.data);
+  PrintTensor("bottom diff", bottom.diff);
+
+}
+
 
 void TestFcLayer(mshadow::Random<cpu>* prnd) {
   Node<cpu> bottom;
@@ -368,12 +413,12 @@ void TestFcLayer(mshadow::Random<cpu>* prnd) {
   setting["w_filler"] = SettingV(&w_setting);
   setting["b_filler"] = SettingV(&b_setting);
   map<string, SettingV> w_updater;
-    w_updater["init_type"] = SettingV(updater::kSGD);
+    w_updater["updater_type"] = SettingV(updater::kSGD);
     w_updater["momentum"] = SettingV(0.0f);
     w_updater["lr"] = SettingV(0.001f);
     w_updater["decay"] = SettingV(0.001f);
     map<string, SettingV> b_updater;
-    b_updater["init_type"] = SettingV(updater::kSGD);
+    b_updater["updater_type"] = SettingV(updater::kSGD);
     b_updater["momentum"] = SettingV(0.0f);
     b_updater["lr"] = SettingV(0.001f);
     b_updater["decay"] = SettingV(0.001f);
@@ -443,7 +488,7 @@ void TestTextDataLayer(mshadow::Random<cpu>* prnd) {
   setting_wfiller["sigma"] = SettingV(1.0f);
   setting_wv["w_filler"] = SettingV(&setting_wfiller);
   map<string, SettingV> w_updater;
-    w_updater["init_type"] = SettingV(updater::kSGD);
+    w_updater["updater_type"] = SettingV(updater::kSGD);
     w_updater["momentum"] = SettingV(0.0f);
     w_updater["lr"] = SettingV(0.001f);
     w_updater["decay"] = SettingV(0.001f);
@@ -534,13 +579,20 @@ void TestActivationLayer(mshadow::Random<cpu>* prnd) {
 
 int main(int argc, char *argv[]) {
   mshadow::Random<cpu> rnd(37);
-  //TestActivationLayer(&rnd);
-  //TestFcLayer(&rnd);
-  //TestConvLayer(&rnd);
-  //TestPoolLayer(&rnd);
-  //TestCrossLayer(&rnd);
-  //TestDropoutLayer(&rnd);
-  //TestHingeLossLayer(&rnd);
+  // mshadow::TensorContainer<cpu, 2> a;
+  // mshadow::Shape<2> shape = Shape2(2,3);
+  // a.Resize(shape);
+  // a = NAN;
+  // a = -1.;
+  // cout << (a[0][0] == a[0][0]) << endl;
+  // TestLstmLayer(&rnd);
+  // TestActivationLayer(&rnd);
+  // TestFcLayer(&rnd);
+  // TestConvLayer(&rnd);
+  // TestPoolLayer(&rnd);
+  // TestCrossLayer(&rnd);
+  // TestDropoutLayer(&rnd);
+  // TestHingeLossLayer(&rnd);
   //TestAccuracyLayer(&rnd);
   TestMatchLayer(&rnd);
   return 0;

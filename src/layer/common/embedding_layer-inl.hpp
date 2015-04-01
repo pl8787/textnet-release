@@ -39,7 +39,9 @@ class EmbeddingLayer : public Layer<xpu>{
     word_count = setting["word_count"].i_val;
     
     this->params.resize(1);
-    this->params[0].need_diff = false;
+    // orc
+    // this->params[0].need_diff = false;
+    this->params[0].need_diff = true;
     this->params[0].Resize(word_count, feat_size, 1, 1);
     
     std::map<std::string, SettingV> w_setting = *setting["w_filler"].m_val;
@@ -55,7 +57,10 @@ class EmbeddingLayer : public Layer<xpu>{
           w_updater, this->prnd_);
     this->params[0].updater_->is_sparse = true;          
     
-    ReadInitEmbedding();
+    // orc
+    if(!embedding_file.empty()) {
+      ReadInitEmbedding();
+    }
   }
   
   void ReadInitEmbedding() {
@@ -66,6 +71,7 @@ class EmbeddingLayer : public Layer<xpu>{
     utils::Check(fin, "Open embedding file problem.");
     while (!fin.eof()) {
       std::getline(fin, s);
+      if (s.empty()) break;
       lines.push_back(s);
     }
     fin.close();
@@ -110,17 +116,25 @@ class EmbeddingLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
     mshadow::Tensor<xpu, 2> weight_data = this->params[0].data_d2();
     
+    // orc
+    top_data = NAN;
     int w_idx = -1;
     for (int i = 0; i < nbatch; ++i) {
       for (int j = 0; j < doc_count; ++j) {
-        for (int k = 0; k < doc_len; ++k) {
+        // orc
+        int begin, end;
+        LocateBeginEnd(bottom_data[i][j], begin, end);
+        // for (int k = 0; k < doc_len; ++k) {
+        for (int k = begin; k < end; ++k) {
           w_idx = (int)bottom_data[i][j][0][k];
           if (w_idx != -1) {
             top_data[i][j][k] = F<op::identity>(weight_data[w_idx]);
           }
         }
+        int tmp = 1;
       }
     }
+    int tmp = 1;
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
@@ -135,7 +149,11 @@ class EmbeddingLayer : public Layer<xpu>{
       int inc = 0;
       for (int i = 0; i < nbatch; ++i) {
         for (int j = 0; j < doc_count; ++j) {
-          for (int k = 0; k < doc_len; ++k) {
+          // orc
+          int begin, end;
+          LocateBeginEnd(bottom_data[i][j], begin, end);
+          for (int k = begin; k < end; ++k) {
+          // for (int k = 0; k < doc_len; ++k) {
             w_idx = (int)bottom_data[i][j][0][k];
             if (w_idx != -1 && !idx_map.count(w_idx)) {
               idx_map[w_idx] = inc;
@@ -157,7 +175,11 @@ class EmbeddingLayer : public Layer<xpu>{
       
       for (int i = 0; i < nbatch; ++i) {
         for (int j = 0; j < doc_count; ++j) {
-          for (int k = 0; k < doc_len; ++k) {
+          // orc
+          int begin, end;
+          LocateBeginEnd(bottom_data[i][j], begin, end);
+          // for (int k = 0; k < doc_len; ++k) {
+          for (int k = begin; k < end; ++k) {
             w_idx = (int)bottom_data[i][j][0][k];
             if (w_idx != -1) {
               weight_diff[idx_map[w_idx]] += top_diff[i][j][k];
@@ -165,10 +187,24 @@ class EmbeddingLayer : public Layer<xpu>{
           }
         }
       }
-      
     }
   }
-  
+  void LocateBeginEnd(mshadow::Tensor<xpu, 2> seq, 
+                      int &begin, int &end) { // input a 2D tensor, out put a sub 2d tensor, with 0 padding
+    utils::Check(seq.size(0) == 1, "EmbeddingLayer: input error for LocateBeginEnd()");
+    for (int i = 0; i < seq.size(1); ++i) {
+      if (!isnan(seq[0][i])) {
+          begin = i;
+          break;
+      }
+    }
+    for (int i = seq.size(1)-1; i >= 0; --i) {
+      if (!isnan(seq[0][i])) {
+          end = i + 1;
+          break;
+      }
+    }
+  }
  protected:
   std::string embedding_file;
   int feat_size;

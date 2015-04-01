@@ -51,6 +51,7 @@ class TextDataLayer : public Layer<xpu>{
     utils::Check(fin, "Open data file problem.");
     while (!fin.eof()) {
       std::getline(fin, s);
+      if (s.empty()) break;
       lines.push_back(s);
     }
     fin.close();
