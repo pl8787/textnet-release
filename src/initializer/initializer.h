@@ -17,6 +17,14 @@ namespace initializer {
 /*! \brief use integer to encode layer types */
 typedef int InitType;
 
+/*! \brief these are enumeration */
+const int kZero = 0;
+const int kConstant = 1;
+const int kUniform = 2;
+const int kGaussian = 3;
+const int kXavier = 4;
+const int kKaiming = 5;
+
 template<typename xpu, int dim>
 class Initializer {
  public:
@@ -28,14 +36,14 @@ class Initializer {
     defaults["init_type"] = SettingV(kZero);
     for (std::map<std::string, SettingV>::iterator it = defaults.begin();
           it != defaults.end(); ++it) {
-      std::string name = *(it->first);
+      std::string name = it->first;
       if (defaults[name].value_type == SET_NONE) {
         utils::Check(setting.count(name), 
             "Setting [%s] needed for this layer.\n", name.c_str());
       } else {
         if (!setting.count(name)) {
           setting[name] = defaults[name];
-          utils::Printf("Setting [%s] set to default value.", name.c_str());
+          utils::Printf("Setting [%s] set to default value.\n", name.c_str());
         }
       }
     }
@@ -57,14 +65,6 @@ class Initializer {
   std::map<std::string, SettingV> defaults;
   
 };
-
-/*! \brief these are enumeration */
-const int kZero = 0;
-const int kConstant = 1;
-const int kUniform = 2;
-const int kGaussian = 3;
-const int kXavier = 4;
-const int kKaiming = 5;
 
 template<typename xpu, int dim>
 Initializer<xpu, dim>* CreateInitializer(InitType type, 

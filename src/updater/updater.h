@@ -17,6 +17,12 @@ namespace updater {
 /*! \brief use integer to encode layer types */
 typedef int UpdaterType;
 
+/*! \brief these are enumeration */
+const int kSGD = 0;
+const int kAdagrad = 1;
+const int kAdam = 2;
+const int kSGDSparse = 3;
+
 template<typename xpu, int dim>
 class Updater {
  public:
@@ -28,14 +34,14 @@ class Updater {
     defaults["updater_type"] = SettingV(kSGD);
     for (std::map<std::string, SettingV>::iterator it = defaults.begin();
           it != defaults.end(); ++it) {
-      std::string name = *(it->first);
+      std::string name = it->first;
       if (defaults[name].value_type == SET_NONE) {
         utils::Check(setting.count(name), 
             "Setting [%s] needed for this layer.\n", name.c_str());
       } else {
         if (!setting.count(name)) {
           setting[name] = defaults[name];
-          utils::Printf("Setting [%s] set to default value.", name.c_str());
+          utils::Printf("Setting [%s] set to default value.\n", name.c_str());
         }
       }
     }
@@ -67,12 +73,6 @@ class Updater {
   std::map<std::string, SettingV> defaults;
   
 };
-
-/*! \brief these are enumeration */
-const int kSGD = 0;
-const int kAdagrad = 1;
-const int kAdam = 2;
-const int kSGDSparse = 3;
 
 template<typename xpu, int dim>
 Updater<xpu, dim>* CreateUpdater(UpdaterType type, std::map<std::string, SettingV> &setting, 
