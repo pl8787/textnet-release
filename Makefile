@@ -44,8 +44,8 @@ export NVCCFLAGS = --use_fast_math -g -O3 -ccbin $(CXX)
 
 # specify tensor path
 # BIN = bin/textnet bin/grad_check bin/textnet_test bin/textnet_senti
-# BIN = bin/textnet_senti
-BIN = bin/textnet_test
+BIN = bin/textnet_senti
+# BIN = bin/textnet_test
 OBJ = layer_cpu.o initializer_cpu.o updater_cpu.o checker_cpu.o io.o
 #  nnet_cpu.o 
 CUOBJ = layer_gpu.o initializer_gpu.o updater_gpu.o checker_gpu.o

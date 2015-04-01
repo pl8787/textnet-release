@@ -56,6 +56,7 @@ class AccuracyLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 1> bottom1_data = bottom[1]->data_d1();
     mshadow::Tensor<xpu, 1> top_data = top[0]->data_d1();
     
+    top_data = 0.;
     for (int i = 0; i < nbatch; ++i) {
       std::vector<std::pair<float, int> > bottom_data_vector;
       int lable_value = static_cast<int>(bottom1_data[i]);

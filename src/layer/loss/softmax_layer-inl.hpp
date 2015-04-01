@@ -54,13 +54,19 @@ class SoftmaxLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 1> top_data = top[0]->data_d1();
     
     mshadow::Softmax(bottom0_data, bottom0_data);
-    
-    for (int i = 1; i < nbatch; ++i) {
+
+    top_data = 0.;
+    for (int i = 0; i < nbatch; ++i) {
       int k = static_cast<int>(bottom1_data[i]);
-      top_data[0] += -log(bottom0_data[i][k]);
+      if (bottom0_data[i][k] == 0.) {
+        top_data[0] += 88; // by min float number
+      } else { 
+        top_data[0] += -log(bottom0_data[i][k]);
+      }
     }
 
     top_data[0] /= nbatch;
+    assert(!isnan(top_data[0]));
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
@@ -71,11 +77,13 @@ class SoftmaxLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 2> bottom0_diff = bottom[0]->diff_d2();
     
     bottom0_diff = F<op::identity>(bottom0_data);
+    // bottom0_diff = 0 - bottom0_diff;
     
     if (this->prop_error[0]) {
       for (int i = 0; i < nbatch; ++i) {
         int k = static_cast<int>(bottom1_data[i]);
         bottom0_diff[i][k] -= 1.0f; 
+        // bottom0_diff[i][k] += 1.0f; 
       }
     }
   }

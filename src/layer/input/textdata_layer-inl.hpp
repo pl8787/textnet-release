@@ -73,6 +73,7 @@ class TextDataLayer : public Layer<xpu>{
       while (!iss.eof()) {
         iss >> data_set[i][0][0][j++];
       }
+      utils::Check(j < max_doc_len, "TextDataLayer: doc length error.");
     }
   }
   
@@ -102,7 +103,7 @@ class TextDataLayer : public Layer<xpu>{
                         const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
   }
-  
+
  protected:
   std::string data_file;
   int batch_size;

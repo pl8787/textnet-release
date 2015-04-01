@@ -712,7 +712,7 @@ int main(int argc, char *argv[]) {
     }
 #endif
 
-    for (index_t i = matching_net.size()-1; i >= 0; --i) {
+    for (int i = matching_net.size()-1; i >= 0; --i) {
       //cout << "Backprop layer " << i << endl;
       matching_net[i]->Backprop(bottom_vecs[i], top_vecs[i]);
     }

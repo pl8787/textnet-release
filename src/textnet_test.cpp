@@ -579,20 +579,20 @@ void TestActivationLayer(mshadow::Random<cpu>* prnd) {
 
 int main(int argc, char *argv[]) {
   mshadow::Random<cpu> rnd(37);
-  mshadow::TensorContainer<cpu, 2> a;
-  mshadow::Shape<2> shape = Shape2(2,3);
-  a.Resize(shape);
-  a = NAN;
+  // mshadow::TensorContainer<cpu, 2> a;
+  // mshadow::Shape<2> shape = Shape2(2,3);
+  // a.Resize(shape);
+  // a = NAN;
   // a = -1.;
-  cout << (a[0][0] == a[0][0]) << endl;
+  // cout << (a[0][0] == a[0][0]) << endl;
   // TestLstmLayer(&rnd);
-  //TestActivationLayer(&rnd);
-  //TestFcLayer(&rnd);
-  //TestConvLayer(&rnd);
-  //TestPoolLayer(&rnd);
-  //TestCrossLayer(&rnd);
-  //TestDropoutLayer(&rnd);
-  //TestHingeLossLayer(&rnd);
+  // TestActivationLayer(&rnd);
+  // TestFcLayer(&rnd);
+  // TestConvLayer(&rnd);
+  // TestPoolLayer(&rnd);
+  // TestCrossLayer(&rnd);
+  // TestDropoutLayer(&rnd);
+  // TestHingeLossLayer(&rnd);
   // TestAccuracyLayer(&rnd);
   return 0;
 }

@@ -36,10 +36,10 @@ class LstmLayer : public Layer<xpu> {
     d_input = setting["d_input"].i_val;
     no_bias = setting["no_bias"].b_val;
 
-    begin_h.Resize(1, d_mem, true);
-    begin_c.Resize(1, d_mem, true);
-    begin_h_er.Resize(1, d_mem, true);
-    begin_c_er.Resize(1, d_mem, true);
+    begin_h.Resize(mshadow::Shape2(1, d_mem));
+    begin_c.Resize(mshadow::Shape2(1, d_mem));
+    begin_h_er.Resize(mshadow::Shape2(1, d_mem));
+    begin_c_er.Resize(mshadow::Shape2(1, d_mem));
 
     this->params.resize(3);
     this->params[0].Resize(1, 1, d_input, 4*d_mem, true); // w
@@ -97,8 +97,8 @@ class LstmLayer : public Layer<xpu> {
   }
 
   void LocateBeginEnd(mshadow::Tensor<xpu, 2> seq, 
-                      index_t &begin, index_t &end) { // input a 2D tensor, out put a sub 2d tensor, with 0 padding
-    for (index_t i = 0; i < seq.size(0); ++i) {
+                      int &begin, int &end) { // input a 2D tensor, out put a sub 2d tensor, with 0 padding
+    for (int i = 0; i < seq.size(0); ++i) {
       if (!isnan(seq[i][0])) {
           begin = i;
           break;
@@ -123,7 +123,7 @@ class LstmLayer : public Layer<xpu> {
     //     break;
     //   }
     // }
-    utils::Check(begin < end && begin > 0, "LstmLayer: input error."); 
+    utils::Check(begin < end && begin >= 0, "LstmLayer: input error."); 
   }
 
   typedef mshadow::Tensor<xpu, 1> Tensor1D;
@@ -165,17 +165,17 @@ class LstmLayer : public Layer<xpu> {
     const index_t nbatch = bottom_data.size(0); 
     Tensor2D pre_c, pre_h;
     for (index_t i = 0; i < nbatch; ++i) {
-      index_t begin = 0, end = 0;
+      int begin = 0, end = 0;
       LocateBeginEnd(bottom_data[i][0], begin, end);
-      assert(begin > 0 && begin < end);
+      assert(begin >= 0 && begin < end);
       // not need any padding, begin h and c are set to 0
       for (index_t row_idx = begin; row_idx < end; ++row_idx) {
         if (row_idx == begin) {
           pre_c = begin_c; 
           pre_h = begin_h;
         } else {
-          pre_c = c[i][0].Splice(row_idx-1, row_idx);
-          pre_h = top_data[i][0].Splice(row_idx-1, row_idx);
+          pre_c = c[i][0].Slice(row_idx-1, row_idx);
+          pre_h = top_data[i][0].Slice(row_idx-1, row_idx);
         }
         ForwardOneStep(pre_c,
                        pre_h,
@@ -269,10 +269,10 @@ class LstmLayer : public Layer<xpu> {
 
     Tensor2D pre_c, pre_h, pre_c_er, pre_h_er;
     for (index_t i = 0; i < nbatch; ++i) {
-      index_t begin = 0, end = 0;
+      int begin = 0, end = 0;
       LocateBeginEnd(bottom_data[i][0], begin, end);
-      assert(begin > 0 && begin < end); 
-      for (index_t row_idx = end-1; row_idx >= begin; --row_idx) {
+      assert(begin >= 0 && begin < end); 
+      for (int row_idx = end-1; row_idx >= begin; --row_idx) {
           if (row_idx == begin) {
               pre_c = begin_c;
               pre_h = begin_h;
