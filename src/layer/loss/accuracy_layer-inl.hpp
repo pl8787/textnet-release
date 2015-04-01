@@ -58,7 +58,6 @@ class AccuracyLayer : public Layer<xpu>{
 
 	top_data[0] = 0.0f;
     
-    top_data = 0.;
     for (int i = 0; i < nbatch; ++i) {
       std::vector<std::pair<float, int> > bottom_data_vector;
       int lable_value = static_cast<int>(bottom1_data[i]);
