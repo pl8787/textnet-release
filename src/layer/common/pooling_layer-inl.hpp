@@ -19,6 +19,17 @@ class PoolingLayer : public Layer<xpu> {
   virtual int TopNodeNum() { return 1; }
   virtual int ParamNodeNum() { return 0; }
   
+  virtual void Require() {
+    // default value, just set the value you want
+    this->defaults["stride"] = SettingV(1);
+    // require value, set to SettingV(),
+    // it will force custom to set in config
+    this->defaults["kernel_x"] = SettingV();
+    this->defaults["kernel_y"] = SettingV();
+    
+    Layer<xpu>::Require();
+  }
+  
   virtual void SetupLayer(std::map<std::string, SettingV> &setting,
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,

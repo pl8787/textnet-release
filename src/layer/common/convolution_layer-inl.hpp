@@ -20,6 +20,26 @@ class ConvolutionLayer : public Layer<xpu> {
   virtual int TopNodeNum() { return 1; }
   virtual int ParamNodeNum() { return 2; }
   
+  virtual void Require() {
+    // default value, just set the value you want
+    this->defaults["pad_x"] = SettingV(0);
+    this->defaults["pad_y"] = SettingV(0);
+    this->defaults["stride"] = SettingV(1);
+    this->defaults["no_bias"] = SettingV(false);
+    
+    // require value, set to SettingV(),
+    // it will force custom to set in config
+    this->defaults["kernel_x"] = SettingV();
+    this->defaults["kernel_y"] = SettingV();
+    this->defaults["channel_out"] = SettingV();
+    this->defaults["w_filler"] = SettingV();
+    this->defaults["b_filler"] = SettingV();
+    this->defaults["w_updater"] = SettingV();
+    this->defaults["b_updater"] = SettingV();
+    
+    Layer<xpu>::Require();
+  }
+  
   virtual void SetupLayer(std::map<std::string, SettingV> &setting,
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,

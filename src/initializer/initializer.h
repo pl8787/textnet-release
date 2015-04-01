@@ -23,8 +23,27 @@ class Initializer {
   Initializer(void) {}
   virtual ~Initializer(void) {}
   
-  virtual void SetupInitializer() {
+  // To implement this function you need call base function in the end
+  virtual void Require(std::map<std::string, SettingV> &setting) {
+    defaults["init_type"] = SettingV(kZero);
+    for (std::map<std::string, SettingV>::iterator it = defaults.begin();
+          it != defaults.end(); ++it) {
+      std::string name = *(it->first);
+      if (defaults[name].value_type == SET_NONE) {
+        utils::Check(setting.count(name), 
+            "Setting [%s] needed for this layer.\n", name.c_str());
+      } else {
+        if (!setting.count(name)) {
+          setting[name] = defaults[name];
+          utils::Printf("Setting [%s] set to default value.", name.c_str());
+        }
+      }
+    }
+  }
+  
+  virtual void SetupInitializer(std::map<std::string, SettingV> &setting) {
     init_type = 0;
+    this->Require(setting);
   }
   
   virtual void DoInitialize(mshadow::Tensor<xpu, dim> data) {}
@@ -34,6 +53,8 @@ class Initializer {
  protected:
   InitType init_type;
   mshadow::Random<xpu>* prnd_;
+  // required setting
+  std::map<std::string, SettingV> defaults;
   
 };
 

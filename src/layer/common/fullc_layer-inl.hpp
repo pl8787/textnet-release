@@ -19,6 +19,20 @@ class FullConnectLayer : public Layer<xpu> {
   virtual int TopNodeNum() { return 1; }
   virtual int ParamNodeNum() { return 2; }
   
+  virtual void Require() {
+    // default value, just set the value you want
+    this->defaults["no_bias"] = SettingV(false);
+    // require value, set to SettingV(),
+    // it will force custom to set in config
+    this->defaults["num_hidden"] = SettingV();
+    this->defaults["w_filler"] = SettingV();
+    this->defaults["b_filler"] = SettingV();
+    this->defaults["w_updater"] = SettingV();
+    this->defaults["b_updater"] = SettingV();
+    
+    Layer<xpu>::Require();
+  }
+  
   virtual void SetupLayer(std::map<std::string, SettingV> &setting,
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,

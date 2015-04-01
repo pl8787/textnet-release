@@ -21,6 +21,16 @@ class LstmLayer : public Layer<xpu> {
   virtual int TopNodeNum() { return 1; }
   virtual int ParamNodeNum() { return 3; }
   
+  virtual void Require() {
+    // default value, just set the value you want
+    
+    // require value, set to SettingV(),
+    // it will force custom to set in config
+    
+    
+    Layer<xpu>::Require();
+  }
+  
   virtual void SetupLayer(std::map<std::string, SettingV> &setting,
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,

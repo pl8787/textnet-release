@@ -23,9 +23,28 @@ class Updater {
   Updater(void) {}
   virtual ~Updater(void) {}
   
-  virtual void SetupUpdater() {
+  // To implement this function you need call base function in the end
+  virtual void Require(std::map<std::string, SettingV> &setting) {
+    defaults["updater_type"] = SettingV(kSGD);
+    for (std::map<std::string, SettingV>::iterator it = defaults.begin();
+          it != defaults.end(); ++it) {
+      std::string name = *(it->first);
+      if (defaults[name].value_type == SET_NONE) {
+        utils::Check(setting.count(name), 
+            "Setting [%s] needed for this layer.\n", name.c_str());
+      } else {
+        if (!setting.count(name)) {
+          setting[name] = defaults[name];
+          utils::Printf("Setting [%s] set to default value.", name.c_str());
+        }
+      }
+    }
+  }
+  
+  virtual void SetupUpdater(std::map<std::string, SettingV> &setting) {
     updater_type = 0;
     is_sparse = false;
+    this->Require(setting);
   }
   
   virtual void Update(mshadow::Tensor<xpu, dim> data, 
@@ -44,6 +63,8 @@ class Updater {
  protected:
   UpdaterType updater_type;
   mshadow::Random<xpu>* prnd_;
+  // required setting
+  std::map<std::string, SettingV> defaults;
   
 };
 

@@ -23,6 +23,20 @@ class EmbeddingLayer : public Layer<xpu>{
   virtual int TopNodeNum() { return 1; }
   virtual int ParamNodeNum() { return 1; }
   
+  virtual void Require() {
+    // default value, just set the value you want
+    
+    // require value, set to SettingV(),
+    // it will force custom to set in config
+    this->defaults["embedding_file"] = SettingV();
+    this->defaults["feat_size"] = SettingV();
+    this->defaults["word_count"] = SettingV();
+    this->defaults["w_filler"] = SettingV();
+    this->defaults["w_updater"] = SettingV();
+    
+    Layer<xpu>::Require();
+  }
+  
   virtual void SetupLayer(std::map<std::string, SettingV> &setting,
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,
@@ -39,9 +53,8 @@ class EmbeddingLayer : public Layer<xpu>{
     word_count = setting["word_count"].i_val;
     
     this->params.resize(1);
-    // orc
-    // this->params[0].need_diff = false;
-    this->params[0].need_diff = true;
+    // No need allocate diff memory
+    this->params[0].need_diff = false;
     this->params[0].Resize(word_count, feat_size, 1, 1);
     
     std::map<std::string, SettingV> w_setting = *setting["w_filler"].m_val;

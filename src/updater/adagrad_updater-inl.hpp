@@ -19,7 +19,21 @@ class AdagradUpdater : public Updater<xpu, dim>{
   }
   virtual ~AdagradUpdater(void) {}
   
+  virtual void Require(std::map<std::string, SettingV> &setting) {
+    // default value, just set the value you want
+    this->defaults["eps"] = SettingV(0.0f);
+    this->defaults["wd"] = SettingV(0.0f);
+    
+    // require value, set to SettingV(),
+    // it will force custom to set in config
+    this->defaults["lr"] = SettingV();
+    
+    Updater<xpu, dim>::Require(setting);
+  }
+  
   virtual void SetupUpdater(std::map<std::string, SettingV> &setting) {
+    Updater<xpu, dim>::SetupUpdater(setting);
+    
     this->updater_type = setting["updater_type"].i_val;
     eps = setting["eps"].f_val;
     lr = setting["lr"].f_val;

@@ -36,6 +36,8 @@ class Layer {
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
     this->settings = setting;
+    this->Require();
+    
     phrase_type = this->settings["phrase_type"].i_val;
     prnd_ = prnd;
   }
@@ -46,6 +48,24 @@ class Layer {
                           mshadow::Random<xpu> *prnd) {
     LoadModel(root);
     this->SetupLayer(this->settings, bottom, top, prnd);                      
+  }
+  
+  // To implement this function you need call base function in the end
+  virtual void Require() {
+    defaults["phrase_type"] = SettingV(kBoth);
+    for (std::map<std::string, SettingV>::iterator it = defaults.begin();
+          it != defaults.end(); ++it) {
+      std::string name = *(it->first);
+      if (defaults[name].value_type == SET_NONE) {
+        utils::Check(settings.count(name), 
+            "Setting [%s] needed for this layer.\n", name.c_str());
+      } else {
+        if (!settings.count(name)) {
+          settings[name] = defaults[name];
+          utils::Printf("Setting [%s] set to default value.", name.c_str());
+        }
+      }
+    }
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -263,6 +283,9 @@ class Layer {
   LayerType layer_type;
   PhraseType phrase_type;
   mshadow::Random<xpu> *prnd_;
+  
+  // required setting
+  std::map<std::string, SettingV> defaults;
   
 };
 
