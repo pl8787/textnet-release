@@ -26,6 +26,16 @@ class LstmLayer : public Layer<xpu> {
   typedef mshadow::Tensor<xpu, 3> Tensor3D;
   typedef mshadow::Tensor<xpu, 4> Tensor4D;
   
+  virtual void Require() {
+    // default value, just set the value you want
+    
+    // require value, set to SettingV(),
+    // it will force custom to set in config
+    
+    
+    Layer<xpu>::Require();
+  }
+  
   virtual void SetupLayer(std::map<std::string, SettingV> &setting,
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,
@@ -36,13 +46,13 @@ class LstmLayer : public Layer<xpu> {
     utils::Check(top.size() == TopNodeNum(), "LstmLayer:top size problem.");
     utils::Check(setting.count("d_mem"), "LstmLayer:setting problem.");
                   
-    d_mem   = setting["d_mem"].i_val;
+    d_mem   = setting["d_mem"].iVal();
     d_input = bottom[0]->data.size(3);
-
+    d_input = setting["d_input"].iVal();
     no_bias = false;
-    if (setting.count("no_bias")) no_bias = setting["no_bias"].b_val;
+    no_bias = setting["no_bias"].bVal();
     reverse = false;
-    if (setting.count("reverse")) reverse = setting["reverse"].b_val;
+    if (setting.count("reverse")) reverse = setting["reverse"].bVal();
 
     begin_h.Resize(mshadow::Shape2(1, d_mem), 0.f);
     begin_c.Resize(mshadow::Shape2(1, d_mem), 0.f);
@@ -54,29 +64,29 @@ class LstmLayer : public Layer<xpu> {
     this->params[1].Resize(1, 1, d_mem,   4*d_mem, true); // u
     this->params[2].Resize(1, 1, 1,       4*d_mem, true); // b
     
-    std::map<std::string, SettingV> &w_setting = *setting["w_filler"].m_val;
-    std::map<std::string, SettingV> &u_setting = *setting["u_filler"].m_val;
-    std::map<std::string, SettingV> &b_setting = *setting["b_filler"].m_val;
+    std::map<std::string, SettingV> &w_setting = *setting["w_filler"].mVal();
+    std::map<std::string, SettingV> &u_setting = *setting["u_filler"].mVal();
+    std::map<std::string, SettingV> &b_setting = *setting["b_filler"].mVal();
     this->params[0].initializer_ = 
-        initializer::CreateInitializer<xpu, 4>(w_setting["init_type"].i_val, w_setting, this->prnd_);
+        initializer::CreateInitializer<xpu, 4>(w_setting["init_type"].iVal(), w_setting, this->prnd_);
     this->params[1].initializer_ = 
-        initializer::CreateInitializer<xpu, 4>(u_setting["init_type"].i_val, u_setting, this->prnd_);
+        initializer::CreateInitializer<xpu, 4>(u_setting["init_type"].iVal(), u_setting, this->prnd_);
     this->params[2].initializer_ = 
-        initializer::CreateInitializer<xpu, 4>(b_setting["init_type"].i_val, b_setting, this->prnd_);
+        initializer::CreateInitializer<xpu, 4>(b_setting["init_type"].iVal(), b_setting, this->prnd_);
     this->params[0].Init();
     this->params[1].Init();
     this->params[2].Init();
     
-    std::map<std::string, SettingV> &w_updater = *setting["w_updater"].m_val;
-    std::map<std::string, SettingV> &u_updater = *setting["u_updater"].m_val;
-    std::map<std::string, SettingV> &b_updater = *setting["b_updater"].m_val;
+    std::map<std::string, SettingV> &w_updater = *setting["w_updater"].mVal();
+    std::map<std::string, SettingV> &u_updater = *setting["u_updater"].mVal();
+    std::map<std::string, SettingV> &b_updater = *setting["b_updater"].mVal();
 
     this->params[0].updater_ = 
-        updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].i_val, w_updater, this->prnd_);
+        updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].iVal(), w_updater, this->prnd_);
     this->params[1].updater_ = 
-        updater::CreateUpdater<xpu, 4>(u_updater["updater_type"].i_val, u_updater, this->prnd_);
+        updater::CreateUpdater<xpu, 4>(u_updater["updater_type"].iVal(), u_updater, this->prnd_);
     this->params[2].updater_ = 
-        updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].i_val, b_updater, this->prnd_);
+        updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].iVal(), b_updater, this->prnd_);
   }
   
   // bottom should be padded with only one zero on both sides

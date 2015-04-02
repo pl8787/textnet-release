@@ -8,6 +8,7 @@
 #include "../global.h"
 #include "../utils/utils.h"
 #include "../utils/io.h"
+#include "../utils/settingv.h"
 
 /*! \brief namespace of textnet */
 namespace textnet {
@@ -17,14 +18,41 @@ namespace initializer {
 /*! \brief use integer to encode layer types */
 typedef int InitType;
 
+/*! \brief these are enumeration */
+const int kZero = 0;
+const int kConstant = 1;
+const int kUniform = 2;
+const int kGaussian = 3;
+const int kXavier = 4;
+const int kKaiming = 5;
+
 template<typename xpu, int dim>
 class Initializer {
  public:
   Initializer(void) {}
   virtual ~Initializer(void) {}
   
-  virtual void SetupInitializer() {
+  // To implement this function you need call base function in the end
+  virtual void Require(std::map<std::string, SettingV> &setting) {
+    defaults["init_type"] = SettingV(kZero);
+    for (std::map<std::string, SettingV>::iterator it = defaults.begin();
+          it != defaults.end(); ++it) {
+      std::string name = it->first;
+      if (defaults[name].value_type == SET_NONE) {
+        utils::Check(setting.count(name), 
+            "\tSetting [%s] needed for this layer.\n", name.c_str());
+      } else {
+        if (!setting.count(name)) {
+          setting[name] = defaults[name];
+          utils::Printf("\tSetting [%s] set to default value.\n", name.c_str());
+        }
+      }
+    }
+  }
+  
+  virtual void SetupInitializer(std::map<std::string, SettingV> &setting) {
     init_type = 0;
+    this->Require(setting);
   }
   
   virtual void DoInitialize(mshadow::Tensor<xpu, dim> data) {}
@@ -34,16 +62,10 @@ class Initializer {
  protected:
   InitType init_type;
   mshadow::Random<xpu>* prnd_;
+  // required setting
+  std::map<std::string, SettingV> defaults;
   
 };
-
-/*! \brief these are enumeration */
-const int kZero = 0;
-const int kConstant = 1;
-const int kUniform = 2;
-const int kGaussian = 3;
-const int kXavier = 4;
-const int kKaiming = 5;
 
 template<typename xpu, int dim>
 Initializer<xpu, dim>* CreateInitializer(InitType type, 

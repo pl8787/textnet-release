@@ -53,9 +53,9 @@ class Checker {
   
   void SetupChecker(std::map<std::string, SettingV> &setting, mshadow::Random<cpu>* prnd) {
     prnd_ = prnd;
-    range_min = setting["range_min"].f_val;
-    range_max = setting["range_max"].f_val;
-    delta = setting["delta"].f_val;
+    range_min = setting["range_min"].fVal();
+    range_max = setting["range_max"].fVal();
+    delta = setting["delta"].fVal();
   }
   
   float GetLoss(std::vector<layer::Node<xpu>*> tops) {

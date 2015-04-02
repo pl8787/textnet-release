@@ -594,7 +594,7 @@ int main(int argc, char *argv[]) {
   // TestDropoutLayer(&rnd);
   // TestHingeLossLayer(&rnd);
   //TestAccuracyLayer(&rnd);
-  TestMatchLayer(&rnd);
+  //TestMatchLayer(&rnd);
   return 0;
 }
 

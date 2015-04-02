@@ -19,19 +19,33 @@ class AdagradUpdater : public Updater<xpu, dim>{
   }
   virtual ~AdagradUpdater(void) {}
   
+  virtual void Require(std::map<std::string, SettingV> &setting) {
+    // default value, just set the value you want
+    this->defaults["eps"] = SettingV(0.0f);
+    this->defaults["wd"] = SettingV(0.0f);
+    
+    // require value, set to SettingV(),
+    // it will force custom to set in config
+    this->defaults["lr"] = SettingV();
+    
+    Updater<xpu, dim>::Require(setting);
+  }
+  
   virtual void SetupUpdater(std::map<std::string, SettingV> &setting) {
+    Updater<xpu, dim>::SetupUpdater(setting);
+	
     utils::Check(setting.count("updater_type"), "AdaGradUpdater: parameter error.");
     utils::Check(setting.count("eps"), "AdaGradUpdater: parameter error.");
     utils::Check(setting.count("lr"), "AdaGradUpdater: parameter error.");
 
-    this->updater_type = setting["updater_type"].i_val;
-    eps = setting["eps"].f_val;
-    lr = setting["lr"].f_val;
+    this->updater_type = setting["updater_type"].iVal();
+    eps = setting["eps"].fVal();
+    lr = setting["lr"].fVal();
 
     max_iter = -1; 
     wd = 0.;
-    if (setting.count("max_iter")) max_iter = setting["max_iter"].i_val; 
-    if (setting.count("l2")) wd = setting["l2"].f_val; 
+    if (setting.count("max_iter")) max_iter = setting["max_iter"].iVal(); 
+    if (setting.count("l2")) wd = setting["l2"].fVal(); 
     
     iter = 0;
   }

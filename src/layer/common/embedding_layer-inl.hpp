@@ -23,6 +23,20 @@ class EmbeddingLayer : public Layer<xpu>{
   virtual int TopNodeNum() { return 1; }
   virtual int ParamNodeNum() { return 1; }
   
+  virtual void Require() {
+    // default value, just set the value you want
+    this->defaults["pad_value"] = SettingV(0.0f);
+    // require value, set to SettingV(),
+    // it will force custom to set in config
+    this->defaults["embedding_file"] = SettingV();
+    this->defaults["feat_size"] = SettingV();
+    this->defaults["word_count"] = SettingV();
+    this->defaults["w_filler"] = SettingV();
+    this->defaults["w_updater"] = SettingV();
+    
+    Layer<xpu>::Require();
+  }
+  
   virtual void SetupLayer(std::map<std::string, SettingV> &setting,
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,
@@ -34,30 +48,30 @@ class EmbeddingLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(),
                   "EmbeddingLayer:top size problem.");
                   
-    embedding_file = setting["embedding_file"].s_val;
-    feat_size = setting["feat_size"].i_val;
-    word_count = setting["word_count"].i_val;
-    
+    embedding_file = setting["embedding_file"].sVal();
+    feat_size = setting["feat_size"].iVal();
+    word_count = setting["word_count"].iVal();
+    pad_value = setting["pad_value"].fVal();
+
     this->params.resize(1);
-    // orc
-    // this->params[0].need_diff = false;
-    this->params[0].need_diff = true;
+    // No need allocate diff memory
+    this->params[0].need_diff = false;
     this->params[0].Resize(word_count, feat_size, 1, 1);
     
-    std::map<std::string, SettingV> w_setting = *setting["w_filler"].m_val;
+    std::map<std::string, SettingV> w_setting = *setting["w_filler"].mVal();
 	std::cout << w_setting["init_type"].i_val << std::endl;
     this->params[0].initializer_ = 
-        initializer::CreateInitializer<xpu, 4>(w_setting["init_type"].i_val,
+        initializer::CreateInitializer<xpu, 4>(w_setting["init_type"].iVal(),
           w_setting, this->prnd_);
     this->params[0].Init();   
 
-    std::map<std::string, SettingV> &w_updater = *setting["w_updater"].m_val;
+    std::map<std::string, SettingV> &w_updater = *setting["w_updater"].mVal();
     this->params[0].updater_ = 
-        updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].i_val,
+        updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].iVal(),
           w_updater, this->prnd_);
     this->params[0].updater_->is_sparse = true;          
     
-    // orc
+    // Check if embedding file is empty
     if(!embedding_file.empty()) {
       ReadInitEmbedding();
     }
@@ -105,8 +119,8 @@ class EmbeddingLayer : public Layer<xpu>{
                   
     top[0]->Resize(nbatch, doc_count, doc_len, feat_size, true);
 
-	  bottom[0]->PrintShape("bottom0");
-	  top[0]->PrintShape("top0");
+    bottom[0]->PrintShape("bottom0");
+    top[0]->PrintShape("top0");
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
@@ -116,16 +130,13 @@ class EmbeddingLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
     mshadow::Tensor<xpu, 2> weight_data = this->params[0].data_d2();
     
-    // orc
-    top_data = NAN;
+    // fill all top data to pad_value
+    top_data = pad_value;
+
     int w_idx = -1;
     for (int i = 0; i < nbatch; ++i) {
       for (int j = 0; j < doc_count; ++j) {
-        // orc
-        int begin, end;
-        LocateBeginEnd(bottom_data[i][j], begin, end);
-        // for (int k = 0; k < doc_len; ++k) {
-        for (int k = begin; k < end; ++k) {
+        for (int k = 0; k < doc_len; ++k) {
           w_idx = (int)bottom_data[i][j][0][k];
           if (w_idx != -1) {
             top_data[i][j][k] = F<op::identity>(weight_data[w_idx]);
@@ -147,11 +158,7 @@ class EmbeddingLayer : public Layer<xpu>{
       int inc = 0;
       for (int i = 0; i < nbatch; ++i) {
         for (int j = 0; j < doc_count; ++j) {
-          // orc
-          int begin, end;
-          LocateBeginEnd(bottom_data[i][j], begin, end);
-          for (int k = begin; k < end; ++k) {
-          // for (int k = 0; k < doc_len; ++k) {
+          for (int k = 0; k < doc_len; ++k) {
             w_idx = (int)bottom_data[i][j][0][k];
             if (w_idx != -1 && !idx_map.count(w_idx)) {
               idx_map[w_idx] = inc;
@@ -173,11 +180,7 @@ class EmbeddingLayer : public Layer<xpu>{
       
       for (int i = 0; i < nbatch; ++i) {
         for (int j = 0; j < doc_count; ++j) {
-          // orc
-          int begin, end;
-          LocateBeginEnd(bottom_data[i][j], begin, end);
-          // for (int k = 0; k < doc_len; ++k) {
-          for (int k = begin; k < end; ++k) {
+           for (int k = 0; k < doc_len; ++k) {
             w_idx = (int)bottom_data[i][j][0][k];
             if (w_idx != -1) {
               weight_diff[idx_map[w_idx]] += top_diff[i][j][k];
@@ -187,25 +190,6 @@ class EmbeddingLayer : public Layer<xpu>{
       }
     }
   }
-  void LocateBeginEnd(mshadow::Tensor<xpu, 2> seq, 
-                      int &begin, int &end) { // input a 2D tensor, out put a sub 2d tensor, with 0 padding
-    utils::Check(seq.size(0) == 1, "EmbeddingLayer: input error.");
-    begin = seq.size(1);
-    for (int i = 0; i < seq.size(1); ++i) {
-      if (!isnan(seq[0][i])) { // the first number
-          begin = i;
-          break;
-      }
-    }
-    end = seq.size(1);
-    for (int i = begin; i < seq.size(1); ++i) {
-      if (isnan(seq[0][i])) { // the first NAN
-          end = i;
-          break;
-      }
-    }
-    utils::Check(begin < end && begin >= 0, "EmbeddingLayer: input error.");
-  }
  protected:
   std::string embedding_file;
   int feat_size;
@@ -214,6 +198,7 @@ class EmbeddingLayer : public Layer<xpu>{
   int doc_count;
   int nbatch;
   int line_count;
+  float pad_value;
 };
 }  // namespace layer
 }  // namespace textnet

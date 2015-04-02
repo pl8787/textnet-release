@@ -19,15 +19,29 @@ class SGDUpdater : public Updater<xpu, dim>{
   }
   virtual ~SGDUpdater(void) {}
   
+  virtual void Require(std::map<std::string, SettingV> &setting) {
+    // default value, just set the value you want
+    this->defaults["decay"] = SettingV(0.0f);
+    this->defaults["momentum"] = SettingV(0.0f);
+    this->defaults["wd"] = SettingV(0.0f);
+    
+    // require value, set to SettingV(),
+    // it will force custom to set in config
+    this->defaults["lr"] = SettingV();
+    
+    Updater<xpu, dim>::Require(setting);
+  }
+  
   virtual void SetupUpdater(std::map<std::string, SettingV> &setting) {
-    this->updater_type = setting["updater_type"].i_val;
-    base_lr = setting["lr"].f_val;
-    decay = setting["decay"].f_val;
-    momentum = setting["momentum"].f_val;
+    Updater<xpu, dim>::SetupUpdater(setting);
+    
+    this->updater_type = setting["updater_type"].iVal();
+    base_lr = setting["lr"].fVal();
+    decay = setting["decay"].fVal();
+    momentum = setting["momentum"].fVal();
+    wd = setting["wd"].fVal();
     iteration = 0;
-	wd = 0.0;
-    if (setting.count("l2")) wd = setting["l2"].f_val;
-	lr = base_lr;
+	  lr = base_lr;
   }
   
   virtual void Update(mshadow::Tensor<xpu, dim> data, 

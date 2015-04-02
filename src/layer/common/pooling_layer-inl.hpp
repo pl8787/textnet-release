@@ -19,6 +19,17 @@ class PoolingLayer : public Layer<xpu> {
   virtual int TopNodeNum() { return 1; }
   virtual int ParamNodeNum() { return 0; }
   
+  virtual void Require() {
+    // default value, just set the value you want
+    this->defaults["stride"] = SettingV(1);
+    // require value, set to SettingV(),
+    // it will force custom to set in config
+    this->defaults["kernel_x"] = SettingV();
+    this->defaults["kernel_y"] = SettingV();
+    
+    Layer<xpu>::Require();
+  }
+  
   virtual void SetupLayer(std::map<std::string, SettingV> &setting,
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,
@@ -30,9 +41,9 @@ class PoolingLayer : public Layer<xpu> {
     utils::Check(top.size() == TopNodeNum(),
                   "PoolingLayer:top size problem.");    
                            
-    kernel_x = setting["kernel_x"].i_val;
-    kernel_y = setting["kernel_y"].i_val;
-    stride = setting["stride"].i_val;
+    kernel_x = setting["kernel_x"].iVal();
+    kernel_y = setting["kernel_y"].iVal();
+    stride = setting["stride"].iVal();
     
   }
   

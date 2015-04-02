@@ -19,6 +19,20 @@ class FullConnectLayer : public Layer<xpu> {
   virtual int TopNodeNum() { return 1; }
   virtual int ParamNodeNum() { return 2; }
   
+  virtual void Require() {
+    // default value, just set the value you want
+    this->defaults["no_bias"] = SettingV(false);
+    // require value, set to SettingV(),
+    // it will force custom to set in config
+    this->defaults["num_hidden"] = SettingV();
+    this->defaults["w_filler"] = SettingV();
+    this->defaults["b_filler"] = SettingV();
+    this->defaults["w_updater"] = SettingV();
+    this->defaults["b_updater"] = SettingV();
+    
+    Layer<xpu>::Require();
+  }
+  
   virtual void SetupLayer(std::map<std::string, SettingV> &setting,
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,
@@ -30,8 +44,8 @@ class FullConnectLayer : public Layer<xpu> {
     utils::Check(top.size() == TopNodeNum(),
                   "FullConnectionLayer:top size problem.");
                             
-    num_hidden = setting["num_hidden"].i_val;
-    no_bias = setting["no_bias"].b_val;
+    num_hidden = setting["num_hidden"].iVal();
+    no_bias = setting["no_bias"].bVal();
 
     mshadow::Tensor<xpu, 2> bottom_data = bottom[0]->data_d2();
     num_input = bottom_data.size(1);
@@ -40,24 +54,24 @@ class FullConnectLayer : public Layer<xpu> {
     this->params[0].Resize(num_hidden, num_input, 1, 1, true);
     this->params[1].Resize(num_hidden, 1, 1, 1, true);
     
-    std::map<std::string, SettingV> &w_setting = *setting["w_filler"].m_val;
-    std::map<std::string, SettingV> &b_setting = *setting["b_filler"].m_val;
+    std::map<std::string, SettingV> &w_setting = *setting["w_filler"].mVal();
+    std::map<std::string, SettingV> &b_setting = *setting["b_filler"].mVal();
     this->params[0].initializer_ = 
-        initializer::CreateInitializer<xpu, 4>(w_setting["init_type"].i_val,
+        initializer::CreateInitializer<xpu, 4>(w_setting["init_type"].iVal(),
           w_setting, this->prnd_);
     this->params[1].initializer_ = 
-        initializer::CreateInitializer<xpu, 4>(b_setting["init_type"].i_val, 
+        initializer::CreateInitializer<xpu, 4>(b_setting["init_type"].iVal(), 
           b_setting, this->prnd_);
     this->params[0].Init();
     this->params[1].Init();
     
-    std::map<std::string, SettingV> &w_updater = *setting["w_updater"].m_val;
-    std::map<std::string, SettingV> &b_updater = *setting["b_updater"].m_val;
+    std::map<std::string, SettingV> &w_updater = *setting["w_updater"].mVal();
+    std::map<std::string, SettingV> &b_updater = *setting["b_updater"].mVal();
     this->params[0].updater_ = 
-        updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].i_val,
+        updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].iVal(),
           w_updater, this->prnd_);
     this->params[1].updater_ = 
-        updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].i_val,
+        updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].iVal(),
           b_updater, this->prnd_);
     
   }

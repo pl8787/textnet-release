@@ -22,6 +22,18 @@ class TextDataLayer : public Layer<xpu>{
   virtual int TopNodeNum() { return 2; }
   virtual int ParamNodeNum() { return 0; }
   
+  virtual void Require() {
+    // default value, just set the value you want
+    this->defaults["min_doc_len"] = SettingV(1);
+    // require value, set to SettingV(),
+    // it will force custom to set in config
+    this->defaults["data_file"] = SettingV();
+    this->defaults["batch_size"] = SettingV();
+    this->defaults["max_doc_len"] = SettingV();
+    
+    Layer<xpu>::Require();
+  }
+  
   virtual void SetupLayer(std::map<std::string, SettingV> &setting,
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,
@@ -32,11 +44,11 @@ class TextDataLayer : public Layer<xpu>{
                   "TextDataLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "TextDataLayer:top size problem.");
-                  
-    data_file = setting["data_file"].s_val;
-    batch_size = setting["batch_size"].i_val;
-    max_doc_len = setting["max_doc_len"].i_val;
-    min_doc_len = setting["min_doc_len"].i_val;
+
+    data_file = setting["data_file"].sVal();
+    batch_size = setting["batch_size"].iVal();
+    max_doc_len = setting["max_doc_len"].iVal();
+    min_doc_len = setting["min_doc_len"].iVal();
     
     ReadTextData();
     

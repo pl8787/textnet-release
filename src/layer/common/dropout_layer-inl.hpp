@@ -23,6 +23,15 @@ class DropoutLayer : public Layer<xpu>{
   virtual int TopNodeNum() { return 1; }
   virtual int ParamNodeNum() { return 0; }
   
+  virtual void Require() {
+    // default value, just set the value you want
+    this->defaults["rate"] = SettingV(0.5f);
+    // require value, set to SettingV(),
+    // it will force custom to set in config
+    
+    Layer<xpu>::Require();
+  }
+  
   virtual void SetupLayer(std::map<std::string, SettingV> &setting,
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,
@@ -34,7 +43,7 @@ class DropoutLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(),
                   "DropoutLayer:top size problem.");
                   
-    rate = setting["rate"].f_val; 
+    rate = setting["rate"].fVal(); 
     utils::Check(rate >= 0.0 && rate <= 1.0, 
                   "Dropout rate must between 0.0 and 1.0.");    
   }
@@ -65,7 +74,7 @@ class DropoutLayer : public Layer<xpu>{
       top_data = bottom_data * mask;
     } else {
       top_data = F<op::identity>(bottom_data);
-    }
+	}
     
   }
   
@@ -87,4 +96,4 @@ class DropoutLayer : public Layer<xpu>{
 }  // namespace layer
 }  // namespace textnet
 #endif  // LAYER_DROPOUT_LAYER_INL_HPP_
-;
+

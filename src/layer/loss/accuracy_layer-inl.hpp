@@ -24,6 +24,15 @@ class AccuracyLayer : public Layer<xpu>{
   virtual int TopNodeNum() { return 1; }
   virtual int ParamNodeNum() { return 0; }
   
+  virtual void Require() {
+    // default value, just set the value you want
+    this->defaults["topk"] = SettingV(1);
+    // require value, set to SettingV(),
+    // it will force custom to set in config
+    
+    Layer<xpu>::Require();
+  }
+  
   virtual void SetupLayer(std::map<std::string, SettingV> &setting,
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,
@@ -35,7 +44,7 @@ class AccuracyLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(),
                   "AccuracyLayer:top size problem.");
        
-    topk = setting["topk"].i_val;
+    topk = setting["topk"].iVal();
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,

@@ -11,6 +11,7 @@
 #include "node.h"
 #include "../utils/utils.h"
 #include "../utils/io.h"
+#include "../utils/settingv.h"
 #include "../io/json/json.h"
 
 /*! \brief namespace of textnet */
@@ -21,6 +22,53 @@ namespace layer {
 /*! \brief use integer to encode layer types */
 typedef int LayerType;
 typedef int PhraseType;
+
+/*! \brief these are enumeration */
+// shared layer is a special type indicating that this connection
+// is sharing Layer with an existing connection
+const int kUnkonwnLayer = 0;
+// Activation Layer 1-10
+const int kRectifiedLinear = 1;
+const int kSigmoid = 2;
+const int kTanh = 3;
+
+// Common Layer 11-50
+const int kFullConnect = 11;
+const int kFlatten = 12;
+const int kDropout = 13;
+const int kConv = 14;
+const int kMaxPooling = 15;
+const int kSumPooling = 16;
+const int kAvgPooling = 17;
+const int kConcat = 18;
+const int kChConcat = 19;
+const int kSplit = 20;
+const int kEmbedding = 21;
+const int kCross = 22;
+const int kMatch = 23;
+const int kLstm = 24;
+const int kWholeMaxPooling = 25;
+const int kWholeAvePooling = 26;
+
+// Loss Layer 51-70
+const int kSoftmax = 51;
+const int kL2Loss = 52;
+const int kMultiLogistic = 53;
+const int kHingeLoss = 54;
+const int kPairHingeLoss = 55;
+const int kAccuracy = 56;
+
+// Input Layer 71-
+const int kTextData = 71;
+const int kSequenceClassificationData = 72;
+const int kNextBasketData = 73;
+
+
+/*! \brief these are enumeration */
+const int kTrain = 0;
+const int kTest = 1;
+const int kBoth = 2;
+
 
 template<typename xpu>
 class Layer {
@@ -36,7 +84,9 @@ class Layer {
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
     this->settings = setting;
-    phrase_type = this->settings["phrase_type"].i_val;
+    this->Require();
+    
+    phrase_type = this->settings["phrase_type"].iVal();
     prnd_ = prnd;
   }
   
@@ -46,6 +96,24 @@ class Layer {
                           mshadow::Random<xpu> *prnd) {
     LoadModel(root);
     this->SetupLayer(this->settings, bottom, top, prnd);                      
+  }
+  
+  // To implement this function you need call base function in the end
+  virtual void Require() {
+    defaults["phrase_type"] = SettingV(kBoth);
+    for (std::map<std::string, SettingV>::iterator it = defaults.begin();
+          it != defaults.end(); ++it) {
+      std::string name = it->first;
+      if (defaults[name].value_type == SET_NONE) {
+        utils::Check(settings.count(name), 
+            "\tSetting [%s] needed for this layer.\n", name.c_str());
+      } else {
+        if (!settings.count(name)) {
+          settings[name] = defaults[name];
+          utils::Printf("\tSetting [%s] set to default value.\n", name.c_str());
+        }
+      }
+    }
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -68,22 +136,22 @@ class Layer {
       switch ( it->second.value_type ) {
         case SET_INT:
           {
-            root[it->first] = it->second.i_val;
+            root[it->first] = it->second.iVal();
           }
           break;
         case SET_FLOAT:
           {
-            root[it->first] = it->second.f_val;
+            root[it->first] = it->second.fVal();
           }
           break;
         case SET_BOOL:
           {
-            root[it->first] = it->second.b_val;
+            root[it->first] = it->second.bVal();
           }
           break;
         case SET_STRING:
           {
-            root[it->first] = it->second.s_val;
+            root[it->first] = it->second.sVal();
           }
           break;
         case SET_MAP:
@@ -247,6 +315,10 @@ class Layer {
   virtual std::vector<Node<xpu> >& GetParams() {
     return params;
   }
+
+  virtual void SetPhrase(PhraseType phrase) {
+	phrase_type = phrase;
+  }
  
   // For Debug
   // If implement net.hpp move to protected
@@ -255,7 +327,7 @@ class Layer {
   std::vector<std::string> bottom_nodes;
   std::vector<std::string> top_nodes; 
  
- public:
+ protected:
   std::vector<Node<xpu> > params;
   std::map<std::string, SettingV> settings;
   std::vector<bool> prop_error;
@@ -264,53 +336,10 @@ class Layer {
   PhraseType phrase_type;
   mshadow::Random<xpu> *prnd_;
   
+  // required setting
+  std::map<std::string, SettingV> defaults;
+  
 };
-
-/*! \brief these are enumeration */
-// shared layer is a special type indicating that this connection
-// is sharing Layer with an existing connection
-const int kUnkonwnLayer = 0;
-// Activation Layer 1-10
-const int kRectifiedLinear = 1;
-const int kSigmoid = 2;
-const int kTanh = 3;
-
-// Common Layer 11-50
-const int kFullConnect = 11;
-const int kFlatten = 12;
-const int kDropout = 13;
-const int kConv = 14;
-const int kMaxPooling = 15;
-const int kSumPooling = 16;
-const int kAvgPooling = 17;
-const int kConcat = 18;
-const int kChConcat = 19;
-const int kSplit = 20;
-const int kEmbedding = 21;
-const int kCross = 22;
-const int kMatch = 23;
-const int kLstm = 24;
-const int kWholeMaxPooling = 25;
-const int kWholeAvePooling = 26;
-
-// Loss Layer 51-70
-const int kSoftmax = 51;
-const int kL2Loss = 52;
-const int kMultiLogistic = 53;
-const int kHingeLoss = 54;
-const int kPairHingeLoss = 55;
-const int kAccuracy = 56;
-
-// Input Layer 71-
-const int kTextData = 71;
-const int kSequenceClassificationData = 72;
-const int kNextBasketData = 73;
-
-
-/*! \brief these are enumeration */
-const int kTrain = 0;
-const int kTest = 1;
-const int kBoth = 2;
 
 
 template<typename xpu>

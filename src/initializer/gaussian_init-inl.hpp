@@ -17,11 +17,24 @@ class GaussianInitializer : public Initializer<xpu, dim>{
   }
   virtual ~GaussianInitializer(void) {}
   
+  virtual void Require(std::map<std::string, SettingV> &setting) {
+    // default value, just set the value you want
+    this->defaults["mu"] = SettingV(0.0f);
+    this->defaults["sigma"] = SettingV(1.0f);
+    
+    // require value, set to SettingV(),
+    // it will force custom to set in config
+    
+    Initializer<xpu, dim>::Require(setting);
+  }
+  
   virtual void SetupInitializer(std::map<std::string, SettingV> &setting) {
-    this->init_type = setting["init_type"].i_val;
+    Initializer<xpu, dim>::SetupInitializer(setting);
+    
+    this->init_type = setting["init_type"].iVal();
     if (this->init_type == kGaussian) {
-      this->mu = setting["mu"].f_val;
-      this->sigma = setting["sigma"].f_val;
+      this->mu = setting["mu"].fVal();
+      this->sigma = setting["sigma"].fVal();
     } else if (this->init_type == kKaiming) {
       // Todo
     }

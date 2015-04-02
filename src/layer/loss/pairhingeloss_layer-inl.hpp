@@ -23,6 +23,15 @@ class PairHingeLossLayer : public Layer<xpu>{
   virtual int TopNodeNum() { return 1; }
   virtual int ParamNodeNum() { return 0; }
   
+  virtual void Require() {
+    // default value, just set the value you want
+    this->defaults["delta"] = SettingV(1.0f);
+    // require value, set to SettingV(),
+    // it will force custom to set in config
+    
+    Layer<xpu>::Require();
+  }
+  
   virtual void SetupLayer(std::map<std::string, SettingV> &setting,
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,
@@ -33,7 +42,7 @@ class PairHingeLossLayer : public Layer<xpu>{
                   "PairHingeLossLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "PairHingeLossLayer:top size problem.");
-    delta = setting["delta"].f_val;
+    delta = setting["delta"].fVal();
     
   }
   

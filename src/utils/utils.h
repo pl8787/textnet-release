@@ -171,34 +171,5 @@ inline const T *BeginPtr(const std::vector<T> &vec) {
   }
 }
 
-typedef int SetValueType;
-
-const int SET_NONE = 0;
-const int SET_INT = 1;
-const int SET_FLOAT = 2;
-const int SET_BOOL = 3;
-const int SET_STRING = 4;
-const int SET_MAP = 5;
-
-/*! \brief Setting structure used to store net settings */
-struct SettingV {
-  bool b_val;
-  int i_val;
-  float f_val;
-  std::string s_val;
-  std::map<std::string, SettingV>* m_val;
-  
-  SetValueType value_type;
-
-  // Constructor
-  SettingV() { value_type = SET_NONE; }
-  SettingV(int i) { i_val = i; value_type = SET_INT; }
-  SettingV(float f) { f_val = f; value_type = SET_FLOAT; }
-  SettingV(bool b) { b_val = b; value_type = SET_BOOL; }
-  SettingV(std::string s) { s_val = s; value_type = SET_STRING; }
-  SettingV(const char* c) { s_val = c; value_type = SET_STRING; }
-  SettingV(std::map<std::string, SettingV>* m) { m_val = m; value_type = SET_MAP; }
-}; // struct SettingV
-
 }  // namespace textnet
 #endif  // CXXNET_UTILS_UTILS_H_

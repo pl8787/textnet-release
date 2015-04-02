@@ -75,7 +75,7 @@ void PrintTensor(const char * name, Tensor<cpu, 4> x) {
 }
 
 int main(int argc, char *argv[]) {
-  mshadow::Random<cpu> rnd(37);
+  mshadow::Random<cpu> rnd(59);
   Net<cpu> MatchingNet(&rnd);
   MatchingNet.InitNet("model/matching_global.model");
   MatchingNet.Training();
