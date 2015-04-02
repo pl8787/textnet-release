@@ -255,7 +255,7 @@ class Layer {
   std::vector<std::string> bottom_nodes;
   std::vector<std::string> top_nodes; 
  
- protected:
+ public:
   std::vector<Node<xpu> > params;
   std::map<std::string, SettingV> settings;
   std::vector<bool> prop_error;
@@ -304,6 +304,7 @@ const int kAccuracy = 56;
 // Input Layer 71-
 const int kTextData = 71;
 const int kSequenceClassificationData = 72;
+const int kNextBasketData = 73;
 
 
 /*! \brief these are enumeration */

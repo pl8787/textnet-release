@@ -47,10 +47,10 @@ class DropoutLayer : public Layer<xpu>{
                   "DropoutLayer:top size problem.");
                   
     top[0]->Resize(bottom[0]->data.shape_, true);
-	  mask.Resize(bottom[0]->data.shape_);
+	mask.Resize(bottom[0]->data.shape_, true);
 
-	  bottom[0]->PrintShape("bottom0");
-	  top[0]->PrintShape("top0");
+    bottom[0]->PrintShape("bottom0");
+    top[0]->PrintShape("top0");
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
@@ -63,6 +63,8 @@ class DropoutLayer : public Layer<xpu>{
       mask = F<op::threshold>(this->prnd_->uniform(mask.shape_), pkeep)  
                 * (1.0f/pkeep);
       top_data = bottom_data * mask;
+    } else {
+      top_data = F<op::identity>(bottom_data);
     }
     
   }
@@ -85,4 +87,4 @@ class DropoutLayer : public Layer<xpu>{
 }  // namespace layer
 }  // namespace textnet
 #endif  // LAYER_DROPOUT_LAYER_INL_HPP_
-
+;

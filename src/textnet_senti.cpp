@@ -89,6 +89,7 @@ void eval(vector<Layer<cpu> *> senti_net,
   ret.clear();
   for (int i = 0; i < nBatch; ++i) {
       for (int j = 0; j < senti_net.size(); ++j) {
+          senti_net[j]->phrase_type = kTest;
           senti_net[j]->Forward(bottoms[j], tops[j]);
       }
       ret.loss += tops[tops.size()-2][0]->data_d1()[0];
@@ -103,7 +104,7 @@ int main(int argc, char *argv[]) {
   mshadow::Random<cpu> rnd(37);
   vector<Layer<cpu>*> senti_net, senti_valid, senti_test;
 
-  int lstm_hidden_dim = 50;
+  int lstm_hidden_dim = 100;
   int word_rep_dim = 300;
   int max_doc_len = 100;
   int min_doc_len = 1;
@@ -126,6 +127,8 @@ int main(int argc, char *argv[]) {
   senti_net[senti_net.size()-1]->layer_name == "lstm";
   senti_net.push_back(CreateLayer<cpu>(kWholeMaxPooling));
   senti_net[senti_net.size()-1]->layer_name = "wholepooling";
+  senti_net.push_back(CreateLayer<cpu>(kDropout));
+  senti_net[senti_net.size()-1]->layer_name = "dropout";
   senti_net.push_back(CreateLayer<cpu>(kFullConnect));
   senti_net[senti_net.size()-1]->layer_name = "fullconnect";
   senti_net.push_back(CreateLayer<cpu>(kSoftmax));
@@ -217,6 +220,7 @@ int main(int argc, char *argv[]) {
     setting_vec.push_back(setting);
   }
   // kLstm
+#if 1
   {
     map<string, SettingV> setting;
     setting["d_input"] = SettingV(word_rep_dim);
@@ -246,9 +250,16 @@ int main(int argc, char *argv[]) {
     
     setting_vec.push_back(setting);
   }
+# endif
   // kWholeMaxPooling
   {
     map<string, SettingV> setting;
+    setting_vec.push_back(setting);
+  }
+  //  kDropout
+  {
+    map<string, SettingV> setting;
+    setting["rate"] = SettingV(0.5f);
     setting_vec.push_back(setting);
   }
   // kFullConnect
@@ -346,6 +357,7 @@ int main(int argc, char *argv[]) {
 
     // cout << "Begin iter " << iter << endl;
     for (index_t i = 0; i < senti_net.size(); ++i) {
+      senti_net[i]->phrase_type = kTrain;
       // cout << "Forward layer " << i << endl;
       senti_net[i]->Forward(bottom_vecs[i], top_vecs[i]);
     }

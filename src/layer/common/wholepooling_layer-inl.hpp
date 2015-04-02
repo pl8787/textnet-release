@@ -33,9 +33,8 @@ class WholePoolingLayer : public Layer<xpu>{
                   "WholePoolingLayer:top size problem.");
     mshadow::Shape<4> shape_in = bottom[0]->data.shape_;
     mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in[0], shape_in[1], 1, shape_in[3]);
-    top[0]->Resize(shape_out);
-    pos.Resize(shape_out);
-    pos = -1;
+    top[0]->Resize(shape_out, 0.f);
+    pos.Resize(shape_out, -1.f);
   }
 
   typedef mshadow::Tensor<xpu, 2> Tensor2D;
@@ -93,8 +92,8 @@ class WholePoolingLayer : public Layer<xpu>{
     for (index_t i = 0; i < bottom_data.size(0); ++i) {
         int begin, end; 
         LocateBeginEnd(bottom_data[i][0], begin, end);
-        wholeMaxPooling(bottom_data[i][0].Slice(begin,end), pos[i][0], top_data[i][0]);
         // wholeAvePooling(bottom_data[i][0].Slice(begin,end), top_data[i][0]);
+        wholeMaxPooling(bottom_data[i][0].Slice(begin,end), pos[i][0], top_data[i][0]);
     }
     // checkNan(top_data.dptr_, top_data.size(3) * top_data.size(0));
   }

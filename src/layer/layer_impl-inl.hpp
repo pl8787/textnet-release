@@ -13,7 +13,9 @@
 #include "./common/match_layer-inl.hpp"
 #include "./common/lstm_layer-inl.hpp"
 #include "./common/wholepooling_layer-inl.hpp"
+#include "./common/concat_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
+#include "./input/next_basket_data_layer-inl.hpp"
 #include "./input/sequence_classification_data_layer-inl.hpp"
 #include "./loss/hingeloss_layer-inl.hpp"
 #include "./loss/pairhingeloss_layer-inl.hpp"
@@ -34,6 +36,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kAvgPooling: return new PoolingLayer<mshadow::red::sum, xpu>(kAvgPooling);
     case kWholeMaxPooling: return new WholePoolingLayer<mshadow::red::maximum, xpu>(kWholeMaxPooling);
     case kWholeAvePooling: return new WholePoolingLayer<mshadow::red::sum, xpu>(kWholeAvePooling);
+    case kConcat: return new ConcatLayer<xpu>(kConcat);
     case kEmbedding: return new EmbeddingLayer<xpu>(kEmbedding);
     case kCross: return new CrossLayer<xpu>(kCross);
     case kSplit: return new SplitLayer<xpu>(kSplit);
@@ -42,6 +45,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kHingeLoss: return new HingeLossLayer<xpu>(kHingeLoss);
     case kPairHingeLoss: return new PairHingeLossLayer<xpu>(kPairHingeLoss);
     case kTextData: return new TextDataLayer<xpu>(kTextData);
+    case kNextBasketData: return new NextBasketDataLayer<xpu>(kNextBasketData);
     case kSequenceClassificationData: return new SequenceClassificationDataLayer<xpu>(kSequenceClassificationData);
     case kSoftmax: return new SoftmaxLayer<xpu>(kSoftmax);
     case kAccuracy: return new AccuracyLayer<xpu>(kAccuracy);
