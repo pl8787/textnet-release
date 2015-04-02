@@ -1,6 +1,9 @@
 #ifndef TEXTNET_NET_NET_H_
 #define TEXTNET_NET_NET_H_
 
+#define DEBUG 0 
+
+#include <iostream>
 #include <sstream>
 #include <fstream>
 #include <vector>
@@ -128,7 +131,8 @@ class Net {
         string node_name = bottoms_root[j].asString();
         if (!nodes.count(node_name)) {
           nodes[node_name] = new Node<xpu>();
-      nodes[node_name]->node_name = node_name;
+          nodes[node_name]->node_name = node_name;
+          node_list.push_back(nodes[node_name]);
           utils::Printf("\t Node Name: %s\n", node_name.c_str());
         }
       }
@@ -136,7 +140,8 @@ class Net {
         string node_name = tops_root[j].asString();
         if (!nodes.count(node_name)) {
           nodes[node_name] = new Node<xpu>();
-      nodes[node_name]->node_name = node_name;
+          nodes[node_name]->node_name = node_name;
+	      node_list.push_back(nodes[node_name]);
           utils::Printf("\t Node Name: %s\n", node_name.c_str());
         }
       }
@@ -205,13 +210,31 @@ class Net {
     }
   }
   
+  virtual void SetPhrase(vector<Layer<xpu>*> &net, PhraseType phrase) {
+	phrase_type = phrase;
+	for (int i = 0; i < net.size(); ++i) {
+	  net[i]->SetPhrase(phrase);
+	}
+    if (need_reshape) Reshape();
+  }
+
   virtual void Forward() {
     if (phrase_type == kTrain) {
       for (int i = 0; i < train_net.size(); ++i) {
         int layer_idx = train_net[i]->layer_idx;
         train_net[i]->Forward(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+#if DEBUG
+		cout << "Feed " ;
+		for (int j = 0; j < bottom_vecs[layer_idx].size(); ++j)
+			cout << bottom_vecs[layer_idx][j]->node_name << ", ";
+		cout << " and ";
+		for (int j = 0; j < top_vecs[layer_idx].size(); ++j)
+			cout << top_vecs[layer_idx][j]->node_name << ", ";
+		cout << " to " << train_net[i]->layer_name << endl;
+#endif
       }
     } else if (phrase_type == kTest) {
+	  SetPhrase(test_net, kTest);
       for (int i = 0; i < test_net.size(); ++i) {
         int layer_idx = test_net[i]->layer_idx;
         test_net[i]->Forward(bottom_vecs[layer_idx], top_vecs[layer_idx]);
@@ -236,25 +259,56 @@ class Net {
     if (phrase_type == kTrain) {
       for (int i = 0; i < train_net.size(); ++i) {
         for (int j = 0; j < train_net[i]->ParamNodeNum(); ++j) {
+#if DEBUG
+		  cout << "Update param in layer " << i << " params " << j << endl;
+          cout << "param data" << i << " , " << j << ": " << train_net[i]->GetParams()[j].data[0][0][0][0] << endl;
+          cout << "param data" << i << " , " << j << ": " << train_net[i]->GetParams()[j].diff[0][0][0][0] << endl;
+#endif
           train_net[i]->GetParams()[j].Update();
+#if DEBUG
+          cout << "param data" << i << " , " << j << ": " << train_net[i]->GetParams()[j].data[0][0][0][0] << endl;
+#endif
         }
       }
     }
   }
   
   virtual void Training() {
-    phrase_type = kTrain;
-    
+	SetPhrase(train_net, kTrain);
+	need_reshape = false;
+
     // Prepare
     PropAll();
     SetupReshape();
 
     for (int iter = 0; iter < max_iters; ++iter) {
-      phrase_type = kTrain;
+	  SetPhrase(train_net, kTrain);
       
       // Do job
       Forward();
       Backprop();
+
+#if DEBUG
+	  // For debug
+	  //for (typename map<string, Node<xpu>*>::iterator it = nodes.begin(); it != nodes.end(); ++it) {
+	  for (int k = 0; k < node_list.size(); ++k) {
+		string name = node_list[k]->node_name; //it->first;
+		cout << "Snapshot [" << name << "]" << endl;
+		cout << "data : ";
+		for (int i = 0; i < 5; ++i) {
+			//cout << nodes[name]->data[0][0][0][i] << "\t";
+			cout << node_list[k]->data[0][0][0][i] << "\t";
+		}
+		cout << endl;
+		cout << "diff : ";
+		for (int i = 0; i < 5; ++i) {
+			//cout << nodes[name]->diff[0][0][0][i] << "\t";
+			cout << node_list[k]->diff[0][0][0][i] << "\t";
+		}
+		cout << endl;
+	  }
+#endif
+
       Update();
       
       // Output 
@@ -267,15 +321,13 @@ class Net {
       }
       
       if (test_interval > 0 && iter % test_interval == 0) {
-        if (need_reshape) Reshape();
         TestOne(iter);
-        if (need_reshape) Reshape();
       }
   }
   }
 
   virtual void TestOne(int iter) {
-      phrase_type = kTest;
+	  SetPhrase(test_net, kTest);
 
       // Initial test loss
       vector<float> test_loss;
@@ -301,7 +353,7 @@ class Net {
              << test_loss[i] << endl; 
       }
         
-      phrase_type = kTrain;
+	  SetPhrase(train_net, kTrain);
   }
   virtual void SaveModel(string model_name) {
     ofstream _of(model_name.c_str());
@@ -334,7 +386,58 @@ class Net {
     
   }
   
- 
+  void PrintTensor(const char * name, Tensor<cpu, 1> x) {
+    Shape<1> s = x.shape_;
+    cout << name << " shape " << s[0] << endl;
+    for (unsigned int d1 = 0; d1 < s[0]; ++d1) {
+      cout << x[d1] << " ";
+    }
+    cout << endl;
+  }
+
+  void PrintTensor(const char * name, Tensor<cpu, 2> x) {
+    Shape<2> s = x.shape_;
+    cout << name << " shape " << s[0] << "x" << s[1] << endl;
+    for (unsigned int d1 = 0; d1 < s[0]; ++d1) {
+      for (unsigned int d2 = 0; d2 < s[1]; ++d2) {
+        cout << x[d1][d2] << " ";
+      }
+      cout << endl;
+    }
+    cout << endl;
+  }
+
+  void PrintTensor(const char * name, Tensor<cpu, 3> x) {
+    Shape<3> s = x.shape_;
+    cout << name << " shape " << s[0] << "x" << s[1] << "x" << s[2] << endl;
+    for (unsigned int d1 = 0; d1 < s[0]; ++d1) {
+        for (unsigned int d2 = 0; d2 < s[1]; ++d2) {
+            for (unsigned int d3 = 0; d3 < s[2]; ++d3) {
+                    cout << x[d1][d2][d3] << " ";
+            }
+            cout << ";";
+        }
+        cout << endl;
+    }
+  }
+
+  void PrintTensor(const char * name, Tensor<cpu, 4> x) {
+    Shape<4> s = x.shape_;
+    cout << name << " shape " << s[0] << "x" << s[1] << "x" << s[2] << "x" << s[3] << endl;
+    for (unsigned int d1 = 0; d1 < s[0]; ++d1) {
+        for (unsigned int d2 = 0; d2 < s[1]; ++d2) {
+            for (unsigned int d3 = 0; d3 < s[2]; ++d3) {
+                for (unsigned int d4 = 0; d4 < s[3]; ++d4) {
+                    cout << x[d1][d2][d3][d4] << " ";
+                }
+                cout << "|";
+            }
+            cout << ";";
+        }
+        cout << endl;
+    }
+  }
+
  protected:
   // Net name 
   string net_name;
@@ -371,7 +474,9 @@ class Net {
   vector<string> test_out;
   // need reshape
   bool need_reshape;
-  
+  // node list
+  vector<Node<xpu>*> node_list;
+
 };
 
 }  // namespace net

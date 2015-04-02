@@ -195,6 +195,8 @@ struct SettingV {
   SettingV(std::string s) { s_val = s; value_type = SET_STRING; }
   SettingV(const char* c) { s_val = c; value_type = SET_STRING; }
   SettingV(std::map<std::string, SettingV>* m) { m_val = m; value_type = SET_MAP; }
+
+
 }; // struct SettingV
 
 }  // namespace textnet

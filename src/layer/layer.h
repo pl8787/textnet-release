@@ -312,6 +312,10 @@ class Layer {
   virtual std::vector<Node<xpu> >& GetParams() {
     return params;
   }
+
+  virtual void SetPhrase(PhraseType phrase) {
+	phrase_type = phrase;
+  }
  
   // For Debug
   // If implement net.hpp move to protected

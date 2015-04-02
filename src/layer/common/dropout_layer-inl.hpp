@@ -72,7 +72,9 @@ class DropoutLayer : public Layer<xpu>{
       mask = F<op::threshold>(this->prnd_->uniform(mask.shape_), pkeep)  
                 * (1.0f/pkeep);
       top_data = bottom_data * mask;
-    }
+    } else {
+      top_data = F<op::identity>(bottom_data);
+	}
     
   }
   
