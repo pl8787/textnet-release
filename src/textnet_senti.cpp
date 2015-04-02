@@ -89,7 +89,7 @@ void eval(vector<Layer<cpu> *> senti_net,
   ret.clear();
   for (int i = 0; i < nBatch; ++i) {
       for (int j = 0; j < senti_net.size(); ++j) {
-          senti_net[j]->phrase_type = kTest;
+          senti_net[j]->SetPhrase(kTest);
           senti_net[j]->Forward(bottoms[j], tops[j]);
       }
       ret.loss += tops[tops.size()-2][0]->data_d1()[0];
@@ -202,6 +202,7 @@ int main(int argc, char *argv[]) {
     setting["embedding_file"] = SettingV("/home/wsx/dl.shengxian/data/mr/word_rep_w2v.plpl");
     setting["word_count"] = SettingV(vocab_size);
     setting["feat_size"] = SettingV(word_rep_dim);
+    setting["pad_value"] = SettingV((float)(NAN));
       
     map<string, SettingV> &w_setting = *(new map<string, SettingV>());
       w_setting["init_type"] = SettingV(initializer::kUniform);
@@ -357,7 +358,7 @@ int main(int argc, char *argv[]) {
 
     // cout << "Begin iter " << iter << endl;
     for (index_t i = 0; i < senti_net.size(); ++i) {
-      senti_net[i]->phrase_type = kTrain;
+      senti_net[i]->SetPhrase(kTrain);
       // cout << "Forward layer " << i << endl;
       senti_net[i]->Forward(bottom_vecs[i], top_vecs[i]);
     }
