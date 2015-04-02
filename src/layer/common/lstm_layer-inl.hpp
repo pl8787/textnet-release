@@ -42,9 +42,9 @@ class LstmLayer : public Layer<xpu> {
     utils::Check(top.size() == TopNodeNum(),
                  "LstmLayer:top size problem.");
                   
-    d_mem   = setting["d_mem"].i_val;
-    d_input = setting["d_input"].i_val;
-    no_bias = setting["no_bias"].b_val;
+    d_mem   = setting["d_mem"].iVal();
+    d_input = setting["d_input"].iVal();
+    no_bias = setting["no_bias"].bVal();
 
     begin_h.Resize(mshadow::Shape2(1, d_mem));
     begin_c.Resize(mshadow::Shape2(1, d_mem));
@@ -56,9 +56,9 @@ class LstmLayer : public Layer<xpu> {
     this->params[1].Resize(1, 1, d_mem,   4*d_mem, true); // u
     this->params[2].Resize(1, 1, 1,       4*d_mem, true); // b
     
-    std::map<std::string, SettingV> &w_setting = *setting["w_filler"].m_val;
-    std::map<std::string, SettingV> &u_setting = *setting["u_filler"].m_val;
-    std::map<std::string, SettingV> &b_setting = *setting["b_filler"].m_val;
+    std::map<std::string, SettingV> &w_setting = *setting["w_filler"].mVal();
+    std::map<std::string, SettingV> &u_setting = *setting["u_filler"].mVal();
+    std::map<std::string, SettingV> &b_setting = *setting["b_filler"].mVal();
     this->params[0].initializer_ = 
         initializer::CreateInitializer<xpu, 4>(w_setting["init_type"].i_val, w_setting, this->prnd_);
     this->params[1].initializer_ = 
@@ -69,9 +69,9 @@ class LstmLayer : public Layer<xpu> {
     this->params[1].Init();
     this->params[2].Init();
     
-    std::map<std::string, SettingV> &w_updater = *setting["w_updater"].m_val;
-    std::map<std::string, SettingV> &u_updater = *setting["u_updater"].m_val;
-    std::map<std::string, SettingV> &b_updater = *setting["b_updater"].m_val;
+    std::map<std::string, SettingV> &w_updater = *setting["w_updater"].mVal();
+    std::map<std::string, SettingV> &u_updater = *setting["u_updater"].mVal();
+    std::map<std::string, SettingV> &b_updater = *setting["b_updater"].mVal();
 
     this->params[0].updater_ = 
         updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].i_val, w_updater, this->prnd_);

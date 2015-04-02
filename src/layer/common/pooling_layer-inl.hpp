@@ -41,9 +41,9 @@ class PoolingLayer : public Layer<xpu> {
     utils::Check(top.size() == TopNodeNum(),
                   "PoolingLayer:top size problem.");    
                            
-    kernel_x = setting["kernel_x"].i_val;
-    kernel_y = setting["kernel_y"].i_val;
-    stride = setting["stride"].i_val;
+    kernel_x = setting["kernel_x"].iVal();
+    kernel_y = setting["kernel_y"].iVal();
+    stride = setting["stride"].iVal();
     
   }
   

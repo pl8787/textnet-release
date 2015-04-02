@@ -177,6 +177,9 @@ const int SET_BOOL = 3;
 const int SET_STRING = 4;
 const int SET_MAP = 5;
 
+std::map<std::string, int> SettingIntMap;
+std::map<std::string, bool> SettingBoolMap;
+
 /*! \brief Setting structure used to store net settings */
 struct SettingV {
   bool b_val;
@@ -196,7 +199,123 @@ struct SettingV {
   SettingV(const char* c) { s_val = c; value_type = SET_STRING; }
   SettingV(std::map<std::string, SettingV>* m) { m_val = m; value_type = SET_MAP; }
 
-
+  // Access data interface
+  bool bVal() {
+    switch(value_type) {
+      case SET_NONE:
+        Error("Can not convert [none] to [bool].");
+        break;
+      case SET_INT:
+        Error("Can not convert [int] to [bool].");
+        break;
+      case SET_FLOAT:
+        Error("Can not convert [float] to [bool].");
+        break;
+      case SET_BOOL:
+        return b_val;
+        break;
+      case SET_STRING:
+        Printf("Convert [string] to [bool]");
+        return SettingBoolMap[s_val];
+        break;
+      case SET_MAP:
+        Error("Can not convert [map] to [bool].");
+        break;
+    }
+  }
+  int iVal() {
+    switch(value_type) {
+      case SET_NONE:
+        Error("Can not convert [none] to [int].");
+        break;
+      case SET_INT:
+        return i_val;
+        break;
+      case SET_FLOAT:
+        Printf("Convert [float] to [int]");
+        return static_cast<int>(f_val);
+        break;
+      case SET_BOOL:
+        Printf("Convert [bool] to [int]");
+        return static_cast<int>(b_val);
+        break;
+      case SET_STRING:
+        Printf("Convert [string] to [int]");
+        return SettingIntMap[s_val];
+        break;
+      case SET_MAP:
+        Error("Can not convert [map] to [int].");
+        break;
+    }
+  }
+  float fVal() {
+    switch(value_type) {
+      case SET_NONE:
+        Error("Can not convert [none] to [float].");
+        break;
+      case SET_INT:
+        Printf("Convert [int] to [float]");
+        return static_cast<float>(i_val);
+        break;
+      case SET_FLOAT:
+        return f_val;
+        break;
+      case SET_BOOL:
+        Error("Can not convert [bool] to [float].");
+        break;
+      case SET_STRING:
+        Error("Can not convert [string] to [float].");
+        break;
+      case SET_MAP:
+        Error("Can not convert [map] to [float].");
+        break;
+    }
+  }
+  std::string sVal() {
+    switch(value_type) {
+      case SET_NONE:
+        Error("Can not convert [none] to [string].");
+        break;
+      case SET_INT:
+        Error("Can not convert [int] to [string].");
+        break;
+      case SET_FLOAT:
+        Error("Can not convert [float] to [string].");
+        break;
+      case SET_BOOL:
+        Error("Can not convert [bool] to [string].");
+        break;
+      case SET_STRING:
+        return s_val;
+        break;
+      case SET_MAP:
+        Error("Can not convert [map] to [string].");
+        break;
+    }
+  }
+  std::map<std::string, Setting>* mVal() {
+    switch(value_type) {
+      case SET_NONE:
+        Error("Can not convert [none] to [map].");
+        break;
+      case SET_INT:
+        Error("Can not convert [int] to [map].");
+        break;
+      case SET_FLOAT:
+        Error("Can not convert [float] to [map].");
+        break;
+      case SET_BOOL:
+        Error("Can not convert [bool] to [map].");
+        break;
+      case SET_STRING:
+        Error("Can not convert [string] to [map].");
+        break;
+      case SET_MAP:
+        return m_val;
+        break;
+    }
+  }
+  
 }; // struct SettingV
 
 }  // namespace textnet

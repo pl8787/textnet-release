@@ -43,7 +43,7 @@ class DropoutLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(),
                   "DropoutLayer:top size problem.");
                   
-    rate = setting["rate"].f_val; 
+    rate = setting["rate"].fVal(); 
     utils::Check(rate >= 0.0 && rate <= 1.0, 
                   "Dropout rate must between 0.0 and 1.0.");    
   }

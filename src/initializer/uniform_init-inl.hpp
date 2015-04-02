@@ -31,9 +31,9 @@ class UniformInitializer : public Initializer<xpu, dim>{
   virtual void SetupInitializer(std::map<std::string, SettingV> &setting) {
     Initializer<xpu, dim>::SetupInitializer(setting);
     
-    this->init_type = setting["init_type"].i_val;
+    this->init_type = setting["init_type"].iVal();
     if (this->init_type == kUniform) {
-      this->range = setting["range"].f_val;
+      this->range = setting["range"].fVal();
     } else if (this->init_type == kXavier) {
       // Todo
     }

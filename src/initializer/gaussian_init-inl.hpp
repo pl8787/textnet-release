@@ -31,10 +31,10 @@ class GaussianInitializer : public Initializer<xpu, dim>{
   virtual void SetupInitializer(std::map<std::string, SettingV> &setting) {
     Initializer<xpu, dim>::SetupInitializer(setting);
     
-    this->init_type = setting["init_type"].i_val;
+    this->init_type = setting["init_type"].iVal();
     if (this->init_type == kGaussian) {
-      this->mu = setting["mu"].f_val;
-      this->sigma = setting["sigma"].f_val;
+      this->mu = setting["mu"].fVal();
+      this->sigma = setting["sigma"].fVal();
     } else if (this->init_type == kKaiming) {
       // Todo
     }

@@ -30,11 +30,11 @@ class ConstantInitializer : public Initializer<xpu, dim>{
   virtual void SetupInitializer(std::map<std::string, SettingV> &setting) {
     Initializer<xpu, dim>::SetupInitializer(setting);
     
-    this->init_type = setting["init_type"].i_val;
+    this->init_type = setting["init_type"].iVal();
     if (this->init_type == kZero) {
       this->value = 0.0f;
     } else if (this->init_type == kConstant) {
-      this->value = setting["value"].f_val;
+      this->value = setting["value"].fVal();
     }
   }
   

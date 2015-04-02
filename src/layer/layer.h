@@ -83,7 +83,7 @@ class Layer {
     this->settings = setting;
     this->Require();
     
-    phrase_type = this->settings["phrase_type"].i_val;
+    phrase_type = this->settings["phrase_type"].iVal();
     prnd_ = prnd;
   }
   
@@ -133,22 +133,22 @@ class Layer {
       switch ( it->second.value_type ) {
         case SET_INT:
           {
-            root[it->first] = it->second.i_val;
+            root[it->first] = it->second.iVal();
           }
           break;
         case SET_FLOAT:
           {
-            root[it->first] = it->second.f_val;
+            root[it->first] = it->second.fVal();
           }
           break;
         case SET_BOOL:
           {
-            root[it->first] = it->second.b_val;
+            root[it->first] = it->second.bVal();
           }
           break;
         case SET_STRING:
           {
-            root[it->first] = it->second.s_val;
+            root[it->first] = it->second.sVal();
           }
           break;
         case SET_MAP:

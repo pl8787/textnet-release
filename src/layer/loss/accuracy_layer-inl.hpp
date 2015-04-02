@@ -44,7 +44,7 @@ class AccuracyLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(),
                   "AccuracyLayer:top size problem.");
        
-    topk = setting["topk"].i_val;
+    topk = setting["topk"].iVal();
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,

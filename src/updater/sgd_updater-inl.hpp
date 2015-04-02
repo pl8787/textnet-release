@@ -35,11 +35,11 @@ class SGDUpdater : public Updater<xpu, dim>{
   virtual void SetupUpdater(std::map<std::string, SettingV> &setting) {
     Updater<xpu, dim>::SetupUpdater(setting);
     
-    this->updater_type = setting["updater_type"].i_val;
-    base_lr = setting["lr"].f_val;
-    decay = setting["decay"].f_val;
-    momentum = setting["momentum"].f_val;
-    wd = setting["wd"].f_val;
+    this->updater_type = setting["updater_type"].iVal();
+    base_lr = setting["lr"].fVal();
+    decay = setting["decay"].fVal();
+    momentum = setting["momentum"].fVal();
+    wd = setting["wd"].fVal();
     iteration = 0;
 	  lr = base_lr;
   }

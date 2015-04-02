@@ -48,23 +48,23 @@ class EmbeddingLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(),
                   "EmbeddingLayer:top size problem.");
                   
-    embedding_file = setting["embedding_file"].s_val;
-    feat_size = setting["feat_size"].i_val;
-    word_count = setting["word_count"].i_val;
+    embedding_file = setting["embedding_file"].sVal();
+    feat_size = setting["feat_size"].iVal();
+    word_count = setting["word_count"].iVal();
     
     this->params.resize(1);
     // No need allocate diff memory
     this->params[0].need_diff = false;
     this->params[0].Resize(word_count, feat_size, 1, 1);
     
-    std::map<std::string, SettingV> w_setting = *setting["w_filler"].m_val;
+    std::map<std::string, SettingV> w_setting = *setting["w_filler"].mVal();
 	std::cout << w_setting["init_type"].i_val << std::endl;
     this->params[0].initializer_ = 
         initializer::CreateInitializer<xpu, 4>(w_setting["init_type"].i_val,
           w_setting, this->prnd_);
     this->params[0].Init();   
 
-    std::map<std::string, SettingV> &w_updater = *setting["w_updater"].m_val;
+    std::map<std::string, SettingV> &w_updater = *setting["w_updater"].mVal();
     this->params[0].updater_ = 
         updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].i_val,
           w_updater, this->prnd_);

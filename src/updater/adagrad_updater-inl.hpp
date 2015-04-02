@@ -34,10 +34,10 @@ class AdagradUpdater : public Updater<xpu, dim>{
   virtual void SetupUpdater(std::map<std::string, SettingV> &setting) {
     Updater<xpu, dim>::SetupUpdater(setting);
     
-    this->updater_type = setting["updater_type"].i_val;
-    eps = setting["eps"].f_val;
-    lr = setting["lr"].f_val;
-    maxIteration = 1000; //setting["max_iter"].i_val; 
+    this->updater_type = setting["updater_type"].iVal();
+    eps = setting["eps"].fVal();
+    lr = setting["lr"].fVal();
+    maxIteration = 1000; //setting["max_iter"].iVal(); 
     iteration = 0;
   }
 

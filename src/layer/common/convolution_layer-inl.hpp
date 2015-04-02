@@ -51,21 +51,21 @@ class ConvolutionLayer : public Layer<xpu> {
     utils::Check(top.size() == TopNodeNum(),
                   "ConvolutionLayer:top size problem.");
                   
-    kernel_x = setting["kernel_x"].i_val;
-    kernel_y = setting["kernel_y"].i_val;
-    pad_x = setting["pad_x"].i_val;
-    pad_y = setting["pad_y"].i_val;
-    stride = setting["stride"].i_val;
+    kernel_x = setting["kernel_x"].iVal();
+    kernel_y = setting["kernel_y"].iVal();
+    pad_x = setting["pad_x"].iVal();
+    pad_y = setting["pad_y"].iVal();
+    stride = setting["stride"].iVal();
     channel_in = bottom[0]->data.size(1);
-    channel_out = setting["channel_out"].i_val;
-    no_bias = setting["no_bias"].b_val;
+    channel_out = setting["channel_out"].iVal();
+    no_bias = setting["no_bias"].bVal();
     
     this->params.resize(2);
     this->params[0].Resize(channel_out, channel_in * kernel_x * kernel_y, 1, 1, true);
     this->params[1].Resize(channel_out, 1, 1, 1, true);
     
-    std::map<std::string, SettingV> &w_setting = *setting["w_filler"].m_val;
-    std::map<std::string, SettingV> &b_setting = *setting["b_filler"].m_val;
+    std::map<std::string, SettingV> &w_setting = *setting["w_filler"].mVal();
+    std::map<std::string, SettingV> &b_setting = *setting["b_filler"].mVal();
     this->params[0].initializer_ = 
         initializer::CreateInitializer<xpu, 4>(w_setting["init_type"].i_val,
           w_setting, this->prnd_);
@@ -75,8 +75,8 @@ class ConvolutionLayer : public Layer<xpu> {
     this->params[0].Init();
     this->params[1].Init();
     
-    std::map<std::string, SettingV> &w_updater = *setting["w_updater"].m_val;
-    std::map<std::string, SettingV> &b_updater = *setting["b_updater"].m_val;
+    std::map<std::string, SettingV> &w_updater = *setting["w_updater"].mVal();
+    std::map<std::string, SettingV> &b_updater = *setting["b_updater"].mVal();
     this->params[0].updater_ = 
         updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].i_val,
           w_updater, this->prnd_);

@@ -42,7 +42,7 @@ class PairHingeLossLayer : public Layer<xpu>{
                   "PairHingeLossLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "PairHingeLossLayer:top size problem.");
-    delta = setting["delta"].f_val;
+    delta = setting["delta"].fVal();
     
   }
   

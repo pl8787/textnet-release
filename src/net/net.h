@@ -38,7 +38,66 @@ class Net {
     
   }
   
-  virtual void ExpandConfig(Json::Value &net_root) {
+  void InitSettingEngine() {
+    using namespace utils;
+    SettingIntMap["UnkonwnLayer"] = kUnkonwnLayer;
+    // Activation Layer 1-10
+    SettingIntMap["RectifiedLinear"] = kRectifiedLinear;
+    SettingIntMap["Sigmoid"] = kSigmoid;
+    SettingIntMap["Tanh"] = kTanh;
+
+    // Common Layer 11-50
+    SettingIntMap["FullConnect"] = kFullConnect;
+    SettingIntMap["Flatten"] = kFlatten;
+    SettingIntMap["Dropout"] = kDropout;
+    SettingIntMap["Conv"] = kConv;
+    SettingIntMap["MaxPooling"] = kMaxPooling;
+    SettingIntMap["SumPooling"] = kSumPooling;
+    SettingIntMap["AvgPooling"] = kAvgPooling;
+    SettingIntMap["Concat"] = kConcat;
+    SettingIntMap["ChConcat"] = kChConcat;
+    SettingIntMap["Split"] = kSplit;
+    SettingIntMap["Embedding"] = kEmbedding;
+    SettingIntMap["Cross"] = kCross;
+    SettingIntMap["Match"] = kMatch;
+    SettingIntMap["Lstm"] = kLstm;
+    SettingIntMap["WholeMaxPooling"] = kWholeMaxPooling;
+    SettingIntMap["WholeAvePooling"] = kWholeAvePooling;
+
+    // Loss Layer 51-70
+    SettingIntMap["Softmax"] = kSoftmax;
+    SettingIntMap["L2Loss"] = kL2Loss;
+    SettingIntMap["MultiLogistic"] = kMultiLogistic;
+    SettingIntMap["HingeLoss"] = kHingeLoss;
+    SettingIntMap["PairHingeLoss"] = kPairHingeLoss;
+    SettingIntMap["Accuracy"] = kAccuracy;
+
+    // Input Layer 71-
+    SettingIntMap["TextData"] = kTextData;
+
+    // Phrase Type
+    SettingIntMap["Train"] = kTrain;
+    SettingIntMap["Test"] = kTest;
+    SettingIntMap["Both"] = kBoth;
+    
+    using namespace initializer;
+    // Initializer
+    SettingIntMap["Zero"] = kZero;
+    SettingIntMap["Constant"] = kConstant;
+    SettingIntMap["Uniform"] = kUniform;
+    SettingIntMap["Gaussian"] = kGaussian;
+    SettingIntMap["Xavier"] = kXavier;
+    SettingIntMap["Kaiming"] = kKaiming;
+
+    using namespace updater;
+    // Updater
+    SettingIntMap["SGD"] = kSGD;
+    SettingIntMap["Adagrad"] = kAdagrad;
+    SettingIntMap["Adam"] = kAdam;
+    SettingIntMap["SGDSparse"] = kSGDSparse;
+  }
+  
+  void ExpandConfig(Json::Value &net_root) {
     Json::Value &global_root = net_root["global"];
     Json::Value &layers_root = net_root["layers"];
     Json::Value::Members member = global_root.getMemberNames();

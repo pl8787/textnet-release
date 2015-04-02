@@ -45,10 +45,10 @@ class TextDataLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(),
                   "TextDataLayer:top size problem.");
                   
-    data_file = setting["data_file"].s_val;
-    batch_size = setting["batch_size"].i_val;
-    max_doc_len = setting["max_doc_len"].i_val;
-    min_doc_len = setting["min_doc_len"].i_val;
+    data_file = setting["data_file"].sVal();
+    batch_size = setting["batch_size"].iVal();
+    max_doc_len = setting["max_doc_len"].iVal();
+    min_doc_len = setting["min_doc_len"].iVal();
     
     ReadTextData();
     
