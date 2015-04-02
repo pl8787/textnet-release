@@ -44,7 +44,7 @@ class TextDataLayer : public Layer<xpu>{
                   "TextDataLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "TextDataLayer:top size problem.");
-                  
+
     data_file = setting["data_file"].sVal();
     batch_size = setting["batch_size"].iVal();
     max_doc_len = setting["max_doc_len"].iVal();

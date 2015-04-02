@@ -20,7 +20,7 @@ Initializer<xpu, dim>* CreateInitializer_(
     case kGaussian: return new GaussianInitializer<xpu, dim>(setting, prnd);
     case kXavier: return new UniformInitializer<xpu, dim>(setting, prnd);
     case kKaiming: return new GaussianInitializer<xpu, dim>(setting, prnd);
-    default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
+    default: utils::Error("unknown initializer type id : \"%d\"", type); return NULL;
   }
 }
 

@@ -3,26 +3,20 @@
       "w_updater_ph" : {
         "w_updater" : {
            "decay" : 0.01,
-           "eps" : 1e-04,
-           "lr" : 1e-01,
-           "momentum" : 0.0,
-           "updater_type" : 0
+           "lr" : 0.01,
+           "updater_type" : "SGD"
         }
       },
       "wb_updater_ph" : {
         "b_updater" : {
            "decay" : 0.01,
-           "eps" : 1e-04,
-           "lr" : 1e-01,
-           "momentum" : 0.0,
-           "updater_type" : 0
+           "lr" : 0.01,
+           "updater_type" : "SGD"
         },
         "w_updater" : {
            "decay" : 0.01,
-           "eps" : 1e-04,
-           "lr" : 1e-01,
-           "momentum" : 0.0,
-           "updater_type" : 0
+           "lr" : 0.01,
+           "updater_type" : "SGD"
         }
       }
    },
@@ -46,7 +40,7 @@
             "data_file" : "/home/pangliang/matching/data/msr_paraphrase_train_wid_dup.txt",
             "max_doc_len" : 31,
             "min_doc_len" : 5,
-            "phrase_type" : 0
+            "phrase_type" : "Train"
          },
          "top_nodes" : [ "data", "label" ]
       },
@@ -60,7 +54,7 @@
             "data_file" : "/home/pangliang/matching/data/msr_paraphrase_test_wid.txt",
             "max_doc_len" : 31,
             "min_doc_len" : 5,
-            "phrase_type" : 1
+            "phrase_type" : "Test"
          },
          "top_nodes" : [ "data", "label" ]
       },
@@ -107,7 +101,6 @@
             "stride" : 1,
             "w_filler" : {
                "init_type" : 3,
-               "mu" : 0,
                "sigma" : 0.019999999552965164
             },
             "wb_updater_ph" : 0
@@ -132,7 +125,6 @@
             "stride" : 1,
             "w_filler" : {
                "init_type" : 3,
-               "mu" : 0,
                "sigma" : 0.019999999552965164
             },
             "wb_updater_ph" : 0
@@ -230,7 +222,6 @@
             "stride" : 1,
             "w_filler" : {
                "init_type" : 3,
-               "mu" : 0,
                "sigma" : 0.0099999997764825821
             },
             "wb_updater_ph" : 0
@@ -270,7 +261,6 @@
             "num_hidden" : 512,
             "w_filler" : {
                "init_type" : 3,
-               "mu" : 0,
                "sigma" : 0.004999999888241291
             },
             "wb_updater_ph" : 0
@@ -308,7 +298,6 @@
             "num_hidden" : 2,
             "w_filler" : {
                "init_type" : 3,
-               "mu" : 0,
                "sigma" : 0.10000000149011612
             },
             "wb_updater_ph" : 0

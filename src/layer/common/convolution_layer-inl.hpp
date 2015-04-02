@@ -67,10 +67,10 @@ class ConvolutionLayer : public Layer<xpu> {
     std::map<std::string, SettingV> &w_setting = *setting["w_filler"].mVal();
     std::map<std::string, SettingV> &b_setting = *setting["b_filler"].mVal();
     this->params[0].initializer_ = 
-        initializer::CreateInitializer<xpu, 4>(w_setting["init_type"].i_val,
+        initializer::CreateInitializer<xpu, 4>(w_setting["init_type"].iVal(),
           w_setting, this->prnd_);
     this->params[1].initializer_ = 
-        initializer::CreateInitializer<xpu, 4>(b_setting["init_type"].i_val, 
+        initializer::CreateInitializer<xpu, 4>(b_setting["init_type"].iVal(), 
           b_setting, this->prnd_);
     this->params[0].Init();
     this->params[1].Init();
@@ -78,10 +78,10 @@ class ConvolutionLayer : public Layer<xpu> {
     std::map<std::string, SettingV> &w_updater = *setting["w_updater"].mVal();
     std::map<std::string, SettingV> &b_updater = *setting["b_updater"].mVal();
     this->params[0].updater_ = 
-        updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].i_val,
+        updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].iVal(),
           w_updater, this->prnd_);
     this->params[1].updater_ = 
-        updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].i_val,
+        updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].iVal(),
           b_updater, this->prnd_);
           
   }

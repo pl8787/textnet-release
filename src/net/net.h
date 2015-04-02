@@ -31,6 +31,7 @@ class Net {
  public:
   Net(Random<xpu>* prnd_) {
     prnd = prnd_;
+	InitSettingEngine();
   }
 
   
@@ -39,65 +40,68 @@ class Net {
   }
   
   void InitSettingEngine() {
-    using namespace utils;
-    SettingIntMap["UnkonwnLayer"] = kUnkonwnLayer;
+	utils::Printf("[Process] Initial Setting Engine.\n");
+
+    SettingV::SettingIntMap["UnkonwnLayer"] = kUnkonwnLayer;
     // Activation Layer 1-10
-    SettingIntMap["RectifiedLinear"] = kRectifiedLinear;
-    SettingIntMap["Sigmoid"] = kSigmoid;
-    SettingIntMap["Tanh"] = kTanh;
+    SettingV::SettingIntMap["RectifiedLinear"] = kRectifiedLinear;
+    SettingV::SettingIntMap["Sigmoid"] = kSigmoid;
+    SettingV::SettingIntMap["Tanh"] = kTanh;
 
     // Common Layer 11-50
-    SettingIntMap["FullConnect"] = kFullConnect;
-    SettingIntMap["Flatten"] = kFlatten;
-    SettingIntMap["Dropout"] = kDropout;
-    SettingIntMap["Conv"] = kConv;
-    SettingIntMap["MaxPooling"] = kMaxPooling;
-    SettingIntMap["SumPooling"] = kSumPooling;
-    SettingIntMap["AvgPooling"] = kAvgPooling;
-    SettingIntMap["Concat"] = kConcat;
-    SettingIntMap["ChConcat"] = kChConcat;
-    SettingIntMap["Split"] = kSplit;
-    SettingIntMap["Embedding"] = kEmbedding;
-    SettingIntMap["Cross"] = kCross;
-    SettingIntMap["Match"] = kMatch;
-    SettingIntMap["Lstm"] = kLstm;
-    SettingIntMap["WholeMaxPooling"] = kWholeMaxPooling;
-    SettingIntMap["WholeAvePooling"] = kWholeAvePooling;
+    SettingV::SettingIntMap["FullConnect"] = kFullConnect;
+    SettingV::SettingIntMap["Flatten"] = kFlatten;
+    SettingV::SettingIntMap["Dropout"] = kDropout;
+    SettingV::SettingIntMap["Conv"] = kConv;
+    SettingV::SettingIntMap["MaxPooling"] = kMaxPooling;
+    SettingV::SettingIntMap["SumPooling"] = kSumPooling;
+    SettingV::SettingIntMap["AvgPooling"] = kAvgPooling;
+    SettingV::SettingIntMap["Concat"] = kConcat;
+    SettingV::SettingIntMap["ChConcat"] = kChConcat;
+    SettingV::SettingIntMap["Split"] = kSplit;
+    SettingV::SettingIntMap["Embedding"] = kEmbedding;
+    SettingV::SettingIntMap["Cross"] = kCross;
+    SettingV::SettingIntMap["Match"] = kMatch;
+    SettingV::SettingIntMap["Lstm"] = kLstm;
+    SettingV::SettingIntMap["WholeMaxPooling"] = kWholeMaxPooling;
+    SettingV::SettingIntMap["WholeAvePooling"] = kWholeAvePooling;
 
     // Loss Layer 51-70
-    SettingIntMap["Softmax"] = kSoftmax;
-    SettingIntMap["L2Loss"] = kL2Loss;
-    SettingIntMap["MultiLogistic"] = kMultiLogistic;
-    SettingIntMap["HingeLoss"] = kHingeLoss;
-    SettingIntMap["PairHingeLoss"] = kPairHingeLoss;
-    SettingIntMap["Accuracy"] = kAccuracy;
+    SettingV::SettingIntMap["Softmax"] = kSoftmax;
+    SettingV::SettingIntMap["L2Loss"] = kL2Loss;
+    SettingV::SettingIntMap["MultiLogistic"] = kMultiLogistic;
+    SettingV::SettingIntMap["HingeLoss"] = kHingeLoss;
+    SettingV::SettingIntMap["PairHingeLoss"] = kPairHingeLoss;
+    SettingV::SettingIntMap["Accuracy"] = kAccuracy;
 
     // Input Layer 71-
-    SettingIntMap["TextData"] = kTextData;
+    SettingV::SettingIntMap["TextData"] = kTextData;
 
     // Phrase Type
-    SettingIntMap["Train"] = kTrain;
-    SettingIntMap["Test"] = kTest;
-    SettingIntMap["Both"] = kBoth;
-    
+    SettingV::SettingIntMap["Train"] = kTrain;
+    SettingV::SettingIntMap["Test"] = kTest;
+    SettingV::SettingIntMap["Both"] = kBoth;
+   
     using namespace initializer;
     // Initializer
-    SettingIntMap["Zero"] = kZero;
-    SettingIntMap["Constant"] = kConstant;
-    SettingIntMap["Uniform"] = kUniform;
-    SettingIntMap["Gaussian"] = kGaussian;
-    SettingIntMap["Xavier"] = kXavier;
-    SettingIntMap["Kaiming"] = kKaiming;
+    SettingV::SettingIntMap["Zero"] = kZero;
+    SettingV::SettingIntMap["Constant"] = kConstant;
+    SettingV::SettingIntMap["Uniform"] = kUniform;
+    SettingV::SettingIntMap["Gaussian"] = kGaussian;
+    SettingV::SettingIntMap["Xavier"] = kXavier;
+    SettingV::SettingIntMap["Kaiming"] = kKaiming;
 
     using namespace updater;
     // Updater
-    SettingIntMap["SGD"] = kSGD;
-    SettingIntMap["Adagrad"] = kAdagrad;
-    SettingIntMap["Adam"] = kAdam;
-    SettingIntMap["SGDSparse"] = kSGDSparse;
+    SettingV::SettingIntMap["SGD"] = kSGD;
+    SettingV::SettingIntMap["Adagrad"] = kAdagrad;
+    SettingV::SettingIntMap["Adam"] = kAdam;
+    SettingV::SettingIntMap["SGDSparse"] = kSGDSparse;
   }
   
   void ExpandConfig(Json::Value &net_root) {
+	utils::Printf("[Process] Expand Configurations.\n");
+
     Json::Value &global_root = net_root["global"];
     Json::Value &layers_root = net_root["layers"];
     Json::Value::Members member = global_root.getMemberNames();
@@ -121,12 +125,16 @@ class Net {
   }
   
   virtual void InitNet(string config_file) {
+	utils::Printf("[Process] Initial Network from file: %s.\n", config_file.c_str());
+
     ifstream _if(config_file.c_str());
     _if >> root;
     InitNet(root);
   }
   
   virtual void InitNet(Json::Value &net_root) {
+	utils::Printf("[Process] Initial Network.\n");
+
     root = net_root;
     ExpandConfig(root);
     net_name = net_root["net_name"].asString();
@@ -141,30 +149,49 @@ class Net {
       test_out.push_back(net_root["test_out"][i].asString());
     }
     
-    utils::Printf("Initializing Net: %s\n", net_name.c_str());
+    utils::Printf("\tInitializing Net: %s\n", net_name.c_str());
     
     // ******** Create Layers ********
-    utils::Printf("Creating Layers.\n");
+    utils::Printf("[Process] Creating Layers.\n");
     Json::Value &layers_root = net_root["layers"];
     
     for (int i = 0; i < layers_root.size(); ++i) {
       Json::Value &layer_root = layers_root[i];
+
       // Get Layer type
-      LayerType layer_type = layer_root["layer_type"].asInt();
+	  LayerType layer_type = 0;
+	  if (layer_root["layer_type"].isInt()) {
+		layer_type = layer_root["layer_type"].asInt();
+	  } else if (layer_root["layer_type"].isString()) {
+        layer_type = SettingV::SettingIntMap[layer_root["layer_type"].asString()];
+	  } else {
+		utils::Error("[Error] layer type error.\n");
+	  }
       
       Layer<xpu> * new_layer = CreateLayer<xpu>(layer_type);
       string layer_name = layer_root["layer_name"].asString();
-      
+      new_layer->layer_name = layer_name;
+
       // Reset layer index
       layer_root["layer_idx"] = i;
-    new_layer->layer_idx = i;
+      new_layer->layer_idx = i;
 
-    if (!layer_root["setting"]["phrase_type"]) 
-     layer_root["setting"]["phrase_type"] = 2; 
+      if (!layer_root["setting"]["phrase_type"]) 
+        layer_root["setting"]["phrase_type"] = kBoth; 
+
+	  // Get Phrase Type
+	  PhraseType layer_phrase = 0;
+	  if (layer_root["setting"]["phrase_type"].type() == Json::intValue) {
+		layer_phrase = layer_root["setting"]["phrase_type"].asInt();
+	  } else if (layer_root["setting"]["phrase_type"].type() == Json::stringValue) {
+        layer_phrase = SettingV::SettingIntMap[layer_root["setting"]["phrase_type"].asString()];
+	  } else {
+		utils::Error("[Error] phrase type error.\n");
+	  }
     
-      if (layer_root["setting"]["phrase_type"].asInt() == 0) {
+      if (layer_phrase == kTrain) {
         train_net.push_back(new_layer);
-      } else if (layer_root["setting"]["phrase_type"].asInt() == 1) {
+      } else if (layer_phrase == kTest) {
         test_net.push_back(new_layer);
       } else {
         train_net.push_back(new_layer);
@@ -181,7 +208,7 @@ class Net {
     utils::Printf("Test Layer Deep: %d\n", test_net.size());
     
     // ******** Create Nodes ********
-    utils::Printf("Creating Nodes.\n");
+    utils::Printf("[Process] Creating Nodes.\n");
     for (int i = 0; i < layers_root.size(); ++i) {
       Json::Value &layer_root = layers_root[i];
       Json::Value &bottoms_root = layer_root["bottom_nodes"];
@@ -209,7 +236,7 @@ class Net {
     utils::Printf("Nodes count: %d\n", nodes.size());
     
     // ******** Connect layers ********
-    utils::Printf("Connecting Layers.\n");
+    utils::Printf("[Process] Connecting Layers.\n");
 
     bottom_vecs.resize(layers_root.size());
     top_vecs.resize(layers_root.size());
@@ -232,23 +259,25 @@ class Net {
   }
 
   virtual void PropAll() {
-    utils::Printf("PropAll Layers.\n");
+    utils::Printf("[Process] PropAll Layers.\n");
     for (int i = 0; i < layers.size(); ++i) {
       layers[i]->PropAll();
     }
   }
   
   virtual void SetupReshape() {
-    utils::Printf("Setup Layers.\n");
+    utils::Printf("[Process] Setup Layers.\n");
     Json::Value &layers_root = root["layers"];
     for (int i = 0; i < test_net.size(); ++i) {
       int layer_idx = test_net[i]->layer_idx;
+	  utils::Printf("[layer] set layer %s\n", test_net[i]->layer_name.c_str());
       test_net[i]->SetupLayer(layers_root[layer_idx], 
       bottom_vecs[layer_idx], top_vecs[layer_idx], prnd);
       test_net[i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
     }
     for (int i = 0; i < train_net.size(); ++i) {
       int layer_idx = train_net[i]->layer_idx;
+	  utils::Printf("[layer] set layer %s\n", train_net[i]->layer_name.c_str());
       train_net[i]->SetupLayer(layers_root[layer_idx], 
       bottom_vecs[layer_idx], top_vecs[layer_idx], prnd);
       train_net[i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
@@ -256,6 +285,7 @@ class Net {
   }
 
   virtual void Reshape() {
+	utils::Printf("[Process] Reshape network.\n");
     if (phrase_type == kTrain) {
       for (int i = 0; i < train_net.size(); ++i) {
         int layer_idx = train_net[i]->layer_idx;
@@ -270,6 +300,7 @@ class Net {
   }
   
   virtual void SetPhrase(vector<Layer<xpu>*> &net, PhraseType phrase) {
+	utils::Printf("[Process] Set Phrase to %d.\n", phrase);
 	phrase_type = phrase;
 	for (int i = 0; i < net.size(); ++i) {
 	  net[i]->SetPhrase(phrase);
@@ -293,7 +324,6 @@ class Net {
 #endif
       }
     } else if (phrase_type == kTest) {
-	  SetPhrase(test_net, kTest);
       for (int i = 0; i < test_net.size(); ++i) {
         int layer_idx = test_net[i]->layer_idx;
         test_net[i]->Forward(bottom_vecs[layer_idx], top_vecs[layer_idx]);
@@ -333,15 +363,15 @@ class Net {
   }
   
   virtual void Training() {
-	SetPhrase(train_net, kTrain);
 	need_reshape = false;
 
     // Prepare
     PropAll();
     SetupReshape();
 
+	SetPhrase(train_net, kTrain);
+
     for (int iter = 0; iter < max_iters; ++iter) {
-	  SetPhrase(train_net, kTrain);
       
       // Do job
       Forward();
@@ -374,7 +404,7 @@ class Net {
       if (display_interval > 0 && iter % display_interval == 0) {
         for (int i = 0; i < train_out.size(); ++i) {
           cout << "[Train]\tIter\t" << iter 
-               << ":\terror[" << i << "] =\t" 
+               << ":\tOut[" << train_out[i] << "] =\t" 
                << nodes[train_out[i]]->data_d1()[0] << endl; 
         }
       }
@@ -382,7 +412,7 @@ class Net {
       if (test_interval > 0 && iter % test_interval == 0) {
         TestOne(iter);
       }
-  }
+    }
   }
 
   virtual void TestOne(int iter) {
@@ -408,7 +438,7 @@ class Net {
       // Output
       for (int i = 0; i < test_out.size(); ++i) {
         cout << "[Test]\tIter\t" << iter 
-             << ":\terror[" << i << "] =\t" 
+             << ":\tOut[" << test_out[i] << "] =\t" 
              << test_loss[i] << endl; 
       }
         

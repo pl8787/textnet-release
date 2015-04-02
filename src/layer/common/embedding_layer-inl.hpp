@@ -60,13 +60,13 @@ class EmbeddingLayer : public Layer<xpu>{
     std::map<std::string, SettingV> w_setting = *setting["w_filler"].mVal();
 	std::cout << w_setting["init_type"].i_val << std::endl;
     this->params[0].initializer_ = 
-        initializer::CreateInitializer<xpu, 4>(w_setting["init_type"].i_val,
+        initializer::CreateInitializer<xpu, 4>(w_setting["init_type"].iVal(),
           w_setting, this->prnd_);
     this->params[0].Init();   
 
     std::map<std::string, SettingV> &w_updater = *setting["w_updater"].mVal();
     this->params[0].updater_ = 
-        updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].i_val,
+        updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].iVal(),
           w_updater, this->prnd_);
     this->params[0].updater_->is_sparse = true;          
     

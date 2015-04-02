@@ -8,6 +8,7 @@
 #include "../global.h"
 #include "../utils/utils.h"
 #include "../utils/io.h"
+#include "../utils/settingv.h"
 
 /*! \brief namespace of textnet */
 namespace textnet {
@@ -39,11 +40,11 @@ class Initializer {
       std::string name = it->first;
       if (defaults[name].value_type == SET_NONE) {
         utils::Check(setting.count(name), 
-            "Setting [%s] needed for this layer.\n", name.c_str());
+            "\tSetting [%s] needed for this layer.\n", name.c_str());
       } else {
         if (!setting.count(name)) {
           setting[name] = defaults[name];
-          utils::Printf("Setting [%s] set to default value.\n", name.c_str());
+          utils::Printf("\tSetting [%s] set to default value.\n", name.c_str());
         }
       }
     }
