@@ -25,7 +25,7 @@ class EmbeddingLayer : public Layer<xpu>{
   
   virtual void Require() {
     // default value, just set the value you want
-    
+    this->defaults["pad_value"] = SettingV(0.0f);
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["embedding_file"] = SettingV();
@@ -51,7 +51,8 @@ class EmbeddingLayer : public Layer<xpu>{
     embedding_file = setting["embedding_file"].sVal();
     feat_size = setting["feat_size"].iVal();
     word_count = setting["word_count"].iVal();
-    
+    pad_value = setting["pad_value"].fVal();
+
     this->params.resize(1);
     // No need allocate diff memory
     this->params[0].need_diff = false;
@@ -70,7 +71,7 @@ class EmbeddingLayer : public Layer<xpu>{
           w_updater, this->prnd_);
     this->params[0].updater_->is_sparse = true;          
     
-    // orc
+    // Check if embedding file is empty
     if(!embedding_file.empty()) {
       ReadInitEmbedding();
     }
@@ -118,8 +119,8 @@ class EmbeddingLayer : public Layer<xpu>{
                   
     top[0]->Resize(nbatch, doc_count, doc_len, feat_size, true);
 
-	  bottom[0]->PrintShape("bottom0");
-	  top[0]->PrintShape("top0");
+    bottom[0]->PrintShape("bottom0");
+    top[0]->PrintShape("top0");
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
@@ -129,25 +130,20 @@ class EmbeddingLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
     mshadow::Tensor<xpu, 2> weight_data = this->params[0].data_d2();
     
-    // orc
-    top_data = NAN;
+    // fill all top data to pad_value
+    top_data = pad_value;
+
     int w_idx = -1;
     for (int i = 0; i < nbatch; ++i) {
       for (int j = 0; j < doc_count; ++j) {
-        // orc
-        int begin, end;
-        LocateBeginEnd(bottom_data[i][j], begin, end);
-        // for (int k = 0; k < doc_len; ++k) {
-        for (int k = begin; k < end; ++k) {
+        for (int k = 0; k < doc_len; ++k) {
           w_idx = (int)bottom_data[i][j][0][k];
           if (w_idx != -1) {
             top_data[i][j][k] = F<op::identity>(weight_data[w_idx]);
           }
         }
-        int tmp = 1;
       }
     }
-    int tmp = 1;
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
@@ -162,11 +158,7 @@ class EmbeddingLayer : public Layer<xpu>{
       int inc = 0;
       for (int i = 0; i < nbatch; ++i) {
         for (int j = 0; j < doc_count; ++j) {
-          // orc
-          int begin, end;
-          LocateBeginEnd(bottom_data[i][j], begin, end);
-          for (int k = begin; k < end; ++k) {
-          // for (int k = 0; k < doc_len; ++k) {
+          for (int k = 0; k < doc_len; ++k) {
             w_idx = (int)bottom_data[i][j][0][k];
             if (w_idx != -1 && !idx_map.count(w_idx)) {
               idx_map[w_idx] = inc;
@@ -188,33 +180,13 @@ class EmbeddingLayer : public Layer<xpu>{
       
       for (int i = 0; i < nbatch; ++i) {
         for (int j = 0; j < doc_count; ++j) {
-          // orc
-          int begin, end;
-          LocateBeginEnd(bottom_data[i][j], begin, end);
-          // for (int k = 0; k < doc_len; ++k) {
-          for (int k = begin; k < end; ++k) {
+           for (int k = 0; k < doc_len; ++k) {
             w_idx = (int)bottom_data[i][j][0][k];
             if (w_idx != -1) {
               weight_diff[idx_map[w_idx]] += top_diff[i][j][k];
             }
           }
         }
-      }
-    }
-  }
-  void LocateBeginEnd(mshadow::Tensor<xpu, 2> seq, 
-                      int &begin, int &end) { // input a 2D tensor, out put a sub 2d tensor, with 0 padding
-    utils::Check(seq.size(0) == 1, "EmbeddingLayer: input error for LocateBeginEnd()");
-    for (int i = 0; i < seq.size(1); ++i) {
-      if (!isnan(seq[0][i])) {
-          begin = i;
-          break;
-      }
-    }
-    for (int i = seq.size(1)-1; i >= 0; --i) {
-      if (!isnan(seq[0][i])) {
-          end = i + 1;
-          break;
       }
     }
   }
@@ -226,6 +198,7 @@ class EmbeddingLayer : public Layer<xpu>{
   int doc_count;
   int nbatch;
   int line_count;
+  float pad_value;
 };
 }  // namespace layer
 }  // namespace textnet

@@ -1,7 +1,7 @@
 #ifndef TEXTNET_NET_NET_H_
 #define TEXTNET_NET_NET_H_
 
-#define DEBUG 0 
+#define DEBUG 1 
 
 #include <iostream>
 #include <sstream>
@@ -350,12 +350,18 @@ class Net {
         for (int j = 0; j < train_net[i]->ParamNodeNum(); ++j) {
 #if DEBUG
 		  cout << "Update param in layer " << i << " params " << j << endl;
-          cout << "param data" << i << " , " << j << ": " << train_net[i]->GetParams()[j].data[0][0][0][0] << endl;
-          cout << "param data" << i << " , " << j << ": " << train_net[i]->GetParams()[j].diff[0][0][0][0] << endl;
+          cout << "param data" << i << " , " << j << ": " << train_net[i]->GetParams()[j].data[0][0][0][0] 
+			   << "\t" << train_net[i]->GetParams()[j].data[0][0][0][1]
+			   << endl;
+          cout << "param data" << i << " , " << j << ": " << train_net[i]->GetParams()[j].diff[0][0][0][0]
+			   << "\t" << train_net[i]->GetParams()[j].diff[0][0][0][1]
+			   << endl;
 #endif
           train_net[i]->GetParams()[j].Update();
 #if DEBUG
-          cout << "param data" << i << " , " << j << ": " << train_net[i]->GetParams()[j].data[0][0][0][0] << endl;
+          cout << "param data" << i << " , " << j << ": " << train_net[i]->GetParams()[j].data[0][0][0][0]
+			   << "\t" << train_net[i]->GetParams()[j].data[0][0][0][1]
+			   << endl;
 #endif
         }
       }
