@@ -34,8 +34,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kFullConnect: return new FullConnectLayer<xpu>(type);
     case kMaxPooling: return new PoolingLayer<mshadow::red::maximum, xpu>(kMaxPooling);
     case kAvgPooling: return new PoolingLayer<mshadow::red::sum, xpu>(kAvgPooling);
-    case kWholeMaxPooling: return new WholePoolingLayer<mshadow::red::maximum, xpu>(kWholeMaxPooling);
-    case kWholeAvePooling: return new WholePoolingLayer<mshadow::red::sum, xpu>(kWholeAvePooling);
+    case kWholePooling: return new WholePoolingLayer<xpu>(kWholePooling);
     case kConcat: return new ConcatLayer<xpu>(kConcat);
     case kEmbedding: return new EmbeddingLayer<xpu>(kEmbedding);
     case kCross: return new CrossLayer<xpu>(kCross);

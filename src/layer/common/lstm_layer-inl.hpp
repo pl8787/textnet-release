@@ -28,10 +28,11 @@ class LstmLayer : public Layer<xpu> {
   
   virtual void Require() {
     // default value, just set the value you want
+    this->defaults["no_bias"] = SettingV(false);
     
     // require value, set to SettingV(),
     // it will force custom to set in config
-    
+    this->defaults["d_mem"] = SettingV();
     
     Layer<xpu>::Require();
   }
@@ -159,7 +160,9 @@ class LstmLayer : public Layer<xpu> {
       Tensor2D i, f, o, cc;
       cur_g = dot(x, w_data);
       cur_g += dot(pre_h, u_data);
-      cur_g += b_data;
+      if (!no_bias) {
+        cur_g += b_data;
+      }
       SplitGate(cur_g, i, f, o, cc);
       i = mshadow::expr::F<op::sigmoid>(i); // logi
       f = mshadow::expr::F<op::sigmoid>(f); // logi
@@ -284,7 +287,9 @@ class LstmLayer : public Layer<xpu> {
     x_er = dot(cur_g_er, w_data.T());
 
     // grad
-    b_er += cur_g_er;
+    if (!no_bias) {
+        b_er += cur_g_er;
+    }
     w_er += dot(x.T(), cur_g_er); 
     u_er += dot(pre_h.T(), cur_g_er);
   }

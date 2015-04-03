@@ -17,16 +17,27 @@ class ConcatLayer : public Layer<xpu>{
   virtual int BottomNodeNum() { return nBottomNode; }
   virtual int TopNodeNum() { return 1; }
   virtual int ParamNodeNum() { return 0; }
-  
+
+  virtual void Require() {
+    // default value, just set the value you want
+
+    // require value, set to SettingV(),
+    // it will force custom to set in config
+    this->defaults["bottom_node_num"] = SettingV();
+
+    
+    Layer<xpu>::Require();
+  }
+
   virtual void SetupLayer(std::map<std::string, SettingV> &setting,
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
-    utils::Check(setting.count("bottom_node_num"),
-                 "ConcatLayer: setting problem."); 
+    utils::Check(setting.count("bottom_node_num"), "ConcatLayer: setting problem."); 
     nBottomNode = setting["bottom_node_num"].i_val;
   }
+  
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {

@@ -47,8 +47,7 @@ const int kEmbedding = 21;
 const int kCross = 22;
 const int kMatch = 23;
 const int kLstm = 24;
-const int kWholeMaxPooling = 25;
-const int kWholeAvePooling = 26;
+const int kWholePooling = 25;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;
@@ -88,6 +87,7 @@ class Layer {
     
     phrase_type = this->settings["phrase_type"].iVal();
     prnd_ = prnd;
+    setting = this->settings;
   }
   
   virtual void SetupLayer(Json::Value &root,
@@ -111,6 +111,7 @@ class Layer {
         if (!settings.count(name)) {
           settings[name] = defaults[name];
           utils::Printf("\tSetting [%s] set to default value.\n", name.c_str());
+          int tmp =1 ;
         }
       }
     }

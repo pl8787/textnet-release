@@ -104,17 +104,25 @@ int main(int argc, char *argv[]) {
   mshadow::Random<cpu> rnd(37);
   vector<Layer<cpu>*> senti_net, senti_valid, senti_test;
 
-  int lstm_hidden_dim = 100;
-  int word_rep_dim = 300;
-  int max_doc_len = 100;
+  int lstm_hidden_dim = 30;
+  int word_rep_dim = 30;
+  int max_doc_len = 20;
   int min_doc_len = 1;
-  int batch_size = 50;
-  int vocab_size = 200000;
+  int batch_size = 1;
+  int vocab_size = 5;
   int num_class = 2;
-  int ADA_GRAD_MAX_ITER = 100000000;
+  int ADA_GRAD_MAX_ITER = 1000000;
   float base_lr = 0.1;
   float ADA_GRAD_EPS = 0.01;
   float decay = 0.00;
+
+  string train_data_file = "/home/wsx/dl.shengxian/data/simulation/lstm.train";
+  string valid_data_file = "/home/wsx/dl.shengxian/data/simulation/lstm.test";
+  string test_data_file = "/home/wsx/dl.shengxian/data/simulation/lstm.test";
+  string embedding_file = ""; 
+  // string embedding_file = "/home/pangliang/matching/data/wikicorp_50_msr.txt";
+  int nTrain = 6, nValid = 7, nTest = 7;
+
   if (argc == 2) {
     base_lr = atof(argv[1]);
   }
@@ -125,7 +133,7 @@ int main(int argc, char *argv[]) {
   senti_net[senti_net.size()-1]->layer_name = "embedding";
   senti_net.push_back(CreateLayer<cpu>(kLstm));
   senti_net[senti_net.size()-1]->layer_name == "lstm";
-  senti_net.push_back(CreateLayer<cpu>(kWholeMaxPooling));
+  senti_net.push_back(CreateLayer<cpu>(kWholePooling));
   senti_net[senti_net.size()-1]->layer_name = "wholepooling";
   senti_net.push_back(CreateLayer<cpu>(kDropout));
   senti_net[senti_net.size()-1]->layer_name = "dropout";
@@ -146,24 +154,55 @@ int main(int argc, char *argv[]) {
   vector<Node<cpu>*> nodes;
 
   // Manual connect layers
+  int inc_node = 0;
   for (int i = 0; i < senti_net.size(); ++i) { // last layers are softmax layer and accuracy layers
     for (int j = 0; j < senti_net[i]->TopNodeNum(); ++j) {
       Node<cpu>* node = new Node<cpu>();
+      stringstream ss;
+      ss << nodes.size();
+      node->node_name = ss.str();
       nodes.push_back(node);
       top_vecs[i].push_back(node);
     }
+    if (i == 0) { // swap input layer node
+      Node<cpu>* node = top_vecs[0][0];
+      top_vecs[0][0] = top_vecs[0][1];
+      top_vecs[0][1] = node;
+    }
+
+    // connect by node name 
+    if (i == 0) {
+        senti_net[0]->top_nodes.push_back(nodes[1]->node_name);
+        senti_net[0]->top_nodes.push_back(nodes[0]->node_name);
+        inc_node += senti_net[i]->TopNodeNum();
+    } else if (senti_net[i]->layer_name == "accuracy") {
+        senti_net[i]->bottom_nodes.push_back(nodes[inc_node-2]->node_name);
+        senti_net[i]->bottom_nodes.push_back(nodes[0]->node_name);
+        senti_net[i]->top_nodes.push_back(nodes[inc_node]->node_name);
+        inc_node += senti_net[i]->TopNodeNum();
+    } else if (senti_net[i]->layer_name == "softmax") {
+        senti_net[i]->bottom_nodes.push_back(nodes[inc_node-1]->node_name);
+        senti_net[i]->bottom_nodes.push_back(nodes[0]->node_name);
+        senti_net[i]->top_nodes.push_back(nodes[inc_node]->node_name);
+        inc_node += senti_net[i]->TopNodeNum();
+    } else {
+        senti_net[i]->bottom_nodes.push_back(nodes[inc_node-1]->node_name);
+        senti_net[i]->top_nodes.push_back(nodes[inc_node]->node_name);
+        inc_node += senti_net[i]->TopNodeNum();
+    }
+    // connect by node memory
     if (i == 0) {
       continue;
-    } else if (i == 1) {
-      bottom_vecs[i].push_back(nodes[0]);
     } else if (senti_net[i]->layer_name == "accuracy") {
       bottom_vecs[i].push_back(top_vecs[i-2][0]);
+      bottom_vecs[i].push_back(nodes[0]); // accuracy
+    } else if (senti_net[i]->layer_name == "softmax") {
+      bottom_vecs[i].push_back(top_vecs[i-1][0]);
+      bottom_vecs[i].push_back(nodes[0]); 
     } else {
       bottom_vecs[i].push_back(top_vecs[i-1][0]);
     }
   }
-  bottom_vecs[senti_net.size()-2].push_back(nodes[1]); // softmax
-  bottom_vecs[senti_net.size()-1].push_back(nodes[1]); // accuracy
   cout << "Total node count: " << nodes.size() << endl;
   
   // Fill Settings vector
@@ -172,9 +211,7 @@ int main(int argc, char *argv[]) {
   {
     map<string, SettingV> setting;
     // orc
-    // setting["data_file"] = SettingV("/home/pangliang/matching/data/msr_paraphrase_train_wid_dup.txt");
-    setting["data_file"] = SettingV("/home/wsx/dl.shengxian/data/mr/lstm.train");
-    // setting["data_file"] = SettingV("/home/wsx/dl.shengxian/data/treebank/trees/train.seq.allnode.unique.pad.binary.shuffle");
+    setting["data_file"] = SettingV(train_data_file);
     setting["batch_size"] = SettingV(batch_size);
     setting["max_doc_len"] = SettingV(max_doc_len);
     setting_vec.push_back(setting);
@@ -182,13 +219,13 @@ int main(int argc, char *argv[]) {
     // valid
     // setting["batch_size"] = SettingV(1);
     // setting["data_file"] = SettingV("/home/wsx/dl.shengxian/data/treebank/trees/dev.seq.pad.binary");
-    setting["data_file"] = SettingV("/home/wsx/dl.shengxian/data/mr/lstm.dev");
+    setting["data_file"] = SettingV(valid_data_file);
     senti_valid[0]->PropAll();
     senti_valid[0]->SetupLayer(setting, bottom_vecs[0], top_vecs[0], &rnd);
     senti_valid[0]->Reshape(bottom_vecs[0], top_vecs[0]);
     // test 
     // setting["batch_size"] = SettingV(1);
-    setting["data_file"] = SettingV("/home/wsx/dl.shengxian/data/mr/lstm.test");
+    setting["data_file"] = SettingV(test_data_file);
     senti_test[0]->PropAll();
     senti_test[0]->SetupLayer(setting, bottom_vecs[0], top_vecs[0], &rnd);
     senti_test[0]->Reshape(bottom_vecs[0], top_vecs[0]);
@@ -197,16 +234,14 @@ int main(int argc, char *argv[]) {
   {
     map<string, SettingV> setting;
     // orc
-    // setting["embedding_file"] = SettingV("/home/pangliang/matching/data/wikicorp_50_msr.txt");
-    // setting["embedding_file"] = SettingV("/home/wsx/repo.other/textnet/data/wikicorp_50_msr.txt");
-    setting["embedding_file"] = SettingV("/home/wsx/dl.shengxian/data/mr/word_rep_w2v.plpl");
+    setting["embedding_file"] = SettingV(embedding_file);
     setting["word_count"] = SettingV(vocab_size);
     setting["feat_size"] = SettingV(word_rep_dim);
     setting["pad_value"] = SettingV((float)(NAN));
       
     map<string, SettingV> &w_setting = *(new map<string, SettingV>());
       w_setting["init_type"] = SettingV(initializer::kUniform);
-      w_setting["range"] = SettingV(0.001f);
+      w_setting["range"] = SettingV(0.01f);
     setting["w_filler"] = SettingV(&w_setting);
       
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
@@ -255,12 +290,13 @@ int main(int argc, char *argv[]) {
   // kWholeMaxPooling
   {
     map<string, SettingV> setting;
+    setting["pool_type"] = "max";
     setting_vec.push_back(setting);
   }
   //  kDropout
   {
     map<string, SettingV> setting;
-    setting["rate"] = SettingV(0.5f);
+    setting["rate"] = SettingV(0.0f);
     setting_vec.push_back(setting);
   }
   // kFullConnect
@@ -315,6 +351,7 @@ int main(int argc, char *argv[]) {
   // Set up Layers
   for (index_t i = 0; i < senti_net.size(); ++i) {
     cout << "Begin set up layer " << i << endl;
+    // senti_net[i]->Require();
     senti_net[i]->PropAll();
     // cout << "\tPropAll" << endl;
     senti_net[i]->SetupLayer(setting_vec[i], bottom_vecs[i], top_vecs[i], &rnd);
@@ -322,6 +359,25 @@ int main(int argc, char *argv[]) {
     senti_net[i]->Reshape(bottom_vecs[i], top_vecs[i]);
     // cout << "\tReshape" << endl;
   }
+
+  // Save Initial Model
+  {
+  ofstream _of("./senti_lstm.manudataset.model");
+  Json::StyledWriter writer;
+  Json::Value net_root;
+  net_root["net_name"] = "senti_lstm";
+  Json::Value layers_root;
+  for (index_t i = 0; i < senti_net.size(); ++i) {
+      Json::Value layer_root;
+      senti_net[i]->SaveModel(layer_root, false);
+      layers_root.append(layer_root);
+  }
+  net_root["layers"] = layers_root;
+  string json_file = writer.write(net_root);
+  _of << json_file;
+  _of.close();
+  }
+
   using namespace checker;
   Checker<cpu> * cker = CreateChecker<cpu>();
   map<string, SettingV> setting_checker;
@@ -337,15 +393,15 @@ int main(int argc, char *argv[]) {
   // }
 
   // Begin Training 
-  int max_iters = 300000;
+  int max_iters = 3000;
   float maxValidAcc = 0., testAccByValid = 0.;
   for (int iter = 0; iter < max_iters; ++iter) {
     // if (iter % 100 == 0) { cout << "iter:" << iter << endl; }
-    if (iter % (8500/batch_size) == 0) {
+    if (iter % (nTrain/batch_size) == 0) {
       EvalRet train_ret, valid_ret, test_ret;
-      eval(senti_net, bottom_vecs, top_vecs, (8500/batch_size), train_ret);
-      eval(senti_valid, bottom_vecs, top_vecs, (1060/batch_size), valid_ret);
-      eval(senti_test,  bottom_vecs, top_vecs, (1060/batch_size), test_ret);
+      eval(senti_net, bottom_vecs, top_vecs, (nTrain/batch_size), train_ret);
+      eval(senti_valid, bottom_vecs, top_vecs, (nValid/batch_size), valid_ret);
+      eval(senti_test,  bottom_vecs, top_vecs, (nTest/batch_size), test_ret);
       fprintf(stdout, "****%d,%f,%f,%f,%f,%f,%f", iter, train_ret.loss, valid_ret.loss, test_ret.loss, 
                                                         train_ret.acc,  valid_ret.acc,  test_ret.acc);
       if (valid_ret.acc > maxValidAcc) {
@@ -397,23 +453,6 @@ int main(int argc, char *argv[]) {
     // cout << "###### Iter " << iter << ": error =\t" << nodes[nodes.size()-2]->data_d1()[0] << endl;
   }
   
-  // Save Initial Model
-  // {
-  // ofstream _of("model/matching1.model");
-  // Json::StyledWriter writer;
-  // Json::Value net_root;
-  // net_root["net_name"] = "senti_net";
-  // Json::Value layers_root;
-  // for (index_t i = 0; i < senti_net.size(); ++i) {
-  //     Json::Value layer_root;
-  //     senti_net[i]->SaveModel(layer_root);
-  //     layers_root.append(layer_root);
-  // }
-  // net_root["layers"] = layers_root;
-  // string json_file = writer.write(net_root);
-  // _of << json_file;
-  // _of.close();
-  // }
-  return 0;
+    return 0;
 }
 

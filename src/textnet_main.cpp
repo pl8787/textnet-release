@@ -75,10 +75,14 @@ void PrintTensor(const char * name, Tensor<cpu, 4> x) {
 }
 
 int main(int argc, char *argv[]) {
+  string model_file = "model/matching_global.model";
+  if (argc > 1) {
+    model_file = string(argv[1]);
+  }
   mshadow::Random<cpu> rnd(59);
-  Net<cpu> MatchingNet(&rnd);
-  MatchingNet.InitNet("model/matching_global.model");
-  MatchingNet.Training();
+  Net<cpu> net(&rnd);
+  net.InitNet(model_file.c_str());
+  net.Training();
   return 0;
 }
 

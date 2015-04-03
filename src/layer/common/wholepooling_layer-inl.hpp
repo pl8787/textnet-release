@@ -8,7 +8,7 @@
 namespace textnet {
 namespace layer {
 
-template<typename Reducer, typename xpu>
+template<typename xpu>
 class WholePoolingLayer : public Layer<xpu>{
  public:
   WholePoolingLayer(LayerType type) { this->layer_type = type; }
@@ -20,6 +20,7 @@ class WholePoolingLayer : public Layer<xpu>{
   
   virtual void Require() {
     // default value, just set the value you want
+    this->defaults["pool_type"] = SettingV("max");
 
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -33,14 +34,14 @@ class WholePoolingLayer : public Layer<xpu>{
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
+    pool_type = setting["pool_type"].sVal();
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
-    utils::Check(bottom.size() == BottomNodeNum(),
-                  "WholePoolingLayer:bottom size problem."); 
-    utils::Check(top.size() == TopNodeNum(),
-                  "WholePoolingLayer:top size problem.");
+    utils::Check(bottom.size() == BottomNodeNum(), "WholePoolingLayer:bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(), "WholePoolingLayer:top size problem.");
+
     mshadow::Shape<4> shape_in = bottom[0]->data.shape_;
     mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in[0], shape_in[1], 1, shape_in[3]);
     top[0]->Resize(shape_out, 0.f);
@@ -62,6 +63,26 @@ class WholePoolingLayer : public Layer<xpu>{
     for (index_t row = 0; row < out.size(0); ++row) {
       out.Slice(row, row+1) = in / (float)(out.size(0));
     }
+  }
+  void wholeFirstPooling(Tensor2D in, Tensor2D out) {
+    utils::Check(in.size(1) == out.size(1) && out.size(0) == 1, "WholePoolingLayer:pooling io size error");
+    out = 0.;
+    out = mshadow::expr::F<op::identity>(in.Slice(0,1));
+  }
+  void wholeUnFirstPooling(Tensor2D in, Tensor2D out) {
+    utils::Check(in.size(1) == out.size(1) && in.size(0) == 1, "WholePoolingLayer:pooling io size error");
+    out = 0.;
+    out.Slice(0,1) = mshadow::expr::F<op::identity>(in);
+  }
+  void wholeLastPooling(Tensor2D in, Tensor2D out) {
+    utils::Check(in.size(1) == out.size(1) && out.size(0) == 1, "WholePoolingLayer:pooling io size error");
+    out = 0.;
+    out = mshadow::expr::F<op::identity>(in.Slice(in.size(0)-1,in.size(0)));
+  }
+  void wholeUnLastPooling(Tensor2D in, Tensor2D out) {
+    utils::Check(in.size(1) == out.size(1) && in.size(0) == 1, "WholePoolingLayer:pooling io size error");
+    out = 0.;
+    out.Slice(out.size(0)-1,out.size(0)) = mshadow::expr::F<op::identity>(in);
   }
 
   void wholeMaxPooling(Tensor2D in, Tensor2D pos, Tensor2D out) {
@@ -97,13 +118,22 @@ class WholePoolingLayer : public Layer<xpu>{
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
-    mshadow::Shape<2> pshape = top_data[0][0].shape_;
 
+    top_data = 0;
     for (index_t i = 0; i < bottom_data.size(0); ++i) {
-        int begin, end; 
+        int begin = 0, end = 0; 
         LocateBeginEnd(bottom_data[i][0], begin, end);
-        // wholeAvePooling(bottom_data[i][0].Slice(begin,end), top_data[i][0]);
-        wholeMaxPooling(bottom_data[i][0].Slice(begin,end), pos[i][0], top_data[i][0]);
+        if (pool_type == "max") {
+            wholeMaxPooling(bottom_data[i][0].Slice(begin, end), pos[i][0], top_data[i][0]);
+        } else if (pool_type == "ave") {
+            wholeAvePooling(bottom_data[i][0].Slice(begin, end), top_data[i][0]);
+        } else if (pool_type == "first") {
+            wholeFirstPooling(bottom_data[i][0].Slice(begin, end), top_data[i][0]);
+        } else if (pool_type == "last") {
+            wholeLastPooling(bottom_data[i][0].Slice(begin, end), top_data[i][0]);
+        } else {
+            utils::Check(false, "WholePoolLayer: pool type error.");
+        }
     }
     // checkNan(top_data.dptr_, top_data.size(3) * top_data.size(0));
   }
@@ -118,12 +148,21 @@ class WholePoolingLayer : public Layer<xpu>{
 
     bottom_diff = NAN;
     for (index_t i = 0; i < bottom_data.size(0); ++i) {
-      int begin, end; 
+      int begin = 0, end = 0; 
       LocateBeginEnd(bottom_data[i][0], begin, end);
 
       if (this->prop_error[0]) {
-        // wholeUnAvePooling(top_diff[i][0], bottom_diff[i][0].Slice(begin, end));
-        wholeUnMaxPooling(top_diff[i][0], pos[i][0], bottom_diff[i][0].Slice(begin, end));
+        if (pool_type == "max") {
+            wholeUnMaxPooling(top_diff[i][0], pos[i][0], bottom_diff[i][0].Slice(begin, end));
+        } else if (pool_type == "ave") {
+            wholeUnAvePooling(top_diff[i][0], bottom_diff[i][0].Slice(begin, end));
+        } else if (pool_type == "first") {
+            wholeUnFirstPooling(top_diff[i][0], bottom_diff[i][0].Slice(begin, end));
+        } else if (pool_type == "last") {
+            wholeUnLastPooling(top_diff[i][0], bottom_diff[i][0].Slice(begin, end));
+        } else {
+            utils::Check(false, "WholePoolLayer: pool type error.");
+        }
       }
     }
   }
@@ -147,6 +186,7 @@ class WholePoolingLayer : public Layer<xpu>{
   }
  protected:
   mshadow::TensorContainer<xpu, 4> pos;
+  std::string pool_type;
 };
 }  // namespace layer
 }  // namespace textnet
