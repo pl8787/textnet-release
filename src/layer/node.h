@@ -11,6 +11,7 @@
 #include "../utils/io.h"
 #include "../initializer/initializer.h"
 #include "../updater/updater.h"
+#include "../io/json/json.h"
 
 /*! \brief namespace of textnet */
 namespace textnet {
@@ -95,6 +96,48 @@ struct Node {
     }
   }
   
+  void SaveNode(Json::Value &node_root, bool with_diff = false) {
+    Json::Value data_root;
+	Json::Value diff_root;
+    Json::Value data_shape_root;
+	Json::Value diff_shape_root;
+	Json::Value data_value_root;
+	Json::Value diff_value_root;
+
+	// Save data Tensor in Node
+    mshadow::Shape<4> shape = data.shape_;
+	for (int i = 0; i < 4; ++i) {
+	  data_shape_root.append(shape[i]);
+	}
+    for (int i = 0; i < data.shape_.Size(); ++i) {
+	  data_value_root.append(data.dptr_[i]);
+	}
+	data_root["shape"] = data_shape_root;
+	data_root["value"] = data_value_root;
+
+	node_root["data"] = data_root;
+
+	// if doesn't need diff just jump out
+	if (!with_diff) return;
+
+	// Save diff Tensor in Node
+    shape = diff.shape_;
+	for (int i = 0; i < 4; ++i) {
+	  diff_shape_root.append(shape[i]);
+	}
+    for (int i = 0; i < diff.shape_.Size(); ++i) {
+	  diff_value_root.append(diff.dptr_[i]);
+	}
+	diff_root["shape"] = diff_shape_root;
+	diff_root["value"] = diff_value_root;
+
+	node_root["diff"] = diff_root;
+  }
+
+  void LoadNode(Json::Value &node_root, bool with_diff = false) {
+
+  }
+
   inline mshadow::Tensor<xpu, 1> data_d1() {
     return mshadow::Tensor<xpu, 1>(data.dptr_, mshadow::Shape1(data.shape_.Size()));
   }
