@@ -85,7 +85,7 @@ class FullConnectLayer : public Layer<xpu> {
     
     mshadow::Tensor<xpu, 2> bottom_data = bottom[0]->data_d2();
     
-    top[0]->Resize(bottom_data.size(0), num_hidden, 1, 1);
+    top[0]->Resize(bottom_data.size(0), num_hidden, 1, 1, true);
 
 	bottom[0]->PrintShape("bottom0");
 	top[0]->PrintShape("top0");

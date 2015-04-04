@@ -43,6 +43,7 @@ class NextBasketDataLayer : public Layer<xpu>{
                   
     ReadNextBasketData();
     example_ptr = 0;
+    test_example_ptr = 0;
   }
   void splitByChar(const std::string &s, char c, std::vector<std::string> &vsResult)
   {
@@ -134,10 +135,18 @@ class NextBasketDataLayer : public Layer<xpu>{
     for (int node_idx = 0; node_idx < top.size(); ++node_idx) {
       top[node_idx]->data = NAN;
     }
+
     for (int i = 0; i < batch_size; ++i) {
-      int exampleIdx = example_ids[example_ptr] / mul;
-      int labelIdx = example_ids[example_ptr] % mul;
-      
+      int exampleIdx = 0, labelIdx = 0;
+      if (this->phrase_type == kTrain) {
+          exampleIdx = example_ids[example_ptr] / mul;
+          labelIdx = example_ids[example_ptr] % mul;
+          example_ptr = (example_ptr + 1) % example_ids.size();
+      } else {
+          exampleIdx = test_example_ptr;
+          test_example_ptr = (test_example_ptr+1) % dataset.size();
+      }
+          
       top[0]->data[i][0][0][0] = dataset[exampleIdx].next_items[labelIdx]; // label
       for (int k = 0; k < dataset[exampleIdx].next_items.size(); ++k) {
         top[1]->data[i][0][0][k] = dataset[exampleIdx].next_items[k]; // label set
@@ -148,7 +157,6 @@ class NextBasketDataLayer : public Layer<xpu>{
           top[w+3]->data[i][0][0][k] = dataset[exampleIdx].context[w][k];
         }
       }
-      example_ptr = (example_ptr + 1) % example_ids.size();
     }
   }
   
@@ -168,7 +176,7 @@ class NextBasketDataLayer : public Layer<xpu>{
   std::string data_file;
   int batch_size, top_node_num, context_window;
   int max_session_len;
-  int example_ptr;
+  int example_ptr, test_example_ptr;
   
   int mul;
 

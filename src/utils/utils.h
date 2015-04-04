@@ -110,6 +110,7 @@ inline int SPrintf(char *buf, size_t size, const char *fmt, ...) {
 
 /*! \brief assert an condition is true, use this to handle debug information */
 inline void Assert(bool exp, const char *fmt, ...) {
+#ifdef DEBUG // orc this if only for debug
   if (!exp) {
     std::string msg(kPrintBuffer, '\0');
     va_list args;
@@ -118,6 +119,7 @@ inline void Assert(bool exp, const char *fmt, ...) {
     va_end(args);
     HandleAssertError(msg.c_str());
   }
+#endif
 }
 
 /*!\brief same as assert, but this is intended to be used as message for user*/
