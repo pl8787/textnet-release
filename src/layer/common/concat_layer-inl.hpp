@@ -78,7 +78,7 @@ class ConcatLayer : public Layer<xpu>{
         cnt += bottom_data.size(0);
       }
     }
-    utils::Check(cnt == top[0]->data.size(3), "ConcatLayer: forward error.");
+    utils::Check(cnt == (top[0]->data.size(3))*(top[0]->data.size(0)), "ConcatLayer: forward error.");
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
@@ -93,7 +93,7 @@ class ConcatLayer : public Layer<xpu>{
         cnt += bottom_diff.size(0);
       }
     }
-    utils::Check(cnt == top[0]->diff.size(3), "ConcatLayer: forward error.");
+    utils::Check(cnt == (top[0]->diff.size(3)*top[0]->data.size(0)), "ConcatLayer: bp error.");
   }
  protected:
   int nBottomNode;

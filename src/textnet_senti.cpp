@@ -108,7 +108,7 @@ int main(int argc, char *argv[]) {
   int word_rep_dim = 30;
   int max_doc_len = 20;
   int min_doc_len = 1;
-  int batch_size = 1;
+  int batch_size = 2;
   int vocab_size = 5;
   int num_class = 2;
   int ADA_GRAD_MAX_ITER = 1000000;

@@ -15,7 +15,7 @@ namespace layer {
 template<typename xpu>
 class NextBasketDataLayer : public Layer<xpu>{
  public:
-  NextBasketDataLayer(LayerType type) { this->layer_type = type; }
+  NextBasketDataLayer(LayerType type) { this->layer_type = type; mul = 1000;}
   virtual ~NextBasketDataLayer(void) {}
   
   virtual int BottomNodeNum() { return 0; }
@@ -31,9 +31,10 @@ class NextBasketDataLayer : public Layer<xpu>{
     utils::Check(setting.count("max_session_len"), "NextBasketDataLayer:setting problem."); 
     utils::Check(setting.count("batch_size"), "NextBasketDataLayer:setting problem."); 
     utils::Check(setting.count("data_file"), "NextBasketDataLayer:setting problem."); 
+
     context_window = setting["context_window"].i_val;
     max_session_len = setting["max_session_len"].i_val;
-    top_node_num = context_window + 2; // user and label
+    top_node_num = context_window + 3; // label, label set and user
     data_file = setting["data_file"].s_val;
     batch_size = setting["batch_size"].i_val;
     
@@ -42,7 +43,6 @@ class NextBasketDataLayer : public Layer<xpu>{
                   
     ReadNextBasketData();
     example_ptr = 0;
-    mul = 1000;
   }
   void splitByChar(const std::string &s, char c, std::vector<std::string> &vsResult)
   {
@@ -87,29 +87,30 @@ class NextBasketDataLayer : public Layer<xpu>{
     for (int i = 0; i < line_count; ++i) {
         std::vector<std::string> vsTab, vsComma;
         Example e;
-        splitByChar(lines[i], '\t', vsTab); 
-        assert(vsTab.size() == top_node_num);
+        splitByChar(lines[i], ' ', vsTab); 
+        assert(vsTab.size() == top_node_num-1);
         e.user = atoi(vsTab[1].c_str());
         splitByChar(vsTab[0], ',', vsComma); 
         for (int j = 0; j < vsComma.size(); ++j) {
             e.next_items.push_back(atoi(vsComma[j].c_str()));
         }
+        utils::Check(vsTab.size() == context_window + 2, "NextBasketDataLayer: input data error.");
         for (int k = 2; k < vsTab.size(); ++k) {
-            std::vector<int> c;
+            std::vector<int> basket;
             splitByChar(vsTab[k], ',', vsComma); 
             for (int j = 0; j < vsComma.size(); ++j) {
-                c.push_back(atoi(vsComma[j].c_str()));
+                basket.push_back(atoi(vsComma[j].c_str()));
             }
-            e.context.push_back(c);
+            e.context.push_back(basket);
         }
         dataset.push_back(e);
     }
 	utils::Printf("Example count in file: %d\n", dataset.size());
     // gen example ids
     for (int i = 0; i < dataset.size(); ++i) {
-        for (int j = 0; j < dataset[i].next_items.size(); ++j) {
-            example_ids.push_back(i * mul + j);
-        }
+      for (int j = 0; j < dataset[i].next_items.size(); ++j) {
+        example_ids.push_back(i * mul + j);
+      }
     }
   }
   
@@ -120,24 +121,32 @@ class NextBasketDataLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(),
                  "NextBasketDataLayer:top size problem.");
     top[0]->Resize(batch_size, 1, 1, 1, true);
-    top[1]->Resize(batch_size, 1, 1, 1, true);
+    top[1]->Resize(batch_size, 1, 1, max_session_len, true);
+    top[2]->Resize(batch_size, 1, 1, 1, true);
     for (int i = 0; i < context_window; ++i) {
-      top[2+i]->Resize(batch_size, 1, 1, max_session_len, true);
+      top[3+i]->Resize(batch_size, 1, 1, max_session_len, true);
     }
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
+    // padding 
+    for (int node_idx = 0; node_idx < top.size(); ++node_idx) {
+      top[node_idx]->data = NAN;
+    }
     for (int i = 0; i < batch_size; ++i) {
       int exampleIdx = example_ids[example_ptr] / mul;
       int labelIdx = example_ids[example_ptr] % mul;
       
-      top[0]->data[i][0][0][0] = dataset[exampleIdx].next_items[labelIdx];
-      top[1]->data[i][0][0][0] = dataset[exampleIdx].user;
+      top[0]->data[i][0][0][0] = dataset[exampleIdx].next_items[labelIdx]; // label
+      for (int k = 0; k < dataset[exampleIdx].next_items.size(); ++k) {
+        top[1]->data[i][0][0][k] = dataset[exampleIdx].next_items[k]; // label set
+      }
+      top[2]->data[i][0][0][0] = dataset[exampleIdx].user;
       for (int w = 0; w < context_window; ++w) {
-          for (int k = 0; k < dataset[exampleIdx].context[w].size(); ++k) {
-            top[w+2]->data[i][0][0][k] = dataset[exampleIdx].context[w][k];
-          }
+        for (int k = 0; k < dataset[exampleIdx].context[w].size(); ++k) {
+          top[w+3]->data[i][0][0][k] = dataset[exampleIdx].context[w][k];
+        }
       }
       example_ptr = (example_ptr + 1) % example_ids.size();
     }

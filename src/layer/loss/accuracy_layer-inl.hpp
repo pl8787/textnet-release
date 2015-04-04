@@ -62,14 +62,13 @@ class AccuracyLayer : public Layer<xpu>{
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 2> bottom0_data = bottom[0]->data_d2();
-    mshadow::Tensor<xpu, 1> bottom1_data = bottom[1]->data_d1();
+    mshadow::Tensor<xpu, 2> bottom1_data = bottom[1]->data_d2();
     mshadow::Tensor<xpu, 1> top_data = top[0]->data_d1();
 
 	top_data[0] = 0.0f;
     
     for (int i = 0; i < nbatch; ++i) {
       std::vector<std::pair<float, int> > bottom_data_vector;
-      int lable_value = static_cast<int>(bottom1_data[i]);
       for (int j = 0; j < ncategory; ++j) {
         bottom_data_vector.push_back(std::make_pair(
             bottom0_data[i][j], j));
@@ -78,13 +77,16 @@ class AccuracyLayer : public Layer<xpu>{
           bottom_data_vector.begin(), bottom_data_vector.begin() + topk,
           bottom_data_vector.end(), std::greater<std::pair<float, int> >());
       for (int j = 0; j < topk; ++j) {
-        if (bottom_data_vector[j].second == lable_value) {
-          ++top_data[0];
-          break;
+        for (int k = 0; k < bottom1_data.size(1); ++k) {
+          int lable_value = static_cast<int>(bottom1_data[i][k]);
+          if (bottom_data_vector[j].second == lable_value) {
+            ++top_data[0];
+            break;
+          }
         }
       }
     }
-    top_data[0] /= nbatch;
+    top_data[0] /= (float)(nbatch);
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,

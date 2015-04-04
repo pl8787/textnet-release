@@ -25,7 +25,7 @@ class EmbeddingLayer : public Layer<xpu>{
   
   virtual void Require() {
     // default value, just set the value you want
-    this->defaults["pad_value"] = SettingV(0.0f);
+    this->defaults["pad_value"] = SettingV(NAN);
     this->defaults["embedding_file"] = SettingV("");
     // require value, set to SettingV(),
     // it will force custom to set in config

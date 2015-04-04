@@ -111,7 +111,6 @@ class Layer {
         if (!settings.count(name)) {
           settings[name] = defaults[name];
           utils::Printf("\tSetting [%s] set to default value.\n", name.c_str());
-          int tmp =1 ;
         }
       }
     }
