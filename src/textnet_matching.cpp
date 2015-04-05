@@ -704,7 +704,7 @@ int main(int argc, char *argv[]) {
       matching_net[i]->Forward(bottom_vecs[i], top_vecs[i]);
     }
     
-#if 0
+#if 1
     for (int i = 0; i < nodes.size(); ++i) {
       cout << "# Data " << nodes[i]->node_name << " : ";
       for (int j = 0; j < 5; ++j) {

@@ -24,10 +24,11 @@ class AdagradUpdater : public Updater<xpu, dim>{
     this->defaults["eps"] = SettingV(0.0001f);
     this->defaults["l2"] = SettingV(0.0f);
     this->defaults["max_iter"] = SettingV(-1);
-    
+
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["lr"] = SettingV();
+    this->defaults["batch_size"] = SettingV();
     
     Updater<xpu, dim>::Require(setting);
   }
@@ -39,6 +40,7 @@ class AdagradUpdater : public Updater<xpu, dim>{
     eps = setting["eps"].fVal();
     lr = setting["lr"].fVal();
     max_iter = setting["max_iter"].iVal(); 
+    batch_size = setting["batch_size"].iVal(); 
     wd = setting["l2"].fVal(); 
     
     iter = 0;
@@ -60,7 +62,10 @@ class AdagradUpdater : public Updater<xpu, dim>{
     if (max_iter > 0) {
       iter %= max_iter;
     } 
-
+    
+    if (batch_size > 1) {
+        diff /= float(batch_size);
+    }
                         
     sumGradSquare += diff * diff;
     data -= lr * (diff / (mshadow::expr::F<square_root>(sumGradSquare) + eps));
@@ -81,6 +86,10 @@ class AdagradUpdater : public Updater<xpu, dim>{
       iter %= max_iter;
     } 
 
+    if (batch_size > 1) {
+        diff /= float(batch_size);
+    }
+
     int w_idx = -1;
     for (int i = 0; i < idx.size(0); ++i) {
       w_idx = idx[i];
@@ -98,7 +107,7 @@ class AdagradUpdater : public Updater<xpu, dim>{
     }
   }
  protected: 
-  int iter, max_iter;
+  int iter, max_iter, batch_size;
   mshadow::TensorContainer<xpu, dim> sumGradSquare;
   float eps, lr, wd;
 

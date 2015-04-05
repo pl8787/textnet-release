@@ -27,6 +27,7 @@ class AdaDeltaUpdater : public Updater<xpu, dim>{
     
     // require value, set to SettingV(),
     // it will force custom to set in config
+    this->defaults["batch_size"] = SettingV();
     
     Updater<xpu, dim>::Require(setting);
   }
@@ -35,6 +36,7 @@ class AdaDeltaUpdater : public Updater<xpu, dim>{
     Updater<xpu, dim>::SetupUpdater(setting);
 	
     this->updater_type = setting["updater_type"].iVal();
+    batch_size = setting["batch_size"].iVal(); 
     eps = setting["eps"].fVal();
     rho = setting["rho"].fVal();
     wd = setting["l2"].fVal(); 
@@ -50,6 +52,11 @@ class AdaDeltaUpdater : public Updater<xpu, dim>{
   virtual void Update(mshadow::Tensor<xpu, dim> data, 
                       mshadow::Tensor<xpu, dim> diff) {
     using namespace mshadow::expr;
+
+    if (batch_size > 1) {
+        diff /= float(batch_size);
+    }
+
     if (iter++ == 0) {
         sumGradSquare.Resize(data.shape_, 0.);
         sumDeltaSquare.Resize(data.shape_, 0.);
@@ -69,6 +76,11 @@ class AdaDeltaUpdater : public Updater<xpu, dim>{
                             mshadow::Tensor<xpu, dim> diff, 
                             mshadow::Tensor<xpu, 1> idx) {
     using namespace mshadow::expr;
+
+    if (batch_size > 1) {
+        diff /= float(batch_size);
+    }
+
     if (iter++ == 0) {
         sumGradSquare.Resize(data.shape_, 0.);
         sumDeltaSquare.Resize(data.shape_, 0.);
@@ -97,7 +109,7 @@ class AdaDeltaUpdater : public Updater<xpu, dim>{
     }
   }
  protected: 
-  int iter;
+  int iter, batch_size;
   mshadow::TensorContainer<xpu, dim> sumGradSquare, sumDeltaSquare, delta;
   float eps, rho, wd;
 

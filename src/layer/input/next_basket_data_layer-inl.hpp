@@ -8,6 +8,7 @@
 #include <mshadow/tensor.h>
 #include "../layer.h"
 #include "../op.h"
+#include "../../utils/random.h"
 
 namespace textnet {
 namespace layer {
@@ -34,6 +35,8 @@ class NextBasketDataLayer : public Layer<xpu>{
 
     context_window = setting["context_window"].i_val;
     max_session_len = setting["max_session_len"].i_val;
+    shuffle_seed = 113;
+    if (setting.count("shuffle_seed")) shuffle_seed = setting["shuffle_seed"].i_val;
     top_node_num = context_window + 3; // label, label set and user
     data_file = setting["data_file"].s_val;
     batch_size = setting["batch_size"].i_val;
@@ -44,6 +47,7 @@ class NextBasketDataLayer : public Layer<xpu>{
     ReadNextBasketData();
     example_ptr = 0;
     test_example_ptr = 0;
+    sampler.Seed(shuffle_seed);
   }
   void splitByChar(const std::string &s, char c, std::vector<std::string> &vsResult)
   {
@@ -139,6 +143,9 @@ class NextBasketDataLayer : public Layer<xpu>{
     for (int i = 0; i < batch_size; ++i) {
       int exampleIdx = 0, labelIdx = 0;
       if (this->phrase_type == kTrain) {
+          if (example_ptr == 0) {
+              this->sampler.Shuffle(example_ids);
+          }
           exampleIdx = example_ids[example_ptr] / mul;
           labelIdx = example_ids[example_ptr] % mul;
           example_ptr = (example_ptr + 1) % example_ids.size();
@@ -186,6 +193,8 @@ class NextBasketDataLayer : public Layer<xpu>{
   // mshadow::TensorContainer<xpu, 4> data_set;
   // mshadow::TensorContainer<xpu, 1> label_set;
   int line_count;
+  int shuffle_seed;
+  utils::RandomSampler sampler;
 };
 }  // namespace layer
 }  // namespace textnet
