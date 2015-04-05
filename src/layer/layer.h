@@ -48,6 +48,7 @@ const int kCross = 22;
 const int kMatch = 23;
 const int kLstm = 24;
 const int kWholePooling = 25;
+const int kConvolutionalLstm = 26;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;

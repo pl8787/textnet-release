@@ -1,7 +1,7 @@
 #ifndef TEXTNET_NET_NET_H_
 #define TEXTNET_NET_NET_H_
 
-#define DEBUG 0
+#define DEBUG 1
 
 #include <iostream>
 #include <sstream>

@@ -132,7 +132,11 @@ int main(int argc, char *argv[]) {
   senti_net.push_back(CreateLayer<cpu>(kEmbedding));
   senti_net[senti_net.size()-1]->layer_name = "embedding";
   senti_net.push_back(CreateLayer<cpu>(kLstm));
-  senti_net[senti_net.size()-1]->layer_name == "lstm";
+  senti_net[senti_net.size()-1]->layer_name == "l_lstm";
+  senti_net.push_back(CreateLayer<cpu>(kLstm));
+  senti_net[senti_net.size()-1]->layer_name == "r_lstm";
+  senti_net.push_back(CreateLayer<cpu>(kConvolutionalLstm));
+  senti_net[senti_net.size()-1]->layer_name == "conv_lstm";
   senti_net.push_back(CreateLayer<cpu>(kWholePooling));
   senti_net[senti_net.size()-1]->layer_name = "wholepooling";
   senti_net.push_back(CreateLayer<cpu>(kDropout));

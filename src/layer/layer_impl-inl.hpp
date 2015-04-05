@@ -12,6 +12,7 @@
 #include "./common/dropout_layer-inl.hpp"
 #include "./common/match_layer-inl.hpp"
 #include "./common/lstm_layer-inl.hpp"
+#include "./common/convolutional_lstm_layer-inl.hpp"
 #include "./common/wholepooling_layer-inl.hpp"
 #include "./common/concat_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
@@ -41,6 +42,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kSplit: return new SplitLayer<xpu>(kSplit);
     case kDropout: return new DropoutLayer<xpu>(kDropout);
     case kLstm: return new LstmLayer<xpu>(kLstm);
+    case kConvolutionalLstm: return new ConvolutionalLstmLayer<xpu>(kConvolutionalLstm);
     case kHingeLoss: return new HingeLossLayer<xpu>(kHingeLoss);
     case kPairHingeLoss: return new PairHingeLossLayer<xpu>(kPairHingeLoss);
     case kTextData: return new TextDataLayer<xpu>(kTextData);

@@ -29,10 +29,17 @@ class LstmLayer : public Layer<xpu> {
   virtual void Require() {
     // default value, just set the value you want
     this->defaults["no_bias"] = SettingV(false);
+    this->defaults["reverse"] = SettingV(false);
     
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["d_mem"] = SettingV();
+    this->defaults["w_filler"] = SettingV();
+    this->defaults["u_filler"] = SettingV();
+    this->defaults["b_filler"] = SettingV();
+    this->defaults["w_updater"] = SettingV();
+    this->defaults["u_updater"] = SettingV();
+    this->defaults["b_updater"] = SettingV();
     
     Layer<xpu>::Require();
   }
@@ -49,11 +56,8 @@ class LstmLayer : public Layer<xpu> {
                   
     d_mem   = setting["d_mem"].iVal();
     d_input = bottom[0]->data.size(3);
-    d_input = setting["d_input"].iVal();
-    no_bias = false;
     no_bias = setting["no_bias"].bVal();
-    reverse = false;
-    if (setting.count("reverse")) reverse = setting["reverse"].bVal();
+    reverse = setting["reverse"].bVal();
 
     begin_h.Resize(mshadow::Shape2(1, d_mem), 0.f);
     begin_c.Resize(mshadow::Shape2(1, d_mem), 0.f);

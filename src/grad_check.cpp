@@ -13,6 +13,9 @@
 #include "./checker/checker.h"
 #include "global.h"
 
+// orc for read interal variable in layer classes
+#include "./layer/common/convolutional_lstm_layer-inl.hpp"
+
 using namespace std;
 using namespace textnet;
 using namespace textnet::layer;
@@ -349,6 +352,236 @@ void TestLstmLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckGrad(layer_fc, bottoms, tops);
 }
 
+void TestConvolutionalLstmLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Conv Lstm Layer." << endl;
+  Node<cpu> bottom_0, bottom_1, bottom_2;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom_0);
+  bottoms.push_back(&bottom_1);
+  bottoms.push_back(&bottom_2);
+  tops.push_back(&top);
+  
+  bottom_0.Resize(Shape4(2,1,10,5), true);
+  bottom_1.Resize(Shape4(2,1,10,5), true);
+  bottom_2.Resize(Shape4(2,1,10,5), true);
+  prnd->SampleUniform(&bottom_0.data, -0.1, 0.1);
+  prnd->SampleUniform(&bottom_1.data, -0.1, 0.1);
+  prnd->SampleUniform(&bottom_2.data, -0.1, 0.1);
+
+  bottom_0.data[0][0].Slice(0, 2) = NAN; // padding
+  bottom_0.data[0][0].Slice(6, 10)= NAN; // padding
+  bottom_0.data[1][0].Slice(0, 2) = NAN; // padding
+  bottom_0.data[1][0].Slice(6, 10)= NAN; // padding
+  bottom_1.data[0][0].Slice(0, 2) = NAN; // padding
+  bottom_1.data[0][0].Slice(6, 10)= NAN; // padding
+  bottom_1.data[1][0].Slice(0, 2) = NAN; // padding
+  bottom_1.data[1][0].Slice(6, 10)= NAN; // padding
+  bottom_2.data[0][0].Slice(0, 2) = NAN; // padding
+  bottom_2.data[0][0].Slice(6, 10)= NAN; // padding
+  bottom_2.data[1][0].Slice(0, 2) = NAN; // padding
+  bottom_2.data[1][0].Slice(6, 10)= NAN; // padding
+  
+  map<string, SettingV> setting;
+  {
+    setting["num_hidden"] = SettingV(3);
+    setting["pad_value"] = SettingV(NAN);
+    setting["no_bias"] = SettingV(true);
+    setting["output_padding_zero"] = SettingV(false);
+      
+    map<string, SettingV> &w_filler = *(new map<string, SettingV>());
+      w_filler["init_type"] = SettingV(initializer::kUniform);
+      w_filler["range"] = SettingV(0.01f);
+    setting["w_filler"] = SettingV(&w_filler);
+
+    map<string, SettingV> &b_filler = *(new map<string, SettingV>());
+      b_filler["init_type"] = SettingV(initializer::kZero);
+    setting["b_filler"] = SettingV(&b_filler);
+      
+    map<string, SettingV> &w_updater = *(new map<string, SettingV>());
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["eps"] = SettingV(0.01f);
+      w_updater["mat_iter"] = SettingV(10000);
+      w_updater["lr"] = SettingV(0.1f);
+    setting["w_updater"] = SettingV(&w_updater);
+    map<string, SettingV> &b_updater = *(new map<string, SettingV>());
+      b_updater["updater_type"] = SettingV(updater::kAdagrad);
+      b_updater["eps"] = SettingV(0.01f);
+      b_updater["mat_iter"] = SettingV(10000);
+      b_updater["lr"] = SettingV(0.1f);
+    setting["b_updater"] = SettingV(&b_updater);
+  }
+
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer = CreateLayer<cpu>(kConvolutionalLstm);
+  layer->PropAll();
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.001f);
+  setting_checker["range_max"] = SettingV(0.001f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+
+  cout << "Check Error." << endl;
+  cker->CheckError(layer, bottoms, tops);
+
+  cout << "Check Grad." << endl;
+  cker->CheckGrad(layer, bottoms, tops);
+
+
+  layer->Forward(bottoms, tops);
+  PrintTensor("b0", bottoms[0]->data);
+  PrintTensor("b1", bottoms[1]->data);
+  PrintTensor("b2", bottoms[2]->data);
+  PrintTensor("t0", tops[0]->data);
+  PrintTensor("cc_data",((ConvolutionalLstmLayer<cpu> *)(layer))->concat_input_data);
+  PrintTensor("cc_diff",((ConvolutionalLstmLayer<cpu> *)(layer))->concat_input_diff);
+  cout << "Done." << endl;
+}
+
+void TestWholePoolingLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check WholePooling Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(2,1,6,3), true);
+  prnd->SampleUniform(&bottom.data, -0.1, 0.1);
+
+  bottom.data[0][0].Slice(0, 2) = NAN; // padding
+  bottom.data[0][0].Slice(4, 6) = NAN; // padding
+  bottom.data[1][0].Slice(0, 1) = NAN; // padding
+  bottom.data[1][0].Slice(4, 6) = NAN; // padding
+  
+  map<string, SettingV> setting;
+  {
+    setting["pool_type"] = SettingV("last");
+    setting["pad_value"] = SettingV((float)(NAN));
+  }
+
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer = CreateLayer<cpu>(kWholePooling);
+  layer->PropAll();
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+  prnd->SampleUniform(&top.diff, -0.1, 0.1);
+  
+  using namespace checker;
+  // Checker<cpu> * cker = CreateChecker<cpu>();
+
+  // map<string, SettingV> setting_checker;
+  // setting_checker["range_min"] = SettingV(-0.001f);
+  // setting_checker["range_max"] = SettingV(0.001f);
+  // setting_checker["delta"] = SettingV(0.0001f);
+  // cker->SetupChecker(setting_checker, prnd);
+
+  // cout << "Check Error." << endl;
+  // cker->CheckError(layer, bottoms, tops);
+
+  // cout << "Check Grad." << endl;
+  // cker->CheckGrad(layer, bottoms, tops);
+
+
+  layer->Forward(bottoms, tops);
+  layer->Backprop(bottoms, tops);
+  PrintTensor("b_data", bottoms[0]->data);
+  PrintTensor("t_data", tops[0]->data);
+  PrintTensor("b_diff", bottoms[0]->diff);
+  PrintTensor("t_diff", tops[0]->diff);
+  cout << "Done." << endl;
+}
+
+void TestConcatLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Concat Layer." << endl;
+  Node<cpu> bottom_0, bottom_1, bottom_2;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom_0);
+  bottoms.push_back(&bottom_1);
+  bottoms.push_back(&bottom_2);
+  tops.push_back(&top);
+  
+  bottom_0.Resize(Shape4(2,1,1,5), true);
+  bottom_1.Resize(Shape4(2,1,1,5), true);
+  bottom_2.Resize(Shape4(2,1,1,5), true);
+  prnd->SampleUniform(&bottom_0.data, -0.1, 0.1);
+  prnd->SampleUniform(&bottom_1.data, -0.1, 0.1);
+  prnd->SampleUniform(&bottom_2.data, -0.1, 0.1);
+
+  // bottom_0.data[0][0].Slice(0, 2) = NAN; // padding
+  // bottom_0.data[0][0].Slice(6, 10)= NAN; // padding
+  // bottom_0.data[1][0].Slice(0, 1) = NAN; // padding
+  // bottom_0.data[1][0].Slice(6, 10)= NAN; // padding
+  // bottom_1.data[0][0].Slice(0, 2) = NAN; // padding
+  // bottom_1.data[0][0].Slice(6, 10)= NAN; // padding
+  // bottom_1.data[1][0].Slice(0, 1) = NAN; // padding
+  // bottom_1.data[1][0].Slice(6, 10)= NAN; // padding
+  // bottom_2.data[0][0].Slice(0, 2) = NAN; // padding
+  // bottom_2.data[0][0].Slice(6, 10)= NAN; // padding
+  // bottom_2.data[1][0].Slice(0, 1) = NAN; // padding
+  // bottom_2.data[1][0].Slice(6, 10)= NAN; // padding
+  
+  map<string, SettingV> setting;
+  {
+    setting["bottom_node_num"] = SettingV(3);
+    setting["pad_value"] = SettingV((float)(NAN));
+  }
+
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer = CreateLayer<cpu>(kConcat);
+  layer->PropAll();
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+  prnd->SampleUniform(&top.diff, -0.1, 0.1);
+  
+  using namespace checker;
+  // Checker<cpu> * cker = CreateChecker<cpu>();
+
+  // map<string, SettingV> setting_checker;
+  // setting_checker["range_min"] = SettingV(-0.001f);
+  // setting_checker["range_max"] = SettingV(0.001f);
+  // setting_checker["delta"] = SettingV(0.0001f);
+  // cker->SetupChecker(setting_checker, prnd);
+
+  // cout << "Check Error." << endl;
+  // cker->CheckError(layer, bottoms, tops);
+
+  // cout << "Check Grad." << endl;
+  // cker->CheckGrad(layer, bottoms, tops);
+
+
+  layer->Forward(bottoms, tops);
+  layer->Backprop(bottoms, tops);
+  PrintTensor("b0_data", bottoms[0]->data);
+  PrintTensor("b1_data", bottoms[1]->data);
+  PrintTensor("b2_data", bottoms[2]->data);
+  PrintTensor("t_data",  tops[0]->data);
+  PrintTensor("b0_diff", bottoms[0]->diff);
+  PrintTensor("b1_diff", bottoms[1]->diff);
+  PrintTensor("b2_diff", bottoms[2]->diff);
+  PrintTensor("t_diff", tops[0]->diff);
+  cout << "Done." << endl;
+}
+
+
+
+
 
 void TestFcLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Fc Layer." << endl;
@@ -549,7 +782,10 @@ int main(int argc, char *argv[]) {
   //TestPoolLayer(&rnd);
   // TestCrossLayer(&rnd);
   //TestDropoutLayer(&rnd);
-  TestLstmLayer(&rnd);
+  // TestLstmLayer(&rnd);
+  // TestConvolutionalLstmLayer(&rnd);
+  // TestWholePoolingLayer(&rnd);
+  TestConcatLayer(&rnd);
   //TestHingeLossLayer(&rnd);
   return 0;
 }
