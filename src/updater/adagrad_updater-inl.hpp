@@ -21,8 +21,9 @@ class AdagradUpdater : public Updater<xpu, dim>{
   
   virtual void Require(std::map<std::string, SettingV> &setting) {
     // default value, just set the value you want
-    this->defaults["eps"] = SettingV(0.0f);
-    this->defaults["wd"] = SettingV(0.0f);
+    this->defaults["eps"] = SettingV(0.0001f);
+    this->defaults["l2"] = SettingV(0.0f);
+    this->defaults["max_iter"] = SettingV(-1);
     
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -34,18 +35,11 @@ class AdagradUpdater : public Updater<xpu, dim>{
   virtual void SetupUpdater(std::map<std::string, SettingV> &setting) {
     Updater<xpu, dim>::SetupUpdater(setting);
 	
-    utils::Check(setting.count("updater_type"), "AdaGradUpdater: parameter error.");
-    utils::Check(setting.count("eps"), "AdaGradUpdater: parameter error.");
-    utils::Check(setting.count("lr"), "AdaGradUpdater: parameter error.");
-
     this->updater_type = setting["updater_type"].iVal();
     eps = setting["eps"].fVal();
     lr = setting["lr"].fVal();
-
-    max_iter = -1; 
-    wd = 0.;
-    if (setting.count("max_iter")) max_iter = setting["max_iter"].iVal(); 
-    if (setting.count("l2")) wd = setting["l2"].fVal(); 
+    max_iter = setting["max_iter"].iVal(); 
+    wd = setting["l2"].fVal(); 
     
     iter = 0;
   }
@@ -90,12 +84,16 @@ class AdagradUpdater : public Updater<xpu, dim>{
     int w_idx = -1;
     for (int i = 0; i < idx.size(0); ++i) {
       w_idx = idx[i];
-      sumGradSquare[w_idx] += diff[i] * diff[i];
+      utils::Assert(w_idx >= 0 && w_idx < data.size(0), "");
 
-      data.Slice(w_idx, w_idx+1) -= (lr * diff.Slice(i, i+1)) /  \
-          (mshadow::expr::F<square_root>(sumGradSquare.Slice(w_idx, w_idx+1)) + eps);
+      mshadow::Tensor<xpu, dim> sumGradSquareRow = sumGradSquare.Slice(w_idx, w_idx+1);
+      mshadow::Tensor<xpu, dim> diffRow = diff.Slice(i, i+1);
+      mshadow::Tensor<xpu, dim> dataRow = data.Slice(w_idx, w_idx+1);
+
+      sumGradSquareRow += diffRow * diffRow;
+      dataRow -= (lr * (diffRow / ((mshadow::expr::F<square_root>(sumGradSquareRow)) + eps)));
       if (wd > 0.) {
-        data.Slice(w_idx, w_idx+1) -= (wd*lr) * data.Slice(w_idx, w_idx+1);
+        dataRow -= (wd*lr) * dataRow;
       }
     }
   }
