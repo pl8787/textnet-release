@@ -47,8 +47,9 @@ const int kEmbedding = 21;
 const int kCross = 22;
 const int kMatch = 23;
 const int kLstm = 24;
-const int kWholeMaxPooling = 25;
-const int kWholeAvePooling = 26;
+const int kWholePooling = 25;
+const int kConvolutionalLstm = 26;
+const int kRecurrent = 27;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;
@@ -60,6 +61,8 @@ const int kAccuracy = 56;
 
 // Input Layer 71-
 const int kTextData = 71;
+const int kSequenceClassificationData = 72;
+const int kNextBasketData = 73;
 
 
 /*! \brief these are enumeration */

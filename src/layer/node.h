@@ -30,6 +30,10 @@ struct Node {
   bool need_diff;
   updater::Updater<xpu, 4>* updater_;
   initializer::Initializer<xpu, 4>* initializer_;
+
+  // orc
+  void ClearDiff() {};
+  void Share(Node &other) {};
   
   // constructor
   Node(bool need_diff_ = true) : must_contiguous(false), need_diff(need_diff_) {

@@ -63,8 +63,7 @@ class Net {
     SettingV::SettingIntMap["Cross"] = kCross;
     SettingV::SettingIntMap["Match"] = kMatch;
     SettingV::SettingIntMap["Lstm"] = kLstm;
-    SettingV::SettingIntMap["WholeMaxPooling"] = kWholeMaxPooling;
-    SettingV::SettingIntMap["WholeAvePooling"] = kWholeAvePooling;
+    SettingV::SettingIntMap["WholePooling"] = kWholePooling;
 
     // Loss Layer 51-70
     SettingV::SettingIntMap["Softmax"] = kSoftmax;
@@ -255,7 +254,6 @@ class Net {
         top_vecs[i].push_back(nodes[node_name]);
       }
     }
-    
   }
 
   virtual void PropAll() {
@@ -272,14 +270,14 @@ class Net {
       int layer_idx = test_net[i]->layer_idx;
 	  utils::Printf("[layer] set layer %s\n", test_net[i]->layer_name.c_str());
       test_net[i]->SetupLayer(layers_root[layer_idx], 
-      bottom_vecs[layer_idx], top_vecs[layer_idx], prnd);
+          bottom_vecs[layer_idx], top_vecs[layer_idx], prnd);
       test_net[i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
     }
     for (int i = 0; i < train_net.size(); ++i) {
       int layer_idx = train_net[i]->layer_idx;
 	  utils::Printf("[layer] set layer %s\n", train_net[i]->layer_name.c_str());
       train_net[i]->SetupLayer(layers_root[layer_idx], 
-      bottom_vecs[layer_idx], top_vecs[layer_idx], prnd);
+          bottom_vecs[layer_idx], top_vecs[layer_idx], prnd);
       train_net[i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
     }
   }

@@ -23,6 +23,7 @@ const int kSGD = 0;
 const int kAdagrad = 1;
 const int kAdam = 2;
 const int kSGDSparse = 3;
+const int kAdaDelta = 4;
 
 template<typename xpu, int dim>
 class Updater {

@@ -12,6 +12,7 @@
 #include <vector>
 #include <map>
 #include <cstdarg>
+#include <cassert> // orc
 
 #if !defined(__GNUC__)
 #define fopen64 std::fopen
@@ -67,6 +68,7 @@ const int kPrintBuffer = 1 << 12;
  */
 inline void HandleAssertError(const char *msg) {
   fprintf(stderr, "AssertError:%s\n", msg);
+  assert(false); // orc for looking stack
   exit(-1);
 }
 /*!
@@ -75,6 +77,7 @@ inline void HandleAssertError(const char *msg) {
  */
 inline void HandleCheckError(const char *msg) {
   fprintf(stderr, "%s\n", msg);
+  assert(false); // orc for looking stack
   exit(-1);
 }
 inline void HandlePrint(const char *msg) {
@@ -107,6 +110,7 @@ inline int SPrintf(char *buf, size_t size, const char *fmt, ...) {
 
 /*! \brief assert an condition is true, use this to handle debug information */
 inline void Assert(bool exp, const char *fmt, ...) {
+#ifdef DEBUG // orc this if only for debug
   if (!exp) {
     std::string msg(kPrintBuffer, '\0');
     va_list args;
@@ -115,6 +119,7 @@ inline void Assert(bool exp, const char *fmt, ...) {
     va_end(args);
     HandleAssertError(msg.c_str());
   }
+#endif
 }
 
 /*!\brief same as assert, but this is intended to be used as message for user*/

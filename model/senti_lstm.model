@@ -1,0 +1,191 @@
+{
+   "net_name" : "senti_net",
+   "max_iters" : 1000,
+   "max_test_iters" : 7,
+   "display_interval": 1,
+   "test_interval" : 100,
+   "train_out" : ["7", "8"],
+   "test_out" : ["7", "8"],
+   
+
+   "layers" : [
+      {
+         "bottom_nodes" : null,
+         "layer_idx" : 0,
+         "layer_name" : "text",
+         "layer_type" : 72,
+         "setting" : {
+            "batch_size" : 1,
+            "data_file" : "/home/wsx/dl.shengxian/data/simulation/lstm.train",
+            "max_doc_len" : 20,
+            "phrase_type" : "Train"
+         },
+         "top_nodes" : [ "1", "0" ]
+      },
+      {
+         "bottom_nodes" : null,
+         "layer_idx" : 0,
+         "layer_name" : "text",
+         "layer_type" : 72,
+         "setting" : {
+            "batch_size" : 1,
+            "data_file" : "/home/wsx/dl.shengxian/data/simulation/lstm.test",
+            "max_doc_len" : 20,
+            "phrase_type" : "Test"
+         },
+         "top_nodes" : [ "1", "0" ]
+      },
+      {
+         "bottom_nodes" : [ "1" ],
+         "layer_idx" : 0,
+         "layer_name" : "embedding",
+         "layer_type" : 21,
+         "setting" : {
+            "embedding_file" : "",
+            "feat_size" : 30,
+            "pad_value" : null,
+            "w_filler" : {
+               "init_type" : 2,
+               "range" : 9.9999998e-03
+            },
+            "w_updater" : {
+               "decay" : 0.0000000e+00,
+               "eps" : 9.9999998e-03,
+               "lr" : 1.0000000e-01,
+               "max_iter" : 1000000,
+               "momentum" : 0.0000000e+00,
+               "updater_type" : 1,
+               "wd" : 0.0000000e+00
+            },
+            "word_count" : 5
+         },
+         "top_nodes" : [ "2" ]
+      },
+      {
+         "bottom_nodes" : [ "2" ],
+         "layer_idx" : 0,
+         "layer_name" : "lstm",
+         "layer_type" : 24,
+         "setting" : {
+            "b_filler" : {
+               "init_type" : 0,
+               "value" : 0.0000000e+00
+            },
+            "b_updater" : {
+               "decay" : 0.0000000e+00,
+               "eps" : 9.9999998e-03,
+               "lr" : 1.0000000e-01,
+               "mat_iter" : 1000000,
+               "momentum" : 0.0000000e+00,
+               "updater_type" : 1,
+               "wd" : 0.0000000e+00
+            },
+            "d_input" : 30,
+            "d_mem" : 30,
+            "no_bias" : true,
+            "u_filler" : {
+               "init_type" : 2,
+               "range" : 9.9999998e-03
+            },
+            "u_updater" : {
+               "decay" : 0.0000000e+00,
+               "eps" : 9.9999998e-03,
+               "lr" : 1.0000000e-01,
+               "mat_iter" : 1000000,
+               "momentum" : 0.0000000e+00,
+               "updater_type" : 1,
+               "wd" : 0.0000000e+00
+            },
+            "w_filler" : {
+               "init_type" : 2,
+               "range" : 9.9999998e-03
+            },
+            "w_updater" : {
+               "decay" : 0.0000000e+00,
+               "eps" : 9.9999998e-03,
+               "lr" : 1.0000000e-01,
+               "mat_iter" : 1000000,
+               "momentum" : 0.0000000e+00,
+               "updater_type" : 1,
+               "wd" : 0.0000000e+00
+            }
+         },
+         "top_nodes" : [ "3" ]
+      },
+      {
+         "bottom_nodes" : [ "3" ],
+         "layer_idx" : 0,
+         "layer_name" : "wholepooling",
+         "layer_type" : 25,
+         "setting" : {
+            "pool_type" : "max"
+         },
+         "top_nodes" : [ "4" ]
+      },
+      {
+         "bottom_nodes" : [ "4" ],
+         "layer_idx" : 0,
+         "layer_name" : "dropout",
+         "layer_type" : 13,
+         "setting" : {
+            "rate" : 0.0000000e+00
+         },
+         "top_nodes" : [ "5" ]
+      },
+      {
+         "bottom_nodes" : [ "5" ],
+         "layer_idx" : 0,
+         "layer_name" : "fullconnect",
+         "layer_type" : 11,
+         "setting" : {
+            "b_filler" : {
+               "init_type" : 0,
+               "value" : 0.0000000e+00
+            },
+            "b_updater" : {
+               "decay" : 0.0000000e+00,
+               "eps" : 9.9999998e-03,
+               "lr" : 1.0000000e-01,
+               "momentum" : 0.0000000e+00,
+               "updater_type" : 1,
+               "wd" : 0.0000000e+00
+            },
+            "no_bias" : false,
+            "num_hidden" : 2,
+            "w_filler" : {
+               "init_type" : 2,
+               "range" : 1.0000000e-01
+            },
+            "w_updater" : {
+               "decay" : 0.0000000e+00,
+               "eps" : 9.9999998e-03,
+               "lr" : 1.0000000e-01,
+               "max_iter" : 1000000,
+               "momentum" : 0.0000000e+00,
+               "updater_type" : 1,
+               "wd" : 0.0000000e+00
+            }
+         },
+         "top_nodes" : [ "6" ]
+      },
+      {
+         "bottom_nodes" : [ "6", "0" ],
+         "layer_idx" : 0,
+         "layer_name" : "softmax",
+         "layer_type" : 51,
+         "setting" : {
+         },
+         "top_nodes" : [ "7" ]
+      },
+      {
+         "bottom_nodes" : [ "6", "0" ],
+         "layer_idx" : 0,
+         "layer_name" : "accuracy",
+         "layer_type" : 56,
+         "setting" : {
+            "topk" : 1
+         },
+         "top_nodes" : [ "8" ]
+      }
+   ]
+}

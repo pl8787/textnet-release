@@ -14,7 +14,7 @@ class SGDUpdater : public Updater<xpu, dim>{
   SGDUpdater(std::map<std::string, SettingV> &setting, 
                       mshadow::Random<xpu>* prnd) {
     this->prnd_ = prnd;
-	  this->is_sparse = false;
+	this->is_sparse = false;
     SetupUpdater(setting);
   }
   virtual ~SGDUpdater(void) {}

@@ -25,10 +25,10 @@ class EmbeddingLayer : public Layer<xpu>{
   
   virtual void Require() {
     // default value, just set the value you want
-    this->defaults["pad_value"] = SettingV(0.0f);
+    this->defaults["pad_value"] = SettingV(NAN);
+    this->defaults["embedding_file"] = SettingV("");
     // require value, set to SettingV(),
     // it will force custom to set in config
-    this->defaults["embedding_file"] = SettingV();
     this->defaults["feat_size"] = SettingV();
     this->defaults["word_count"] = SettingV();
     this->defaults["w_filler"] = SettingV();
@@ -138,7 +138,7 @@ class EmbeddingLayer : public Layer<xpu>{
       for (int j = 0; j < doc_count; ++j) {
         for (int k = 0; k < doc_len; ++k) {
           w_idx = (int)bottom_data[i][j][0][k];
-          if (w_idx != -1) {
+          if (!isnan(bottom_data[i][j][0][k]) && w_idx != -1) {
             top_data[i][j][k] = F<op::identity>(weight_data[w_idx]);
           }
         }
@@ -160,7 +160,7 @@ class EmbeddingLayer : public Layer<xpu>{
         for (int j = 0; j < doc_count; ++j) {
           for (int k = 0; k < doc_len; ++k) {
             w_idx = (int)bottom_data[i][j][0][k];
-            if (w_idx != -1 && !idx_map.count(w_idx)) {
+            if (!isnan(bottom_data[i][j][0][k]) && w_idx != -1 && !idx_map.count(w_idx)) {
               idx_map[w_idx] = inc;
               inc++;
             }
@@ -182,7 +182,7 @@ class EmbeddingLayer : public Layer<xpu>{
         for (int j = 0; j < doc_count; ++j) {
            for (int k = 0; k < doc_len; ++k) {
             w_idx = (int)bottom_data[i][j][0][k];
-            if (w_idx != -1) {
+            if (!isnan(bottom_data[i][j][0][k]) && w_idx != -1) {
               weight_diff[idx_map[w_idx]] += top_diff[i][j][k];
             }
           }

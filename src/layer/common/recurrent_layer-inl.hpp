@@ -1,5 +1,5 @@
-#ifndef TEXTNET_LAYER_LSTM_LAYER_INL_HPP_
-#define TEXTNET_LAYER_LSTM_LAYER_INL_HPP_
+#ifndef TEXTNET_LAYER_RECURRENT_LAYER_INL_HPP_
+#define TEXTNET_LAYER_RECURRENT_LAYER_INL_HPP_
 
 #include <iostream>
 
@@ -12,10 +12,10 @@ namespace textnet {
 namespace layer {
 
 template<typename xpu>
-class LstmLayer : public Layer<xpu> {
+class RecurrentLayer : public Layer<xpu> {
  public:
-  LstmLayer(LayerType type) { this->layer_type = type; }
-  virtual ~LstmLayer(void) {}
+  RecurrentLayer(LayerType type) { this->layer_type = type; }
+  virtual ~RecurrentLayer(void) {}
   
   virtual int BottomNodeNum() { return 1; }
   virtual int TopNodeNum() { return 1; }
@@ -30,6 +30,8 @@ class LstmLayer : public Layer<xpu> {
     // default value, just set the value you want
     this->defaults["no_bias"] = SettingV(false);
     this->defaults["reverse"] = SettingV(false);
+    this->defaults["input_transform"] = SettingV(true);
+    this->defaults["nonlinear_type"] = SettingV("tanh"); // other options "sigmoid", "rectifier"
     
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -50,14 +52,19 @@ class LstmLayer : public Layer<xpu> {
                           mshadow::Random<xpu> *prnd) {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);                        
     
-    utils::Check(bottom.size() == BottomNodeNum(), "LstmLayer:bottom size problem."); 
-    utils::Check(top.size() == TopNodeNum(), "LstmLayer:top size problem.");
-    utils::Check(setting.count("d_mem"), "LstmLayer:setting problem.");
+    utils::Check(bottom.size() == BottomNodeNum(), "RecurrentLayer:bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(), "RecurrentLayer:top size problem.");
+    utils::Check(setting.count("d_mem"), "RecurrentLayer:setting problem.");
                   
     d_mem   = setting["d_mem"].iVal();
     d_input = bottom[0]->data.size(3);
     no_bias = setting["no_bias"].bVal();
     reverse = setting["reverse"].bVal();
+    input_transform = setting["input_transform"].bVal();
+    nonlinear_type = setting["nonlinear_type"].sVal();
+    if (!input_transform) {
+        utils::Check(d_input == d_mem, "RecurrentLayer:input does not match with memory, need transform.");
+    }
 
     begin_h.Resize(mshadow::Shape2(1, d_mem), 0.f);
     begin_c.Resize(mshadow::Shape2(1, d_mem), 0.f);
@@ -65,9 +72,9 @@ class LstmLayer : public Layer<xpu> {
     begin_c_er.Resize(mshadow::Shape2(1, d_mem), 0.f);
 
     this->params.resize(3);
-    this->params[0].Resize(1, 1, d_input, 4*d_mem, true); // w
-    this->params[1].Resize(1, 1, d_mem,   4*d_mem, true); // u
-    this->params[2].Resize(1, 1, 1,       4*d_mem, true); // b
+    this->params[0].Resize(d_input, d_mem, 1, 1, true); // w
+    this->params[1].Resize(d_mem,   d_mem, 1, 1, true); // u
+    this->params[2].Resize(d_mem,       1, 1, 1, true); // b
     
     std::map<std::string, SettingV> &w_setting = *setting["w_filler"].mVal();
     std::map<std::string, SettingV> &u_setting = *setting["u_filler"].mVal();
@@ -97,22 +104,17 @@ class LstmLayer : public Layer<xpu> {
   // bottom should be padded with only one zero on both sides
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
-    utils::Check(bottom.size() == BottomNodeNum(), "LstmLayer:bottom size problem."); 
-    utils::Check(top.size() == TopNodeNum(), "LstmLayer:top size problem.");
+    utils::Check(bottom.size() == BottomNodeNum(), "RecurrentLayer:bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(), "RecurrentLayer:top size problem.");
     
     mshadow::Shape<4> shape_in  = bottom[0]->data.shape_;
     mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in[0], shape_in[1], shape_in[2], d_mem);
-    mshadow::Shape<4> shape_gate= mshadow::Shape4(shape_in[0], shape_in[1], shape_in[2], d_mem*4);
 
-    std::cout << "Lstm io shape:" << std::endl;
+    std::cout << "Rnn io shape:" << std::endl;
     std::cout << shape_in[0] << "x" << shape_in[1] << "x" << shape_in[2] << "x" << shape_in[3] << std::endl;
     std::cout << shape_out[0] << "x" << shape_out[1] << "x" << shape_out[2] << "x" << shape_out[3] << std::endl;
 
     top[0]->Resize(shape_out);
-    c.Resize(shape_out, 0.f);
-    g.Resize(shape_gate, 0.f);
-    c_er.Resize(shape_out, 0.f);
-    g_er.Resize(shape_gate, 0.f);
   }
 
   void LocateBeginEnd(mshadow::Tensor<xpu, 2> seq, 
@@ -131,7 +133,7 @@ class LstmLayer : public Layer<xpu> {
           break;
       }
     }
-    utils::Check(begin < end && begin >= 0, "LstmLayer: input error."); 
+    utils::Check(begin < end && begin >= 0, "RecurrentLayer: input error."); 
   }
 
   void checkNan(float *p, int l) {
@@ -151,72 +153,62 @@ class LstmLayer : public Layer<xpu> {
       checkNan(u_diff.dptr_, u_diff.size(0) * u_diff.size(1));
   }
 
-  virtual void ForwardOneStep(Tensor2D pre_c, 
-                              Tensor2D pre_h,
+  virtual void ForwardOneStep(Tensor2D pre_h,
                               Tensor2D x,
-                              Tensor2D cur_g,
-                              Tensor2D cur_c,
                               Tensor2D cur_h) {
-      Tensor2D w_data = this->params[0].data[0][0];
-      Tensor2D u_data = this->params[1].data[0][0];
-      Tensor2D b_data = this->params[2].data[0][0];
+      Tensor2D w_data = this->params[0].data_d2();
+      Tensor2D u_data = this->params[1].data_d2();
+      Tensor1D b_data = this->params[2].data_d1();
 
-      Tensor2D i, f, o, cc;
-      cur_g = dot(x, w_data);
-      cur_g += dot(pre_h, u_data);
-      if (!no_bias) {
-        cur_g += b_data;
+      cur_h = dot(pre_h, u_data);
+      if (input_transform) {
+        cur_h += dot(x, w_data);
+      } else {
+        cur_h += x;
       }
-      SplitGate(cur_g, i, f, o, cc);
-      i = mshadow::expr::F<op::sigmoid>(i); // logi
-      f = mshadow::expr::F<op::sigmoid>(f); // logi
-      o = mshadow::expr::F<op::sigmoid>(o); // logi
-      cc= mshadow::expr::F<op::tanh>(cc);   // tanh 
-
-      cur_c = f * pre_c + i * cc;
-      cur_h = o * mshadow::expr::F<op::tanh>(cur_c); // tanh
+      if (!no_bias) {
+        cur_h += repmat(b_data, cur_h.size(0));
+      }
+      if (nonlinear_type == "sigmoid") {
+        cur_h = mshadow::expr::F<op::sigmoid>(cur_h); // sigmoid_grad
+      } else if (nonlinear_type == "tanh") {         
+        cur_h = mshadow::expr::F<op::tanh>(cur_h);    // tanh_grad
+      } else if (nonlinear_type == "rectifier") {
+        cur_h = mshadow::expr::F<op::relu>(cur_h);    // relu_grad
+      } else {
+        utils::Check(false, "RecurrentLayer:nonlinear type error.");
+      }
   }
 
-  void ForwardLeft2Right(Tensor2D in, Tensor2D g, Tensor2D c, Tensor2D out) {
+  void ForwardLeft2Right(Tensor2D in, Tensor2D out) {
       int begin = 0, end = 0;
       LocateBeginEnd(in, begin, end);
-      Tensor2D pre_c, pre_h;
+      Tensor2D pre_h;
       // not need any padding, begin h and c are set to 0
       for (index_t row_idx = begin; row_idx < end; ++row_idx) {
         if (row_idx == begin) {
-          pre_c = begin_c; 
           pre_h = begin_h;
         } else {
-          pre_c = c.Slice(row_idx-1, row_idx);
           pre_h = out.Slice(row_idx-1, row_idx);
         }
-        ForwardOneStep(pre_c,
-                       pre_h,
+        ForwardOneStep(pre_h,
                        in.Slice(row_idx, row_idx+1),
-                       g.Slice(row_idx, row_idx+1), 
-                       c.Slice(row_idx, row_idx+1), 
                        out.Slice(row_idx, row_idx+1));
       }
   }
-  void ForwardRight2Left(Tensor2D in, Tensor2D g, Tensor2D c, Tensor2D out) {
+  void ForwardRight2Left(Tensor2D in, Tensor2D out) {
       int begin = 0, end = 0;
       LocateBeginEnd(in, begin, end);
-      assert(begin >= 0 && begin < end);
-      Tensor2D pre_c, pre_h;
+      Tensor2D pre_h;
       // not need any padding, begin h and c are set to 0
       for (int row_idx = end-1; row_idx >= begin; --row_idx) {
         if (row_idx == end-1) {
-          pre_c = begin_c; 
           pre_h = begin_h;
         } else {
-          pre_c = c.Slice(row_idx+1, row_idx+2);
           pre_h = out.Slice(row_idx+1, row_idx+2);
         }
-        ForwardOneStep(pre_c,
-                       pre_h,
+        ForwardOneStep(pre_h,
                        in.Slice(row_idx, row_idx+1),
-                       g.Slice(row_idx, row_idx+1), 
-                       c.Slice(row_idx, row_idx+1), 
                        out.Slice(row_idx, row_idx+1));
       }
   }
@@ -226,174 +218,119 @@ class LstmLayer : public Layer<xpu> {
     // checkNanParams();
     Tensor4D bottom_data = bottom[0]->data;
     Tensor4D top_data = top[0]->data;
-    top_data = NAN; c = NAN, g = NAN; c_er = NAN; g_er = NAN;
+    top_data = NAN;
     const index_t nbatch = bottom_data.size(0); 
-    for (index_t i = 0; i < nbatch; ++i) {
+    for (int i = 0; i < nbatch; ++i) {
         if (reverse) {
-          ForwardLeft2Right(bottom_data[i][0], g[i][0], c[i][0], top_data[i][0]);
+          ForwardLeft2Right(bottom_data[i][0], top_data[i][0]);
         } else {
-          ForwardRight2Left(bottom_data[i][0], g[i][0], c[i][0], top_data[i][0]);
+          ForwardRight2Left(bottom_data[i][0], top_data[i][0]);
         }
     }
     // checkNanParams();
   }
-
-  // too tricky, may bring errors
-  void SplitGate(Tensor2D g, Tensor2D &i, Tensor2D &f, Tensor2D &o, Tensor2D &cc) {
-    utils::Check(g.shape_[0] == 1, "LstmLayer: gate problem."); 
-    i.shape_ = mshadow::Shape2(1, d_mem);
-    f.shape_ = mshadow::Shape2(1, d_mem);
-    o.shape_ = mshadow::Shape2(1, d_mem);
-    cc.shape_= mshadow::Shape2(1, d_mem);
-
-    i.dptr_ = g.dptr_;
-    f.dptr_ = g.dptr_ + 1 * d_mem;
-    o.dptr_ = g.dptr_ + 2 * d_mem;
-    cc.dptr_= g.dptr_ + 3 * d_mem;
-  }
-
   void BpOneStep(Tensor2D cur_h_er,
-                 Tensor2D pre_c,
+                 Tensor2D cur_h,
                  Tensor2D pre_h,
                  Tensor2D x,
-                 Tensor2D cur_g,
-                 Tensor2D cur_c,
-                 Tensor2D cur_h,
-                 Tensor2D cur_c_er,
-                 Tensor2D cur_g_er,
-                 Tensor2D pre_c_er,
                  Tensor2D pre_h_er,
-                 Tensor2D x_er,
-                 Tensor2D w_er,
-                 Tensor2D u_er,
-                 Tensor2D b_er) {
+                 Tensor2D x_er) {
+    Tensor2D w_er = this->params[0].diff_d2();
+    Tensor2D u_er = this->params[1].diff_d2();
+    Tensor1D b_er = this->params[2].diff_d1();
 
-    Tensor2D w_data = this->params[0].data[0][0];
-    Tensor2D u_data = this->params[1].data[0][0];
-    
-    Tensor2D i, f, o, cc, i_er, f_er, o_er, cc_er;
-    SplitGate(cur_g, i, f, o, cc);
-    SplitGate(cur_g_er, i_er, f_er, o_er, cc_er);
+    Tensor2D w_data = this->params[0].data_d2();
+    Tensor2D u_data = this->params[1].data_d2();
 
-    mshadow::TensorContainer<xpu, 2> tanhc(cur_c.shape_);
-    tanhc = mshadow::expr::F<op::tanh>(cur_c);
-    o_er = mshadow::expr::F<op::sigmoid_grad>(o) * (cur_h_er * tanhc); // logi
-    cur_c_er += mshadow::expr::F<op::tanh_grad>(tanhc) * (cur_h_er * o);
-
-    i_er = mshadow::expr::F<op::sigmoid_grad>(i) * (cur_c_er * cc);    // logi
-    cc_er = mshadow::expr::F<op::tanh_grad>(cc) * (cur_c_er * i);      // tanh
-    pre_c_er = cur_c_er * f;
-    f_er = mshadow::expr::F<op::sigmoid_grad>(f) * (cur_c_er * pre_c); // logi
-
-    pre_h_er += dot(cur_g_er, u_data.T());
-    x_er = dot(cur_g_er, w_data.T());
-
-    // grad
-    if (!no_bias) {
-        b_er += cur_g_er;
+    if (nonlinear_type == "sigmoid") {
+      cur_h_er *= mshadow::expr::F<op::sigmoid_grad>(cur_h); // sigmoid_grad
+    } else if (nonlinear_type == "tanh") {         
+      cur_h_er *= mshadow::expr::F<op::tanh_grad>(cur_h);    // tanh_grad
+    } else if (nonlinear_type == "rectifier") {
+      cur_h_er *= mshadow::expr::F<op::relu_grad>(cur_h);    // relu_grad
+    } else {
+      utils::Check(false, "RecurrentLayer:nonlinear type error.");
     }
-    w_er += dot(x.T(), cur_g_er); 
-    u_er += dot(pre_h.T(), cur_g_er);
+
+    pre_h_er += dot(cur_h_er, u_data.T());
+    u_er += dot(pre_h.T(), cur_h_er);
+
+    if (input_transform) {
+      x_er += dot(cur_h_er, w_data.T());
+      w_er += dot(x.T(), cur_h_er); 
+    } else {
+      x_er += cur_h_er;
+    }
+    if (!no_bias) {
+      b_er += sum_rows(cur_h_er);
+    }
   }
 
-  void BackpropForLeft2RightLstm(Tensor2D top_data, Tensor2D top_diff, 
-                                 Tensor2D c, Tensor2D c_er, 
-                                 Tensor2D g, Tensor2D g_er, 
-                                 Tensor2D bottom_data, Tensor2D bottom_diff,
-                                 Tensor2D w_diff, Tensor2D u_diff, Tensor2D b_diff) {
+  void BackpropForLeft2RightRnn(Tensor2D top_data, Tensor2D top_diff, 
+                                Tensor2D bottom_data, Tensor2D bottom_diff) {
       int begin = 0, end = 0;
       LocateBeginEnd(bottom_data, begin, end);
-      assert(begin >= 0 && begin < end); 
-      Tensor2D pre_c, pre_h, pre_c_er, pre_h_er;
+
+      Tensor2D pre_h, pre_h_er;
       for (int row_idx = end-1; row_idx >= begin; --row_idx) {
         if (row_idx == begin) {
-            pre_c = begin_c;
             pre_h = begin_h;
-            pre_c_er = begin_c_er;
             pre_h_er = begin_h_er;
         } else {
-            pre_c = c.Slice(row_idx-1, row_idx);
             pre_h = top_data.Slice(row_idx-1, row_idx);
-            pre_c_er = c_er.Slice(row_idx-1, row_idx);
             pre_h_er = top_diff.Slice(row_idx-1, row_idx);
         }
         BpOneStep(top_diff.Slice(row_idx, row_idx+1), 
-                  pre_c,
+                  top_data.Slice(row_idx, row_idx+1),
                   pre_h,
                   bottom_data.Slice(row_idx, row_idx+1), 
-                  g.Slice(row_idx, row_idx+1), 
-                  c.Slice(row_idx, row_idx+1), 
-                  top_data.Slice(row_idx, row_idx+1),
-                  c_er.Slice(row_idx, row_idx+1),
-                  g_er.Slice(row_idx, row_idx+1),
-                  pre_c_er,
                   pre_h_er,
-                  bottom_diff.Slice(row_idx, row_idx+1), 
-                  w_diff, u_diff, b_diff);
+                  bottom_diff.Slice(row_idx, row_idx+1));
       }
   }
-  void BackpropForRight2LeftLstm(Tensor2D top_data, Tensor2D top_diff, 
-                                 Tensor2D c, Tensor2D c_er, 
-                                 Tensor2D g, Tensor2D g_er, 
-                                 Tensor2D bottom_data, Tensor2D bottom_diff,
-                                 Tensor2D w_diff, Tensor2D u_diff, Tensor2D b_diff) {
+  void BackpropForRight2LeftRnn(Tensor2D top_data, Tensor2D top_diff, 
+                                Tensor2D bottom_data, Tensor2D bottom_diff) {
       int begin = 0, end = 0;
       LocateBeginEnd(bottom_data, begin, end);
-      Tensor2D pre_c, pre_h, pre_c_er, pre_h_er;
+
+      Tensor2D pre_h, pre_h_er;
       for (int row_idx = begin; row_idx < end; ++row_idx) {
         if (row_idx == end-1) {
-            pre_c = begin_c;
             pre_h = begin_h;
-            pre_c_er = begin_c_er;
             pre_h_er = begin_h_er;
         } else {
-            pre_c = c.Slice(row_idx+1, row_idx+2);
             pre_h = top_data.Slice(row_idx+1, row_idx+2);
-            pre_c_er = c_er.Slice(row_idx+1, row_idx+2);
             pre_h_er = top_diff.Slice(row_idx+1, row_idx+2);
         }
         BpOneStep(top_diff.Slice(row_idx, row_idx+1), 
-                  pre_c,
+                  top_data.Slice(row_idx, row_idx+1),
                   pre_h,
                   bottom_data.Slice(row_idx, row_idx+1), 
-                  g.Slice(row_idx, row_idx+1), 
-                  c.Slice(row_idx, row_idx+1), 
-                  top_data.Slice(row_idx, row_idx+1),
-                  c_er.Slice(row_idx, row_idx+1),
-                  g_er.Slice(row_idx, row_idx+1),
-                  pre_c_er,
                   pre_h_er,
-                  bottom_diff.Slice(row_idx, row_idx+1), 
-                  w_diff, u_diff, b_diff);
+                  bottom_diff.Slice(row_idx, row_idx+1));
       }
   }
-
-  
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
                         const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
     // checkNanParams();
-    mshadow::Tensor<xpu, 4> top_diff = top[0]->diff;
-    mshadow::Tensor<xpu, 4> top_data = top[0]->data;
-    mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
-    mshadow::Tensor<xpu, 4> bottom_diff = bottom[0]->diff;
-    mshadow::Tensor<xpu, 2> w_diff = this->params[0].diff[0][0];
-    mshadow::Tensor<xpu, 2> u_diff = this->params[1].diff[0][0];
-    mshadow::Tensor<xpu, 2> b_diff = this->params[2].diff[0][0];
+    Tensor4D top_diff = top[0]->diff;
+    Tensor4D top_data = top[0]->data;
+    Tensor4D bottom_data = bottom[0]->data;
+    Tensor4D bottom_diff = bottom[0]->diff;
+    Tensor4D w_diff = this->params[0].diff;
+    Tensor4D u_diff = this->params[1].diff;
+    Tensor4D b_diff = this->params[2].diff;;
     const index_t nbatch = bottom_data.size(0);
         
-	w_diff = 0.; u_diff = 0.; b_diff = 0.; bottom_diff = 0.;
-    begin_c_er = 0.; begin_h_er = 0.; g_er = 0.; c_er = 0.;
+	w_diff = 0.; u_diff = 0.; b_diff = 0.; bottom_diff = 0.; // this will cause a bug if sharing parameters or nodes
+    begin_c_er = 0.; begin_h_er = 0.; 
 
     for (index_t i = 0; i < nbatch; ++i) {
         if (!reverse) {
-            BackpropForLeft2RightLstm(top_data[i][0], top_diff[i][0], c[i][0], c_er[i][0],
-                                      g[i][0], g_er[i][0], bottom_data[i][0], bottom_diff[i][0],
-                                      w_diff, u_diff, b_diff);
+            BackpropForLeft2RightRnn(top_data[i][0], top_diff[i][0], bottom_data[i][0], bottom_diff[i][0]);
         } else {
-            BackpropForRight2LeftLstm(top_data[i][0], top_diff[i][0], c[i][0], c_er[i][0],
-                                      g[i][0], g_er[i][0], bottom_data[i][0], bottom_diff[i][0],
-                                      w_diff, u_diff, b_diff);
+            BackpropForRight2LeftRnn(top_data[i][0], top_diff[i][0], bottom_data[i][0], bottom_diff[i][0]);
         }
     }
     checkNanParams();
@@ -401,10 +338,10 @@ class LstmLayer : public Layer<xpu> {
 
  protected:
   int d_mem, d_input;
-  bool no_bias, reverse; 
-  mshadow::TensorContainer<xpu, 4> c, g, c_er, g_er;
+  bool no_bias, reverse, input_transform; 
   mshadow::TensorContainer<xpu, 2> begin_h, begin_c, begin_c_er, begin_h_er;
+  std::string nonlinear_type;
 };
 }  // namespace layer
 }  // namespace textnet
-#endif  // LAYER_LSTM_LAYER_INL_HPP_
+#endif
