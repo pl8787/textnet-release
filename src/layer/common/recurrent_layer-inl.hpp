@@ -61,6 +61,7 @@ class RecurrentLayer : public Layer<xpu> {
     no_bias = setting["no_bias"].bVal();
     reverse = setting["reverse"].bVal();
     input_transform = setting["input_transform"].bVal();
+    nonlinear_type = setting["nonlinear_type"].sVal();
     if (!input_transform) {
         utils::Check(d_input == d_mem, "RecurrentLayer:input does not match with memory, need transform.");
     }
@@ -266,8 +267,7 @@ class RecurrentLayer : public Layer<xpu> {
   }
 
   void BackpropForLeft2RightRnn(Tensor2D top_data, Tensor2D top_diff, 
-                                Tensor2D bottom_data, Tensor2D bottom_diff,
-                                Tensor2D w_diff, Tensor2D u_diff, Tensor2D b_diff) {
+                                Tensor2D bottom_data, Tensor2D bottom_diff) {
       int begin = 0, end = 0;
       LocateBeginEnd(bottom_data, begin, end);
 
@@ -289,8 +289,7 @@ class RecurrentLayer : public Layer<xpu> {
       }
   }
   void BackpropForRight2LeftRnn(Tensor2D top_data, Tensor2D top_diff, 
-                                Tensor2D bottom_data, Tensor2D bottom_diff,
-                                Tensor2D w_diff, Tensor2D u_diff, Tensor2D b_diff) {
+                                Tensor2D bottom_data, Tensor2D bottom_diff) {
       int begin = 0, end = 0;
       LocateBeginEnd(bottom_data, begin, end);
 
@@ -341,7 +340,7 @@ class RecurrentLayer : public Layer<xpu> {
   int d_mem, d_input;
   bool no_bias, reverse, input_transform; 
   mshadow::TensorContainer<xpu, 2> begin_h, begin_c, begin_c_er, begin_h_er;
-  string nonlinear_type;
+  std::string nonlinear_type;
 };
 }  // namespace layer
 }  // namespace textnet

@@ -113,7 +113,7 @@ int main(int argc, char *argv[]) {
   int max_session_len = 300;
   int context_window = 1;
   int min_doc_len = 1;
-  int batch_size = 1;
+  int batch_size = 5;
   int word_rep_dim = 20;
   int num_hidden = (context_window+1) * word_rep_dim;
   int num_item = 7973;
@@ -141,6 +141,17 @@ int main(int argc, char *argv[]) {
   if (argc >= 2) {
     base_lr = atof(argv[1]);
   }
+  map<string, SettingV> &g_updater = *(new map<string, SettingV>());
+  // g_updater["updater_type"] = SettingV(updater::kAdaDelta);
+  g_updater["updater_type"] = SettingV(updater::kAdagrad);
+  g_updater["batch_size"] = SettingV(batch_size);
+  g_updater["l2"] = SettingV(l2);
+  // g_updater["max_iter"] = SettingV(ADA_GRAD_MAX_ITER);
+  g_updater["eps"] = SettingV(ADA_GRAD_EPS);
+  g_updater["lr"] = SettingV(base_lr);
+  // g_updater["decay"] = SettingV(decay);  
+  // g_updater["momentum"] = SettingV(0.0f);
+
   
   senti_net.push_back(CreateLayer<cpu>(kNextBasketData));
   senti_net[senti_net.size()-1]->layer_name = "data";
@@ -309,14 +320,7 @@ int main(int argc, char *argv[]) {
     setting["w_filler"] = SettingV(&w_setting);
       
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-      w_updater["updater_type"] = SettingV(updater::kAdagrad);
-      w_updater["momentum"] = SettingV(0.0f);
-      w_updater["batch_size"] = SettingV(batch_size);
-      w_updater["l2"] = SettingV(l2);
-      w_updater["max_iter"] = SettingV(ADA_GRAD_MAX_ITER);
-      w_updater["eps"] = SettingV(ADA_GRAD_EPS);
-      w_updater["lr"] = SettingV(base_lr);
-      w_updater["decay"] = SettingV(decay);  
+    w_updater = g_updater;
     setting["w_updater"] = SettingV(&w_updater);
     setting_vec.push_back(setting);
   }
@@ -334,7 +338,7 @@ int main(int argc, char *argv[]) {
     setting["w_filler"] = SettingV(&w_setting);
       
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-    w_updater = *setting_vec[setting_vec.size()-1]["w_updater"].mVal();
+    w_updater = g_updater;
     setting["w_updater"]= SettingV(&w_updater);
 
     setting_vec.push_back(setting);
@@ -366,24 +370,10 @@ int main(int argc, char *argv[]) {
     setting["b_filler"] = SettingV(&b_setting);
 
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-      w_updater["updater_type"] = SettingV(updater::kAdagrad);
-      w_updater["max_iter"] = SettingV(ADA_GRAD_MAX_ITER);
-      w_updater["batch_size"] = SettingV(batch_size);
-      // w_updater["updater_type"] = SettingV(updater::kSGD);
-      w_updater["eps"] = SettingV(ADA_GRAD_EPS);
-      w_updater["momentum"] = SettingV(0.0f);
-      w_updater["lr"] = SettingV(base_lr);
-      w_updater["l2"] = SettingV(l2);
-      w_updater["decay"] = SettingV(decay);
+    w_updater = g_updater;
     map<string, SettingV> &b_updater = *(new map<string, SettingV>());
-      b_updater["updater_type"] = SettingV(updater::kAdagrad);
-      b_updater["max_iter"] = SettingV(ADA_GRAD_MAX_ITER);
-      b_updater["batch_size"] = SettingV(batch_size);
-      // b_updater["updater_type"] = SettingV(updater::kSGD);
-      b_updater["eps"] = SettingV(ADA_GRAD_EPS);
-      b_updater["momentum"] = SettingV(0.0f);
-      b_updater["lr"] = SettingV(base_lr);
-      b_updater["decay"] = SettingV(decay);
+    b_updater = g_updater;
+
     setting["w_updater"] = SettingV(&w_updater);
     setting["b_updater"] = SettingV(&b_updater);
     setting_vec.push_back(setting);
@@ -415,24 +405,9 @@ int main(int argc, char *argv[]) {
     setting["b_filler"] = SettingV(&b_setting);
 
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-      w_updater["updater_type"] = SettingV(updater::kAdagrad);
-      w_updater["max_iter"] = SettingV(ADA_GRAD_MAX_ITER);
-      w_updater["batch_size"] = SettingV(batch_size);
-      w_updater["l2"] = SettingV(l2);
-      // w_updater["updater_type"] = SettingV(updater::kSGD);
-      w_updater["eps"] = SettingV(ADA_GRAD_EPS);
-      w_updater["momentum"] = SettingV(0.0f);
-      w_updater["lr"] = SettingV(base_lr);
-      w_updater["decay"] = SettingV(decay);
+    w_updater = g_updater;
     map<string, SettingV> &b_updater = *(new map<string, SettingV>());
-      b_updater["updater_type"] = SettingV(updater::kAdagrad);
-      b_updater["max_iter"] = SettingV(ADA_GRAD_MAX_ITER);
-      // b_updater["updater_type"] = SettingV(updater::kSGD);
-      b_updater["eps"] = SettingV(ADA_GRAD_EPS);
-      b_updater["batch_size"] = SettingV(batch_size);
-      b_updater["momentum"] = SettingV(0.0f);
-      b_updater["lr"] = SettingV(base_lr);
-      b_updater["decay"] = SettingV(decay);
+    b_updater = g_updater;
     setting["w_updater"] = SettingV(&w_updater);
     setting["b_updater"] = SettingV(&b_updater);
     setting_vec.push_back(setting);
