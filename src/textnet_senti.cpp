@@ -104,39 +104,58 @@ int main(int argc, char *argv[]) {
   mshadow::Random<cpu> rnd(37);
   vector<Layer<cpu>*> senti_net, senti_valid, senti_test;
 
-  int lstm_hidden_dim = 30;
-  int word_rep_dim = 30;
-  int max_doc_len = 20;
+  int lstm_hidden_dim = 100;
+  int word_rep_dim = 300;
+  int max_doc_len = 200;
   int min_doc_len = 1;
-  int batch_size = 2;
-  int vocab_size = 5;
+  int batch_size = 50;
+  int vocab_size = 200000;
   int num_class = 2;
   int ADA_GRAD_MAX_ITER = 1000000;
   float base_lr = 0.1;
   float ADA_GRAD_EPS = 0.01;
   float decay = 0.00;
+  float l2 = 0.f;
 
-  string train_data_file = "/home/wsx/dl.shengxian/data/simulation/lstm.train";
-  string valid_data_file = "/home/wsx/dl.shengxian/data/simulation/lstm.test";
-  string test_data_file = "/home/wsx/dl.shengxian/data/simulation/lstm.test";
-  string embedding_file = ""; 
-  // string embedding_file = "/home/pangliang/matching/data/wikicorp_50_msr.txt";
-  int nTrain = 6, nValid = 7, nTest = 7;
+  // string train_data_file = "/home/wsx/dl.shengxian/data/simulation/lstm.train";
+  // string valid_data_file = "/home/wsx/dl.shengxian/data/simulation/lstm.test";
+  // string test_data_file = "/home/wsx/dl.shengxian/data/simulation/lstm.test";
+  // string embedding_file = ""; 
+  // int nTrain = 6, nValid = 7, nTest = 7;
+  
+  string train_data_file = "/home/wsx/dl.shengxian/data/mr/lstm.train";
+  string valid_data_file = "/home/wsx/dl.shengxian/data/mr/lstm.dev";
+  string test_data_file = "/home/wsx/dl.shengxian/data/mr/lstm.test";
+  string embedding_file = "/home/wsx/dl.shengxian/data/mr/word_rep_w2v.plpl"; 
+  int nTrain = 8528, nValid = 1067, nTest = 1067;
 
   if (argc == 2) {
     base_lr = atof(argv[1]);
   }
+  map<string, SettingV> &g_updater = *(new map<string, SettingV>());
+  // g_updater["updater_type"] = SettingV(updater::kAdaDelta);
+  g_updater["updater_type"] = SettingV(updater::kAdaDelta);
+  // g_updater["batch_size"] = SettingV(batch_size);
+  g_updater["l2"] = SettingV(l2);
+  g_updater["batch_size"] = SettingV(batch_size);
+  // g_updater["max_iter"] = SettingV(ADA_GRAD_MAX_ITER);
+  // g_updater["eps"] = SettingV(ADA_GRAD_EPS);
+  // g_updater["lr"] = SettingV(base_lr);
+  // g_updater["decay"] = SettingV(decay);  
+  // g_updater["momentum"] = SettingV(0.0f);
+
+
   
   senti_net.push_back(CreateLayer<cpu>(kSequenceClassificationData));
   senti_net[senti_net.size()-1]->layer_name = "text";
   senti_net.push_back(CreateLayer<cpu>(kEmbedding));
   senti_net[senti_net.size()-1]->layer_name = "embedding";
   senti_net.push_back(CreateLayer<cpu>(kLstm));
-  senti_net[senti_net.size()-1]->layer_name == "l_lstm";
+  senti_net[senti_net.size()-1]->layer_name = "l_lstm";
   senti_net.push_back(CreateLayer<cpu>(kLstm));
-  senti_net[senti_net.size()-1]->layer_name == "r_lstm";
+  senti_net[senti_net.size()-1]->layer_name = "r_lstm";
   senti_net.push_back(CreateLayer<cpu>(kConvolutionalLstm));
-  senti_net[senti_net.size()-1]->layer_name == "conv_lstm";
+  senti_net[senti_net.size()-1]->layer_name = "conv_lstm";
   senti_net.push_back(CreateLayer<cpu>(kWholePooling));
   senti_net[senti_net.size()-1]->layer_name = "wholepooling";
   senti_net.push_back(CreateLayer<cpu>(kDropout));
@@ -168,16 +187,21 @@ int main(int argc, char *argv[]) {
       nodes.push_back(node);
       top_vecs[i].push_back(node);
     }
-    if (i == 0) { // swap input layer node
-      Node<cpu>* node = top_vecs[0][0];
-      top_vecs[0][0] = top_vecs[0][1];
-      top_vecs[0][1] = node;
-    }
 
     // connect by node name 
     if (i == 0) {
-        senti_net[0]->top_nodes.push_back(nodes[1]->node_name);
         senti_net[0]->top_nodes.push_back(nodes[0]->node_name);
+        senti_net[0]->top_nodes.push_back(nodes[1]->node_name);
+        inc_node += senti_net[i]->TopNodeNum();
+    } else if (senti_net[i]->layer_name == "r_lstm") {
+        senti_net[i]->bottom_nodes.push_back(nodes[inc_node-2]->node_name);
+        senti_net[i]->top_nodes.push_back(nodes[inc_node]->node_name);
+        inc_node += senti_net[i]->TopNodeNum();
+    } else if (senti_net[i]->layer_name == "conv_lstm") {
+        senti_net[i]->bottom_nodes.push_back(nodes[inc_node-2]->node_name);
+        senti_net[i]->bottom_nodes.push_back(nodes[inc_node-3]->node_name);
+        senti_net[i]->bottom_nodes.push_back(nodes[inc_node-1]->node_name);
+        senti_net[i]->top_nodes.push_back(nodes[inc_node]->node_name);
         inc_node += senti_net[i]->TopNodeNum();
     } else if (senti_net[i]->layer_name == "accuracy") {
         senti_net[i]->bottom_nodes.push_back(nodes[inc_node-2]->node_name);
@@ -197,6 +221,12 @@ int main(int argc, char *argv[]) {
     // connect by node memory
     if (i == 0) {
       continue;
+    } else if (senti_net[i]->layer_name == "r_lstm") {
+      bottom_vecs[i].push_back(top_vecs[i-2][0]);
+    } else if (senti_net[i]->layer_name == "conv_lstm") {
+      bottom_vecs[i].push_back(top_vecs[i-2][0]);
+      bottom_vecs[i].push_back(top_vecs[i-3][0]);
+      bottom_vecs[i].push_back(top_vecs[i-1][0]);
     } else if (senti_net[i]->layer_name == "accuracy") {
       bottom_vecs[i].push_back(top_vecs[i-2][0]);
       bottom_vecs[i].push_back(nodes[0]); // accuracy
@@ -249,18 +279,36 @@ int main(int argc, char *argv[]) {
     setting["w_filler"] = SettingV(&w_setting);
       
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-      w_updater["updater_type"] = SettingV(updater::kAdagrad);
-      // w_updater["updater_type"] = SettingV(updater::kSGD);
-      w_updater["momentum"] = SettingV(0.0f);
-      w_updater["max_iter"] = SettingV(ADA_GRAD_MAX_ITER);
-      w_updater["eps"] = SettingV(ADA_GRAD_EPS);
-      w_updater["lr"] = SettingV(base_lr);
-      w_updater["decay"] = SettingV(decay);  
+    w_updater = g_updater;
     setting["w_updater"] = SettingV(&w_updater);
     setting_vec.push_back(setting);
   }
   // kLstm
-#if 1
+  {
+    map<string, SettingV> setting;
+    setting["d_input"] = SettingV(word_rep_dim);
+    setting["d_mem"] = SettingV(lstm_hidden_dim);
+    setting["no_bias"] = SettingV(true);
+    setting["reverse"] = SettingV(true);
+      
+    map<string, SettingV> &w_filler = *(new map<string, SettingV>());
+      w_filler["init_type"] = SettingV(initializer::kUniform);
+      w_filler["range"] = SettingV(0.01f);
+    setting["w_filler"] = SettingV(&w_filler);
+    setting["u_filler"] = SettingV(&w_filler);
+
+    map<string, SettingV> &b_filler = *(new map<string, SettingV>());
+      b_filler["init_type"] = SettingV(initializer::kZero);
+    setting["b_filler"] = SettingV(&b_filler);
+      
+    map<string, SettingV> &w_updater = *(new map<string, SettingV>());
+    w_updater = g_updater;
+    setting["w_updater"] = SettingV(&w_updater);
+    setting["u_updater"] = SettingV(&w_updater);
+    setting["b_updater"] = SettingV(&w_updater);
+    
+    setting_vec.push_back(setting);
+  }
   {
     map<string, SettingV> setting;
     setting["d_input"] = SettingV(word_rep_dim);
@@ -278,19 +326,35 @@ int main(int argc, char *argv[]) {
     setting["b_filler"] = SettingV(&b_filler);
       
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-      w_updater["updater_type"] = SettingV(updater::kAdagrad);
-      w_updater["momentum"] = SettingV(0.0f);
-      w_updater["eps"] = SettingV(ADA_GRAD_EPS);
-      w_updater["mat_iter"] = SettingV(ADA_GRAD_MAX_ITER);
-      w_updater["lr"] = SettingV(base_lr);
-      w_updater["decay"] = SettingV(decay); 
+    w_updater = g_updater;
     setting["w_updater"] = SettingV(&w_updater);
     setting["u_updater"] = SettingV(&w_updater);
     setting["b_updater"] = SettingV(&w_updater);
     
     setting_vec.push_back(setting);
   }
-# endif
+  // kConvLstm
+  {
+    map<string, SettingV> setting;
+    setting["num_hidden"] = SettingV(lstm_hidden_dim);
+    setting["no_bias"] = SettingV(true);
+      
+    map<string, SettingV> &w_filler = *(new map<string, SettingV>());
+      w_filler["init_type"] = SettingV(initializer::kUniform);
+      w_filler["range"] = SettingV(0.01f);
+    setting["w_filler"] = SettingV(&w_filler);
+
+    map<string, SettingV> &b_filler = *(new map<string, SettingV>());
+      b_filler["init_type"] = SettingV(initializer::kZero);
+    setting["b_filler"] = SettingV(&b_filler);
+
+    map<string, SettingV> &w_updater = *(new map<string, SettingV>());
+    w_updater = g_updater;
+    setting["w_updater"] = SettingV(&w_updater);
+    setting["b_updater"] = SettingV(&w_updater);
+    setting_vec.push_back(setting);
+
+  }
   // kWholeMaxPooling
   {
     map<string, SettingV> setting;
@@ -319,23 +383,9 @@ int main(int argc, char *argv[]) {
     setting["b_filler"] = SettingV(&b_setting);
 
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-      w_updater["updater_type"] = SettingV(updater::kAdagrad);
-      w_updater["max_iter"] = SettingV(ADA_GRAD_MAX_ITER);
-      // w_updater["updater_type"] = SettingV(updater::kSGD);
-      w_updater["eps"] = SettingV(ADA_GRAD_EPS);
-      w_updater["momentum"] = SettingV(0.0f);
-      w_updater["lr"] = SettingV(base_lr);
-      w_updater["decay"] = SettingV(decay);
-    map<string, SettingV> &b_updater = *(new map<string, SettingV>());
-      b_updater["updater_type"] = SettingV(updater::kAdagrad);
-      w_updater["max_iter"] = SettingV(ADA_GRAD_MAX_ITER);
-      // _updater["updater_type"] = SettingV(updater::kSGD);
-      b_updater["eps"] = SettingV(ADA_GRAD_EPS);
-      b_updater["momentum"] = SettingV(0.0f);
-      b_updater["lr"] = SettingV(base_lr);
-      b_updater["decay"] = SettingV(decay);
+    w_updater = g_updater;
     setting["w_updater"] = SettingV(&w_updater);
-    setting["b_updater"] = SettingV(&b_updater);
+    setting["b_updater"] = SettingV(&w_updater);
     setting_vec.push_back(setting);
   }
   // kSoftmax
@@ -437,7 +487,9 @@ int main(int argc, char *argv[]) {
     }
 #endif
     
-
+    for (int i = 0; i < senti_net.size(); ++i) {
+        senti_net[i]->ClearDiff(bottom_vecs[i], top_vecs[i]);
+    }
     for (int i = senti_net.size()-2; i >= 0; --i) {
       // cout << "Backprop layer " << i << endl;
       senti_net[i]->Backprop(bottom_vecs[i], top_vecs[i]);

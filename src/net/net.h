@@ -333,6 +333,10 @@ class Net {
     utils::Check(phrase_type == kTrain, 
                   "Only call in Train Phrase.");
     if (phrase_type == kTrain) {
+      for (int i = train_net.size()-1; i >= 0; --i) {
+          int layer_idx = train_net[i]->layer_idx;
+          train_net[i]->ClearDiff(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+      }
       for (int i = train_net.size()-1; i>=0; --i) {
         int layer_idx = train_net[i]->layer_idx;
         train_net[i]->Backprop(bottom_vecs[layer_idx], top_vecs[layer_idx]);

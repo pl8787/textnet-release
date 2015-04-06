@@ -168,33 +168,29 @@ class ConvolutionalLstmLayer : public Layer<xpu> {
     int dim_middle = word_rep.size(3);
     int dim_right = r2l_rep.size(3);
 
-    l2r_rep  = pad_value; // init
-    word_rep = pad_value; // init
-    r2l_rep  = pad_value; // init
-
     for (int batch_idx = 0; batch_idx < l2r_rep.size(0); ++batch_idx) {
         int begin = 0, end = 0;
         LocateBeginEnd(cc_rep[batch_idx][0], begin, end);
 
-        l2r_rep[batch_idx][0][end-1] = 0.f;
-        r2l_rep[batch_idx][0][begin] = 0.f;
+        l2r_rep[batch_idx][0][end-1] += 0.f;
+        r2l_rep[batch_idx][0][begin] += 0.f;
         for (int word_idx = begin; word_idx < end; ++word_idx) {
             Tensor1D row_l2r, row_word, row_r2l, row_cc;
 
             row_cc = cc_rep[batch_idx][0][word_idx].Slice(0, dim_left);
             if (word_idx != begin) {
-                row_l2r  = l2r_rep[batch_idx][0][word_idx-1];
-                row_l2r = mshadow::expr::F<op::identity>(row_cc);
+                row_l2r = l2r_rep[batch_idx][0][word_idx-1];
+                row_l2r += row_cc;
             }
 
             row_cc = cc_rep[batch_idx][0][word_idx].Slice(dim_left, dim_left+dim_middle);
             row_word = word_rep[batch_idx][0][word_idx];
-            row_word = mshadow::expr::F<op::identity>(row_cc);
+            row_word += row_cc;
 
             row_cc = cc_rep[batch_idx][0][word_idx].Slice(dim_left+dim_middle, dim_left+dim_middle+dim_right);
             if (word_idx != end-1) {
                 row_r2l  = r2l_rep[batch_idx][0][word_idx+1];
-                row_r2l = mshadow::expr::F<op::identity>(row_cc);
+                row_r2l += row_cc;
             }
         }
     }
@@ -231,13 +227,6 @@ class ConvolutionalLstmLayer : public Layer<xpu> {
                         const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
     
-    // init
-    this->params[0].diff = 0.f;
-    this->params[1].diff = 0.f;
-    bottom[0]->diff = pad_value;
-    bottom[1]->diff = pad_value;
-    bottom[2]->diff = pad_value;
-
     for (int batch_idx = 0; batch_idx < top[0]->data.size(0); ++batch_idx) {
         Tensor2D in_data, in_diff, out_diff;
         in_data = concat_input_data[batch_idx][0];
@@ -245,7 +234,6 @@ class ConvolutionalLstmLayer : public Layer<xpu> {
         out_diff = top[0]->diff[batch_idx][0];
 
         int begin = 0, end = 0;
-        // LocateBeginEnd(out_diff, begin, end); // out may be padding with 0
         LocateBeginEnd(in_data, begin, end);
 
 #if DEBUG
@@ -257,7 +245,7 @@ class ConvolutionalLstmLayer : public Layer<xpu> {
         in_diff.Slice(begin, end) = dot(out_diff.Slice(begin, end), this->params[0].data_d2());
         this->params[0].diff_d2() += dot(out_diff.Slice(begin,end).T(), in_data.Slice(begin,end));
         if (!no_bias) {
-            this->params[1].diff_d1() += sum_rows(out_diff.Slice(begin,end));
+           this->params[1].diff_d1() += sum_rows(out_diff.Slice(begin,end));
         }
     }
     Split(concat_input_diff, bottom[0]->diff, bottom[1]->diff, bottom[2]->diff);

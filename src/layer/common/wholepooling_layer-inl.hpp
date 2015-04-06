@@ -48,41 +48,33 @@ class WholePoolingLayer : public Layer<xpu>{
     pos.Resize(shape_out, -1.f);
   }
 
+  typedef mshadow::Tensor<xpu, 1> Tensor1D;
   typedef mshadow::Tensor<xpu, 2> Tensor2D;
   typedef mshadow::Tensor<xpu, 4> Tensor4D;
   void wholeAvePooling(Tensor2D in, Tensor2D out) {
     utils::Check(in.size(1) == out.size(1) && out.size(0) == 1, "WholePoolingLayer:pooling io size error");
-    out = 0.;
-    for (index_t row = 0; row < in.size(0); ++row) {
-      out += in.Slice(row, row+1);
-    }
+    out[0] = sum_rows(in);
     out /= float(in.size(0));
   }
   void wholeUnAvePooling(Tensor2D in, Tensor2D out) {
     utils::Check(in.size(1) == out.size(1) && in.size(0) == 1, "WholePoolingLayer:pooling io size error");
-    for (index_t row = 0; row < out.size(0); ++row) {
-      out.Slice(row, row+1) = in / (float)(out.size(0));
-    }
+    out += repmat(in[0] / (float)(out.size(0)), out.size(0));
   }
   void wholeFirstPooling(Tensor2D in, Tensor2D out) {
     utils::Check(in.size(1) == out.size(1) && out.size(0) == 1, "WholePoolingLayer:pooling io size error");
-    out = 0.;
     out = mshadow::expr::F<op::identity>(in.Slice(0,1));
   }
   void wholeUnFirstPooling(Tensor2D in, Tensor2D out) {
     utils::Check(in.size(1) == out.size(1) && in.size(0) == 1, "WholePoolingLayer:pooling io size error");
-    out = 0.;
-    out.Slice(0,1) = mshadow::expr::F<op::identity>(in);
+    out.Slice(0,1) += in;
   }
   void wholeLastPooling(Tensor2D in, Tensor2D out) {
     utils::Check(in.size(1) == out.size(1) && out.size(0) == 1, "WholePoolingLayer:pooling io size error");
-    out = 0.;
     out = mshadow::expr::F<op::identity>(in.Slice(in.size(0)-1,in.size(0)));
   }
   void wholeUnLastPooling(Tensor2D in, Tensor2D out) {
     utils::Check(in.size(1) == out.size(1) && in.size(0) == 1, "WholePoolingLayer:pooling io size error");
-    out = 0.;
-    out.Slice(out.size(0)-1,out.size(0)) = mshadow::expr::F<op::identity>(in);
+    out.Slice(out.size(0)-1,out.size(0)) += in;
   }
 
   void wholeMaxPooling(Tensor2D in, Tensor2D pos, Tensor2D out) {
@@ -101,10 +93,9 @@ class WholePoolingLayer : public Layer<xpu>{
   void wholeUnMaxPooling(Tensor2D in, Tensor2D pos, Tensor2D out) {
     utils::Check(in.size(1) == out.size(1) && in.size(0) == 1, "WholePoolingLayer:pooling io size error");
     utils::Check(in.size(1) == pos.size(1) && pos.size(0) == 1, "WholePoolingLayer:pooling io size error");
-    out = 0.;
     for (index_t col = 0; col < in.size(1); ++col) {
       index_t row = pos[0][col];
-      out[row][col] = in[0][col];
+      out[row][col] += in[0][col];
     }
   }
 
@@ -146,7 +137,6 @@ class WholePoolingLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
     mshadow::Tensor<xpu, 4> bottom_diff = bottom[0]->diff;
 
-    bottom_diff = NAN;
     for (index_t i = 0; i < bottom_data.size(0); ++i) {
       int begin = 0, end = 0; 
       LocateBeginEnd(bottom_data[i][0], begin, end);

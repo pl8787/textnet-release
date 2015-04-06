@@ -88,8 +88,8 @@ class CrossLayer : public Layer<xpu>{
     
     for (int i = 0; i < nbatch; i++) {
       for (int j = 0; j < channel; j++) {
-        bottom0_diff[i][j] = sumall_except_dim<0>(top_diff[i][j]); 
-        bottom1_diff[i][j] = sumall_except_dim<1>(top_diff[i][j]);
+        bottom0_diff[i][j] += sumall_except_dim<0>(top_diff[i][j]); 
+        bottom1_diff[i][j] += sumall_except_dim<1>(top_diff[i][j]);
       }
     }
   }

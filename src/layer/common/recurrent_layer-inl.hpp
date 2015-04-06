@@ -318,12 +318,8 @@ class RecurrentLayer : public Layer<xpu> {
     Tensor4D top_data = top[0]->data;
     Tensor4D bottom_data = bottom[0]->data;
     Tensor4D bottom_diff = bottom[0]->diff;
-    Tensor4D w_diff = this->params[0].diff;
-    Tensor4D u_diff = this->params[1].diff;
-    Tensor4D b_diff = this->params[2].diff;;
     const index_t nbatch = bottom_data.size(0);
         
-	w_diff = 0.; u_diff = 0.; b_diff = 0.; bottom_diff = 0.; // this will cause a bug if sharing parameters or nodes
     begin_c_er = 0.; begin_h_er = 0.; 
 
     for (index_t i = 0; i < nbatch; ++i) {

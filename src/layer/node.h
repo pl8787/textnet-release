@@ -24,6 +24,7 @@ struct Node {
   bool must_contiguous;
   bool inited_data;
   bool inited_diff;
+  bool is_share;
   std::string node_name;
   int node_idx;
   bool need_diff;
@@ -31,8 +32,33 @@ struct Node {
   initializer::Initializer<xpu, 4>* initializer_;
 
   // orc
-  void ClearDiff() {};
-  void Share(Node &other) {};
+  void ClearDiff(void) {
+    if (!is_share) {
+      if (updater_->is_sparse) {
+        diff = 0.f;
+      } else {
+        diff.Resize(mshadow::Shape4(0, 0, 0, 0), 0);
+        idx.Resize(mshadow::Shape1(0), 0);
+      }
+    }
+  };
+
+  // orc
+  void Share(const Node &other) {
+    is_share = true;
+    data = other.data;
+    diff = other.diff;
+    idx  = other.idx;
+    must_contiguous = other.must_contiguous;
+    inited_diff = false; // main node take charge of this
+    inited_diff = false; // main node take charge of this
+    node_name = other.node_name;
+    node_idx = other.node_idx;
+    need_diff = other.need_diff;
+    
+    updater_ = NULL;     // main node take charge of this
+    initializer_ = NULL; // main node take charge of this 
+  }
   
   // constructor
   Node(bool need_diff_ = true) : must_contiguous(false), need_diff(need_diff_) {
@@ -42,6 +68,7 @@ struct Node {
     // diff.set_pad(false);
     inited_data = false;
     inited_diff = false;
+    is_share = false;
   }
   
   inline void FreeSpace(void) {
@@ -135,18 +162,22 @@ struct Node {
     return mshadow::Tensor<xpu, 3>(diff.dptr_, mshadow::Shape3(s[0], s[1], ymax));
   }
   
-  inline void Init(bool init_diff = false) {
-    initializer_->DoInitialize(data);
-    if (init_diff) {
-      initializer_->DoInitialize(diff);
+  inline void Init(bool init_diff = false) { // why init diff?
+    if (!is_share) {
+      initializer_->DoInitialize(data);
+      if (init_diff) {
+        initializer_->DoInitialize(diff);
+      }
     }
   }
   
   inline void Update() {
-    if (updater_->is_sparse) {
-      updater_->UpdateSparse(data, diff, idx);
-    } else {
-      updater_->Update(data, diff);
+    if (!is_share) {
+      if (updater_->is_sparse) {
+        updater_->UpdateSparse(data, diff, idx);
+      } else {
+        updater_->Update(data, diff);
+      }
     }
   }
 

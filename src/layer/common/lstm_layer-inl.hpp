@@ -263,13 +263,13 @@ class LstmLayer : public Layer<xpu> {
                  Tensor2D cur_g_er,
                  Tensor2D pre_c_er,
                  Tensor2D pre_h_er,
-                 Tensor2D x_er,
-                 Tensor2D w_er,
-                 Tensor2D u_er,
-                 Tensor2D b_er) {
+                 Tensor2D x_er) {
 
     Tensor2D w_data = this->params[0].data[0][0];
     Tensor2D u_data = this->params[1].data[0][0];
+    Tensor2D w_er = this->params[0].diff[0][0];
+    Tensor2D u_er = this->params[1].diff[0][0];
+    Tensor2D b_er = this->params[2].diff[0][0];
     
     Tensor2D i, f, o, cc, i_er, f_er, o_er, cc_er;
     SplitGate(cur_g, i, f, o, cc);
@@ -286,7 +286,7 @@ class LstmLayer : public Layer<xpu> {
     f_er = mshadow::expr::F<op::sigmoid_grad>(f) * (cur_c_er * pre_c); // logi
 
     pre_h_er += dot(cur_g_er, u_data.T());
-    x_er = dot(cur_g_er, w_data.T());
+    x_er += dot(cur_g_er, w_data.T());
 
     // grad
     if (!no_bias) {
@@ -299,11 +299,10 @@ class LstmLayer : public Layer<xpu> {
   void BackpropForLeft2RightLstm(Tensor2D top_data, Tensor2D top_diff, 
                                  Tensor2D c, Tensor2D c_er, 
                                  Tensor2D g, Tensor2D g_er, 
-                                 Tensor2D bottom_data, Tensor2D bottom_diff,
-                                 Tensor2D w_diff, Tensor2D u_diff, Tensor2D b_diff) {
+                                 Tensor2D bottom_data, Tensor2D bottom_diff) {
       int begin = 0, end = 0;
       LocateBeginEnd(bottom_data, begin, end);
-      assert(begin >= 0 && begin < end); 
+
       Tensor2D pre_c, pre_h, pre_c_er, pre_h_er;
       for (int row_idx = end-1; row_idx >= begin; --row_idx) {
         if (row_idx == begin) {
@@ -328,17 +327,16 @@ class LstmLayer : public Layer<xpu> {
                   g_er.Slice(row_idx, row_idx+1),
                   pre_c_er,
                   pre_h_er,
-                  bottom_diff.Slice(row_idx, row_idx+1), 
-                  w_diff, u_diff, b_diff);
+                  bottom_diff.Slice(row_idx, row_idx+1));
       }
   }
   void BackpropForRight2LeftLstm(Tensor2D top_data, Tensor2D top_diff, 
                                  Tensor2D c, Tensor2D c_er, 
                                  Tensor2D g, Tensor2D g_er, 
-                                 Tensor2D bottom_data, Tensor2D bottom_diff,
-                                 Tensor2D w_diff, Tensor2D u_diff, Tensor2D b_diff) {
+                                 Tensor2D bottom_data, Tensor2D bottom_diff) {
       int begin = 0, end = 0;
       LocateBeginEnd(bottom_data, begin, end);
+
       Tensor2D pre_c, pre_h, pre_c_er, pre_h_er;
       for (int row_idx = begin; row_idx < end; ++row_idx) {
         if (row_idx == end-1) {
@@ -363,8 +361,7 @@ class LstmLayer : public Layer<xpu> {
                   g_er.Slice(row_idx, row_idx+1),
                   pre_c_er,
                   pre_h_er,
-                  bottom_diff.Slice(row_idx, row_idx+1), 
-                  w_diff, u_diff, b_diff);
+                  bottom_diff.Slice(row_idx, row_idx+1));
       }
   }
 
@@ -377,23 +374,17 @@ class LstmLayer : public Layer<xpu> {
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
     mshadow::Tensor<xpu, 4> bottom_diff = bottom[0]->diff;
-    mshadow::Tensor<xpu, 2> w_diff = this->params[0].diff[0][0];
-    mshadow::Tensor<xpu, 2> u_diff = this->params[1].diff[0][0];
-    mshadow::Tensor<xpu, 2> b_diff = this->params[2].diff[0][0];
     const index_t nbatch = bottom_data.size(0);
         
-	w_diff = 0.; u_diff = 0.; b_diff = 0.; bottom_diff = 0.;
     begin_c_er = 0.; begin_h_er = 0.; g_er = 0.; c_er = 0.;
 
     for (index_t i = 0; i < nbatch; ++i) {
         if (!reverse) {
             BackpropForLeft2RightLstm(top_data[i][0], top_diff[i][0], c[i][0], c_er[i][0],
-                                      g[i][0], g_er[i][0], bottom_data[i][0], bottom_diff[i][0],
-                                      w_diff, u_diff, b_diff);
+                                      g[i][0], g_er[i][0], bottom_data[i][0], bottom_diff[i][0]);
         } else {
             BackpropForRight2LeftLstm(top_data[i][0], top_diff[i][0], c[i][0], c_er[i][0],
-                                      g[i][0], g_er[i][0], bottom_data[i][0], bottom_diff[i][0],
-                                      w_diff, u_diff, b_diff);
+                                      g[i][0], g_er[i][0], bottom_data[i][0], bottom_diff[i][0]);
         }
     }
     checkNanParams();

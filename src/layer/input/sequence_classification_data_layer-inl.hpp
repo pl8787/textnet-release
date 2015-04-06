@@ -82,18 +82,18 @@ class SequenceClassificationDataLayer : public Layer<xpu>{
                   "SequenceClassificationDataLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "SequenceClassificationDataLayer:top size problem.");
-    top[0]->Resize(batch_size, 1, 1, max_doc_len, true);
-    top[1]->Resize(batch_size, 1, 1, 1, true);
+    top[0]->Resize(batch_size, 1, 1, 1, true);
+    top[1]->Resize(batch_size, 1, 1, max_doc_len, true);
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
-    mshadow::Tensor<xpu, 4> top0_data = top[0]->data;
-    mshadow::Tensor<xpu, 1> top1_data = top[1]->data_d1();
+    mshadow::Tensor<xpu, 1> top0_data = top[0]->data_d1();
+    mshadow::Tensor<xpu, 4> top1_data = top[1]->data;
     for (int i = 0; i < batch_size; ++i) {
-      top0_data[i] = F<op::identity>(data_set[line_ptr]);
-      top1_data[i] = label_set[line_ptr];
+      top0_data[i] = label_set[line_ptr];
+      top1_data[i] = F<op::identity>(data_set[line_ptr]);
       line_ptr = (line_ptr + 1) % line_count;
     }
   }

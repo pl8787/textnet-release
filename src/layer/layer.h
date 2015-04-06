@@ -124,6 +124,21 @@ class Layer {
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) = 0;
 
+  // orc clear all top nodes diff and paramters diff
+  virtual void ClearDiff(const std::vector<Node<xpu>*> &bottom,
+                         const std::vector<Node<xpu>*> &top) {
+    for (int i = 0; i < params.size(); ++i) {
+        params[i].ClearDiff();
+    }
+    for (int i = 0; i < top.size(); ++i) {
+        top[i]->ClearDiff();
+    }
+  }
+  // orc for parameter sharing
+  virtual void ShareParameter(int param_idx, const Node<xpu> &other) {
+      params[param_idx].Share(other);
+  }
+
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
                         const std::vector<Node<xpu>*> &top) = 0;
                         

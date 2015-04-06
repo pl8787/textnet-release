@@ -502,7 +502,9 @@ int main(int argc, char *argv[]) {
     }
 #endif
     
-
+    for (int i = 0; i < senti_net.size(); ++i) {
+      senti_net[i]->ClearDiff(bottom_vecs[i], top_vecs[i]);
+    }
     for (int i = senti_net.size()-2; i >= 0; --i) {
       // cout << "Backprop layer " << i << endl;
       senti_net[i]->Backprop(bottom_vecs[i], top_vecs[i]);
