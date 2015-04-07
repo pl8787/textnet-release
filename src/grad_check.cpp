@@ -389,6 +389,7 @@ void TestConvolutionalLstmLayer(mshadow::Random<cpu>* prnd) {
     setting["num_hidden"] = SettingV(3);
     setting["pad_value"] = SettingV(NAN);
     setting["no_bias"] = SettingV(true);
+    setting["batch_size"] = SettingV(2);
     setting["output_padding_zero"] = SettingV(false);
       
     map<string, SettingV> &w_filler = *(new map<string, SettingV>());
@@ -405,12 +406,14 @@ void TestConvolutionalLstmLayer(mshadow::Random<cpu>* prnd) {
       w_updater["eps"] = SettingV(0.01f);
       w_updater["mat_iter"] = SettingV(10000);
       w_updater["lr"] = SettingV(0.1f);
+      w_updater["batch_size"] = SettingV(2);
     setting["w_updater"] = SettingV(&w_updater);
     map<string, SettingV> &b_updater = *(new map<string, SettingV>());
       b_updater["updater_type"] = SettingV(updater::kAdagrad);
       b_updater["eps"] = SettingV(0.01f);
       b_updater["mat_iter"] = SettingV(10000);
       b_updater["lr"] = SettingV(0.1f);
+      b_updater["batch_size"] = SettingV(2);
     setting["b_updater"] = SettingV(&b_updater);
   }
 
@@ -578,10 +581,6 @@ void TestConcatLayer(mshadow::Random<cpu>* prnd) {
   PrintTensor("t_diff", tops[0]->diff);
   cout << "Done." << endl;
 }
-
-
-
-
 
 void TestFcLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Fc Layer." << endl;
@@ -783,9 +782,9 @@ int main(int argc, char *argv[]) {
   // TestCrossLayer(&rnd);
   //TestDropoutLayer(&rnd);
   // TestLstmLayer(&rnd);
-  // TestConvolutionalLstmLayer(&rnd);
+  TestConvolutionalLstmLayer(&rnd);
   // TestWholePoolingLayer(&rnd);
-  TestConcatLayer(&rnd);
+  // TestConcatLayer(&rnd);
   //TestHingeLossLayer(&rnd);
   return 0;
 }

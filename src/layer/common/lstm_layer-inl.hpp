@@ -223,7 +223,9 @@ class LstmLayer : public Layer<xpu> {
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
-    // checkNanParams();
+#if DEBUG
+    checkNanParams();
+#endif
     Tensor4D bottom_data = bottom[0]->data;
     Tensor4D top_data = top[0]->data;
     top_data = NAN; c = NAN, g = NAN; c_er = NAN; g_er = NAN;
@@ -235,7 +237,9 @@ class LstmLayer : public Layer<xpu> {
           ForwardRight2Left(bottom_data[i][0], g[i][0], c[i][0], top_data[i][0]);
         }
     }
-    // checkNanParams();
+#if DEBUG
+    checkNanParams();
+#endif
   }
 
   // too tricky, may bring errors
@@ -369,7 +373,9 @@ class LstmLayer : public Layer<xpu> {
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
                         const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
-    // checkNanParams();
+#if DEBUG
+    checkNanParams();
+#endif
     mshadow::Tensor<xpu, 4> top_diff = top[0]->diff;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
@@ -387,7 +393,9 @@ class LstmLayer : public Layer<xpu> {
                                       g[i][0], g_er[i][0], bottom_data[i][0], bottom_diff[i][0]);
         }
     }
+#if DEBUG
     checkNanParams();
+#endif
   }
 
  protected:

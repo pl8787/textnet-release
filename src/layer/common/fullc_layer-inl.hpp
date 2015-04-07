@@ -119,6 +119,8 @@ class FullConnectLayer : public Layer<xpu> {
     
     if (this->prop_error[0]) {
       bottom_diff += dot(top_diff, this->params[0].data_d2());
+      // orc_debug
+      int tmp = 1;
     }
   }
 

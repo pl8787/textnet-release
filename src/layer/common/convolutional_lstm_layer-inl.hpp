@@ -127,9 +127,9 @@ class ConvolutionalLstmLayer : public Layer<xpu> {
         int begin = 0, end = 0;
         LocateBeginEnd(l2r_rep[batch_idx][0], begin, end);
 #if DEBUG
-        int begin_1 = 0; end_1 = 0;
+        int begin_1 = 0, end_1 = 0;
         LocateBeginEnd(word_rep[batch_idx][0], begin_1, end_1);
-        int begin_2 = 0; end_2 = 0;
+        int begin_2 = 0, end_2 = 0;
         LocateBeginEnd(r2l_rep[batch_idx][0], begin_2, end_2);
         utils::Assert(begin == begin_1 && begin == begin_2, "");
         utils::Assert(end == end_1 && end == end_2, "");
@@ -159,37 +159,37 @@ class ConvolutionalLstmLayer : public Layer<xpu> {
         }
     }
   }
-  virtual void Split(Tensor4D cc_rep, Tensor4D l2r_rep, Tensor4D word_rep, Tensor4D r2l_rep) {
-    utils::Assert(l2r_rep.size(0) == cc_rep.size(0), "ConvolutionalLstmLayer:size problem.");
-    utils::Assert(l2r_rep.size(2) == cc_rep.size(2), "ConvolutionalLstmLayer:size problem.");
-    utils::Assert((l2r_rep.size(3)+word_rep.size(3)+r2l_rep.size(3)) == cc_rep.size(3), "ConvolutionalLstmLayer:size problem.");
+  virtual void Split(Tensor4D cc_rep, Tensor4D cc_diff, Tensor4D l2r_diff, Tensor4D word_diff, Tensor4D r2l_diff) {
+    utils::Assert(l2r_diff.size(0) == cc_diff.size(0), "ConvolutionalLstmLayer:size problem.");
+    utils::Assert(l2r_diff.size(2) == cc_diff.size(2), "ConvolutionalLstmLayer:size problem.");
+    utils::Assert((l2r_diff.size(3)+word_diff.size(3)+r2l_diff.size(3)) == cc_diff.size(3), "ConvolutionalLstmLayer:size problem.");
 
-    int dim_left = l2r_rep.size(3);
-    int dim_middle = word_rep.size(3);
-    int dim_right = r2l_rep.size(3);
+    int dim_left = l2r_diff.size(3);
+    int dim_middle = word_diff.size(3);
+    int dim_right = r2l_diff.size(3);
 
-    for (int batch_idx = 0; batch_idx < l2r_rep.size(0); ++batch_idx) {
+    for (int batch_idx = 0; batch_idx < l2r_diff.size(0); ++batch_idx) {
         int begin = 0, end = 0;
         LocateBeginEnd(cc_rep[batch_idx][0], begin, end);
 
-        l2r_rep[batch_idx][0][end-1] += 0.f;
-        r2l_rep[batch_idx][0][begin] += 0.f;
+        l2r_diff[batch_idx][0][end-1] += 0.f;
+        r2l_diff[batch_idx][0][begin] += 0.f;
         for (int word_idx = begin; word_idx < end; ++word_idx) {
             Tensor1D row_l2r, row_word, row_r2l, row_cc;
 
-            row_cc = cc_rep[batch_idx][0][word_idx].Slice(0, dim_left);
+            row_cc = cc_diff[batch_idx][0][word_idx].Slice(0, dim_left);
             if (word_idx != begin) {
-                row_l2r = l2r_rep[batch_idx][0][word_idx-1];
+                row_l2r = l2r_diff[batch_idx][0][word_idx-1];
                 row_l2r += row_cc;
             }
 
-            row_cc = cc_rep[batch_idx][0][word_idx].Slice(dim_left, dim_left+dim_middle);
-            row_word = word_rep[batch_idx][0][word_idx];
+            row_cc = cc_diff[batch_idx][0][word_idx].Slice(dim_left, dim_left+dim_middle);
+            row_word = word_diff[batch_idx][0][word_idx];
             row_word += row_cc;
 
-            row_cc = cc_rep[batch_idx][0][word_idx].Slice(dim_left+dim_middle, dim_left+dim_middle+dim_right);
+            row_cc = cc_diff[batch_idx][0][word_idx].Slice(dim_left+dim_middle, dim_left+dim_middle+dim_right);
             if (word_idx != end-1) {
-                row_r2l  = r2l_rep[batch_idx][0][word_idx+1];
+                row_r2l  = r2l_diff[batch_idx][0][word_idx+1];
                 row_r2l += row_cc;
             }
         }
@@ -239,7 +239,7 @@ class ConvolutionalLstmLayer : public Layer<xpu> {
 #if DEBUG
         int begin_0 = 0, end_0 = 0;
         LocateBeginEnd(in_data, begin_0, end_0);
-        utils::Assert(begin == being_0 && end == end_0, "");
+        utils::Assert(begin == begin_0 && end == end_0, "");
 #endif
 
         in_diff.Slice(begin, end) = dot(out_diff.Slice(begin, end), this->params[0].data_d2());
@@ -248,7 +248,7 @@ class ConvolutionalLstmLayer : public Layer<xpu> {
            this->params[1].diff_d1() += sum_rows(out_diff.Slice(begin,end));
         }
     }
-    Split(concat_input_diff, bottom[0]->diff, bottom[1]->diff, bottom[2]->diff);
+    Split(concat_input_data, concat_input_diff, bottom[0]->diff, bottom[1]->diff, bottom[2]->diff);
   }
   void LocateBeginEnd(mshadow::Tensor<xpu, 2> seq, 
                       int &begin, int &end) { // input a 2D tensor, out put a sub 2d tensor, with 0 padding

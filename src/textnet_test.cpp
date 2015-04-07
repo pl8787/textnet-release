@@ -585,6 +585,7 @@ int main(int argc, char *argv[]) {
   // a = NAN;
   // a = -1.;
   // cout << (a[0][0] == a[0][0]) << endl;
+  // TestConvolutionalLstmLayer(&rnd);
   // TestLstmLayer(&rnd);
   // TestActivationLayer(&rnd);
   // TestFcLayer(&rnd);

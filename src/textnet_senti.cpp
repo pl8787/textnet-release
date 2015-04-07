@@ -104,9 +104,9 @@ int main(int argc, char *argv[]) {
   mshadow::Random<cpu> rnd(37);
   vector<Layer<cpu>*> senti_net, senti_valid, senti_test;
 
-  int lstm_hidden_dim = 100;
+  int lstm_hidden_dim = 30;
   int word_rep_dim = 300;
-  int max_doc_len = 200;
+  int max_doc_len = 100;
   int min_doc_len = 1;
   int batch_size = 50;
   int vocab_size = 200000;
@@ -116,6 +116,7 @@ int main(int argc, char *argv[]) {
   float ADA_GRAD_EPS = 0.01;
   float decay = 0.00;
   float l2 = 0.f;
+  float pad_value = (float)(NAN);
 
   // string train_data_file = "/home/wsx/dl.shengxian/data/simulation/lstm.train";
   // string valid_data_file = "/home/wsx/dl.shengxian/data/simulation/lstm.test";
@@ -233,6 +234,8 @@ int main(int argc, char *argv[]) {
     } else if (senti_net[i]->layer_name == "softmax") {
       bottom_vecs[i].push_back(top_vecs[i-1][0]);
       bottom_vecs[i].push_back(nodes[0]); 
+    } else if (senti_net[i]->layer_name == "embedding") {
+      bottom_vecs[i].push_back(top_vecs[i-1][1]);
     } else {
       bottom_vecs[i].push_back(top_vecs[i-1][0]);
     }
@@ -271,7 +274,7 @@ int main(int argc, char *argv[]) {
     setting["embedding_file"] = SettingV(embedding_file);
     setting["word_count"] = SettingV(vocab_size);
     setting["feat_size"] = SettingV(word_rep_dim);
-    setting["pad_value"] = SettingV((float)(NAN));
+    setting["pad_value"] = SettingV(pad_value);
       
     map<string, SettingV> &w_setting = *(new map<string, SettingV>());
       w_setting["init_type"] = SettingV(initializer::kUniform);
@@ -289,11 +292,11 @@ int main(int argc, char *argv[]) {
     setting["d_input"] = SettingV(word_rep_dim);
     setting["d_mem"] = SettingV(lstm_hidden_dim);
     setting["no_bias"] = SettingV(true);
-    setting["reverse"] = SettingV(true);
+    setting["pad_value"] = SettingV(pad_value);
       
     map<string, SettingV> &w_filler = *(new map<string, SettingV>());
       w_filler["init_type"] = SettingV(initializer::kUniform);
-      w_filler["range"] = SettingV(0.01f);
+      w_filler["range"] = SettingV(0.0001f);
     setting["w_filler"] = SettingV(&w_filler);
     setting["u_filler"] = SettingV(&w_filler);
 
@@ -314,10 +317,12 @@ int main(int argc, char *argv[]) {
     setting["d_input"] = SettingV(word_rep_dim);
     setting["d_mem"] = SettingV(lstm_hidden_dim);
     setting["no_bias"] = SettingV(true);
-      
+    setting["pad_value"] = SettingV(pad_value);
+    setting["reverse"] = SettingV(true);
+
     map<string, SettingV> &w_filler = *(new map<string, SettingV>());
       w_filler["init_type"] = SettingV(initializer::kUniform);
-      w_filler["range"] = SettingV(0.01f);
+      w_filler["range"] = SettingV(0.0001f);
     setting["w_filler"] = SettingV(&w_filler);
     setting["u_filler"] = SettingV(&w_filler);
 
@@ -338,10 +343,11 @@ int main(int argc, char *argv[]) {
     map<string, SettingV> setting;
     setting["num_hidden"] = SettingV(lstm_hidden_dim);
     setting["no_bias"] = SettingV(true);
+    setting["pad_value"] = SettingV(pad_value);
       
     map<string, SettingV> &w_filler = *(new map<string, SettingV>());
       w_filler["init_type"] = SettingV(initializer::kUniform);
-      w_filler["range"] = SettingV(0.01f);
+      w_filler["range"] = SettingV(0.0001f);
     setting["w_filler"] = SettingV(&w_filler);
 
     map<string, SettingV> &b_filler = *(new map<string, SettingV>());
@@ -376,7 +382,7 @@ int main(int argc, char *argv[]) {
     map<string, SettingV> &w_setting = *(new map<string, SettingV>());
       // w_setting["init_type"] = SettingV(initializer::kZero);
       w_setting["init_type"] = SettingV(initializer::kUniform);
-      w_setting["range"] = SettingV(0.1f);
+      w_setting["range"] = SettingV(0.0001f);
     map<string, SettingV> &b_setting = *(new map<string, SettingV>());
       b_setting["init_type"] = SettingV(initializer::kZero);
     setting["w_filler"] = SettingV(&w_setting);
@@ -451,7 +457,7 @@ int main(int argc, char *argv[]) {
   float maxValidAcc = 0., testAccByValid = 0.;
   for (int iter = 0; iter < max_iters; ++iter) {
     // if (iter % 100 == 0) { cout << "iter:" << iter << endl; }
-    if (iter % (nTrain/batch_size) == 0) {
+    if (iter+1 % (nTrain/batch_size) == 0) {
       EvalRet train_ret, valid_ret, test_ret;
       eval(senti_net, bottom_vecs, top_vecs, (nTrain/batch_size), train_ret);
       eval(senti_valid, bottom_vecs, top_vecs, (nValid/batch_size), valid_ret);
