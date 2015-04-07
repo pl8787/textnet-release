@@ -104,7 +104,7 @@ int main(int argc, char *argv[]) {
   mshadow::Random<cpu> rnd(37);
   vector<Layer<cpu>*> senti_net, senti_valid, senti_test;
 
-  int lstm_hidden_dim = 30;
+  int lstm_hidden_dim = 100;
   int word_rep_dim = 300;
   int max_doc_len = 100;
   int min_doc_len = 1;
@@ -370,7 +370,7 @@ int main(int argc, char *argv[]) {
   //  kDropout
   {
     map<string, SettingV> setting;
-    setting["rate"] = SettingV(0.0f);
+    setting["rate"] = SettingV(0.5f);
     setting_vec.push_back(setting);
   }
   // kFullConnect
@@ -419,6 +419,11 @@ int main(int argc, char *argv[]) {
     senti_net[i]->Reshape(bottom_vecs[i], top_vecs[i]);
     // cout << "\tReshape" << endl;
   }
+  // share
+  assert(senti_net[3]->layer_name == "r_lstm");
+  senti_net[3]->ShareParameter(0, senti_net[2]->params[0]);
+  senti_net[3]->ShareParameter(1, senti_net[2]->params[1]);
+  senti_net[3]->ShareParameter(2, senti_net[2]->params[2]);
 
   // Save Initial Model
   {
@@ -457,7 +462,7 @@ int main(int argc, char *argv[]) {
   float maxValidAcc = 0., testAccByValid = 0.;
   for (int iter = 0; iter < max_iters; ++iter) {
     // if (iter % 100 == 0) { cout << "iter:" << iter << endl; }
-    if (iter+1 % (nTrain/batch_size) == 0) {
+    if (iter % (nTrain/batch_size) == 0) {
       EvalRet train_ret, valid_ret, test_ret;
       eval(senti_net, bottom_vecs, top_vecs, (nTrain/batch_size), train_ret);
       eval(senti_valid, bottom_vecs, top_vecs, (nValid/batch_size), valid_ret);

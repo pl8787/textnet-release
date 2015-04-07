@@ -344,7 +344,8 @@ class Layer {
   std::vector<std::string> bottom_nodes;
   std::vector<std::string> top_nodes; 
  
- protected:
+ // protected:
+ public:
   std::vector<Node<xpu> > params;
   std::map<std::string, SettingV> settings;
   std::vector<bool> prop_error;

@@ -33,10 +33,9 @@ struct Node {
 
   // orc
   void ClearDiff(void) {
-    if (!is_share && updater_) {
-      if (!updater_->is_sparse) {
-        diff = 0.f;
-      } else {
+    if (!is_share) {
+      diff = 0.f;
+      if (updater_ && updater_->is_sparse) {
         diff.Resize(mshadow::Shape4(0, 0, 0, 0), 0);
         idx.Resize(mshadow::Shape1(0), 0);
       }

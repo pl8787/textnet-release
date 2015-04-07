@@ -85,6 +85,8 @@ class DropoutLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 4> top_diff = top[0]->diff;
     if (this->prop_error[0]) {
       bottom_diff += top_diff * mask;
+      // orc_debug
+      int tmp = 1;
     }
   }
   
