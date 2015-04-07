@@ -244,7 +244,7 @@ class LstmLayer : public Layer<xpu> {
 
   // too tricky, may bring errors
   void SplitGate(Tensor2D g, Tensor2D &i, Tensor2D &f, Tensor2D &o, Tensor2D &cc) {
-    utils::Check(g.shape_[0] == 1, "LstmLayer: gate problem."); 
+    utils::Check(g.size(0) == 1, "LstmLayer: gate problem."); 
     i.shape_ = mshadow::Shape2(1, d_mem);
     f.shape_ = mshadow::Shape2(1, d_mem);
     o.shape_ = mshadow::Shape2(1, d_mem);

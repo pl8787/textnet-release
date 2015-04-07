@@ -113,8 +113,8 @@ int main(int argc, char *argv[]) {
   int max_session_len = 300;
   int context_window = 1;
   int min_doc_len = 1;
-  int batch_size = 5;
-  int word_rep_dim = 20;
+  int batch_size = 1;
+  int word_rep_dim = 50;
   int num_hidden = (context_window+1) * word_rep_dim;
   int num_item = 7973;
   int num_user = 2265;
@@ -165,7 +165,7 @@ int main(int argc, char *argv[]) {
   senti_net[senti_net.size()-1]->layer_name = "concat";
   senti_net.push_back(CreateLayer<cpu>(kFullConnect));
   senti_net[senti_net.size()-1]->layer_name = "fullconnect";
-  senti_net.push_back(CreateLayer<cpu>(kTanh));
+  senti_net.push_back(CreateLayer<cpu>(kRectifiedLinear));
   senti_net[senti_net.size()-1]->layer_name = "activation";
   senti_net.push_back(CreateLayer<cpu>(kDropout));
   senti_net[senti_net.size()-1]->layer_name = "dropout";

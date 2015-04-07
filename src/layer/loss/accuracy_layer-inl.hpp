@@ -79,7 +79,7 @@ class AccuracyLayer : public Layer<xpu>{
       for (int j = 0; j < topk; ++j) {
         for (int k = 0; k < bottom1_data.size(1); ++k) {
           int lable_value = static_cast<int>(bottom1_data[i][k]);
-          if (bottom_data_vector[j].second == lable_value) {
+          if (!isnan(bottom1_data[i][k]) && bottom_data_vector[j].second == lable_value) {
             ++top_data[0];
             break;
           }

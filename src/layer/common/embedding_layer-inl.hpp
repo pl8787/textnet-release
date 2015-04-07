@@ -180,7 +180,7 @@ class EmbeddingLayer : public Layer<xpu>{
       
       for (int i = 0; i < nbatch; ++i) {
         for (int j = 0; j < doc_count; ++j) {
-           for (int k = 0; k < doc_len; ++k) {
+          for (int k = 0; k < doc_len; ++k) {
             w_idx = (int)bottom_data[i][j][0][k];
             if (!isnan(bottom_data[i][j][0][k]) && w_idx != -1) {
               weight_diff[idx_map[w_idx]] += top_diff[i][j][k];

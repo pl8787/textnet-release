@@ -104,18 +104,19 @@ int main(int argc, char *argv[]) {
   mshadow::Random<cpu> rnd(37);
   vector<Layer<cpu>*> senti_net, senti_valid, senti_test;
 
+  float init_interval = 0.3;
   int lstm_hidden_dim = 100;
   int word_rep_dim = 300;
-  int max_doc_len = 100;
+  int max_doc_len = 200;
   int min_doc_len = 1;
   int batch_size = 50;
-  int vocab_size = 200000;
+  int vocab_size = 100000;
   int num_class = 2;
   int ADA_GRAD_MAX_ITER = 1000000;
   float base_lr = 0.1;
   float ADA_GRAD_EPS = 0.01;
-  float decay = 0.00;
-  float l2 = 0.f;
+  float decay = 0.0;
+  float l2 = 0.000001f;
   float pad_value = (float)(NAN);
 
   // string train_data_file = "/home/wsx/dl.shengxian/data/simulation/lstm.train";
@@ -124,9 +125,9 @@ int main(int argc, char *argv[]) {
   // string embedding_file = ""; 
   // int nTrain = 6, nValid = 7, nTest = 7;
   
-  string train_data_file = "/home/wsx/dl.shengxian/data/mr/lstm.train";
-  string valid_data_file = "/home/wsx/dl.shengxian/data/mr/lstm.dev";
-  string test_data_file = "/home/wsx/dl.shengxian/data/mr/lstm.test";
+  string train_data_file = "/home/wsx/dl.shengxian/data/mr/lstm.train.nopad";
+  string valid_data_file = "/home/wsx/dl.shengxian/data/mr/lstm.dev.nopad";
+  string test_data_file = "/home/wsx/dl.shengxian/data/mr/lstm.test.nopad";
   string embedding_file = "/home/wsx/dl.shengxian/data/mr/word_rep_w2v.plpl"; 
   int nTrain = 8528, nValid = 1067, nTest = 1067;
 
@@ -138,7 +139,7 @@ int main(int argc, char *argv[]) {
   g_updater["updater_type"] = SettingV(updater::kAdaDelta);
   // g_updater["batch_size"] = SettingV(batch_size);
   g_updater["l2"] = SettingV(l2);
-  g_updater["batch_size"] = SettingV(batch_size);
+  g_updater["batch_size"] = SettingV(1);
   // g_updater["max_iter"] = SettingV(ADA_GRAD_MAX_ITER);
   // g_updater["eps"] = SettingV(ADA_GRAD_EPS);
   // g_updater["lr"] = SettingV(base_lr);
@@ -278,11 +279,12 @@ int main(int argc, char *argv[]) {
       
     map<string, SettingV> &w_setting = *(new map<string, SettingV>());
       w_setting["init_type"] = SettingV(initializer::kUniform);
-      w_setting["range"] = SettingV(0.01f);
+      w_setting["range"] = SettingV(init_interval);
     setting["w_filler"] = SettingV(&w_setting);
       
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
     w_updater = g_updater;
+    w_updater["l2"] = 0.f;
     setting["w_updater"] = SettingV(&w_updater);
     setting_vec.push_back(setting);
   }
@@ -296,7 +298,7 @@ int main(int argc, char *argv[]) {
       
     map<string, SettingV> &w_filler = *(new map<string, SettingV>());
       w_filler["init_type"] = SettingV(initializer::kUniform);
-      w_filler["range"] = SettingV(0.0001f);
+      w_filler["range"] = SettingV(init_interval);
     setting["w_filler"] = SettingV(&w_filler);
     setting["u_filler"] = SettingV(&w_filler);
 
@@ -322,7 +324,7 @@ int main(int argc, char *argv[]) {
 
     map<string, SettingV> &w_filler = *(new map<string, SettingV>());
       w_filler["init_type"] = SettingV(initializer::kUniform);
-      w_filler["range"] = SettingV(0.0001f);
+      w_filler["range"] = SettingV(init_interval);
     setting["w_filler"] = SettingV(&w_filler);
     setting["u_filler"] = SettingV(&w_filler);
 
@@ -343,11 +345,12 @@ int main(int argc, char *argv[]) {
     map<string, SettingV> setting;
     setting["num_hidden"] = SettingV(lstm_hidden_dim);
     setting["no_bias"] = SettingV(true);
+    setting["nonlinear_type"] = SettingV("rectifier");
     setting["pad_value"] = SettingV(pad_value);
       
     map<string, SettingV> &w_filler = *(new map<string, SettingV>());
       w_filler["init_type"] = SettingV(initializer::kUniform);
-      w_filler["range"] = SettingV(0.0001f);
+      w_filler["range"] = SettingV(init_interval);
     setting["w_filler"] = SettingV(&w_filler);
 
     map<string, SettingV> &b_filler = *(new map<string, SettingV>());
@@ -377,12 +380,12 @@ int main(int argc, char *argv[]) {
   {
     map<string, SettingV> setting;
     setting["num_hidden"] = SettingV(num_class);
-    setting["no_bias"] = SettingV(false);
+    setting["no_bias"] = SettingV(true);
 
     map<string, SettingV> &w_setting = *(new map<string, SettingV>());
-      // w_setting["init_type"] = SettingV(initializer::kZero);
-      w_setting["init_type"] = SettingV(initializer::kUniform);
-      w_setting["range"] = SettingV(0.0001f);
+      w_setting["init_type"] = SettingV(initializer::kZero);
+      // w_setting["init_type"] = SettingV(initializer::kUniform);
+      // w_setting["range"] = SettingV(init_interval);
     map<string, SettingV> &b_setting = *(new map<string, SettingV>());
       b_setting["init_type"] = SettingV(initializer::kZero);
     setting["w_filler"] = SettingV(&w_setting);
@@ -390,6 +393,7 @@ int main(int argc, char *argv[]) {
 
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
     w_updater = g_updater;
+    w_updater["l2"] = w_updater["l2"].fVal()*3.f;
     setting["w_updater"] = SettingV(&w_updater);
     setting["b_updater"] = SettingV(&w_updater);
     setting_vec.push_back(setting);
@@ -419,11 +423,11 @@ int main(int argc, char *argv[]) {
     senti_net[i]->Reshape(bottom_vecs[i], top_vecs[i]);
     // cout << "\tReshape" << endl;
   }
-  // share
-  assert(senti_net[3]->layer_name == "r_lstm");
-  senti_net[3]->ShareParameter(0, senti_net[2]->params[0]);
-  senti_net[3]->ShareParameter(1, senti_net[2]->params[1]);
-  senti_net[3]->ShareParameter(2, senti_net[2]->params[2]);
+  // // share
+  // assert(senti_net[3]->layer_name == "r_lstm");
+  // senti_net[3]->ShareParameter(0, senti_net[2]->params[0]);
+  // senti_net[3]->ShareParameter(1, senti_net[2]->params[1]);
+  // senti_net[3]->ShareParameter(2, senti_net[2]->params[2]);
 
   // Save Initial Model
   {

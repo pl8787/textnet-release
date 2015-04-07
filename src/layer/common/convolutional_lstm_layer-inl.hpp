@@ -41,10 +41,8 @@ class ConvolutionalLstmLayer : public Layer<xpu> {
                           mshadow::Random<xpu> *prnd) {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
     
-    utils::Check(bottom.size() == BottomNodeNum(),
-                  "ConvolutionalLstmLayer:bottom size problem."); 
-    utils::Check(top.size() == TopNodeNum(),
-                  "ConvolutionalLstmLayer:top size problem.");
+    utils::Check(bottom.size() == BottomNodeNum(), "ConvolutionalLstmLayer:bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(), "ConvolutionalLstmLayer:top size problem.");
                             
     pad_value = setting["pad_value"].fVal();
     num_hidden = setting["num_hidden"].iVal();
@@ -79,7 +77,6 @@ class ConvolutionalLstmLayer : public Layer<xpu> {
     this->params[1].updater_ = 
         updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].iVal(),
           b_updater, this->prnd_);
-    
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -172,8 +169,6 @@ class ConvolutionalLstmLayer : public Layer<xpu> {
         int begin = 0, end = 0;
         LocateBeginEnd(cc_rep[batch_idx][0], begin, end);
 
-        l2r_diff[batch_idx][0][end-1] += 0.f;
-        r2l_diff[batch_idx][0][begin] += 0.f;
         for (int word_idx = begin; word_idx < end; ++word_idx) {
             Tensor1D row_l2r, row_word, row_r2l, row_cc;
 
@@ -235,12 +230,6 @@ class ConvolutionalLstmLayer : public Layer<xpu> {
 
         int begin = 0, end = 0;
         LocateBeginEnd(in_data, begin, end);
-
-#if DEBUG
-        int begin_0 = 0, end_0 = 0;
-        LocateBeginEnd(in_data, begin_0, end_0);
-        utils::Assert(begin == begin_0 && end == end_0, "");
-#endif
 
         in_diff.Slice(begin, end) = dot(out_diff.Slice(begin, end), this->params[0].data_d2());
         this->params[0].diff_d2() += dot(out_diff.Slice(begin,end).T(), in_data.Slice(begin,end));
