@@ -79,6 +79,7 @@ class AccuracyLayer : public Layer<xpu>{
           bottom_data_vector.end(), std::greater<std::pair<float, int> >());
       for (int j = 0; j < topk; ++j) {
         int len = bottom1_len[i];
+        if (len == 0) len = 1; 
         for (int k = 0; k < len; ++k) {
           int lable_value = static_cast<int>(bottom1_data[i][k]);
           if (bottom_data_vector[j].second == lable_value) {

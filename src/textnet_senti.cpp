@@ -136,18 +136,23 @@ void LoadMatrix(const char *inFile, Tensor4D t) {
 void LoadModel(const string dir, string epoch, vector<Layer<cpu> *> senti_net) {
     string inFile = dir + "/word_rep." + epoch;
     LoadMatrix(inFile.c_str(), senti_net[1]->params[0].data);
-    inFile = dir + "/W_l." + epoch;
+    TensorProp prop;
+    statMatrix(senti_net[1]->params[0].data, prop);
+    cout << prop.ave << ":" << prop.max << endl;
+    inFile = dir + "/word_w_trans." + epoch;
     LoadMatrix(inFile.c_str(), senti_net[2]->params[0].data);
-    inFile = dir + "/U_l." + epoch;
-    LoadMatrix(inFile.c_str(), senti_net[2]->params[1].data);
-    inFile = dir + "/W_r." + epoch;
+    inFile = dir + "/W_l." + epoch;
     LoadMatrix(inFile.c_str(), senti_net[3]->params[0].data);
-    inFile = dir + "/U_r." + epoch;
+    inFile = dir + "/U_l." + epoch;
     LoadMatrix(inFile.c_str(), senti_net[3]->params[1].data);
-    inFile = dir + "/conv_w_trans." + epoch;
+    inFile = dir + "/W_r." + epoch;
     LoadMatrix(inFile.c_str(), senti_net[4]->params[0].data);
-    inFile = dir + "/sm_w." + epoch;
-    LoadMatrix(inFile.c_str(), senti_net[6]->params[0].data);
+    inFile = dir + "/U_r." + epoch;
+    LoadMatrix(inFile.c_str(), senti_net[4]->params[1].data);
+    inFile = dir + "/conv_w_trans." + epoch;
+    LoadMatrix(inFile.c_str(), senti_net[5]->params[0].data);
+    inFile = dir + "/sm_w_trans." + epoch;
+    LoadMatrix(inFile.c_str(), senti_net[9]->params[0].data);
 }
 
 struct EvalRet {
@@ -192,7 +197,7 @@ int main(int argc, char *argv[]) {
   float ADA_GRAD_EPS = 0.01;
   float decay = 0.0;
   float l2 = 0.000001f;
-  float pad_value = (float)(NAN);
+  // float pad_value = (float)(NAN);
 
   // string train_data_file = "/home/wsx/dl.shengxian/data/simulation/lstm.train";
   // string valid_data_file = "/home/wsx/dl.shengxian/data/simulation/lstm.test";
@@ -201,8 +206,8 @@ int main(int argc, char *argv[]) {
   // int nTrain = 6, nValid = 7, nTest = 7;
   
   string train_data_file = "/home/wsx/dl.shengxian/data/mr/lstm.train.nopad";
-  string valid_data_file = "/home/wsx/dl.shengxian/data/mr/lstm.test.nopad";
-  string test_data_file = "/home/wsx/dl.shengxian/data/mr/lstm.dev.nopad";
+  string valid_data_file = "/home/wsx/dl.shengxian/data/mr/lstm.dev.nopad";
+  string test_data_file = "/home/wsx/dl.shengxian/data/mr/lstm.test.nopad";
   string embedding_file = "/home/wsx/dl.shengxian/data/mr/word_rep_w2v.plpl"; 
   int nTrain = 8528, nValid = 1067, nTest = 1067;
 
@@ -228,14 +233,16 @@ int main(int argc, char *argv[]) {
   senti_net[senti_net.size()-1]->layer_name = "text";
   senti_net.push_back(CreateLayer<cpu>(kEmbedding));
   senti_net[senti_net.size()-1]->layer_name = "embedding";
+  senti_net.push_back(CreateLayer<cpu>(kSequenceDimReduction));
+  senti_net[senti_net.size()-1]->layer_name = "word_dim_reduction";
   senti_net.push_back(CreateLayer<cpu>(kLstm));
   senti_net[senti_net.size()-1]->layer_name = "l_lstm";
   senti_net.push_back(CreateLayer<cpu>(kLstm));
   senti_net[senti_net.size()-1]->layer_name = "r_lstm";
-  senti_net.push_back(CreateLayer<cpu>(kFullConnect));
-  senti_net[senti_net.size()-1]->layer_name = "word_dim_reduction";
   senti_net.push_back(CreateLayer<cpu>(kConvolutionalLstm));
   senti_net[senti_net.size()-1]->layer_name = "conv_lstm";
+  senti_net.push_back(CreateLayer<cpu>(kRectifiedLinear));
+  senti_net[senti_net.size()-1]->layer_name = "activation";
   senti_net.push_back(CreateLayer<cpu>(kWholePooling));
   senti_net[senti_net.size()-1]->layer_name = "wholepooling";
   senti_net.push_back(CreateLayer<cpu>(kDropout));
@@ -273,8 +280,12 @@ int main(int argc, char *argv[]) {
         senti_net[0]->top_nodes.push_back(nodes[0]->node_name);
         senti_net[0]->top_nodes.push_back(nodes[1]->node_name);
         inc_node += senti_net[i]->TopNodeNum();
-    } else if (senti_net[i]->layer_name == "r_lstm") {
+    } else if (senti_net[i]->layer_name == "l_lstm") {
         senti_net[i]->bottom_nodes.push_back(nodes[inc_node-2]->node_name);
+        senti_net[i]->top_nodes.push_back(nodes[inc_node]->node_name);
+        inc_node += senti_net[i]->TopNodeNum();
+    } else if (senti_net[i]->layer_name == "r_lstm") {
+        senti_net[i]->bottom_nodes.push_back(nodes[inc_node-3]->node_name);
         senti_net[i]->top_nodes.push_back(nodes[inc_node]->node_name);
         inc_node += senti_net[i]->TopNodeNum();
     } else if (senti_net[i]->layer_name == "conv_lstm") {
@@ -301,8 +312,10 @@ int main(int argc, char *argv[]) {
     // connect by node memory
     if (i == 0) {
       continue;
-    } else if (senti_net[i]->layer_name == "r_lstm") {
+    } else if (senti_net[i]->layer_name == "l_lstm") {
       bottom_vecs[i].push_back(top_vecs[i-2][0]);
+    } else if (senti_net[i]->layer_name == "r_lstm") {
+      bottom_vecs[i].push_back(top_vecs[i-3][0]);
     } else if (senti_net[i]->layer_name == "conv_lstm") {
       bottom_vecs[i].push_back(top_vecs[i-2][0]);
       bottom_vecs[i].push_back(top_vecs[i-3][0]);
@@ -353,7 +366,7 @@ int main(int argc, char *argv[]) {
     setting["embedding_file"] = SettingV(embedding_file);
     setting["word_count"] = SettingV(vocab_size);
     setting["feat_size"] = SettingV(word_rep_dim);
-    setting["pad_value"] = SettingV(pad_value);
+    // setting["pad_value"] = SettingV(pad_value);
       
     map<string, SettingV> &w_setting = *(new map<string, SettingV>());
       w_setting["init_type"] = SettingV(initializer::kUniform);
@@ -366,13 +379,29 @@ int main(int argc, char *argv[]) {
     setting["w_updater"] = SettingV(&w_updater);
     setting_vec.push_back(setting);
   }
+  // kSequenceDimReduction
+  {
+    map<string, SettingV> setting;
+    setting["num_hidden"] = SettingV(lstm_hidden_dim);
+      
+    map<string, SettingV> &w_filler = *(new map<string, SettingV>());
+      w_filler["init_type"] = SettingV(initializer::kUniform);
+      w_filler["range"] = SettingV(init_interval);
+    setting["w_filler"] = SettingV(&w_filler);
+
+    map<string, SettingV> &w_updater = *(new map<string, SettingV>());
+    w_updater = g_updater;
+    setting["w_updater"] = SettingV(&w_updater);
+    
+    setting_vec.push_back(setting);
+  }
   // kLstm
   {
     map<string, SettingV> setting;
     setting["d_input"] = SettingV(word_rep_dim);
     setting["d_mem"] = SettingV(lstm_hidden_dim);
     setting["no_bias"] = SettingV(true);
-    setting["pad_value"] = SettingV(pad_value);
+    // setting["pad_value"] = SettingV(pad_value);
       
     map<string, SettingV> &w_filler = *(new map<string, SettingV>());
       w_filler["init_type"] = SettingV(initializer::kUniform);
@@ -397,7 +426,7 @@ int main(int argc, char *argv[]) {
     setting["d_input"] = SettingV(word_rep_dim);
     setting["d_mem"] = SettingV(lstm_hidden_dim);
     setting["no_bias"] = SettingV(true);
-    setting["pad_value"] = SettingV(pad_value);
+    // setting["pad_value"] = SettingV(pad_value);
     setting["reverse"] = SettingV(true);
 
     map<string, SettingV> &w_filler = *(new map<string, SettingV>());
@@ -424,7 +453,7 @@ int main(int argc, char *argv[]) {
     setting["num_hidden"] = SettingV(lstm_hidden_dim);
     setting["no_bias"] = SettingV(true);
     setting["nonlinear_type"] = SettingV("rectifier");
-    setting["pad_value"] = SettingV(pad_value);
+    // setting["pad_value"] = SettingV(pad_value);
       
     map<string, SettingV> &w_filler = *(new map<string, SettingV>());
       w_filler["init_type"] = SettingV(initializer::kUniform);
@@ -441,6 +470,11 @@ int main(int argc, char *argv[]) {
     setting["b_updater"] = SettingV(&w_updater);
     setting_vec.push_back(setting);
 
+  }
+  // kActivation
+  {
+    map<string, SettingV> setting;
+    setting_vec.push_back(setting);
   }
   // kWholeMaxPooling
   {
@@ -542,17 +576,17 @@ int main(int argc, char *argv[]) {
   // Begin Training 
   int max_iters = 3000;
   float maxValidAcc = 0., testAccByValid = 0.;
-  LoadModel("/home/wsx/dl.shengxian/src/cpp/model/", "1", senti_net);
+  LoadModel("/home/wsx/dl.shengxian/src/cpp/model/", "0", senti_net);
   for (int iter = 0; iter < max_iters; ++iter) {
     // if (iter % 100 == 0) { cout << "iter:" << iter << endl; }
     if (iter % (nTrain/batch_size) == 0) {
-      EvalRet train_ret, valid_ret, test_ret;
-      eval(senti_net, bottom_vecs, top_vecs, (nTrain/batch_size), train_ret);
-      eval(senti_valid, bottom_vecs, top_vecs, (nValid/batch_size), valid_ret);
-      eval(senti_test,  bottom_vecs, top_vecs, (nTest/batch_size), test_ret);
+      statSentiNet(senti_net);
       ((SequenceClassificationDataLayer<cpu> *)(senti_valid[0]))->line_ptr = 0;
       ((SequenceClassificationDataLayer<cpu> *)(senti_test[0]))->line_ptr = 0;
-      statSentiNet(senti_net);
+      EvalRet train_ret, valid_ret, test_ret;
+      eval(senti_valid, bottom_vecs, top_vecs, (nValid/batch_size), valid_ret);
+      eval(senti_test,  bottom_vecs, top_vecs, (nTest/batch_size), test_ret);
+      eval(senti_net, bottom_vecs, top_vecs, (nTrain/batch_size), train_ret);
       fprintf(stdout, "****%d,%f,%f,%f,%f,%f,%f", iter, train_ret.loss, valid_ret.loss, test_ret.loss, 
                                                         train_ret.acc,  valid_ret.acc,  test_ret.acc);
       if (valid_ret.acc > maxValidAcc) {

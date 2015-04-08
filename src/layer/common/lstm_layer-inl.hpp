@@ -211,7 +211,7 @@ class LstmLayer : public Layer<xpu> {
     const index_t nbatch = bottom_data.size(0); 
     for (index_t i = 0; i < nbatch; ++i) {
         int len = bottom[0]->length[i];
-        if (reverse) {
+        if (!reverse) {
           ForwardLeft2Right(bottom_data[i][0].Slice(0,len), g[i][0].Slice(0,len), 
                             c[i][0].Slice(0,len), top_data[i][0].Slice(0,len));
         } else {

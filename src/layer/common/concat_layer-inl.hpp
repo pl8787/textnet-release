@@ -69,6 +69,7 @@ class ConcatLayer : public Layer<xpu>{
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
 
+    top[0]->length = F<op::identity>(bottom[0]->length);
     for (int i = 0; i < top[0]->data.size(0); ++i) { // for each batch
       int cnt = 0;
       mshadow::Tensor<xpu, 1> top_data = top[0]->data[i][0][0];
