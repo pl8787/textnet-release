@@ -58,9 +58,9 @@ class SequenceClassificationDataLayer : public Layer<xpu>{
     line_count = lines.size();
 	utils::Printf("Line count in file: %d\n", line_count);
 
-    data_set.Resize(mshadow::Shape4(line_count, 1, 1, max_doc_len));
-    label_set.Resize(mshadow::Shape1(line_count), 0);
-    data_set = NAN;
+    data_set.Resize(mshadow::Shape4(line_count, 1, 1, max_doc_len), 0);
+    label_set.Resize(mshadow::Shape1(line_count), -1);
+    length.Resize(mshadow::Shape1(line_count), -1);
 
     std::istringstream iss;
     for (int i = 0; i < line_count; ++i) {
@@ -72,6 +72,7 @@ class SequenceClassificationDataLayer : public Layer<xpu>{
       while (!iss.eof()) {
         iss >> data_set[i][0][0][j++];
       }
+      length[i] = j;
       utils::Check(j < max_doc_len, "SequenceClassificationDataLayer: doc length error.");
     }
   }
@@ -91,9 +92,11 @@ class SequenceClassificationDataLayer : public Layer<xpu>{
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 1> top0_data = top[0]->data_d1();
     mshadow::Tensor<xpu, 4> top1_data = top[1]->data;
+    mshadow::Tensor<xpu, 1> top1_length = top[1]->length;
     for (int i = 0; i < batch_size; ++i) {
       top0_data[i] = label_set[line_ptr];
       top1_data[i] = F<op::identity>(data_set[line_ptr]);
+      top1_length[i] = length[line_ptr];
       line_ptr = (line_ptr + 1) % line_count;
     }
   }
@@ -103,12 +106,13 @@ class SequenceClassificationDataLayer : public Layer<xpu>{
     using namespace mshadow::expr;
   }
 
- protected:
+ public:
   std::string data_file;
   int batch_size;
   int max_doc_len;
   mshadow::TensorContainer<xpu, 4> data_set;
   mshadow::TensorContainer<xpu, 1> label_set;
+  mshadow::TensorContainer<xpu, 1, int> length;
   int line_count;
   int line_ptr;
 };

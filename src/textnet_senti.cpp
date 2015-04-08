@@ -15,6 +15,7 @@
 #include "global.h"
 #include <cassert>
 #include "./checker/checker.h"
+#include "./layer/input/sequence_classification_data_layer-inl.hpp"
 
 
 using namespace std;
@@ -75,6 +76,80 @@ void PrintTensor(const char * name, Tensor<cpu, 4> x) {
     cout << endl;
 }
 
+typedef mshadow::Tensor<cpu, 1> Tensor1D;
+typedef mshadow::Tensor<cpu, 2> Tensor2D;
+typedef mshadow::Tensor<cpu, 3> Tensor3D;
+typedef mshadow::Tensor<cpu, 4> Tensor4D;
+
+struct TensorProp{
+  float ave, var, max;
+  void clear() {
+    ave = 0.f; var = 0.f; max = 0.f;
+  }
+};
+
+void statMatrix(Tensor4D t, TensorProp &prop) {
+    int num = t.size(0) * t.size(1) * t.size(2) * t.size(3);
+    prop.clear();
+    for (int i = 0; i < num; ++i) {
+        float x = t.dptr_[i];
+        if (x < 0.f) {
+            x = -x;
+        }
+
+        prop.ave += x;
+        if (prop.max < x)
+          prop.max = x;
+    }
+    prop.ave /= float(num);
+}
+
+void statSentiNet(vector<Layer<cpu> *> &senti_net) {
+    for (int i = 0; i < senti_net.size(); ++i) {
+        for (int j = 0; j < senti_net[i]->ParamNodeNum(); ++j) {
+            cout << "STAT PARAMETER:" << senti_net[i]->layer_name << ":" << j << ":";
+            TensorProp prop;
+            statMatrix(senti_net[i]->params[j].data, prop);
+            cout << prop.ave << "," << prop.max << endl;
+        }
+    }
+}
+
+void LoadMatrix(const char *inFile, Tensor4D t) {
+    ifstream ifs(inFile);
+    int m = -1, n = -1;
+    ifs >> m >> n;
+    if (t.size(0) == 1) {
+        if (!(t.size(1) == 1)) { cout << "matrix error"; assert(false); exit(1);}
+        if (!(t.size(2) == m)) { cout << "matrix error"; assert(false); exit(1);}
+        if (!(t.size(3) == n)) { cout << "matrix error"; assert(false); exit(1);}
+    } else {
+        if (!(t.size(0) == m)) { cout << "matrix error"; assert(false); exit(1);}
+        if (!(t.size(1) == n)) { cout << "matrix error"; assert(false); exit(1);}
+        if (!(t.size(2) == 1)) { cout << "matrix error"; assert(false); exit(1);}
+        if (!(t.size(3) == 1)) { cout << "matrix error"; assert(false); exit(1);}
+    }
+    for (int i = 0; i < m * n; ++i) {
+        ifs >> t.dptr_[i];
+    }
+}
+void LoadModel(const string dir, string epoch, vector<Layer<cpu> *> senti_net) {
+    string inFile = dir + "/word_rep." + epoch;
+    LoadMatrix(inFile.c_str(), senti_net[1]->params[0].data);
+    inFile = dir + "/W_l." + epoch;
+    LoadMatrix(inFile.c_str(), senti_net[2]->params[0].data);
+    inFile = dir + "/U_l." + epoch;
+    LoadMatrix(inFile.c_str(), senti_net[2]->params[1].data);
+    inFile = dir + "/W_r." + epoch;
+    LoadMatrix(inFile.c_str(), senti_net[3]->params[0].data);
+    inFile = dir + "/U_r." + epoch;
+    LoadMatrix(inFile.c_str(), senti_net[3]->params[1].data);
+    inFile = dir + "/conv_w_trans." + epoch;
+    LoadMatrix(inFile.c_str(), senti_net[4]->params[0].data);
+    inFile = dir + "/sm_w." + epoch;
+    LoadMatrix(inFile.c_str(), senti_net[6]->params[0].data);
+}
+
 struct EvalRet {
     float acc, loss;
     EvalRet(): acc(0.), loss(0.) {}
@@ -110,7 +185,7 @@ int main(int argc, char *argv[]) {
   int max_doc_len = 200;
   int min_doc_len = 1;
   int batch_size = 50;
-  int vocab_size = 100000;
+  int vocab_size = 18766;
   int num_class = 2;
   int ADA_GRAD_MAX_ITER = 1000000;
   float base_lr = 0.1;
@@ -126,8 +201,8 @@ int main(int argc, char *argv[]) {
   // int nTrain = 6, nValid = 7, nTest = 7;
   
   string train_data_file = "/home/wsx/dl.shengxian/data/mr/lstm.train.nopad";
-  string valid_data_file = "/home/wsx/dl.shengxian/data/mr/lstm.dev.nopad";
-  string test_data_file = "/home/wsx/dl.shengxian/data/mr/lstm.test.nopad";
+  string valid_data_file = "/home/wsx/dl.shengxian/data/mr/lstm.test.nopad";
+  string test_data_file = "/home/wsx/dl.shengxian/data/mr/lstm.dev.nopad";
   string embedding_file = "/home/wsx/dl.shengxian/data/mr/word_rep_w2v.plpl"; 
   int nTrain = 8528, nValid = 1067, nTest = 1067;
 
@@ -139,6 +214,7 @@ int main(int argc, char *argv[]) {
   g_updater["updater_type"] = SettingV(updater::kAdaDelta);
   // g_updater["batch_size"] = SettingV(batch_size);
   g_updater["l2"] = SettingV(l2);
+  // g_updater["batch_size"] = SettingV(1);
   g_updater["batch_size"] = SettingV(1);
   // g_updater["max_iter"] = SettingV(ADA_GRAD_MAX_ITER);
   // g_updater["eps"] = SettingV(ADA_GRAD_EPS);
@@ -156,6 +232,8 @@ int main(int argc, char *argv[]) {
   senti_net[senti_net.size()-1]->layer_name = "l_lstm";
   senti_net.push_back(CreateLayer<cpu>(kLstm));
   senti_net[senti_net.size()-1]->layer_name = "r_lstm";
+  senti_net.push_back(CreateLayer<cpu>(kFullConnect));
+  senti_net[senti_net.size()-1]->layer_name = "word_dim_reduction";
   senti_net.push_back(CreateLayer<cpu>(kConvolutionalLstm));
   senti_net[senti_net.size()-1]->layer_name = "conv_lstm";
   senti_net.push_back(CreateLayer<cpu>(kWholePooling));
@@ -447,13 +525,13 @@ int main(int argc, char *argv[]) {
   _of.close();
   }
 
-  using namespace checker;
-  Checker<cpu> * cker = CreateChecker<cpu>();
-  map<string, SettingV> setting_checker;
-  setting_checker["range_min"] = SettingV(-0.1f);
-  setting_checker["range_max"] = SettingV(0.1f);
-  setting_checker["delta"] = SettingV(0.0001f);
-  cker->SetupChecker(setting_checker, &rnd);
+  // using namespace checker;
+  // Checker<cpu> * cker = CreateChecker<cpu>();
+  // map<string, SettingV> setting_checker;
+  // setting_checker["range_min"] = SettingV(-0.1f);
+  // setting_checker["range_max"] = SettingV(0.1f);
+  // setting_checker["delta"] = SettingV(0.0001f);
+  // cker->SetupChecker(setting_checker, &rnd);
   // check gradient, uncheck last two layers (softmax and accuracy)
   // for (index_t i = 0; i < senti_net.size()-2; ++i) {
   //   cout << "Check gradient of layer " << i << endl;
@@ -464,6 +542,7 @@ int main(int argc, char *argv[]) {
   // Begin Training 
   int max_iters = 3000;
   float maxValidAcc = 0., testAccByValid = 0.;
+  LoadModel("/home/wsx/dl.shengxian/src/cpp/model/", "1", senti_net);
   for (int iter = 0; iter < max_iters; ++iter) {
     // if (iter % 100 == 0) { cout << "iter:" << iter << endl; }
     if (iter % (nTrain/batch_size) == 0) {
@@ -471,6 +550,9 @@ int main(int argc, char *argv[]) {
       eval(senti_net, bottom_vecs, top_vecs, (nTrain/batch_size), train_ret);
       eval(senti_valid, bottom_vecs, top_vecs, (nValid/batch_size), valid_ret);
       eval(senti_test,  bottom_vecs, top_vecs, (nTest/batch_size), test_ret);
+      ((SequenceClassificationDataLayer<cpu> *)(senti_valid[0]))->line_ptr = 0;
+      ((SequenceClassificationDataLayer<cpu> *)(senti_test[0]))->line_ptr = 0;
+      statSentiNet(senti_net);
       fprintf(stdout, "****%d,%f,%f,%f,%f,%f,%f", iter, train_ret.loss, valid_ret.loss, test_ret.loss, 
                                                         train_ret.acc,  valid_ret.acc,  test_ret.acc);
       if (valid_ret.acc > maxValidAcc) {

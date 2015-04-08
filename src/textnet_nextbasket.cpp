@@ -108,18 +108,17 @@ int main(int argc, char *argv[]) {
     setvbuf(stdout, NULL, _IOLBF, 0);
   }
 
-  bool no_bias = false;
+  bool no_bias = true;
   float l2 = 0.f;
   int max_session_len = 300;
   int context_window = 1;
   int min_doc_len = 1;
-  int batch_size = 1;
+  int batch_size = 10;
   int word_rep_dim = 50;
   int num_hidden = (context_window+1) * word_rep_dim;
   int num_item = 7973;
   int num_user = 2265;
   int num_class = num_item;
-  int ADA_GRAD_MAX_ITER = 1000000;
   float base_lr = 0.1;
   float ADA_GRAD_EPS = 0.1;
   float decay = 0.00;
@@ -127,8 +126,10 @@ int main(int argc, char *argv[]) {
   int nTrainPred = num_user;// nValid = 7, nTest = 7;
   int nValid = num_user;// nValid = 7, nTest = 7;
   int nTest = num_user; // nValid = 7, nTest = 7;
-  int max_iter = (10*nTrain)/(batch_size);
+  int max_iter = (20*nTrain)/(batch_size);
   int iter_eval = (nTrain/batch_size)/20;
+  int ADA_GRAD_MAX_ITER = 1000000;
+  // int ADA_GRAD_MAX_ITER = nTrain/batch_size;
 
   string train_data_file = "/home/wsx/dl.shengxian/data/pengfei/tafeng_sub.textnet.train.1";
   string train_pred_data_file = "/home/wsx/dl.shengxian/data/pengfei/tafeng_sub.textnet.train_pred.1";
@@ -146,7 +147,7 @@ int main(int argc, char *argv[]) {
   g_updater["updater_type"] = SettingV(updater::kAdagrad);
   g_updater["batch_size"] = SettingV(batch_size);
   g_updater["l2"] = SettingV(l2);
-  // g_updater["max_iter"] = SettingV(ADA_GRAD_MAX_ITER);
+  g_updater["max_iter"] = SettingV(ADA_GRAD_MAX_ITER);
   g_updater["eps"] = SettingV(ADA_GRAD_EPS);
   g_updater["lr"] = SettingV(base_lr);
   // g_updater["decay"] = SettingV(decay);  

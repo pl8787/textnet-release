@@ -292,6 +292,61 @@ void TestPoolLayer(mshadow::Random<cpu>* prnd) {
 
 }
 
+void TestSequenceDimReductionLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Sequence Dim Reduction Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(2,1,5,4), true);
+  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+  
+  map<string, SettingV> setting;
+  {
+    setting["num_hidden"] = SettingV(3);
+      
+    map<string, SettingV> &w_filler = *(new map<string, SettingV>());
+      w_filler["init_type"] = SettingV(initializer::kUniform);
+      w_filler["range"] = SettingV(0.01f);
+    setting["w_filler"] = SettingV(&w_filler);
+
+      
+    map<string, SettingV> &w_updater = *(new map<string, SettingV>());
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["eps"] = SettingV(0.01f);
+      w_updater["batch_size"] = SettingV(1);
+      w_updater["mat_iter"] = SettingV(10000);
+      w_updater["lr"] = SettingV(0.1f);
+    setting["w_updater"] = SettingV(&w_updater);
+  }
+
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer = CreateLayer<cpu>(kSequenceDimReduction);
+  layer->PropAll();
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.001f);
+  setting_checker["range_max"] = SettingV(0.001f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer, bottoms, tops);
+
+  cout << "Check Grad." << endl;
+  cker->CheckGrad(layer, bottoms, tops);
+}
+
+
+
 void TestLstmLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Lstm Layer." << endl;
   Node<cpu> bottom;
@@ -782,7 +837,8 @@ int main(int argc, char *argv[]) {
   // TestCrossLayer(&rnd);
   //TestDropoutLayer(&rnd);
   // TestLstmLayer(&rnd);
-  TestConvolutionalLstmLayer(&rnd);
+  // TestConvolutionalLstmLayer(&rnd);
+  TestSequenceDimReductionLayer(&rnd);
   // TestWholePoolingLayer(&rnd);
   // TestConcatLayer(&rnd);
   //TestHingeLossLayer(&rnd);

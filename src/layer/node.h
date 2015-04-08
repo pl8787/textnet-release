@@ -24,6 +24,8 @@ struct Node {
   mshadow::TensorContainer<xpu, 4> diff;
   // store the Node idx, if node is sparse
   mshadow::TensorContainer<xpu, 1> idx;
+  // store sentence lenth
+  mshadow::TensorContainer<xpu, 1> length;
   // to show whether Node has sparse diff
   bool is_sparse;
   // always true
@@ -54,6 +56,8 @@ struct Node {
     inited_diff = false;
     is_share = false;
 	is_sparse = false;
+	updater_ = NULL;
+    initializer_ = NULL;
   }
   
   inline void FreeSpace(void) {
@@ -75,6 +79,7 @@ struct Node {
 
   // Clear Data data 
   void ClearData(void) {
+    if (is_share) return;
 	utils::Check(inited_data, "Must init data before clear.");
 	if (!inited_data) return;
 	data = 0.f;
@@ -82,6 +87,7 @@ struct Node {
 
   // Clear Diff data
   void ClearDiff(void) {
+    if (is_share) return;
 	utils::Check(inited_diff || !need_diff, "Must init diff before clear.");
 	if (!inited_diff && need_diff) return;
     if (is_sparse) {
@@ -100,6 +106,7 @@ struct Node {
     data = other.data;
     diff = other.diff;
     idx  = other.idx;
+    length  = other.length;
     must_contiguous = other.must_contiguous;
     inited_data = false; // main node take charge of this
     inited_diff = false; // main node take charge of this
@@ -117,6 +124,7 @@ struct Node {
       // do nothing
     } else if (init) {
       data.Resize(new_size, 0.0);
+      length.Resize(mshadow::Shape1(d1), 0.0);
       inited_data = true;
       if (need_diff) {
         diff.Resize(new_size, 0.0);
@@ -124,6 +132,7 @@ struct Node {
       }
     } else {
       data.Resize(new_size);
+      length.Resize(mshadow::Shape1(d1));
       inited_data = true;
       if (need_diff) {
         diff.Resize(new_size);
@@ -137,6 +146,7 @@ struct Node {
       // do nothing
     } else if (init) {
       data.Resize(new_size, 0.0);
+      length.Resize(mshadow::Shape1(new_size[0]), 0.0);
       inited_data = true;
       if (need_diff) {
         diff.Resize(new_size, 0.0);
@@ -144,6 +154,7 @@ struct Node {
       }
     } else {
       data.Resize(new_size);
+      length.Resize(mshadow::Shape1(new_size[0]));
       inited_data = true;
       if (need_diff) {
         diff.Resize(new_size);
@@ -170,10 +181,21 @@ struct Node {
     return mshadow::Tensor<xpu, 2>(data.dptr_, mshadow::Shape2(s[0], ymax));
   }
 
+  inline mshadow::Tensor<xpu, 2> data_d2_reverse() {
+    mshadow::Shape<4> s = data.shape_;
+    index_t  xmax = s[0]*s[1]*s[2];
+    return mshadow::Tensor<xpu, 2>(data.dptr_, mshadow::Shape2(xmax, s[3]));
+  }
+
   inline mshadow::Tensor<xpu, 2> diff_d2() {
     mshadow::Shape<4> s = diff.shape_;
     index_t  ymax = s[1]*s[2]*s[3];
     return mshadow::Tensor<xpu, 2>(diff.dptr_, mshadow::Shape2(s[0], ymax));
+  }
+  inline mshadow::Tensor<xpu, 2> diff_d2_reverse() {
+    mshadow::Shape<4> s = diff.shape_;
+    index_t  xmax = s[0]*s[1]*s[2];
+    return mshadow::Tensor<xpu, 2>(diff.dptr_, mshadow::Shape2(xmax, s[3]));
   }
  
   inline mshadow::Tensor<xpu, 3> data_d3() {
@@ -205,6 +227,55 @@ struct Node {
         updater_->Update(data, diff);
       }
     }
+  }
+  void sparseAdd(mshadow::TensorContainer<xpu, 4> &l_data, 
+                 mshadow::TensorContainer<xpu, 1> &l_idx, 
+                 mshadow::TensorContainer<xpu, 4> &r_data, 
+                 mshadow::TensorContainer<xpu, 1> &r_idx,
+                 mshadow::TensorContainer<xpu, 4> &merge_data,
+                 mshadow::TensorContainer<xpu, 1> &merge_idx) {
+    utils::Assert(l_data.size(2) == 1 && r_data.size(2) == 1, "Merge Sparse Tensor: size problem");
+    utils::Assert(l_data.size(3) == 1 && r_data.size(3) == 1, "Merge Sparse Tensor: size problem");
+    utils::Assert(l_data.size(1) == r_data.size(1), "Merge Sparse Tensor: size problem");
+
+    std::map<int, int> idx_map;
+    int inc = 0;
+    for (int i = 0; i < l_idx.size(0); ++i) {
+      int w_idx = l_idx[i];
+      if (!idx_map.count(w_idx)) {
+        idx_map[w_idx] = inc++;
+      }
+    }
+    for (int i = 0; i < r_idx.size(0); ++i) {
+      int w_idx = r_idx[i];
+      if (!idx_map.count(w_idx)) {
+        idx_map[w_idx] = inc++;
+      }
+    }
+
+    int feat_size = l_data.size(1);
+    merge_data.Resize(mshadow::Shape4(inc, feat_size, 1, 1), 0);
+    merge_idx.Resize(mshadow::Shape1(inc), 0);
+    for (std::map<int,int>::iterator it=idx_map.begin(); it!=idx_map.end(); ++it) {
+      merge_idx[it->second] = it->first;
+    }
+    for (int i = 0; i < l_data.size(0); ++i) {
+      merge_data[idx_map[l_idx[i]]] += l_data[i];
+    }
+    for (int i = 0; i < r_data.size(0); ++i) {
+      merge_data[idx_map[r_idx[i]]] += r_data[i];
+    }
+  }
+
+  void sparseAdd2Left(mshadow::TensorContainer<xpu, 4> &l_data, 
+                      mshadow::TensorContainer<xpu, 1> &l_idx, 
+                      mshadow::TensorContainer<xpu, 4> &r_data, 
+                      mshadow::TensorContainer<xpu, 1> &r_idx) {
+    mshadow::TensorContainer<xpu, 4> merge_data;
+    mshadow::TensorContainer<xpu, 1> merge_idx;
+    sparseAdd(l_data, l_idx, r_data, r_idx, merge_data, merge_idx);
+    l_data = merge_data;
+    l_idx  = merge_idx;
   }
 
 }; // struct Node
