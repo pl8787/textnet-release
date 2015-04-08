@@ -1,7 +1,7 @@
 #ifndef TEXTNET_NET_NET_H_
 #define TEXTNET_NET_NET_H_
 
-#define DEBUG 1
+#define DEBUG 0
 
 #include <iostream>
 #include <sstream>
@@ -254,6 +254,32 @@ class Net {
         top_vecs[i].push_back(nodes[node_name]);
       }
     }
+
+	// ******** Cope with param sharing ********
+	utils::Printf("[Process] Add Params Sharing.\n");
+
+	for (int i = 0; i < layers_root.size(); ++i) {
+	  Json::Value &layer_root = layers_root[i];
+	  Json::Value &shares_root = layer_root["share"];
+	  if (!shares_root.isNull()) {
+		for (int j = 0; j < shares_root.size(); ++j) {
+		  Json::Value &share_root = shares_root[j];
+		  string target_layer_name = layer_root["layer_name"].asString();
+		  string source_layer_name = share_root["source_layer_name"].asString();
+          int target_param_id = share_root["param_id"].asInt();
+		  int source_param_id = share_root["source_param_id"].asInt();
+
+    //      name2layer[target_layer_name]->ShareParameter(target_param_id,
+	//			name2layer[source_layer_name]->GetParams()[source_param_id]);
+
+		  utils::Printf("\t%s.param[%d] === %s.param[%d]\n", 
+				target_layer_name.c_str(),
+				target_param_id,
+				source_layer_name.c_str(),
+				source_param_id);
+	    }
+	  }
+	}
   }
 
   virtual void PropAll() {

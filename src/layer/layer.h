@@ -123,8 +123,8 @@ class Layer {
 
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) = 0;
-
-  // orc clear all top nodes diff and paramters diff
+  
+  // clear all top nodes diff and paramters diff
   virtual void ClearDiff(const std::vector<Node<xpu>*> &bottom,
                          const std::vector<Node<xpu>*> &top) {
     for (int i = 0; i < params.size(); ++i) {
@@ -134,10 +134,6 @@ class Layer {
         top[i]->ClearDiff();
     }
   }
-  // orc for parameter sharing
-  virtual void ShareParameter(int param_idx, const Node<xpu> &other) {
-      params[param_idx].Share(other);
-  }
 
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
                         const std::vector<Node<xpu>*> &top) = 0;
@@ -146,6 +142,14 @@ class Layer {
   virtual int TopNodeNum() = 0;
 
   virtual int ParamNodeNum() = 0;
+
+  // parameter sharing
+  virtual void ShareParameter(int param_idx, const Node<xpu> &other) {
+	  utils::Check(param_idx < params.size(), 
+			  "Share param index extend params size.");
+      params[param_idx].Share(other);
+  }
+
 
   void SaveSetting(std::map<std::string, SettingV> &setting, Json::Value &root) {
     for (std::map<std::string, SettingV>::iterator it = setting.begin(); 

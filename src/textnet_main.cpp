@@ -75,7 +75,7 @@ void PrintTensor(const char * name, Tensor<cpu, 4> x) {
 }
 
 int main(int argc, char *argv[]) {
-  string model_file = "model/matching_global.model";
+  string model_file = "model/matching_share.model";
   if (argc > 1) {
     model_file = string(argv[1]);
   }

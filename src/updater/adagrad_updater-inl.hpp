@@ -14,7 +14,6 @@ class AdagradUpdater : public Updater<xpu, dim>{
   AdagradUpdater(std::map<std::string, SettingV> &setting, 
                       mshadow::Random<xpu>* prnd) {
     this->prnd_ = prnd;
-	this->is_sparse = false;
     SetupUpdater(setting);
   }
   virtual ~AdagradUpdater(void) {}

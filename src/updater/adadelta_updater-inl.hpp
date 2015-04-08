@@ -14,7 +14,6 @@ class AdaDeltaUpdater : public Updater<xpu, dim>{
   AdaDeltaUpdater(std::map<std::string, SettingV> &setting, 
                       mshadow::Random<xpu>* prnd) {
     this->prnd_ = prnd;
-	this->is_sparse = false;
     SetupUpdater(setting);
   }
   virtual ~AdaDeltaUpdater(void) {}

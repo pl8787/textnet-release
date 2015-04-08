@@ -56,6 +56,7 @@ class EmbeddingLayer : public Layer<xpu>{
     this->params.resize(1);
     // No need allocate diff memory
     this->params[0].need_diff = false;
+	this->params[0].is_sparse = true;
     this->params[0].Resize(word_count, feat_size, 1, 1);
     
     std::map<std::string, SettingV> w_setting = *setting["w_filler"].mVal();
@@ -69,7 +70,6 @@ class EmbeddingLayer : public Layer<xpu>{
     this->params[0].updater_ = 
         updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].iVal(),
           w_updater, this->prnd_);
-    this->params[0].updater_->is_sparse = true;          
     
     // Check if embedding file is empty
     if(!embedding_file.empty()) {
