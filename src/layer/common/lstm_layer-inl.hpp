@@ -115,25 +115,6 @@ class LstmLayer : public Layer<xpu> {
     g_er.Resize(shape_gate, 0.f);
   }
 
-  void LocateBeginEnd(mshadow::Tensor<xpu, 2> seq, 
-                      int &begin, int &end) { // input a 2D tensor, out put a sub 2d tensor, with 0 padding
-    begin = seq.size(0);
-    for (int i = 0; i < seq.size(0); ++i) {
-      if (!isnan(seq[i][0])) { // the first number
-          begin = i;
-          break;
-      }
-    }
-    end = seq.size(0);
-    for (int i = begin; i < seq.size(0); ++i) {
-      if (isnan(seq[i][0])) { // the first NAN
-          end = i;
-          break;
-      }
-    }
-    utils::Check(begin < end && begin >= 0, "LstmLayer: input error."); 
-  }
-
   void checkNan(float *p, int l) {
       for (int i = 0; i < l; ++i) {
           assert(!isnan(p[i]));
@@ -178,8 +159,7 @@ class LstmLayer : public Layer<xpu> {
   }
 
   void ForwardLeft2Right(Tensor2D in, Tensor2D g, Tensor2D c, Tensor2D out) {
-      int begin = 0, end = 0;
-      LocateBeginEnd(in, begin, end);
+      int begin = 0, end = in.size(0);
       Tensor2D pre_c, pre_h;
       // not need any padding, begin h and c are set to 0
       for (index_t row_idx = begin; row_idx < end; ++row_idx) {
@@ -199,9 +179,7 @@ class LstmLayer : public Layer<xpu> {
       }
   }
   void ForwardRight2Left(Tensor2D in, Tensor2D g, Tensor2D c, Tensor2D out) {
-      int begin = 0, end = 0;
-      LocateBeginEnd(in, begin, end);
-      assert(begin >= 0 && begin < end);
+      int begin = 0, end = in.size(0);
       Tensor2D pre_c, pre_h;
       // not need any padding, begin h and c are set to 0
       for (int row_idx = end-1; row_idx >= begin; --row_idx) {
@@ -228,13 +206,17 @@ class LstmLayer : public Layer<xpu> {
 #endif
     Tensor4D bottom_data = bottom[0]->data;
     Tensor4D top_data = top[0]->data;
-    top_data = NAN; c = NAN, g = NAN; c_er = NAN; g_er = NAN;
+    top[0]->length = mshadow::expr::F<op::identity>(bottom[0]->length);
+    top_data = 0.f; c = 0.f, g = 0.f; c_er = 0.f; g_er = 0.f;
     const index_t nbatch = bottom_data.size(0); 
     for (index_t i = 0; i < nbatch; ++i) {
+        int len = bottom[0]->length[i];
         if (reverse) {
-          ForwardLeft2Right(bottom_data[i][0], g[i][0], c[i][0], top_data[i][0]);
+          ForwardLeft2Right(bottom_data[i][0].Slice(0,len), g[i][0].Slice(0,len), 
+                            c[i][0].Slice(0,len), top_data[i][0].Slice(0,len));
         } else {
-          ForwardRight2Left(bottom_data[i][0], g[i][0], c[i][0], top_data[i][0]);
+          ForwardRight2Left(bottom_data[i][0].Slice(0,len), g[i][0].Slice(0,len), 
+                            c[i][0].Slice(0,len), top_data[i][0].Slice(0,len));
         }
     }
 #if DEBUG
@@ -304,8 +286,7 @@ class LstmLayer : public Layer<xpu> {
                                  Tensor2D c, Tensor2D c_er, 
                                  Tensor2D g, Tensor2D g_er, 
                                  Tensor2D bottom_data, Tensor2D bottom_diff) {
-      int begin = 0, end = 0;
-      LocateBeginEnd(bottom_data, begin, end);
+      int begin = 0, end = top_data.size(0);
 
       Tensor2D pre_c, pre_h, pre_c_er, pre_h_er;
       for (int row_idx = end-1; row_idx >= begin; --row_idx) {
@@ -338,8 +319,7 @@ class LstmLayer : public Layer<xpu> {
                                  Tensor2D c, Tensor2D c_er, 
                                  Tensor2D g, Tensor2D g_er, 
                                  Tensor2D bottom_data, Tensor2D bottom_diff) {
-      int begin = 0, end = 0;
-      LocateBeginEnd(bottom_data, begin, end);
+      int begin = 0, end = top_data.size(0);
 
       Tensor2D pre_c, pre_h, pre_c_er, pre_h_er;
       for (int row_idx = begin; row_idx < end; ++row_idx) {
@@ -385,12 +365,17 @@ class LstmLayer : public Layer<xpu> {
     begin_c_er = 0.; begin_h_er = 0.; g_er = 0.; c_er = 0.;
 
     for (index_t i = 0; i < nbatch; ++i) {
+        int len = bottom[0]->length[i];
         if (!reverse) {
-            BackpropForLeft2RightLstm(top_data[i][0], top_diff[i][0], c[i][0], c_er[i][0],
-                                      g[i][0], g_er[i][0], bottom_data[i][0], bottom_diff[i][0]);
+            BackpropForLeft2RightLstm(top_data[i][0].Slice(0,len), top_diff[i][0].Slice(0,len), 
+                                      c[i][0].Slice(0,len), c_er[i][0].Slice(0,len),
+                                      g[i][0].Slice(0,len), g_er[i][0].Slice(0,len), 
+                                      bottom_data[i][0].Slice(0,len), bottom_diff[i][0].Slice(0,len));
         } else {
-            BackpropForRight2LeftLstm(top_data[i][0], top_diff[i][0], c[i][0], c_er[i][0],
-                                      g[i][0], g_er[i][0], bottom_data[i][0], bottom_diff[i][0]);
+            BackpropForRight2LeftLstm(top_data[i][0].Slice(0,len), top_diff[i][0].Slice(0,len), 
+                                      c[i][0].Slice(0,len), c_er[i][0].Slice(0,len),
+                                      g[i][0].Slice(0,len), g_er[i][0].Slice(0,len), 
+                                      bottom_data[i][0].Slice(0,len), bottom_diff[i][0].Slice(0,len));
         }
     }
 #if DEBUG

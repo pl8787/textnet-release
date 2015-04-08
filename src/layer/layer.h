@@ -50,6 +50,7 @@ const int kLstm = 24;
 const int kWholePooling = 25;
 const int kConvolutionalLstm = 26;
 const int kRecurrent = 27;
+const int kSequenceDimReduction = 28;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;

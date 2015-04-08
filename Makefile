@@ -12,11 +12,12 @@ ifdef CUSTOM_CXX
 endif
 
 # orc
-ver = debug
+# ver = debug
+ver = release 
 ifeq ($(ver), debug)
 CXXFLAGS += -g -Ddebug -I./mshadow/
 else
-CXXFLAGS += -Wall -g -O3 -msse3 -Wno-unknown-pragmas -funroll-loops -I./mshadow/
+CXXFLAGS += -Wall -O3 -msse3 -Wno-unknown-pragmas -funroll-loops -I./mshadow/
 endif
 
 CUDA_INCLUDE_DIR := $(CUDA_DIR)/include

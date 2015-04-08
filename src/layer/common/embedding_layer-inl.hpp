@@ -25,7 +25,7 @@ class EmbeddingLayer : public Layer<xpu>{
   
   virtual void Require() {
     // default value, just set the value you want
-    this->defaults["pad_value"] = SettingV(NAN);
+    // this->defaults["pad_value"] = SettingV(NAN);
     this->defaults["embedding_file"] = SettingV("");
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -51,7 +51,7 @@ class EmbeddingLayer : public Layer<xpu>{
     embedding_file = setting["embedding_file"].sVal();
     feat_size = setting["feat_size"].iVal();
     word_count = setting["word_count"].iVal();
-    pad_value = setting["pad_value"].fVal();
+    // pad_value = setting["pad_value"].fVal();
 
     this->params.resize(1);
     // No need allocate diff memory
@@ -113,11 +113,11 @@ class EmbeddingLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(),
                   "EmbeddingLayer:top size problem.");
     
-    doc_len = bottom[0]->data.size(3);
+    max_doc_len = bottom[0]->data.size(3);
     doc_count = bottom[0]->data.size(1);
     nbatch = bottom[0]->data.size(0);
                   
-    top[0]->Resize(nbatch, doc_count, doc_len, feat_size, true);
+    top[0]->Resize(nbatch, doc_count, max_doc_len, feat_size, true);
 
     bottom[0]->PrintShape("bottom0");
     top[0]->PrintShape("top0");
@@ -127,18 +127,23 @@ class EmbeddingLayer : public Layer<xpu>{
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
+    mshadow::Tensor<xpu, 1> bottom_len  = bottom[0]->length;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
+    mshadow::Tensor<xpu, 1> top_len  = top[0]->length;
     mshadow::Tensor<xpu, 2> weight_data = this->params[0].data_d2();
     
     // fill all top data to pad_value
-    top_data = pad_value;
+    // top_data = pad_value;
+    top_data = 0.;
+    top_len = F<op::identity>(bottom_len);
 
     int w_idx = -1;
     for (int i = 0; i < nbatch; ++i) {
       for (int j = 0; j < doc_count; ++j) {
+        int doc_len = bottom_len[i];
         for (int k = 0; k < doc_len; ++k) {
           w_idx = (int)bottom_data[i][j][0][k];
-          if (!isnan(bottom_data[i][j][0][k]) && w_idx != -1) {
+          if (w_idx != -1) {
             top_data[i][j][k] = F<op::identity>(weight_data[w_idx]);
           }
         }
@@ -150,6 +155,7 @@ class EmbeddingLayer : public Layer<xpu>{
                         const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
+    mshadow::Tensor<xpu, 1> bottom_len  = bottom[0]->length;
     mshadow::Tensor<xpu, 4> top_diff = top[0]->diff;
     
     if (this->prop_grad[0]) {
@@ -158,9 +164,10 @@ class EmbeddingLayer : public Layer<xpu>{
       int inc = 0;
       for (int i = 0; i < nbatch; ++i) {
         for (int j = 0; j < doc_count; ++j) {
+          int doc_len = bottom_len[i];
           for (int k = 0; k < doc_len; ++k) {
             w_idx = (int)bottom_data[i][j][0][k];
-            if (!isnan(bottom_data[i][j][0][k]) && w_idx != -1 && !idx_map.count(w_idx)) {
+            if (w_idx != -1 && !idx_map.count(w_idx)) {
               idx_map[w_idx] = inc;
               inc++;
             }
@@ -180,9 +187,10 @@ class EmbeddingLayer : public Layer<xpu>{
       
       for (int i = 0; i < nbatch; ++i) {
         for (int j = 0; j < doc_count; ++j) {
+          int doc_len = bottom_len[i];
           for (int k = 0; k < doc_len; ++k) {
             w_idx = (int)bottom_data[i][j][0][k];
-            if (!isnan(bottom_data[i][j][0][k]) && w_idx != -1) {
+            if (w_idx != -1) {
               weight_diff[idx_map[w_idx]] += top_diff[i][j][k];
             }
           }
@@ -194,11 +202,11 @@ class EmbeddingLayer : public Layer<xpu>{
   std::string embedding_file;
   int feat_size;
   int word_count;
-  int doc_len;
+  int max_doc_len;
   int doc_count;
   int nbatch;
   int line_count;
-  float pad_value;
+  // float pad_value;
 };
 }  // namespace layer
 }  // namespace textnet
