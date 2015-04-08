@@ -227,15 +227,10 @@ class LstmLayer : public Layer<xpu> {
   // too tricky, may bring errors
   void SplitGate(Tensor2D g, Tensor2D &i, Tensor2D &f, Tensor2D &o, Tensor2D &cc) {
     utils::Check(g.size(0) == 1, "LstmLayer: gate problem."); 
-    i.shape_ = mshadow::Shape2(1, d_mem);
-    f.shape_ = mshadow::Shape2(1, d_mem);
-    o.shape_ = mshadow::Shape2(1, d_mem);
-    cc.shape_= mshadow::Shape2(1, d_mem);
-
-    i.dptr_ = g.dptr_;
-    f.dptr_ = g.dptr_ + 1 * d_mem;
-    o.dptr_ = g.dptr_ + 2 * d_mem;
-    cc.dptr_= g.dptr_ + 3 * d_mem;
+    i = Tensor2D(g.dptr_, mshadow::Shape2(1, d_mem));
+    f = Tensor2D(g.dptr_ + 1 * d_mem, mshadow::Shape2(1, d_mem));
+    o = Tensor2D(g.dptr_ + 2 * d_mem, mshadow::Shape2(1, d_mem));
+    cc= Tensor2D(g.dptr_ + 3 * d_mem, mshadow::Shape2(1, d_mem));
   }
 
   void BpOneStep(Tensor2D cur_h_er,

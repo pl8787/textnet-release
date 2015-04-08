@@ -12,8 +12,8 @@ ifdef CUSTOM_CXX
 endif
 
 # orc
-# ver = debug
-ver = release 
+ver = debug
+# ver = release 
 ifeq ($(ver), debug)
 CXXFLAGS += -g -Ddebug -I./mshadow/
 else

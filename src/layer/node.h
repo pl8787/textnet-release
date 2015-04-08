@@ -72,6 +72,8 @@ struct Node {
     inited_data = false;
     inited_diff = false;
     is_share = false;
+    updater_ = NULL;
+    initializer_ = NULL;
   }
   
   inline void FreeSpace(void) {
@@ -162,6 +164,11 @@ struct Node {
     mshadow::Shape<4> s = diff.shape_;
     index_t  ymax = s[1]*s[2]*s[3];
     return mshadow::Tensor<xpu, 2>(diff.dptr_, mshadow::Shape2(s[0], ymax));
+  }
+  inline mshadow::Tensor<xpu, 2> diff_d2_reverse() {
+    mshadow::Shape<4> s = diff.shape_;
+    index_t  xmax = s[0]*s[1]*s[2];
+    return mshadow::Tensor<xpu, 2>(diff.dptr_, mshadow::Shape2(xmax, s[3]));
   }
  
   inline mshadow::Tensor<xpu, 3> data_d3() {
