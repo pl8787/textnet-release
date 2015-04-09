@@ -90,7 +90,8 @@ class Layer {
     
     phrase_type = this->settings["phrase_type"].iVal();
     prnd_ = prnd;
-    setting = this->settings;
+
+	setting = this->settings;
   }
   
   virtual void SetupLayer(Json::Value &root,
@@ -282,8 +283,14 @@ class Layer {
   }
 
   virtual void LoadModel(Json::Value &layer_root) {
-    // Set layer type 
-    layer_type = layer_root["layer_type"].asInt();
+    // Set Layer type
+	if (layer_root["layer_type"].isInt()) {
+		layer_type = layer_root["layer_type"].asInt();
+	} else if (layer_root["layer_type"].isString()) {
+        layer_type = SettingV::SettingIntMap[layer_root["layer_type"].asString()];
+	} else {
+		utils::Error("[Error] layer type error.\n");
+	}
     layer_name = layer_root["layer_name"].asString();
     layer_idx = layer_root["layer_idx"].asInt();
     
