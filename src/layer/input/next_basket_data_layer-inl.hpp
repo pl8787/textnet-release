@@ -157,13 +157,13 @@ class NextBasketDataLayer : public Layer<xpu>{
       for (int k = 0; k < dataset[exampleIdx].next_items.size(); ++k) {
         top[1]->data[i][0][0][k] = dataset[exampleIdx].next_items[k]; // label set
       }
-      top[1]->length[i] = dataset[exampleIdx].next_items.size();
+      top[1]->length[i][0] = dataset[exampleIdx].next_items.size();
       top[2]->data[i][0][0][0] = dataset[exampleIdx].user;
       for (int w = 0; w < context_window; ++w) {
         for (int k = 0; k < dataset[exampleIdx].context[w].size(); ++k) {
           top[w+3]->data[i][0][0][k] = dataset[exampleIdx].context[w][k];
         }
-        top[w+3]->length[i] = dataset[exampleIdx].context[w].size();
+        top[w+3]->length[i][0] = dataset[exampleIdx].context[w].size();
       }
     }
   }

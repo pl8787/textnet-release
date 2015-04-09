@@ -92,11 +92,11 @@ class SequenceClassificationDataLayer : public Layer<xpu>{
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 1> top0_data = top[0]->data_d1();
     mshadow::Tensor<xpu, 4> top1_data = top[1]->data;
-    mshadow::Tensor<xpu, 1> top1_length = top[1]->length;
+    mshadow::Tensor<xpu, 2> top1_length = top[1]->length;
     for (int i = 0; i < batch_size; ++i) {
       top0_data[i] = label_set[line_ptr];
       top1_data[i] = F<op::identity>(data_set[line_ptr]);
-      top1_length[i] = length[line_ptr];
+      top1_length[i][0] = length[line_ptr];
       line_ptr = (line_ptr + 1) % line_count;
     }
   }

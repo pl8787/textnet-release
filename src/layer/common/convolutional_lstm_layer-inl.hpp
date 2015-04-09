@@ -81,18 +81,18 @@ class ConvolutionalLstmLayer : public Layer<xpu> {
     utils::Check(top.size() == TopNodeNum(), "ConvolutionalLstmLayer:top size problem.");
     utils::Check(bottom[0]->data.size(0) == bottom[1]->data.size(0), "ConvolutionalLstmLayer:bottom size problem.");
     utils::Check(bottom[0]->data.size(0) == bottom[2]->data.size(0), "ConvolutionalLstmLayer:bottom size problem.");
-    utils::Check(bottom[0]->data.size(1) == 1, "ConvolutionalLstmLayer:bottom size problem.");
-    utils::Check(bottom[1]->data.size(1) == 1, "ConvolutionalLstmLayer:bottom size problem.");
-    utils::Check(bottom[2]->data.size(1) == 1, "ConvolutionalLstmLayer:bottom size problem.");
+    utils::Check(bottom[0]->data.size(1) == bottom[1]->data.size(1), "ConvolutionalLstmLayer:bottom size problem.");
+    utils::Check(bottom[0]->data.size(1) == bottom[2]->data.size(1), "ConvolutionalLstmLayer:bottom size problem.");
     utils::Check(bottom[0]->data.size(2) == bottom[1]->data.size(2), "ConvolutionalLstmLayer:bottom size problem.");
     utils::Check(bottom[0]->data.size(2) == bottom[2]->data.size(2), "ConvolutionalLstmLayer:bottom size problem.");
     
     int batch_size = bottom[0]->data.size(0);
+    int num_seq = bottom[0]->data.size(1);
     int length = bottom[0]->data.size(2);
     
-    top[0]->Resize(batch_size, 1, length, num_hidden, true);
-    concat_input_data.Resize(mshadow::Shape4(batch_size, 1, length, num_input));
-    concat_input_diff.Resize(mshadow::Shape4(batch_size, 1, length, num_input));
+    top[0]->Resize(batch_size, num_seq, length, num_hidden, true);
+    concat_input_data.Resize(mshadow::Shape4(batch_size, num_seq, length, num_input));
+    concat_input_diff.Resize(mshadow::Shape4(batch_size, num_seq, length, num_input));
     concat_input_data = 0.f;
     concat_input_diff = 0.f;
 
@@ -176,19 +176,22 @@ class ConvolutionalLstmLayer : public Layer<xpu> {
     top[0]->data = 0.f; // init
     top[0]->length = F<op::identity>(bottom[0]->length); // init
 
-    for (int batch_idx = 0; batch_idx < concat_input_data.size(0); ++batch_idx) {
-      int len = bottom[0]->length[batch_idx];
-      Tensor2D input, output;
-      input = concat_input_data[batch_idx][0].Slice(0,len);
-      output = top[0]->data[batch_idx][0].Slice(0,len);
-      Concat(bottom[0]->data[batch_idx][0].Slice(0,len), 
-             bottom[1]->data[batch_idx][0].Slice(0,len), 
-             bottom[2]->data[batch_idx][0].Slice(0,len), 
-             input);
+    for (index_t batch_idx = 0; batch_idx < concat_input_data.size(0); ++batch_idx) {
+      for (index_t seq_idx = 0; seq_idx < concat_input_data.size(1); ++seq_idx) {
+        int len = bottom[0]->length[batch_idx][seq_idx];
+        Tensor2D input, output;
+        input = concat_input_data[batch_idx][seq_idx].Slice(0,len);
+        output = top[0]->data[batch_idx][seq_idx].Slice(0,len);
 
-      output = dot(input, this->params[0].data_d2().T());
-      if (!no_bias) {
-          output += repmat(this->params[1].data_d1(), len);
+        Concat(bottom[0]->data[batch_idx][seq_idx].Slice(0,len), 
+               bottom[1]->data[batch_idx][seq_idx].Slice(0,len), 
+               bottom[2]->data[batch_idx][seq_idx].Slice(0,len), 
+               input);
+
+        output = dot(input, this->params[0].data_d2().T());
+        if (!no_bias) {
+            output += repmat(this->params[1].data_d1(), len);
+        }
       }
     }
   }
@@ -197,22 +200,25 @@ class ConvolutionalLstmLayer : public Layer<xpu> {
                         const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
     
-    for (int batch_idx = 0; batch_idx < top[0]->data.size(0); ++batch_idx) {
+    for (index_t batch_idx = 0; batch_idx < top[0]->data.size(0); ++batch_idx) {
+      for (index_t seq_idx = 0; seq_idx < top[0]->data.size(1); ++seq_idx) {
+        int len = bottom[0]->length[batch_idx][seq_idx];
         Tensor2D in_data, in_diff, out_diff;
-        int len = bottom[0]->length[batch_idx];
-        in_data = concat_input_data[batch_idx][0].Slice(0,len);
-        in_diff = concat_input_diff[batch_idx][0].Slice(0,len);
-        out_diff = top[0]->diff[batch_idx][0].Slice(0,len);
+        in_data = concat_input_data[batch_idx][seq_idx].Slice(0,len);
+        in_diff = concat_input_diff[batch_idx][seq_idx].Slice(0,len);
+        out_diff = top[0]->diff[batch_idx][seq_idx].Slice(0,len);
 
         in_diff = dot(out_diff, this->params[0].data_d2());
         this->params[0].diff_d2() += dot(out_diff.T(), in_data);
         if (!no_bias) {
            this->params[1].diff_d1() += sum_rows(out_diff);
         }
+
         Split(in_diff, 
-              bottom[0]->diff[batch_idx][0].Slice(0,len),
-              bottom[1]->diff[batch_idx][0].Slice(0,len),
-              bottom[2]->diff[batch_idx][0].Slice(0,len));
+              bottom[0]->diff[batch_idx][seq_idx].Slice(0,len),
+              bottom[1]->diff[batch_idx][seq_idx].Slice(0,len),
+              bottom[2]->diff[batch_idx][seq_idx].Slice(0,len));
+      }
     }
   }
 
