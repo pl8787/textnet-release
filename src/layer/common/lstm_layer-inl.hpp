@@ -208,16 +208,21 @@ class LstmLayer : public Layer<xpu> {
     Tensor4D top_data = top[0]->data;
     top[0]->length = mshadow::expr::F<op::identity>(bottom[0]->length);
     top_data = 0.f; c = 0.f, g = 0.f; c_er = 0.f; g_er = 0.f;
-    const index_t nbatch = bottom_data.size(0); 
-    for (index_t i = 0; i < nbatch; ++i) {
-        int len = bottom[0]->length[i];
+    for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
+      for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
+        int len = bottom[0]->length[batch_idx][seq_idx];
         if (!reverse) {
-          ForwardLeft2Right(bottom_data[i][0].Slice(0,len), g[i][0].Slice(0,len), 
-                            c[i][0].Slice(0,len), top_data[i][0].Slice(0,len));
+          ForwardLeft2Right(bottom_data[batch_idx][seq_idx].Slice(0,len), 
+                            g[batch_idx][seq_idx].Slice(0,len), 
+                            c[batch_idx][seq_idx].Slice(0,len), 
+                            top_data[batch_idx][seq_idx].Slice(0,len));
         } else {
-          ForwardRight2Left(bottom_data[i][0].Slice(0,len), g[i][0].Slice(0,len), 
-                            c[i][0].Slice(0,len), top_data[i][0].Slice(0,len));
+          ForwardRight2Left(bottom_data[batch_idx][seq_idx].Slice(0,len), 
+                            g[batch_idx][seq_idx].Slice(0,len), 
+                            c[batch_idx][seq_idx].Slice(0,len), 
+                            top_data[batch_idx][seq_idx].Slice(0,len));
         }
+      }
     }
 #if DEBUG
     checkNanParams();
@@ -355,23 +360,31 @@ class LstmLayer : public Layer<xpu> {
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
     mshadow::Tensor<xpu, 4> bottom_diff = bottom[0]->diff;
-    const index_t nbatch = bottom_data.size(0);
         
     begin_c_er = 0.; begin_h_er = 0.; g_er = 0.; c_er = 0.;
-
-    for (index_t i = 0; i < nbatch; ++i) {
-        int len = bottom[0]->length[i];
+    for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
+      for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
+        int len = bottom[0]->length[batch_idx][seq_idx];
         if (!reverse) {
-            BackpropForLeft2RightLstm(top_data[i][0].Slice(0,len), top_diff[i][0].Slice(0,len), 
-                                      c[i][0].Slice(0,len), c_er[i][0].Slice(0,len),
-                                      g[i][0].Slice(0,len), g_er[i][0].Slice(0,len), 
-                                      bottom_data[i][0].Slice(0,len), bottom_diff[i][0].Slice(0,len));
+            BackpropForLeft2RightLstm(top_data[batch_idx][seq_idx].Slice(0,len), 
+                                      top_diff[batch_idx][seq_idx].Slice(0,len), 
+                                      c[batch_idx][seq_idx].Slice(0,len), 
+                                      c_er[batch_idx][seq_idx].Slice(0,len),
+                                      g[batch_idx][seq_idx].Slice(0,len), 
+                                      g_er[batch_idx][seq_idx].Slice(0,len), 
+                                      bottom_data[batch_idx][seq_idx].Slice(0,len), 
+                                      bottom_diff[batch_idx][seq_idx].Slice(0,len));
         } else {
-            BackpropForRight2LeftLstm(top_data[i][0].Slice(0,len), top_diff[i][0].Slice(0,len), 
-                                      c[i][0].Slice(0,len), c_er[i][0].Slice(0,len),
-                                      g[i][0].Slice(0,len), g_er[i][0].Slice(0,len), 
-                                      bottom_data[i][0].Slice(0,len), bottom_diff[i][0].Slice(0,len));
+            BackpropForRight2LeftLstm(top_data[batch_idx][seq_idx].Slice(0,len), 
+                                      top_diff[batch_idx][seq_idx].Slice(0,len), 
+                                      c[batch_idx][seq_idx].Slice(0,len), 
+                                      c_er[batch_idx][seq_idx].Slice(0,len),
+                                      g[batch_idx][seq_idx].Slice(0,len), 
+                                      g_er[batch_idx][seq_idx].Slice(0,len), 
+                                      bottom_data[batch_idx][seq_idx].Slice(0,len), 
+                                      bottom_diff[batch_idx][seq_idx].Slice(0,len));
         }
+      }
     }
 #if DEBUG
     checkNanParams();

@@ -198,14 +198,17 @@ class RecurrentLayer : public Layer<xpu> {
     top[0]->length = mshadow::expr::F<op::identity>(bottom[0]->length);
 
     top_data = 0.f;
-    const index_t nbatch = bottom_data.size(0); 
-    for (int i = 0; i < nbatch; ++i) {
-        int len = bottom[0]->length[i];
+    for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
+      for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
+        int len = bottom[0]->length[batch_idx][seq_idx];
         if (!reverse) {
-          ForwardLeft2Right(bottom_data[i][0].Slice(0,len), top_data[i][0].Slice(0,len));
+          ForwardLeft2Right(bottom_data[batch_idx][seq_idx].Slice(0,len),  
+                            top_data[batch_idx][seq_idx].Slice(0,len));
         } else {
-          ForwardRight2Left(bottom_data[i][0].Slice(0,len), top_data[i][0].Slice(0,len));
+          ForwardRight2Left(bottom_data[batch_idx][seq_idx].Slice(0,len), 
+                            top_data[batch_idx][seq_idx].Slice(0,len));
         }
+      }
     }
     // checkNanParams();
   }
@@ -299,19 +302,19 @@ class RecurrentLayer : public Layer<xpu> {
     const index_t nbatch = bottom_data.size(0);
         
     begin_h_er = 0.; 
-
-    for (index_t i = 0; i < nbatch; ++i) {
-        int len = bottom[0]->length[i];
+    for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
+      for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
+        int len = bottom[0]->length[batch_idx][seq_idx];
         if (!reverse) {
-            BackpropForLeft2RightRnn(top_data[i][0].Slice(0,len), 
-                                     top_diff[i][0].Slice(0,len), 
-                                     bottom_data[i][0].Slice(0,len), 
-                                     bottom_diff[i][0].Slice(0,len));
+            BackpropForLeft2RightRnn(top_data[batch_idx][seq_idx].Slice(0,len), 
+                                     top_diff[batch_idx][seq_idx].Slice(0,len), 
+                                     bottom_data[batch_idx][seq_idx].Slice(0,len), 
+                                     bottom_diff[batch_idx][seq_idx].Slice(0,len));
         } else {
-            BackpropForRight2LeftRnn(top_data[i][0].Slice(0,len), 
-                                     top_diff[i][0].Slice(0,len), 
-                                     bottom_data[i][0].Slice(0,len), 
-                                     bottom_diff[i][0].Slice(0,len));
+            BackpropForRight2LeftRnn(top_data[batch_idx][seq_idx].Slice(0,len), 
+                                     top_diff[batch_idx][seq_idx].Slice(0,len), 
+                                     bottom_data[batch_idx][seq_idx].Slice(0,len), 
+                                     bottom_diff[batch_idx][seq_idx].Slice(0,len));
         }
     }
   // checkNanParams();

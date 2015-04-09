@@ -109,23 +109,30 @@ class WholePoolingLayer : public Layer<xpu>{
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
-    mshadow::Tensor<xpu, 1> bottom_len  = bottom[0]->length;
+    mshadow::Tensor<xpu, 2> bottom_len  = bottom[0]->length;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
 
     top_data = 0;
-    for (index_t i = 0; i < bottom_data.size(0); ++i) {
-      int begin = 0, end = bottom_len[i]; 
+    for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
+      for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
+        int begin = 0, end = bottom_len[batch_idx][seq_idx]; 
 
-      if (pool_type == "max") {
-          wholeMaxPooling(bottom_data[i][0].Slice(begin, end), pos[i][0], top_data[i][0]);
-      } else if (pool_type == "ave") {
-          wholeAvePooling(bottom_data[i][0].Slice(begin, end), top_data[i][0]);
-      } else if (pool_type == "first") {
-          wholeFirstPooling(bottom_data[i][0].Slice(begin, end), top_data[i][0]);
-      } else if (pool_type == "last") {
-          wholeLastPooling(bottom_data[i][0].Slice(begin, end), top_data[i][0]);
-      } else {
-          utils::Check(false, "WholePoolLayer: pool type error.");
+        if (pool_type == "max") {
+            wholeMaxPooling(bottom_data[batch_idx][seq_idx].Slice(begin, end), 
+                            pos[batch_idx][seq_idx], 
+                            top_data[batch_idx][seq_idx]);
+        } else if (pool_type == "ave") {
+            wholeAvePooling(bottom_data[batch_idx][seq_idx].Slice(begin, end), 
+                            top_data[batch_idx][seq_idx]);
+        } else if (pool_type == "first") {
+            wholeFirstPooling(bottom_data[batch_idx][seq_idx].Slice(begin, end), 
+                              top_data[batch_idx][seq_idx]);
+        } else if (pool_type == "last") {
+            wholeLastPooling(bottom_data[batch_idx][seq_idx].Slice(begin, end), 
+                             top_data[batch_idx][seq_idx]);
+        } else {
+            utils::Check(false, "WholePoolLayer: pool type error.");
+        }
       }
     }
   }
@@ -136,23 +143,30 @@ class WholePoolingLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
     mshadow::Tensor<xpu, 4> top_diff = top[0]->diff;
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
-    mshadow::Tensor<xpu, 1> bottom_len  = bottom[0]->length;
+    mshadow::Tensor<xpu, 2> bottom_len  = bottom[0]->length;
     mshadow::Tensor<xpu, 4> bottom_diff = bottom[0]->diff;
 
-    for (index_t i = 0; i < bottom_data.size(0); ++i) {
-      int begin = 0, end = bottom_len[i]; 
+    for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
+      for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
+        int begin = 0, end = bottom_len[batch_idx][seq_idx]; 
 
-      if (this->prop_error[0]) {
-        if (pool_type == "max") {
-            wholeUnMaxPooling(top_diff[i][0], pos[i][0], bottom_diff[i][0].Slice(begin, end));
-        } else if (pool_type == "ave") {
-            wholeUnAvePooling(top_diff[i][0], bottom_diff[i][0].Slice(begin, end));
-        } else if (pool_type == "first") {
-            wholeUnFirstPooling(top_diff[i][0], bottom_diff[i][0].Slice(begin, end));
-        } else if (pool_type == "last") {
-            wholeUnLastPooling(top_diff[i][0], bottom_diff[i][0].Slice(begin, end));
-        } else {
-            utils::Check(false, "WholePoolLayer: pool type error.");
+        if (this->prop_error[0]) {
+          if (pool_type == "max") {
+              wholeUnMaxPooling(top_diff[batch_idx][seq_idx], 
+                                pos[batch_idx][seq_idx], 
+                                bottom_diff[batch_idx][seq_idx].Slice(begin, end));
+          } else if (pool_type == "ave") {
+              wholeUnAvePooling(top_diff[batch_idx][seq_idx], 
+                                bottom_diff[batch_idx][seq_idx].Slice(begin, end));
+          } else if (pool_type == "first") {
+              wholeUnFirstPooling(top_diff[batch_idx][seq_idx],
+                                  bottom_diff[batch_idx][seq_idx].Slice(begin, end));
+          } else if (pool_type == "last") {
+              wholeUnLastPooling(top_diff[batch_idx][seq_idx], 
+                                 bottom_diff[batch_idx][seq_idx].Slice(begin, end));
+          } else {
+              utils::Check(false, "WholePoolLayer: pool type error.");
+          }
         }
       }
     }
