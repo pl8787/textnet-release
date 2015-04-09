@@ -184,6 +184,19 @@ int main(int argc, char *argv[]) {
   mshadow::Random<cpu> rnd(37);
   vector<Layer<cpu>*> senti_net, senti_valid, senti_test;
 
+  mshadow::TensorContainer<cpu, 1> a;
+  a.Resize(mshadow::Shape1(10));
+  cout << "a.dptr:" << a.dptr_ << endl;
+  mshadow::Tensor<cpu, 1> b;
+  b = a.Slice(0,10);
+  cout << "b.dptr:" << b.dptr_ << endl;
+  mshadow::TensorContainer<cpu, 1> c;
+  cout << "c.dptr:" << c.dptr_ << endl;
+  (*(mshadow::Tensor<cpu, 1> *)&c) = a;
+  // c = b;
+  cout << "c.dptr:" << c.dptr_ << endl;
+  exit(0);
+
   float init_interval = 0.3;
   int lstm_hidden_dim = 100;
   int word_rep_dim = 300;

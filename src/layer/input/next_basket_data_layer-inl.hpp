@@ -191,8 +191,6 @@ class NextBasketDataLayer : public Layer<xpu>{
   std::vector<Example> dataset;
   
   std::vector<int> example_ids;
-  // mshadow::TensorContainer<xpu, 4> data_set;
-  // mshadow::TensorContainer<xpu, 1> label_set;
   int line_count;
   int shuffle_seed;
   utils::RandomSampler sampler;

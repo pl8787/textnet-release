@@ -46,6 +46,8 @@ struct Node {
   // Initializer interface
   initializer::Initializer<xpu, 4>* initializer_;
 
+  Node *master; // share
+
   // constructor
   Node(bool need_diff_ = true) : must_contiguous(true), need_diff(need_diff_) {
     data.shape_ = mshadow::Shape4(0,0,0,0);
@@ -58,6 +60,7 @@ struct Node {
 	is_sparse = false;
 	updater_ = NULL;
     initializer_ = NULL;
+    master = NULL;
   }
   
   inline void FreeSpace(void) {
@@ -100,13 +103,21 @@ struct Node {
   }
 
   // Share with other node
-  void Share(const Node &other) {
-    is_share = true;
+  void Share(Node &other) {
+    // is_share = true;
 	is_sparse = other.is_sparse;
-    data = other.data;
-    diff = other.diff;
-    idx  = other.idx;
-    length  = other.length;
+    data.Resize(mshadow::Shape4(0,0,0,0));
+    diff.Resize(mshadow::Shape4(0,0,0,0));
+    idx.Resize(mshadow::Shape1(0));
+    length.Resize(mshadow::Shape1(0));
+    // assert(!is_sparse);
+    // utils::Check(!is_sparse, "Node: sparse parameter sharing is not supported yet");
+    (*(mshadow::Tensor<xpu, 4> *)&data) = other.data;
+    (*(mshadow::Tensor<xpu, 1> *)&length) = other.length;
+    if (!is_sparse)  {
+      (*(mshadow::Tensor<xpu, 4> *)&diff) = other.diff;
+      (*(mshadow::Tensor<xpu, 1> *)&idx)  = other.idx;
+    }
     must_contiguous = other.must_contiguous;
     inited_data = false; // main node take charge of this
     inited_diff = false; // main node take charge of this
@@ -116,6 +127,7 @@ struct Node {
     
     updater_ = NULL;     // main node take charge of this
     initializer_ = NULL; // main node take charge of this 
+    master = &other;
   }
  
   inline void Resize(int d1, int d2, int d3, int d4, bool init=false) {

@@ -145,7 +145,7 @@ class Layer {
   virtual int ParamNodeNum() = 0;
 
   // parameter sharing
-  virtual void ShareParameter(int param_idx, const Node<xpu> &other) {
+  virtual void ShareParameter(int param_idx, Node<xpu> &other) {
 	  utils::Check(param_idx < params.size(), 
 			  "Share param index extend params size.");
       params[param_idx].Share(other);
