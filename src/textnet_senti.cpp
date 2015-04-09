@@ -184,18 +184,18 @@ int main(int argc, char *argv[]) {
   mshadow::Random<cpu> rnd(37);
   vector<Layer<cpu>*> senti_net, senti_valid, senti_test;
 
-  mshadow::TensorContainer<cpu, 1> a;
-  a.Resize(mshadow::Shape1(10));
-  cout << "a.dptr:" << a.dptr_ << endl;
-  mshadow::Tensor<cpu, 1> b;
-  b = a.Slice(0,10);
-  cout << "b.dptr:" << b.dptr_ << endl;
-  mshadow::TensorContainer<cpu, 1> c;
-  cout << "c.dptr:" << c.dptr_ << endl;
-  (*(mshadow::Tensor<cpu, 1> *)&c) = a;
-  // c = b;
-  cout << "c.dptr:" << c.dptr_ << endl;
-  exit(0);
+ //  mshadow::TensorContainer<cpu, 1> a;
+ //  a.Resize(mshadow::Shape1(10));
+ //  cout << "a.dptr:" << a.dptr_ << endl;
+ //  mshadow::Tensor<cpu, 1> b;
+ //  b = a.Slice(0,10);
+ //  cout << "b.dptr:" << b.dptr_ << endl;
+ //  mshadow::TensorContainer<cpu, 1> c;
+ //  cout << "c.dptr:" << c.dptr_ << endl;
+ //  (*(mshadow::Tensor<cpu, 1> *)&c) = a;
+ //  // c = b;
+ //  cout << "c.dptr:" << c.dptr_ << endl;
+ //  exit(0);
 
   float init_interval = 0.3;
   int lstm_hidden_dim = 100;
@@ -589,7 +589,7 @@ int main(int argc, char *argv[]) {
   // Begin Training 
   int max_iters = 3000;
   float maxValidAcc = 0., testAccByValid = 0.;
-  LoadModel("/home/wsx/dl.shengxian/src/cpp/model/", "0", senti_net);
+  LoadModel("/home/wsx/dl.shengxian/src/cpp/model/", "1", senti_net);
   for (int iter = 0; iter < max_iters; ++iter) {
     // if (iter % 100 == 0) { cout << "iter:" << iter << endl; }
     if (iter % (nTrain/batch_size) == 0) {

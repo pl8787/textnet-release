@@ -317,7 +317,6 @@ class RecurrentLayer : public Layer<xpu> {
                                      bottom_diff[batch_idx][seq_idx].Slice(0,len));
         }
       }
-    // checkNanParams();
     }
   }
 
