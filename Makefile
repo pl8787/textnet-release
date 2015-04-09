@@ -11,7 +11,6 @@ ifdef CUSTOM_CXX
     CXX := $(CUSTOM_CXX)
 endif
 
-# orc
 #ver = debug
 ver = release 
 ifeq ($(ver), debug)
@@ -34,19 +33,39 @@ LINKFLAGS += -fPIC $(COMMON_FLAGS) $(WARNINGS)
 LDFLAGS += $(foreach librarydir,$(LIBRARY_DIRS),-L$(librarydir)) \
         $(foreach library,$(LIBRARIES),-l$(library))
  
-# orc
-# CXXFLAGS += -Wall -g -O3 -msse3 -Wno-unknown-pragmas -funroll-loops -I./mshadow/
-
-LDFLAGS += -lm -lcudart -lcublas -lmkl_core -lmkl_intel_lp64 -lmkl_intel_thread -liomp5 -lpthread -lcurand -lz `pkg-config --libs opencv`
-
 export NVCCFLAGS = --use_fast_math -g -O3 -ccbin $(CXX)
-
 
 # specify tensor path
 BIN = bin/textnet bin/grad_check bin/textnet_test bin/textnet_matching bin/textnet_senti bin/textnet_nb
-OBJ = layer_cpu.o initializer_cpu.o updater_cpu.o checker_cpu.o io.o settingv.o#net_cpu.o 
+OBJ = layer_cpu.o initializer_cpu.o updater_cpu.o checker_cpu.o io.o settingv.o #net_cpu.o 
 CUOBJ = layer_gpu.o initializer_gpu.o updater_gpu.o checker_gpu.o #net_gpu.o
 NETH = net.h
+
+# define it to use cpu only
+ifeq ($(CPU_ONLY), 1)
+    CXXFLAGS += -DMSHADOW_USE_CUDA=0
+    CUOBJ = 
+    LDFLAGS += -lm -lpthread -lz
+else
+    LDFLAGS += -lm -lpthread -lz -lcudart -lcublas -lcurand
+endif
+
+# use mkl
+ifeq ($(BLAS), mkl)
+    CXXFLAGS += -DMSHADOW_USE_MKL=1
+    LDFLAGS += -lmkl_core -lmkl_intel_lp64 -lmkl_intel_thread -liomp5
+else
+    CXXFLAGS += -DMSHADOW_USE_MKL=0
+endif
+
+# use cblas
+ifeq ($(BLAS), cblas)
+    CXXFLAGS += -DMSHADOW_USE_CBLAS=1
+    LDFLAGS += -lblas
+else
+    CXXFLAGS += -DMSHADOW_USE_CBLAS=0
+endif
+
 
 all: $(BIN)
 

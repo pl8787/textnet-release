@@ -30,7 +30,7 @@ class Net {
   Net(Random<xpu>* prnd_, int device_id_ = 0) {
     prnd = prnd_;
     device_id = device_id_;
-    mshadow::InitTensorEngine<gpu>();
+    mshadow::InitTensorEngine<xpu>(device_id);
 	InitSettingEngine();
   }
 
