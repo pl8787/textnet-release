@@ -69,12 +69,17 @@ class SplitLayer : public Layer<xpu>{
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
+	mshadow::Tensor<xpu, 2> bottom_len = bottom[0]->length;
     mshadow::Tensor<xpu, 4> top0_data = top[0]->data;
     mshadow::Tensor<xpu, 4> top1_data = top[1]->data;
+	mshadow::Tensor<xpu, 2> top0_len = top[0]->length;
+	mshadow::Tensor<xpu, 2> top1_len = top[1]->length;
     
     for (int i = 0; i < nbatch; i++) {
       top0_data[i] = F<op::identity>(bottom_data[i].Slice(0, 1));
       top1_data[i] = F<op::identity>(bottom_data[i].Slice(1, 2));
+	  top0_len[i] = F<op::identity>(bottom_len[i].Slice(0, 1));
+	  top1_len[i] = F<op::identity>(bottom_len[i].Slice(1, 2));
     }
     
   }

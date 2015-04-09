@@ -43,7 +43,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kEmbedding: return new EmbeddingLayer<xpu>(kEmbedding);
     case kCross: return new CrossLayer<xpu>(kCross);
     case kSplit: return new SplitLayer<xpu>(kSplit);
-    case kConvLstmSplit: return new SplitLayer<xpu>(kConvLstmSplit);
+    case kConvLstmSplit: return new ConvLstmSplitLayer<xpu>(kConvLstmSplit);
     case kDropout: return new DropoutLayer<xpu>(kDropout);
     case kLstm: return new LstmLayer<xpu>(kLstm);
     case kRecurrent: return new RecurrentLayer<xpu>(kRecurrent);

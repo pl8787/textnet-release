@@ -1,0 +1,366 @@
+{
+   "global" : {
+      "w_updater_ph" : {
+        "w_updater" : {
+           "decay" : 0.01,
+           "lr" : 0.01,
+           "updater_type" : "SGD"
+        }
+      },
+      "wb_updater_ph" : {
+        "b_updater" : {
+           "decay" : 0.01,
+           "lr" : 0.01,
+           "updater_type" : "SGD"
+        },
+        "w_updater" : {
+           "decay" : 0.01,
+           "lr" : 0.01,
+           "updater_type" : "SGD"
+        }
+      },
+      "wub_updater_ph" : {
+        "b_updater" : {
+           "decay" : 0.01,
+           "lr" : 0.01,
+           "updater_type" : "SGD"
+        },
+        "w_updater" : {
+           "decay" : 0.01,
+           "lr" : 0.01,
+           "updater_type" : "SGD"
+        },
+        "u_updater" : {
+           "decay" : 0.01,
+           "lr" : 0.01,
+           "updater_type" : "SGD"
+        }
+      }
+   },
+   
+   "net_name" : "matching_net",
+   "max_iters" : 10000,
+   "max_test_iters" : 34,
+   "display_interval": 1,
+   "test_interval" : 100,
+   "train_out" : ["loss"],
+   "test_out" : ["loss", "acc"],
+   
+   "layers" : [
+      {
+         "bottom_nodes" : null,
+         "layer_idx" : 0,
+         "layer_name" : "textdata",
+         "layer_type" : 71,
+         "setting" : {
+            "batch_size" : 50,
+            "data_file" : "/home/pangliang/matching/data/msr_paraphrase_train_wid_dup.txt",
+            "max_doc_len" : 31,
+            "min_doc_len" : 5,
+            "phrase_type" : "Train"
+         },
+         "top_nodes" : [ "data", "label" ]
+      },
+      {
+         "bottom_nodes" : null,
+         "layer_idx" : 0,
+         "layer_name" : "textdata",
+         "layer_type" : 71,
+         "setting" : {
+            "batch_size" : 50,
+            "data_file" : "/home/pangliang/matching/data/msr_paraphrase_test_wid.txt",
+            "max_doc_len" : 31,
+            "min_doc_len" : 5,
+            "phrase_type" : "Test"
+         },
+         "top_nodes" : [ "data", "label" ]
+      },
+      {
+         "bottom_nodes" : [ "data" ],
+         "layer_idx" : 1,
+         "layer_name" : "embedding",
+         "layer_type" : 21,
+         "setting" : {
+            "embedding_file" : "/home/pangliang/matching/data/wikicorp_50_msr.txt",
+            "feat_size" : 50,
+            "w_filler" : {
+               "init_type" : 2,
+               "range" : 0.0099999997764825821
+            },
+            "w_updater_ph" : 0,
+            "word_count" : 14727
+         },
+         "top_nodes" : [ "embed" ]
+      },
+      {
+         "bottom_nodes" : [ "embed" ],
+         "layer_idx" : 3,
+         "layer_name" : "lstm_left",
+         "layer_type" : 24,
+         "setting" : {
+            "no_bias" : true,
+            "reverse" : false,
+			"d_mem" : 50,
+            "b_filler" : {
+               "init_type" : 0
+            },
+            "w_filler" : {
+               "init_type" : 3,
+               "sigma" : 0.02
+            },
+            "u_filler" : {
+               "init_type" : 3,
+               "sigma" : 0.02
+            },
+            "wub_updater_ph" : 0
+         },
+         "top_nodes" : [ "lstm_left" ]
+      },
+      {
+         "bottom_nodes" : [ "embed" ],
+         "layer_idx" : 4,
+         "layer_name" : "lstm_right",
+         "layer_type" : 24,
+         "setting" : {
+            "no_bias" : true,
+            "reverse" : true,
+			"d_mem" : 50,
+            "b_filler" : {
+               "init_type" : 0
+            },
+            "w_filler" : {
+               "init_type" : 3,
+               "sigma" : 0.02
+            },
+            "u_filler" : {
+               "init_type" : 3,
+               "sigma" : 0.02
+            },
+            "wub_updater_ph" : 0
+         },
+         "top_nodes" : [ "lstm_right" ]
+      },
+      {
+         "bottom_nodes" : [ "lstm_left", "embed", "lstm_right" ],
+         "layer_idx" : 4,
+         "layer_name" : "conv_lstm",
+         "layer_type" : 26,
+         "setting" : {
+            "no_bias" : true,
+            "num_hidden" : 200,
+            "b_filler" : {
+               "init_type" : 0
+            },
+            "w_filler" : {
+               "init_type" : 3,
+               "sigma" : 0.02
+            },
+            "wb_updater_ph" : 0
+         },
+         "top_nodes" : [ "conv_lstm" ]
+      },
+      {
+         "bottom_nodes" : [ "conv_lstm" ],
+         "layer_idx" : 2,
+         "layer_name" : "conv_lstm_split",
+         "layer_type" : 29,
+         "setting" : null,
+         "top_nodes" : [ "splt1", "splt2" ]
+      },
+      {
+         "bottom_nodes" : [ "splt1", "splt2" ],
+         "layer_idx" : 5,
+         "layer_name" : "cross",
+         "layer_type" : 22,
+         "setting" : null,
+         "top_nodes" : [ "cross" ]
+      },
+      {
+         "bottom_nodes" : [ "cross" ],
+         "layer_idx" : 6,
+         "layer_name" : "maxpool1",
+         "layer_type" : 15,
+         "setting" : {
+            "kernel_x" : 2,
+            "kernel_y" : 2,
+            "stride" : 2
+         },
+         "top_nodes" : [ "pool1" ]
+      },
+      {
+         "bottom_nodes" : [ "pool1" ],
+         "layer_idx" : 7,
+         "layer_name" : "relu1",
+         "layer_type" : 1,
+         "setting" : null,
+         "top_nodes" : [ "relu1" ]
+      },
+      {
+         "bottom_nodes" : [ "relu1" ],
+         "layer_idx" : 8,
+         "layer_name" : "conv2",
+         "layer_type" : 14,
+         "setting" : {
+            "b_filler" : {
+               "init_type" : 0
+            },
+            "channel_out" : 300,
+            "kernel_x" : 2,
+            "kernel_y" : 2,
+            "no_bias" : false,
+            "pad_x" : 0,
+            "pad_y" : 0,
+            "stride" : 1,
+            "w_filler" : {
+               "init_type" : 3,
+               "mu" : 0,
+               "sigma" : 0.0099999997764825821
+            },
+            "wb_updater_ph" : 0
+         },
+         "top_nodes" : [ "conv2" ]
+      },
+      {
+         "bottom_nodes" : [ "conv2" ],
+         "layer_idx" : 9,
+         "layer_name" : "maxpool2",
+         "layer_type" : 15,
+         "setting" : {
+            "kernel_x" : 2,
+            "kernel_y" : 2,
+            "stride" : 2
+         },
+         "top_nodes" : [ "pool2" ]
+      },
+      {
+         "bottom_nodes" : [ "pool2" ],
+         "layer_idx" : 10,
+         "layer_name" : "relu2",
+         "layer_type" : 1,
+         "setting" : null,
+         "top_nodes" : [ "relu2" ]
+      },
+      {
+         "bottom_nodes" : [ "relu2" ],
+         "layer_idx" : 11,
+         "layer_name" : "conv3",
+         "layer_type" : 14,
+         "setting" : {
+            "b_filler" : {
+               "init_type" : 0
+            },
+            "channel_out" : 400,
+            "kernel_x" : 2,
+            "kernel_y" : 2,
+            "no_bias" : false,
+            "pad_x" : 0,
+            "pad_y" : 0,
+            "stride" : 1,
+            "w_filler" : {
+               "init_type" : 3,
+               "sigma" : 0.0099999997764825821
+            },
+            "wb_updater_ph" : 0
+         },
+         "top_nodes" : [ "conv3" ]
+      },
+      {
+         "bottom_nodes" : [ "conv3" ],
+         "layer_idx" : 12,
+         "layer_name" : "maxpool3",
+         "layer_type" : 15,
+         "setting" : {
+            "kernel_x" : 2,
+            "kernel_y" : 2,
+            "stride" : 2
+         },
+         "top_nodes" : [ "pool3" ]
+      },
+      {
+         "bottom_nodes" : [ "pool3" ],
+         "layer_idx" : 13,
+         "layer_name" : "relu3",
+         "layer_type" : 1,
+         "setting" : null,
+         "top_nodes" : [ "relu3" ]
+      },
+      {
+         "bottom_nodes" : [ "relu3" ],
+         "layer_idx" : 14,
+         "layer_name" : "fc1",
+         "layer_type" : 11,
+         "setting" : {
+            "b_filler" : {
+               "init_type" : 0
+            },
+            "no_bias" : false,
+            "num_hidden" : 512,
+            "w_filler" : {
+               "init_type" : 3,
+               "sigma" : 0.004999999888241291
+            },
+            "wb_updater_ph" : 0
+         },
+         "top_nodes" : [ "fc1" ]
+      },
+      {
+         "bottom_nodes" : [ "fc1" ],
+         "layer_idx" : 15,
+         "layer_name" : "relu4",
+         "layer_type" : 1,
+         "setting" : null,
+         "top_nodes" : [ "relu4" ]
+      },
+      {
+         "bottom_nodes" : [ "relu4" ],
+         "layer_idx" : 16,
+         "layer_name" : "dropout",
+         "layer_type" : 13,
+         "setting" : {
+            "rate" : 0.5
+         },
+         "top_nodes" : [ "drop" ]
+      },
+      {
+         "bottom_nodes" : [ "drop" ],
+         "layer_idx" : 17,
+         "layer_name" : "fc2",
+         "layer_type" : 11,
+         "setting" : {
+            "b_filler" : {
+               "init_type" : 0
+            },
+            "no_bias" : false,
+            "num_hidden" : 2,
+            "w_filler" : {
+               "init_type" : 3,
+               "sigma" : 0.10000000149011612
+            },
+            "wb_updater_ph" : 0
+         },
+         "top_nodes" : [ "fc2" ]
+      },
+      {
+         "bottom_nodes" : [ "fc2", "label" ],
+         "layer_idx" : 18,
+         "layer_name" : "softmax",
+         "layer_type" : 51,
+         "setting" : {
+            "delta" : 1
+         },
+         "top_nodes" : [ "loss" ]
+      },
+      {
+         "bottom_nodes" : [ "fc2", "label" ],
+         "layer_idx" : 18,
+         "layer_name" : "accuracy",
+         "layer_type" : 56,
+         "setting" : {
+            "topk" : 1,
+            "phrase_type" : 1
+         },
+         "top_nodes" : [ "acc" ]
+      }
+   ]
+   
+}
