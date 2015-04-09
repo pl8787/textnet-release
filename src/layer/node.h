@@ -25,7 +25,7 @@ struct Node {
   // store the Node idx, if node is sparse
   mshadow::TensorContainer<xpu, 1> idx;
   // store sentence lenth
-  mshadow::TensorContainer<xpu, 1> length;
+  mshadow::TensorContainer<xpu, 2> length;
   // to show whether Node has sparse diff
   bool is_sparse;
   // always true
@@ -109,11 +109,11 @@ struct Node {
     data.Resize(mshadow::Shape4(0,0,0,0));
     diff.Resize(mshadow::Shape4(0,0,0,0));
     idx.Resize(mshadow::Shape1(0));
-    length.Resize(mshadow::Shape1(0));
+    length.Resize(mshadow::Shape2(0,0));
     // assert(!is_sparse);
     // utils::Check(!is_sparse, "Node: sparse parameter sharing is not supported yet");
     (*(mshadow::Tensor<xpu, 4> *)&data) = other.data;
-    (*(mshadow::Tensor<xpu, 1> *)&length) = other.length;
+    (*(mshadow::Tensor<xpu, 2> *)&length) = other.length;
     if (!is_sparse)  {
       (*(mshadow::Tensor<xpu, 4> *)&diff) = other.diff;
       (*(mshadow::Tensor<xpu, 1> *)&idx)  = other.idx;
@@ -136,7 +136,7 @@ struct Node {
       // do nothing
     } else if (init) {
       data.Resize(new_size, 0.0);
-      length.Resize(mshadow::Shape1(d1), 0.0);
+      length.Resize(mshadow::Shape2(d1, d2), 0.0);
       inited_data = true;
       if (need_diff) {
         diff.Resize(new_size, 0.0);
@@ -144,7 +144,7 @@ struct Node {
       }
     } else {
       data.Resize(new_size);
-      length.Resize(mshadow::Shape1(d1));
+      length.Resize(mshadow::Shape2(d1, d2));
       inited_data = true;
       if (need_diff) {
         diff.Resize(new_size);
@@ -158,7 +158,7 @@ struct Node {
       // do nothing
     } else if (init) {
       data.Resize(new_size, 0.0);
-      length.Resize(mshadow::Shape1(new_size[0]), 0.0);
+      length.Resize(mshadow::Shape2(new_size[0], new_size[1]), 0.0);
       inited_data = true;
       if (need_diff) {
         diff.Resize(new_size, 0.0);
@@ -166,7 +166,7 @@ struct Node {
       }
     } else {
       data.Resize(new_size);
-      length.Resize(mshadow::Shape1(new_size[0]));
+      length.Resize(mshadow::Shape2(new_size[0], new_size[1]));
       inited_data = true;
       if (need_diff) {
         diff.Resize(new_size);
@@ -186,7 +186,11 @@ struct Node {
   inline mshadow::Tensor<xpu, 1> idx_d1() {
     return mshadow::Tensor<xpu, 1>(idx.dptr_, mshadow::Shape1(idx.shape_.Size()));
   }
-  
+
+  inline mshadow::Tensor<xpu, 1> length_d1() {
+    return mshadow::Tensor<xpu, 1>(length.dptr_, mshadow::Shape1(length.shape_.Size()));
+  }
+ 
   inline mshadow::Tensor<xpu, 2> data_d2() {
     mshadow::Shape<4> s = data.shape_;
     index_t  ymax = s[1]*s[2]*s[3];

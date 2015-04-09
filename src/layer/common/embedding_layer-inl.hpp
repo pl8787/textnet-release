@@ -25,7 +25,7 @@ class EmbeddingLayer : public Layer<xpu>{
   
   virtual void Require() {
     // default value, just set the value you want
-    // this->defaults["pad_value"] = SettingV(NAN);
+    this->defaults["pad_value"] = SettingV(0.f);
     this->defaults["embedding_file"] = SettingV("");
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -51,7 +51,7 @@ class EmbeddingLayer : public Layer<xpu>{
     embedding_file = setting["embedding_file"].sVal();
     feat_size = setting["feat_size"].iVal();
     word_count = setting["word_count"].iVal();
-    // pad_value = setting["pad_value"].fVal();
+    pad_value = setting["pad_value"].fVal();
 
     this->params.resize(1);
     // No need allocate diff memory
@@ -127,20 +127,19 @@ class EmbeddingLayer : public Layer<xpu>{
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
-    mshadow::Tensor<xpu, 1> bottom_len  = bottom[0]->length;
+    mshadow::Tensor<xpu, 2> bottom_len  = bottom[0]->length;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
-    mshadow::Tensor<xpu, 1> top_len  = top[0]->length;
+    mshadow::Tensor<xpu, 2> top_len  = top[0]->length;
     mshadow::Tensor<xpu, 2> weight_data = this->params[0].data_d2();
     
     // fill all top data to pad_value
-    // top_data = pad_value;
-    top_data = 0.;
+    top_data = pad_value;
     top_len = F<op::identity>(bottom_len);
 
     int w_idx = -1;
     for (int i = 0; i < nbatch; ++i) {
       for (int j = 0; j < doc_count; ++j) {
-        int doc_len = bottom_len[i];
+        int doc_len = bottom_len[i][j];
         for (int k = 0; k < doc_len; ++k) {
           w_idx = (int)bottom_data[i][j][0][k];
           if (w_idx != -1) {
@@ -155,7 +154,7 @@ class EmbeddingLayer : public Layer<xpu>{
                         const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
-    mshadow::Tensor<xpu, 1> bottom_len  = bottom[0]->length;
+    mshadow::Tensor<xpu, 2> bottom_len  = bottom[0]->length;
     mshadow::Tensor<xpu, 4> top_diff = top[0]->diff;
     
     if (this->prop_grad[0]) {
@@ -164,7 +163,7 @@ class EmbeddingLayer : public Layer<xpu>{
       int inc = 0;
       for (int i = 0; i < nbatch; ++i) {
         for (int j = 0; j < doc_count; ++j) {
-          int doc_len = bottom_len[i];
+          int doc_len = bottom_len[i][j];
           for (int k = 0; k < doc_len; ++k) {
             w_idx = (int)bottom_data[i][j][0][k];
             if (w_idx != -1 && !idx_map.count(w_idx)) {
@@ -206,7 +205,7 @@ class EmbeddingLayer : public Layer<xpu>{
   int doc_count;
   int nbatch;
   int line_count;
-  // float pad_value;
+  float pad_value;
 };
 }  // namespace layer
 }  // namespace textnet
