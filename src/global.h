@@ -8,6 +8,6 @@ typedef mshadow::index_t index_t;
 typedef mshadow::default_real_t real_t;
 } // namespace textnet
 
-#define DEBUG 1
+#define DEBUG 0
 
 #endif  // CXXNET_GLOBAL_H_
