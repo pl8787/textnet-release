@@ -318,7 +318,6 @@ class RecurrentLayer : public Layer<xpu> {
         }
       }
     }
-  // checkNanParams();
   }
 
  protected:

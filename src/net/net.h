@@ -1,8 +1,6 @@
 #ifndef TEXTNET_NET_NET_H_
 #define TEXTNET_NET_NET_H_
 
-// #define DEBUG 1
-
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -29,14 +27,16 @@ using namespace mshadow;
 template<typename xpu>
 class Net {
  public:
-  Net(Random<xpu>* prnd_) {
+  Net(Random<xpu>* prnd_, int device_id_ = 0) {
     prnd = prnd_;
+    device_id = device_id_;
+    mshadow::InitTensorEngine<gpu>();
 	InitSettingEngine();
   }
 
   
   virtual ~Net(void) {
-    
+    mshadow::ShutdownTensorEngine<xpu>(); 
   }
   
   void InitSettingEngine() {
@@ -446,6 +446,26 @@ class Net {
       if (test_interval > 0 && iter % test_interval == 0) {
         TestOne(iter);
       }
+
+	  // Just for this time!
+	  if (false) {//iter == 1300 || iter == 5000 || iter == 0) {
+		cout << "Begin Saveing Model and Activations at iter " << iter << endl;
+
+		vector<string> node_names;
+		node_names.push_back("data");
+		node_names.push_back("label");
+		node_names.push_back("cross");
+
+		ostringstream dir_name;
+		dir_name << "act_" << iter << "/";
+
+		SaveModelActivation(dir_name.str(), node_names, 10);
+
+		ostringstream model_file;
+		model_file << "model/matching_" << iter << ".model";
+
+		SaveModel(model_file.str());
+	  }
     }
   }
 
@@ -478,6 +498,34 @@ class Net {
         
 	  SetPhrase(train_net, kTrain);
   }
+ 
+  virtual void SaveModelActivation(string dir_path, vector<string> node_names, int num_iter) {
+    SetPhrase(train_net, kTrain);
+	for (int iter = 0; iter < num_iter; ++iter) {
+	  Forward();
+	  cout << "Forward " << iter << " over!" << endl;
+	  for (int i = 0; i < node_names.size(); ++i) {
+		string name = node_names[i];
+		Json::Value node_root;
+
+		nodes[name]->SaveNode(node_root);
+
+		// Prepare for output filename
+		ostringstream file_name;
+		file_name << dir_path << name << "_" << iter << ".json";
+
+		cout << "Save node " << name << " to " << file_name.str() << endl;
+		// Write Node to file
+		ofstream _of(file_name.str().c_str());
+        Json::FastWriter writer;
+		string json_file = writer.write(node_root);
+		_of << json_file;
+		_of.close();
+
+	  }
+	}
+  }
+  
   virtual void SaveModel(string model_name) {
     ofstream _of(model_name.c_str());
     Json::StyledWriter writer;
@@ -600,6 +648,8 @@ class Net {
   // node list
   vector<Node<xpu>*> node_list;
 
+  // gpu device id
+  int device_id;
 };
 
 }  // namespace net
