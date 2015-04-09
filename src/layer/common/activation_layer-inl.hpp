@@ -49,6 +49,7 @@ class ActivationLayer : public Layer<xpu>{
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
+    top[0]->length = F<op::identity>(bottom[0]->length);
     top[0]->data = F<ForwardOp>(bottom[0]->data);
   }
   
@@ -56,7 +57,7 @@ class ActivationLayer : public Layer<xpu>{
                         const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
     if (this->prop_error[0]) {
-      bottom[0]->diff = F<BackOp>(top[0]->data) * top[0]->diff;
+      bottom[0]->diff += F<BackOp>(top[0]->data) * top[0]->diff;
     }
   }
 };

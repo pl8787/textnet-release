@@ -11,12 +11,12 @@ ifdef CUSTOM_CXX
     CXX := $(CUSTOM_CXX)
 endif
 
-# orc
-ver = release #debug
+#ver = debug
+ver = release 
 ifeq ($(ver), debug)
 CXXFLAGS += -g -Ddebug -I./mshadow/
 else
-CXXFLAGS += -Wall -g -O3 -msse3 -Wno-unknown-pragmas -funroll-loops -I./mshadow/
+CXXFLAGS += -Wall -O3 -msse3 -Wno-unknown-pragmas -funroll-loops -I./mshadow/
 endif
 
 CUDA_INCLUDE_DIR := $(CUDA_DIR)/include
@@ -43,8 +43,9 @@ export NVCCFLAGS = --use_fast_math -g -O3 -ccbin $(CXX)
 
 # specify tensor path
 BIN = bin/textnet bin/grad_check bin/textnet_test bin/textnet_matching bin/textnet_senti bin/textnet_nb
-OBJ = layer_cpu.o initializer_cpu.o updater_cpu.o checker_cpu.o io.o settingv.o #net_cpu.o 
+OBJ = layer_cpu.o initializer_cpu.o updater_cpu.o checker_cpu.o io.o settingv.o#net_cpu.o 
 CUOBJ = layer_gpu.o initializer_gpu.o updater_gpu.o checker_gpu.o #net_gpu.o
+NETH = net.h
 
 all: $(BIN)
 
@@ -64,10 +65,10 @@ io.o: src/io/jsoncpp.cpp src/io/json/*.*
 
 settingv.o: src/utils/settingv.cpp src/utils/*.h
 
-#net_cpu.o net_gpu.o: src/net/net.h src/layer/*.h src/utils/*.h
+net.h: src/net/net.h
 
 
-bin/textnet: src/textnet_main.cpp $(OBJ) $(CUOBJ)
+bin/textnet: src/textnet_main.cpp $(OBJ) $(CUOBJ) $(NETH)
 bin/textnet_matching: src/textnet_matching.cpp $(OBJ) $(CUOBJ)
 bin/textnet_senti: src/textnet_senti.cpp $(OBJ) $(CUOBJ)
 bin/textnet_nb: src/textnet_nextbasket.cpp $(OBJ) $(CUOBJ)

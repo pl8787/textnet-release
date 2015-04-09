@@ -74,7 +74,6 @@ class SoftmaxLayer : public Layer<xpu>{
         top_data[0] += -log(bottom0_data[i][k]);
       }
     }
-
     top_data[0] /= nbatch;
   }
   

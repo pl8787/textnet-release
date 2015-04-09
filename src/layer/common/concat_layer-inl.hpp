@@ -69,6 +69,7 @@ class ConcatLayer : public Layer<xpu>{
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
 
+    top[0]->length = F<op::identity>(bottom[0]->length);
     for (int i = 0; i < top[0]->data.size(0); ++i) { // for each batch
       int cnt = 0;
       mshadow::Tensor<xpu, 1> top_data = top[0]->data[i][0][0];
@@ -89,7 +90,7 @@ class ConcatLayer : public Layer<xpu>{
       mshadow::Tensor<xpu, 1> top_diff = top[0]->diff[i][0][0];
       for (int j = 0; j < BottomNodeNum(); ++j) { // for each input node
         mshadow::Tensor<xpu, 1> bottom_diff = bottom[j]->diff[i][0][0];
-        bottom_diff = F<op::identity>(top_diff.Slice(cnt, cnt+bottom_diff.size(0)));
+        bottom_diff += top_diff.Slice(cnt, cnt+bottom_diff.size(0));
         cnt += bottom_diff.size(0);
       }
       utils::Assert(cnt == top[0]->diff.size(3), "ConcatLayer: bp error.");

@@ -51,7 +51,6 @@ class Updater {
   
   virtual void SetupUpdater(std::map<std::string, SettingV> &setting) {
     updater_type = 0;
-    is_sparse = false;
     this->Require(setting);
   }
   
@@ -64,9 +63,6 @@ class Updater {
                             
   
   virtual UpdaterType GetUpdaterType() { return updater_type; }
-  
-  // whether use sparse update
-  bool is_sparse;
   
  protected:
   UpdaterType updater_type;

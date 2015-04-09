@@ -111,14 +111,14 @@ class FullConnectLayer : public Layer<xpu> {
     mshadow::Tensor<xpu, 2> bottom_diff = bottom[0]->diff_d2();
     
     if (this->prop_grad[0]) {
-      this->params[0].diff_d2() = dot(top_diff.T(), bottom_data);
+      this->params[0].diff_d2() += dot(top_diff.T(), bottom_data);
     }
     if (!no_bias && this->prop_grad[1]) {
-      this->params[1].diff_d1() = sum_rows(top_diff);
+      this->params[1].diff_d1() += sum_rows(top_diff);
     }
     
     if (this->prop_error[0]) {
-      bottom_diff = dot(top_diff, this->params[0].data_d2());
+      bottom_diff += dot(top_diff, this->params[0].data_d2());
     }
   }
 

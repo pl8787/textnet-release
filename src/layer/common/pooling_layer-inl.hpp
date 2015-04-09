@@ -95,9 +95,9 @@ class PoolingLayer : public Layer<xpu> {
     
     if (this->prop_error[0]) {
       if (this->layer_type == kMaxPooling || this->layer_type == kSumPooling) {
-        bottom_diff = unpool<Reducer>(bottom_data, top_data, top_diff, kernel_y, kernel_x, stride);
+        bottom_diff += unpool<Reducer>(bottom_data, top_data, top_diff, kernel_y, kernel_x, stride);
       }else if (this->layer_type == kAvgPooling) {
-        bottom_diff = unpool<Reducer>(bottom_data, top_data, top_diff, kernel_y, kernel_x, stride)
+        bottom_diff += unpool<Reducer>(bottom_data, top_data, top_diff, kernel_y, kernel_x, stride)
             * (1.0f / (kernel_y*kernel_x));
       } else {
         utils::Error("Unknown pooling mode");

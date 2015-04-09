@@ -67,9 +67,7 @@ class RecurrentLayer : public Layer<xpu> {
     }
 
     begin_h.Resize(mshadow::Shape2(1, d_mem), 0.f);
-    begin_c.Resize(mshadow::Shape2(1, d_mem), 0.f);
     begin_h_er.Resize(mshadow::Shape2(1, d_mem), 0.f);
-    begin_c_er.Resize(mshadow::Shape2(1, d_mem), 0.f);
 
     this->params.resize(3);
     this->params[0].Resize(d_input, d_mem, 1, 1, true); // w
@@ -117,25 +115,6 @@ class RecurrentLayer : public Layer<xpu> {
     top[0]->Resize(shape_out);
   }
 
-  void LocateBeginEnd(mshadow::Tensor<xpu, 2> seq, 
-                      int &begin, int &end) { // input a 2D tensor, out put a sub 2d tensor, with 0 padding
-    begin = seq.size(0);
-    for (int i = 0; i < seq.size(0); ++i) {
-      if (!isnan(seq[i][0])) { // the first number
-          begin = i;
-          break;
-      }
-    }
-    end = seq.size(0);
-    for (int i = begin; i < seq.size(0); ++i) {
-      if (isnan(seq[i][0])) { // the first NAN
-          end = i;
-          break;
-      }
-    }
-    utils::Check(begin < end && begin >= 0, "RecurrentLayer: input error."); 
-  }
-
   void checkNan(float *p, int l) {
       for (int i = 0; i < l; ++i) {
           assert(!isnan(p[i]));
@@ -167,7 +146,7 @@ class RecurrentLayer : public Layer<xpu> {
         cur_h += x;
       }
       if (!no_bias) {
-        cur_h += repmat(b_data, cur_h.size(0));
+        cur_h += repmat(b_data, 1);
       }
       if (nonlinear_type == "sigmoid") {
         cur_h = mshadow::expr::F<op::sigmoid>(cur_h); // sigmoid_grad
@@ -181,8 +160,7 @@ class RecurrentLayer : public Layer<xpu> {
   }
 
   void ForwardLeft2Right(Tensor2D in, Tensor2D out) {
-      int begin = 0, end = 0;
-      LocateBeginEnd(in, begin, end);
+      int begin = 0, end = in.size(0);
       Tensor2D pre_h;
       // not need any padding, begin h and c are set to 0
       for (index_t row_idx = begin; row_idx < end; ++row_idx) {
@@ -197,8 +175,7 @@ class RecurrentLayer : public Layer<xpu> {
       }
   }
   void ForwardRight2Left(Tensor2D in, Tensor2D out) {
-      int begin = 0, end = 0;
-      LocateBeginEnd(in, begin, end);
+      int begin = 0, end = in.size(0);
       Tensor2D pre_h;
       // not need any padding, begin h and c are set to 0
       for (int row_idx = end-1; row_idx >= begin; --row_idx) {
@@ -218,14 +195,20 @@ class RecurrentLayer : public Layer<xpu> {
     // checkNanParams();
     Tensor4D bottom_data = bottom[0]->data;
     Tensor4D top_data = top[0]->data;
-    top_data = NAN;
-    const index_t nbatch = bottom_data.size(0); 
-    for (int i = 0; i < nbatch; ++i) {
-        if (reverse) {
-          ForwardLeft2Right(bottom_data[i][0], top_data[i][0]);
+    top[0]->length = mshadow::expr::F<op::identity>(bottom[0]->length);
+
+    top_data = 0.f;
+    for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
+      for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
+        int len = bottom[0]->length[batch_idx][seq_idx];
+        if (!reverse) {
+          ForwardLeft2Right(bottom_data[batch_idx][seq_idx].Slice(0,len),  
+                            top_data[batch_idx][seq_idx].Slice(0,len));
         } else {
-          ForwardRight2Left(bottom_data[i][0], top_data[i][0]);
+          ForwardRight2Left(bottom_data[batch_idx][seq_idx].Slice(0,len), 
+                            top_data[batch_idx][seq_idx].Slice(0,len));
         }
+      }
     }
     // checkNanParams();
   }
@@ -268,8 +251,7 @@ class RecurrentLayer : public Layer<xpu> {
 
   void BackpropForLeft2RightRnn(Tensor2D top_data, Tensor2D top_diff, 
                                 Tensor2D bottom_data, Tensor2D bottom_diff) {
-      int begin = 0, end = 0;
-      LocateBeginEnd(bottom_data, begin, end);
+      int begin = 0, end = top_data.size(0);
 
       Tensor2D pre_h, pre_h_er;
       for (int row_idx = end-1; row_idx >= begin; --row_idx) {
@@ -290,8 +272,7 @@ class RecurrentLayer : public Layer<xpu> {
   }
   void BackpropForRight2LeftRnn(Tensor2D top_data, Tensor2D top_diff, 
                                 Tensor2D bottom_data, Tensor2D bottom_diff) {
-      int begin = 0, end = 0;
-      LocateBeginEnd(bottom_data, begin, end);
+      int begin = 0, end = top_data.size(0);
 
       Tensor2D pre_h, pre_h_er;
       for (int row_idx = begin; row_idx < end; ++row_idx) {
@@ -318,28 +299,32 @@ class RecurrentLayer : public Layer<xpu> {
     Tensor4D top_data = top[0]->data;
     Tensor4D bottom_data = bottom[0]->data;
     Tensor4D bottom_diff = bottom[0]->diff;
-    Tensor4D w_diff = this->params[0].diff;
-    Tensor4D u_diff = this->params[1].diff;
-    Tensor4D b_diff = this->params[2].diff;;
     const index_t nbatch = bottom_data.size(0);
         
-	w_diff = 0.; u_diff = 0.; b_diff = 0.; bottom_diff = 0.; // this will cause a bug if sharing parameters or nodes
-    begin_c_er = 0.; begin_h_er = 0.; 
-
-    for (index_t i = 0; i < nbatch; ++i) {
+    begin_h_er = 0.; 
+    for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
+      for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
+        int len = bottom[0]->length[batch_idx][seq_idx];
         if (!reverse) {
-            BackpropForLeft2RightRnn(top_data[i][0], top_diff[i][0], bottom_data[i][0], bottom_diff[i][0]);
+            BackpropForLeft2RightRnn(top_data[batch_idx][seq_idx].Slice(0,len), 
+                                     top_diff[batch_idx][seq_idx].Slice(0,len), 
+                                     bottom_data[batch_idx][seq_idx].Slice(0,len), 
+                                     bottom_diff[batch_idx][seq_idx].Slice(0,len));
         } else {
-            BackpropForRight2LeftRnn(top_data[i][0], top_diff[i][0], bottom_data[i][0], bottom_diff[i][0]);
+            BackpropForRight2LeftRnn(top_data[batch_idx][seq_idx].Slice(0,len), 
+                                     top_diff[batch_idx][seq_idx].Slice(0,len), 
+                                     bottom_data[batch_idx][seq_idx].Slice(0,len), 
+                                     bottom_diff[batch_idx][seq_idx].Slice(0,len));
         }
+      }
+    // checkNanParams();
     }
-    checkNanParams();
   }
 
  protected:
   int d_mem, d_input;
   bool no_bias, reverse, input_transform; 
-  mshadow::TensorContainer<xpu, 2> begin_h, begin_c, begin_c_er, begin_h_er;
+  mshadow::TensorContainer<xpu, 2> begin_h, begin_h_er;
   std::string nonlinear_type;
 };
 }  // namespace layer

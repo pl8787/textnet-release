@@ -1,8 +1,6 @@
 #ifndef TEXTNET_NET_NET_H_
 #define TEXTNET_NET_NET_H_
 
-#define DEBUG 0 
-
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -29,14 +27,16 @@ using namespace mshadow;
 template<typename xpu>
 class Net {
  public:
-  Net(Random<xpu>* prnd_) {
+  Net(Random<xpu>* prnd_, int device_id_ = 0) {
     prnd = prnd_;
+    device_id = device_id_;
+    mshadow::InitTensorEngine<gpu>();
 	InitSettingEngine();
   }
 
   
   virtual ~Net(void) {
-    
+    mshadow::ShutdownTensorEngine<xpu>(); 
   }
   
   void InitSettingEngine() {
@@ -254,6 +254,32 @@ class Net {
         top_vecs[i].push_back(nodes[node_name]);
       }
     }
+
+	// ******** Cope with param sharing ********
+	utils::Printf("[Process] Add Params Sharing.\n");
+
+	for (int i = 0; i < layers_root.size(); ++i) {
+	  Json::Value &layer_root = layers_root[i];
+	  Json::Value &shares_root = layer_root["share"];
+	  if (!shares_root.isNull()) {
+		for (int j = 0; j < shares_root.size(); ++j) {
+		  Json::Value &share_root = shares_root[j];
+		  string target_layer_name = layer_root["layer_name"].asString();
+		  string source_layer_name = share_root["source_layer_name"].asString();
+          int target_param_id = share_root["param_id"].asInt();
+		  int source_param_id = share_root["source_param_id"].asInt();
+
+    //      name2layer[target_layer_name]->ShareParameter(target_param_id,
+	//			name2layer[source_layer_name]->GetParams()[source_param_id]);
+
+		  utils::Printf("\t%s.param[%d] === %s.param[%d]\n", 
+				target_layer_name.c_str(),
+				target_param_id,
+				source_layer_name.c_str(),
+				source_param_id);
+	    }
+	  }
+	}
   }
 
   virtual void PropAll() {
@@ -333,6 +359,10 @@ class Net {
     utils::Check(phrase_type == kTrain, 
                   "Only call in Train Phrase.");
     if (phrase_type == kTrain) {
+      for (int i = train_net.size()-1; i >= 0; --i) {
+          int layer_idx = train_net[i]->layer_idx;
+          train_net[i]->ClearDiff(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+      }
       for (int i = train_net.size()-1; i>=0; --i) {
         int layer_idx = train_net[i]->layer_idx;
         train_net[i]->Backprop(bottom_vecs[layer_idx], top_vecs[layer_idx]);
@@ -618,6 +648,8 @@ class Net {
   // node list
   vector<Node<xpu>*> node_list;
 
+  // gpu device id
+  int device_id;
 };
 
 }  // namespace net

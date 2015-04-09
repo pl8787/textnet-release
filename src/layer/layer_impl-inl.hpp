@@ -16,6 +16,7 @@
 #include "./common/convolutional_lstm_layer-inl.hpp"
 #include "./common/wholepooling_layer-inl.hpp"
 #include "./common/concat_layer-inl.hpp"
+#include "./common/sequcence_dim_reduction_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
 #include "./input/sequence_classification_data_layer-inl.hpp"
@@ -44,6 +45,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kDropout: return new DropoutLayer<xpu>(kDropout);
     case kLstm: return new LstmLayer<xpu>(kLstm);
     case kRecurrent: return new RecurrentLayer<xpu>(kRecurrent);
+    case kSequenceDimReduction: return new SequenceDimReductionLayer<xpu>(kSequenceDimReduction);
     case kConvolutionalLstm: return new ConvolutionalLstmLayer<xpu>(kConvolutionalLstm);
     case kHingeLoss: return new HingeLossLayer<xpu>(kHingeLoss);
     case kPairHingeLoss: return new PairHingeLossLayer<xpu>(kPairHingeLoss);

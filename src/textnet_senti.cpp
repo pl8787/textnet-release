@@ -15,6 +15,7 @@
 #include "global.h"
 #include <cassert>
 #include "./checker/checker.h"
+#include "./layer/input/sequence_classification_data_layer-inl.hpp"
 
 
 using namespace std;
@@ -75,6 +76,85 @@ void PrintTensor(const char * name, Tensor<cpu, 4> x) {
     cout << endl;
 }
 
+typedef mshadow::Tensor<cpu, 1> Tensor1D;
+typedef mshadow::Tensor<cpu, 2> Tensor2D;
+typedef mshadow::Tensor<cpu, 3> Tensor3D;
+typedef mshadow::Tensor<cpu, 4> Tensor4D;
+
+struct TensorProp{
+  float ave, var, max;
+  void clear() {
+    ave = 0.f; var = 0.f; max = 0.f;
+  }
+};
+
+void statMatrix(Tensor4D t, TensorProp &prop) {
+    int num = t.size(0) * t.size(1) * t.size(2) * t.size(3);
+    prop.clear();
+    for (int i = 0; i < num; ++i) {
+        float x = t.dptr_[i];
+        if (x < 0.f) {
+            x = -x;
+        }
+
+        prop.ave += x;
+        if (prop.max < x)
+          prop.max = x;
+    }
+    prop.ave /= float(num);
+}
+
+void statSentiNet(vector<Layer<cpu> *> &senti_net) {
+    for (int i = 0; i < senti_net.size(); ++i) {
+        for (int j = 0; j < senti_net[i]->ParamNodeNum(); ++j) {
+            cout << "STAT PARAMETER:" << senti_net[i]->layer_name << ":" << j << ":";
+            TensorProp prop;
+            statMatrix(senti_net[i]->params[j].data, prop);
+            cout << prop.ave << "," << prop.max << endl;
+        }
+    }
+}
+
+void LoadMatrix(const char *inFile, Tensor4D t) {
+    ifstream ifs(inFile);
+    int m = -1, n = -1;
+    ifs >> m >> n;
+    if (t.size(0) == 1) {
+        if (!(t.size(1) == 1)) { cout << "matrix error"; assert(false); exit(1);}
+        if (!(t.size(2) == m)) { cout << "matrix error"; assert(false); exit(1);}
+        if (!(t.size(3) == n)) { cout << "matrix error"; assert(false); exit(1);}
+    } else {
+        if (!(t.size(0) == m)) { cout << "matrix error"; assert(false); exit(1);}
+        if (!(t.size(1) == n)) { cout << "matrix error"; assert(false); exit(1);}
+        if (!(t.size(2) == 1)) { cout << "matrix error"; assert(false); exit(1);}
+        if (!(t.size(3) == 1)) { cout << "matrix error"; assert(false); exit(1);}
+    }
+    for (int i = 0; i < m * n; ++i) {
+        ifs >> t.dptr_[i];
+    }
+}
+void LoadModel(const string dir, string epoch, vector<Layer<cpu> *> senti_net) {
+    string inFile = dir + "/word_rep." + epoch;
+    LoadMatrix(inFile.c_str(), senti_net[1]->params[0].data);
+    TensorProp prop;
+    statMatrix(senti_net[1]->params[0].data, prop);
+    cout << prop.ave << ":" << prop.max << endl;
+    inFile = dir + "/word_w_trans." + epoch;
+    LoadMatrix(inFile.c_str(), senti_net[2]->params[0].data);
+    inFile = dir + "/W_l." + epoch;
+    LoadMatrix(inFile.c_str(), senti_net[3]->params[0].data);
+    inFile = dir + "/U_l." + epoch;
+    LoadMatrix(inFile.c_str(), senti_net[3]->params[1].data);
+    inFile = dir + "/W_r." + epoch;
+    LoadMatrix(inFile.c_str(), senti_net[4]->params[0].data);
+    inFile = dir + "/U_r." + epoch;
+    LoadMatrix(inFile.c_str(), senti_net[4]->params[1].data);
+    inFile = dir + "/conv_w_trans." + epoch;
+    LoadMatrix(inFile.c_str(), senti_net[5]->params[0].data);
+    inFile = dir + "/sm_w_trans." + epoch;
+    LoadMatrix(inFile.c_str(), senti_net[9]->params[0].data);
+}
+
 struct EvalRet {
     float acc, loss;
     EvalRet(): acc(0.), loss(0.) {}
@@ -104,39 +184,78 @@ int main(int argc, char *argv[]) {
   mshadow::Random<cpu> rnd(37);
   vector<Layer<cpu>*> senti_net, senti_valid, senti_test;
 
-  int lstm_hidden_dim = 30;
-  int word_rep_dim = 30;
-  int max_doc_len = 20;
+  mshadow::TensorContainer<cpu, 1> a;
+  a.Resize(mshadow::Shape1(10));
+  cout << "a.dptr:" << a.dptr_ << endl;
+  mshadow::Tensor<cpu, 1> b;
+  b = a.Slice(0,10);
+  cout << "b.dptr:" << b.dptr_ << endl;
+  mshadow::TensorContainer<cpu, 1> c;
+  cout << "c.dptr:" << c.dptr_ << endl;
+  (*(mshadow::Tensor<cpu, 1> *)&c) = a;
+  // c = b;
+  cout << "c.dptr:" << c.dptr_ << endl;
+  exit(0);
+
+  float init_interval = 0.3;
+  int lstm_hidden_dim = 100;
+  int word_rep_dim = 300;
+  int max_doc_len = 200;
   int min_doc_len = 1;
-  int batch_size = 2;
-  int vocab_size = 5;
+  int batch_size = 50;
+  int vocab_size = 18766;
   int num_class = 2;
   int ADA_GRAD_MAX_ITER = 1000000;
   float base_lr = 0.1;
   float ADA_GRAD_EPS = 0.01;
-  float decay = 0.00;
+  float decay = 0.0;
+  float l2 = 0.000001f;
+  // float pad_value = (float)(NAN);
 
-  string train_data_file = "/home/wsx/dl.shengxian/data/simulation/lstm.train";
-  string valid_data_file = "/home/wsx/dl.shengxian/data/simulation/lstm.test";
-  string test_data_file = "/home/wsx/dl.shengxian/data/simulation/lstm.test";
-  string embedding_file = ""; 
-  // string embedding_file = "/home/pangliang/matching/data/wikicorp_50_msr.txt";
-  int nTrain = 6, nValid = 7, nTest = 7;
+  // string train_data_file = "/home/wsx/dl.shengxian/data/simulation/lstm.train";
+  // string valid_data_file = "/home/wsx/dl.shengxian/data/simulation/lstm.test";
+  // string test_data_file = "/home/wsx/dl.shengxian/data/simulation/lstm.test";
+  // string embedding_file = ""; 
+  // int nTrain = 6, nValid = 7, nTest = 7;
+  
+  string train_data_file = "/home/wsx/dl.shengxian/data/mr/lstm.train.nopad";
+  string valid_data_file = "/home/wsx/dl.shengxian/data/mr/lstm.dev.nopad";
+  string test_data_file = "/home/wsx/dl.shengxian/data/mr/lstm.test.nopad";
+  string embedding_file = "/home/wsx/dl.shengxian/data/mr/word_rep_w2v.plpl"; 
+  int nTrain = 8528, nValid = 1067, nTest = 1067;
 
   if (argc == 2) {
     base_lr = atof(argv[1]);
   }
+  map<string, SettingV> &g_updater = *(new map<string, SettingV>());
+  // g_updater["updater_type"] = SettingV(updater::kAdaDelta);
+  g_updater["updater_type"] = SettingV(updater::kAdaDelta);
+  // g_updater["batch_size"] = SettingV(batch_size);
+  g_updater["l2"] = SettingV(l2);
+  // g_updater["batch_size"] = SettingV(1);
+  g_updater["batch_size"] = SettingV(1);
+  // g_updater["max_iter"] = SettingV(ADA_GRAD_MAX_ITER);
+  // g_updater["eps"] = SettingV(ADA_GRAD_EPS);
+  // g_updater["lr"] = SettingV(base_lr);
+  // g_updater["decay"] = SettingV(decay);  
+  // g_updater["momentum"] = SettingV(0.0f);
+
+
   
   senti_net.push_back(CreateLayer<cpu>(kSequenceClassificationData));
   senti_net[senti_net.size()-1]->layer_name = "text";
   senti_net.push_back(CreateLayer<cpu>(kEmbedding));
   senti_net[senti_net.size()-1]->layer_name = "embedding";
+  senti_net.push_back(CreateLayer<cpu>(kSequenceDimReduction));
+  senti_net[senti_net.size()-1]->layer_name = "word_dim_reduction";
   senti_net.push_back(CreateLayer<cpu>(kLstm));
-  senti_net[senti_net.size()-1]->layer_name == "l_lstm";
+  senti_net[senti_net.size()-1]->layer_name = "l_lstm";
   senti_net.push_back(CreateLayer<cpu>(kLstm));
-  senti_net[senti_net.size()-1]->layer_name == "r_lstm";
+  senti_net[senti_net.size()-1]->layer_name = "r_lstm";
   senti_net.push_back(CreateLayer<cpu>(kConvolutionalLstm));
-  senti_net[senti_net.size()-1]->layer_name == "conv_lstm";
+  senti_net[senti_net.size()-1]->layer_name = "conv_lstm";
+  senti_net.push_back(CreateLayer<cpu>(kRectifiedLinear));
+  senti_net[senti_net.size()-1]->layer_name = "activation";
   senti_net.push_back(CreateLayer<cpu>(kWholePooling));
   senti_net[senti_net.size()-1]->layer_name = "wholepooling";
   senti_net.push_back(CreateLayer<cpu>(kDropout));
@@ -168,16 +287,25 @@ int main(int argc, char *argv[]) {
       nodes.push_back(node);
       top_vecs[i].push_back(node);
     }
-    if (i == 0) { // swap input layer node
-      Node<cpu>* node = top_vecs[0][0];
-      top_vecs[0][0] = top_vecs[0][1];
-      top_vecs[0][1] = node;
-    }
 
     // connect by node name 
     if (i == 0) {
-        senti_net[0]->top_nodes.push_back(nodes[1]->node_name);
         senti_net[0]->top_nodes.push_back(nodes[0]->node_name);
+        senti_net[0]->top_nodes.push_back(nodes[1]->node_name);
+        inc_node += senti_net[i]->TopNodeNum();
+    } else if (senti_net[i]->layer_name == "l_lstm") {
+        senti_net[i]->bottom_nodes.push_back(nodes[inc_node-2]->node_name);
+        senti_net[i]->top_nodes.push_back(nodes[inc_node]->node_name);
+        inc_node += senti_net[i]->TopNodeNum();
+    } else if (senti_net[i]->layer_name == "r_lstm") {
+        senti_net[i]->bottom_nodes.push_back(nodes[inc_node-3]->node_name);
+        senti_net[i]->top_nodes.push_back(nodes[inc_node]->node_name);
+        inc_node += senti_net[i]->TopNodeNum();
+    } else if (senti_net[i]->layer_name == "conv_lstm") {
+        senti_net[i]->bottom_nodes.push_back(nodes[inc_node-2]->node_name);
+        senti_net[i]->bottom_nodes.push_back(nodes[inc_node-3]->node_name);
+        senti_net[i]->bottom_nodes.push_back(nodes[inc_node-1]->node_name);
+        senti_net[i]->top_nodes.push_back(nodes[inc_node]->node_name);
         inc_node += senti_net[i]->TopNodeNum();
     } else if (senti_net[i]->layer_name == "accuracy") {
         senti_net[i]->bottom_nodes.push_back(nodes[inc_node-2]->node_name);
@@ -197,12 +325,22 @@ int main(int argc, char *argv[]) {
     // connect by node memory
     if (i == 0) {
       continue;
+    } else if (senti_net[i]->layer_name == "l_lstm") {
+      bottom_vecs[i].push_back(top_vecs[i-2][0]);
+    } else if (senti_net[i]->layer_name == "r_lstm") {
+      bottom_vecs[i].push_back(top_vecs[i-3][0]);
+    } else if (senti_net[i]->layer_name == "conv_lstm") {
+      bottom_vecs[i].push_back(top_vecs[i-2][0]);
+      bottom_vecs[i].push_back(top_vecs[i-3][0]);
+      bottom_vecs[i].push_back(top_vecs[i-1][0]);
     } else if (senti_net[i]->layer_name == "accuracy") {
       bottom_vecs[i].push_back(top_vecs[i-2][0]);
       bottom_vecs[i].push_back(nodes[0]); // accuracy
     } else if (senti_net[i]->layer_name == "softmax") {
       bottom_vecs[i].push_back(top_vecs[i-1][0]);
       bottom_vecs[i].push_back(nodes[0]); 
+    } else if (senti_net[i]->layer_name == "embedding") {
+      bottom_vecs[i].push_back(top_vecs[i-1][1]);
     } else {
       bottom_vecs[i].push_back(top_vecs[i-1][0]);
     }
@@ -241,35 +379,46 @@ int main(int argc, char *argv[]) {
     setting["embedding_file"] = SettingV(embedding_file);
     setting["word_count"] = SettingV(vocab_size);
     setting["feat_size"] = SettingV(word_rep_dim);
-    setting["pad_value"] = SettingV((float)(NAN));
+    // setting["pad_value"] = SettingV(pad_value);
       
     map<string, SettingV> &w_setting = *(new map<string, SettingV>());
       w_setting["init_type"] = SettingV(initializer::kUniform);
-      w_setting["range"] = SettingV(0.01f);
+      w_setting["range"] = SettingV(init_interval);
     setting["w_filler"] = SettingV(&w_setting);
       
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-      w_updater["updater_type"] = SettingV(updater::kAdagrad);
-      // w_updater["updater_type"] = SettingV(updater::kSGD);
-      w_updater["momentum"] = SettingV(0.0f);
-      w_updater["max_iter"] = SettingV(ADA_GRAD_MAX_ITER);
-      w_updater["eps"] = SettingV(ADA_GRAD_EPS);
-      w_updater["lr"] = SettingV(base_lr);
-      w_updater["decay"] = SettingV(decay);  
+    w_updater = g_updater;
+    w_updater["l2"] = 0.f;
     setting["w_updater"] = SettingV(&w_updater);
     setting_vec.push_back(setting);
   }
+  // kSequenceDimReduction
+  {
+    map<string, SettingV> setting;
+    setting["num_hidden"] = SettingV(lstm_hidden_dim);
+      
+    map<string, SettingV> &w_filler = *(new map<string, SettingV>());
+      w_filler["init_type"] = SettingV(initializer::kUniform);
+      w_filler["range"] = SettingV(init_interval);
+    setting["w_filler"] = SettingV(&w_filler);
+
+    map<string, SettingV> &w_updater = *(new map<string, SettingV>());
+    w_updater = g_updater;
+    setting["w_updater"] = SettingV(&w_updater);
+    
+    setting_vec.push_back(setting);
+  }
   // kLstm
-#if 1
   {
     map<string, SettingV> setting;
     setting["d_input"] = SettingV(word_rep_dim);
     setting["d_mem"] = SettingV(lstm_hidden_dim);
     setting["no_bias"] = SettingV(true);
+    // setting["pad_value"] = SettingV(pad_value);
       
     map<string, SettingV> &w_filler = *(new map<string, SettingV>());
       w_filler["init_type"] = SettingV(initializer::kUniform);
-      w_filler["range"] = SettingV(0.01f);
+      w_filler["range"] = SettingV(init_interval);
     setting["w_filler"] = SettingV(&w_filler);
     setting["u_filler"] = SettingV(&w_filler);
 
@@ -278,19 +427,68 @@ int main(int argc, char *argv[]) {
     setting["b_filler"] = SettingV(&b_filler);
       
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-      w_updater["updater_type"] = SettingV(updater::kAdagrad);
-      w_updater["momentum"] = SettingV(0.0f);
-      w_updater["eps"] = SettingV(ADA_GRAD_EPS);
-      w_updater["mat_iter"] = SettingV(ADA_GRAD_MAX_ITER);
-      w_updater["lr"] = SettingV(base_lr);
-      w_updater["decay"] = SettingV(decay); 
+    w_updater = g_updater;
     setting["w_updater"] = SettingV(&w_updater);
     setting["u_updater"] = SettingV(&w_updater);
     setting["b_updater"] = SettingV(&w_updater);
     
     setting_vec.push_back(setting);
   }
-# endif
+  {
+    map<string, SettingV> setting;
+    setting["d_input"] = SettingV(word_rep_dim);
+    setting["d_mem"] = SettingV(lstm_hidden_dim);
+    setting["no_bias"] = SettingV(true);
+    // setting["pad_value"] = SettingV(pad_value);
+    setting["reverse"] = SettingV(true);
+
+    map<string, SettingV> &w_filler = *(new map<string, SettingV>());
+      w_filler["init_type"] = SettingV(initializer::kUniform);
+      w_filler["range"] = SettingV(init_interval);
+    setting["w_filler"] = SettingV(&w_filler);
+    setting["u_filler"] = SettingV(&w_filler);
+
+    map<string, SettingV> &b_filler = *(new map<string, SettingV>());
+      b_filler["init_type"] = SettingV(initializer::kZero);
+    setting["b_filler"] = SettingV(&b_filler);
+      
+    map<string, SettingV> &w_updater = *(new map<string, SettingV>());
+    w_updater = g_updater;
+    setting["w_updater"] = SettingV(&w_updater);
+    setting["u_updater"] = SettingV(&w_updater);
+    setting["b_updater"] = SettingV(&w_updater);
+    
+    setting_vec.push_back(setting);
+  }
+  // kConvLstm
+  {
+    map<string, SettingV> setting;
+    setting["num_hidden"] = SettingV(lstm_hidden_dim);
+    setting["no_bias"] = SettingV(true);
+    setting["nonlinear_type"] = SettingV("rectifier");
+    // setting["pad_value"] = SettingV(pad_value);
+      
+    map<string, SettingV> &w_filler = *(new map<string, SettingV>());
+      w_filler["init_type"] = SettingV(initializer::kUniform);
+      w_filler["range"] = SettingV(init_interval);
+    setting["w_filler"] = SettingV(&w_filler);
+
+    map<string, SettingV> &b_filler = *(new map<string, SettingV>());
+      b_filler["init_type"] = SettingV(initializer::kZero);
+    setting["b_filler"] = SettingV(&b_filler);
+
+    map<string, SettingV> &w_updater = *(new map<string, SettingV>());
+    w_updater = g_updater;
+    setting["w_updater"] = SettingV(&w_updater);
+    setting["b_updater"] = SettingV(&w_updater);
+    setting_vec.push_back(setting);
+
+  }
+  // kActivation
+  {
+    map<string, SettingV> setting;
+    setting_vec.push_back(setting);
+  }
   // kWholeMaxPooling
   {
     map<string, SettingV> setting;
@@ -300,42 +498,29 @@ int main(int argc, char *argv[]) {
   //  kDropout
   {
     map<string, SettingV> setting;
-    setting["rate"] = SettingV(0.0f);
+    setting["rate"] = SettingV(0.5f);
     setting_vec.push_back(setting);
   }
   // kFullConnect
   {
     map<string, SettingV> setting;
     setting["num_hidden"] = SettingV(num_class);
-    setting["no_bias"] = SettingV(false);
+    setting["no_bias"] = SettingV(true);
 
     map<string, SettingV> &w_setting = *(new map<string, SettingV>());
-      // w_setting["init_type"] = SettingV(initializer::kZero);
-      w_setting["init_type"] = SettingV(initializer::kUniform);
-      w_setting["range"] = SettingV(0.1f);
+      w_setting["init_type"] = SettingV(initializer::kZero);
+      // w_setting["init_type"] = SettingV(initializer::kUniform);
+      // w_setting["range"] = SettingV(init_interval);
     map<string, SettingV> &b_setting = *(new map<string, SettingV>());
       b_setting["init_type"] = SettingV(initializer::kZero);
     setting["w_filler"] = SettingV(&w_setting);
     setting["b_filler"] = SettingV(&b_setting);
 
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
-      w_updater["updater_type"] = SettingV(updater::kAdagrad);
-      w_updater["max_iter"] = SettingV(ADA_GRAD_MAX_ITER);
-      // w_updater["updater_type"] = SettingV(updater::kSGD);
-      w_updater["eps"] = SettingV(ADA_GRAD_EPS);
-      w_updater["momentum"] = SettingV(0.0f);
-      w_updater["lr"] = SettingV(base_lr);
-      w_updater["decay"] = SettingV(decay);
-    map<string, SettingV> &b_updater = *(new map<string, SettingV>());
-      b_updater["updater_type"] = SettingV(updater::kAdagrad);
-      w_updater["max_iter"] = SettingV(ADA_GRAD_MAX_ITER);
-      // _updater["updater_type"] = SettingV(updater::kSGD);
-      b_updater["eps"] = SettingV(ADA_GRAD_EPS);
-      b_updater["momentum"] = SettingV(0.0f);
-      b_updater["lr"] = SettingV(base_lr);
-      b_updater["decay"] = SettingV(decay);
+    w_updater = g_updater;
+    w_updater["l2"] = w_updater["l2"].fVal()*3.f;
     setting["w_updater"] = SettingV(&w_updater);
-    setting["b_updater"] = SettingV(&b_updater);
+    setting["b_updater"] = SettingV(&w_updater);
     setting_vec.push_back(setting);
   }
   // kSoftmax
@@ -363,6 +548,11 @@ int main(int argc, char *argv[]) {
     senti_net[i]->Reshape(bottom_vecs[i], top_vecs[i]);
     // cout << "\tReshape" << endl;
   }
+  // // share
+  // assert(senti_net[3]->layer_name == "r_lstm");
+  // senti_net[3]->ShareParameter(0, senti_net[2]->params[0]);
+  // senti_net[3]->ShareParameter(1, senti_net[2]->params[1]);
+  // senti_net[3]->ShareParameter(2, senti_net[2]->params[2]);
 
   // Save Initial Model
   {
@@ -382,13 +572,13 @@ int main(int argc, char *argv[]) {
   _of.close();
   }
 
-  using namespace checker;
-  Checker<cpu> * cker = CreateChecker<cpu>();
-  map<string, SettingV> setting_checker;
-  setting_checker["range_min"] = SettingV(-0.1f);
-  setting_checker["range_max"] = SettingV(0.1f);
-  setting_checker["delta"] = SettingV(0.0001f);
-  cker->SetupChecker(setting_checker, &rnd);
+  // using namespace checker;
+  // Checker<cpu> * cker = CreateChecker<cpu>();
+  // map<string, SettingV> setting_checker;
+  // setting_checker["range_min"] = SettingV(-0.1f);
+  // setting_checker["range_max"] = SettingV(0.1f);
+  // setting_checker["delta"] = SettingV(0.0001f);
+  // cker->SetupChecker(setting_checker, &rnd);
   // check gradient, uncheck last two layers (softmax and accuracy)
   // for (index_t i = 0; i < senti_net.size()-2; ++i) {
   //   cout << "Check gradient of layer " << i << endl;
@@ -399,13 +589,17 @@ int main(int argc, char *argv[]) {
   // Begin Training 
   int max_iters = 3000;
   float maxValidAcc = 0., testAccByValid = 0.;
+  LoadModel("/home/wsx/dl.shengxian/src/cpp/model/", "0", senti_net);
   for (int iter = 0; iter < max_iters; ++iter) {
     // if (iter % 100 == 0) { cout << "iter:" << iter << endl; }
     if (iter % (nTrain/batch_size) == 0) {
+      statSentiNet(senti_net);
+      ((SequenceClassificationDataLayer<cpu> *)(senti_valid[0]))->line_ptr = 0;
+      ((SequenceClassificationDataLayer<cpu> *)(senti_test[0]))->line_ptr = 0;
       EvalRet train_ret, valid_ret, test_ret;
-      eval(senti_net, bottom_vecs, top_vecs, (nTrain/batch_size), train_ret);
       eval(senti_valid, bottom_vecs, top_vecs, (nValid/batch_size), valid_ret);
       eval(senti_test,  bottom_vecs, top_vecs, (nTest/batch_size), test_ret);
+      eval(senti_net, bottom_vecs, top_vecs, (nTrain/batch_size), train_ret);
       fprintf(stdout, "****%d,%f,%f,%f,%f,%f,%f", iter, train_ret.loss, valid_ret.loss, test_ret.loss, 
                                                         train_ret.acc,  valid_ret.acc,  test_ret.acc);
       if (valid_ret.acc > maxValidAcc) {
@@ -437,7 +631,9 @@ int main(int argc, char *argv[]) {
     }
 #endif
     
-
+    for (int i = 0; i < senti_net.size(); ++i) {
+        senti_net[i]->ClearDiff(bottom_vecs[i], top_vecs[i]);
+    }
     for (int i = senti_net.size()-2; i >= 0; --i) {
       // cout << "Backprop layer " << i << endl;
       senti_net[i]->Backprop(bottom_vecs[i], top_vecs[i]);

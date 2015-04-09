@@ -50,6 +50,7 @@ const int kLstm = 24;
 const int kWholePooling = 25;
 const int kConvolutionalLstm = 26;
 const int kRecurrent = 27;
+const int kSequenceDimReduction = 28;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;
@@ -124,6 +125,17 @@ class Layer {
 
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) = 0;
+  
+  // clear all top nodes diff and paramters diff
+  virtual void ClearDiff(const std::vector<Node<xpu>*> &bottom,
+                         const std::vector<Node<xpu>*> &top) {
+    for (int i = 0; i < params.size(); ++i) {
+        params[i].ClearDiff();
+    }
+    for (int i = 0; i < top.size(); ++i) {
+        top[i]->ClearDiff();
+    }
+  }
 
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
                         const std::vector<Node<xpu>*> &top) = 0;
@@ -132,6 +144,14 @@ class Layer {
   virtual int TopNodeNum() = 0;
 
   virtual int ParamNodeNum() = 0;
+
+  // parameter sharing
+  virtual void ShareParameter(int param_idx, Node<xpu> &other) {
+	  utils::Check(param_idx < params.size(), 
+			  "Share param index extend params size.");
+      params[param_idx].Share(other);
+  }
+
 
   void SaveSetting(std::map<std::string, SettingV> &setting, Json::Value &root) {
     for (std::map<std::string, SettingV>::iterator it = setting.begin(); 
@@ -336,7 +356,8 @@ class Layer {
   std::vector<std::string> bottom_nodes;
   std::vector<std::string> top_nodes; 
  
- protected:
+ // protected:
+ public:
   std::vector<Node<xpu> > params;
   std::map<std::string, SettingV> settings;
   std::vector<bool> prop_error;

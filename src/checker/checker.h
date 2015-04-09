@@ -80,6 +80,10 @@ class Checker {
     // Fill the top diff
     // Because the loss is L2 norm, the top diff is simply copy of top data
     layer->Forward(bottoms, tops);
+    layer->ClearDiff(bottoms, tops);
+    for (int i = 0; i < bottoms.size(); ++i) {
+      bottoms[i]->diff = 0.;
+    }
     for (int i = 0; i < tops.size(); ++i) {
       tops[i]->diff = F<mshadow::op::identity>(tops[i]->data);
     }
@@ -143,6 +147,10 @@ class Checker {
     // Fill the top diff
     // Because the loss is L2 norm, the top diff is simply copy of top data
     layer->Forward(bottoms, tops);
+    layer->ClearDiff(bottoms, tops);
+    for (int i = 0; i < bottoms.size(); ++i) {
+      bottoms[i]->diff = 0.;
+    }
     for (int i = 0; i < tops.size(); ++i) {
       tops[i]->diff = F<mshadow::op::identity>(tops[i]->data);
     }

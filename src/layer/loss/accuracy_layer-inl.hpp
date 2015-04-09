@@ -63,6 +63,7 @@ class AccuracyLayer : public Layer<xpu>{
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 2> bottom0_data = bottom[0]->data_d2();
     mshadow::Tensor<xpu, 2> bottom1_data = bottom[1]->data_d2();
+    mshadow::Tensor<xpu, 2> bottom1_len  = bottom[1]->length;
     mshadow::Tensor<xpu, 1> top_data = top[0]->data_d1();
 
 	top_data[0] = 0.0f;
@@ -77,7 +78,9 @@ class AccuracyLayer : public Layer<xpu>{
           bottom_data_vector.begin(), bottom_data_vector.begin() + topk,
           bottom_data_vector.end(), std::greater<std::pair<float, int> >());
       for (int j = 0; j < topk; ++j) {
-        for (int k = 0; k < bottom1_data.size(1); ++k) {
+        int len = bottom1_len[i][0];
+        if (len == 0) len = 1; 
+        for (int k = 0; k < len; ++k) {
           int lable_value = static_cast<int>(bottom1_data[i][k]);
           if (bottom_data_vector[j].second == lable_value) {
             ++top_data[0];

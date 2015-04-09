@@ -70,8 +70,10 @@ class TextDataLayer : public Layer<xpu>{
     
     line_count = lines.size();
     data_set.Resize(mshadow::Shape3(line_count, 2, max_doc_len));
+    length_set.Resize(mshadow::Shape2(line_count, 2));
     label_set.Resize(mshadow::Shape1(line_count), 0);
     data_set = -1;
+	length_set = 0;
     
     utils::Printf("Line count in file: %d\n", line_count);
 
@@ -83,6 +85,8 @@ class TextDataLayer : public Layer<xpu>{
         iss.seekg(0, iss.beg);
       iss.str(lines[i]);
       iss >> label_set[i] >> len_s1 >> len_s2;
+	  length_set[i][0] = len_s1;
+	  length_set[i][1] = len_s2;
       for (int j = 0; j < len_s1; ++j) {
         iss >> data_set[i][0][j];
       }
@@ -114,9 +118,11 @@ class TextDataLayer : public Layer<xpu>{
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 3> top0_data = top[0]->data_d3();
+    mshadow::Tensor<xpu, 2> top0_length = top[0]->length;
     mshadow::Tensor<xpu, 1> top1_data = top[1]->data_d1();
     for (int i = 0; i < batch_size; ++i) {
       top0_data[i] = F<op::identity>(data_set[line_ptr]);
+	  top0_length[i] = F<op::identity>(length_set[line_ptr]);
       top1_data[i] = label_set[line_ptr];
       line_ptr = (line_ptr + 1) % line_count;
     }
@@ -134,6 +140,7 @@ class TextDataLayer : public Layer<xpu>{
   int max_doc_len;
   int min_doc_len;
   mshadow::TensorContainer<xpu, 3> data_set;
+  mshadow::TensorContainer<xpu, 2> length_set;
   mshadow::TensorContainer<xpu, 1> label_set;
   int line_count;
   int line_ptr;

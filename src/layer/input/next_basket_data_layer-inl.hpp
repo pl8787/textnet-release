@@ -135,9 +135,8 @@ class NextBasketDataLayer : public Layer<xpu>{
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
-    // padding 
     for (int node_idx = 0; node_idx < top.size(); ++node_idx) {
-      top[node_idx]->data = NAN;
+      top[node_idx]->data = 0;
     }
 
     for (int i = 0; i < batch_size; ++i) {
@@ -158,11 +157,13 @@ class NextBasketDataLayer : public Layer<xpu>{
       for (int k = 0; k < dataset[exampleIdx].next_items.size(); ++k) {
         top[1]->data[i][0][0][k] = dataset[exampleIdx].next_items[k]; // label set
       }
+      top[1]->length[i][0] = dataset[exampleIdx].next_items.size();
       top[2]->data[i][0][0][0] = dataset[exampleIdx].user;
       for (int w = 0; w < context_window; ++w) {
         for (int k = 0; k < dataset[exampleIdx].context[w].size(); ++k) {
           top[w+3]->data[i][0][0][k] = dataset[exampleIdx].context[w][k];
         }
+        top[w+3]->length[i][0] = dataset[exampleIdx].context[w].size();
       }
     }
   }
@@ -190,8 +191,6 @@ class NextBasketDataLayer : public Layer<xpu>{
   std::vector<Example> dataset;
   
   std::vector<int> example_ids;
-  // mshadow::TensorContainer<xpu, 4> data_set;
-  // mshadow::TensorContainer<xpu, 1> label_set;
   int line_count;
   int shuffle_seed;
   utils::RandomSampler sampler;

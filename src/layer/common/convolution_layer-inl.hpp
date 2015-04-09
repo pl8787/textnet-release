@@ -148,11 +148,9 @@ class ConvolutionLayer : public Layer<xpu> {
     const index_t nbatch = bottom_data.size(0);
         
     if (!no_bias && this->prop_grad[1]) {
-      bias_diff = sumall_except_dim<1>(top_diff);
+      bias_diff += sumall_except_dim<1>(top_diff);
     }
     
-	weight_diff = 0.0f;
-
     for (int i = 0; i < nbatch; ++i) {
       if (pad_x == 0 && pad_y == 0) {
         temp_col_ = unpack_patch2col(bottom_data[i], kernel_y, kernel_x, stride);
@@ -169,13 +167,13 @@ class ConvolutionLayer : public Layer<xpu> {
         temp_dif_ = dot(weight_data.T(), top_diff[i]);
         mshadow::Tensor<xpu, 3> one_diff = bottom_diff[i];
         if (pad_x == 0 && pad_y == 0) {
-          one_diff = pack_col2patch(temp_dif_, one_diff.shape_, 
+          one_diff += pack_col2patch(temp_dif_, one_diff.shape_, 
               kernel_y, kernel_x, stride);
         } else {
           mshadow::Shape<3> pshape = one_diff.shape_;
           pshape[1] += 2*pad_y; 
           pshape[2] += 2*pad_x;
-          one_diff = crop(pack_col2patch(temp_dif_, pshape, 
+          one_diff += crop(pack_col2patch(temp_dif_, pshape, 
               kernel_y, kernel_x, stride), one_diff[0].shape_);
         }
       }
