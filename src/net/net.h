@@ -1,8 +1,6 @@
 #ifndef TEXTNET_NET_NET_H_
 #define TEXTNET_NET_NET_H_
 
-#define DEBUG 1
-
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -29,14 +27,16 @@ using namespace mshadow;
 template<typename xpu>
 class Net {
  public:
-  Net(Random<xpu>* prnd_) {
+  Net(Random<xpu>* prnd_, int device_id_ = 0) {
     prnd = prnd_;
+    device_id = device_id_;
+    mshadow::InitTensorEngine<gpu>();
 	InitSettingEngine();
   }
 
   
   virtual ~Net(void) {
-    
+    mshadow::ShutdownTensorEngine<xpu>(); 
   }
   
   void InitSettingEngine() {
@@ -600,6 +600,8 @@ class Net {
   // node list
   vector<Node<xpu>*> node_list;
 
+  // gpu device id
+  int device_id;
 };
 
 }  // namespace net
