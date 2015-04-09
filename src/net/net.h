@@ -418,7 +418,7 @@ class Net {
       }
 
 	  // Just for this time!
-	  if (iter == 1300 || iter == 5000 || iter == 0) {
+	  if (false) {//iter == 1300 || iter == 5000 || iter == 0) {
 		cout << "Begin Saveing Model and Activations at iter " << iter << endl;
 
 		vector<string> node_names;
