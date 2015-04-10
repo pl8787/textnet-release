@@ -483,6 +483,8 @@ class Net {
         for (int i = 0; i < test_out.size(); ++i) {
           test_loss[i] += nodes[test_out[i]]->data_d1()[0];
         }
+        // orc_tmp
+        // cout << "test loss:" << nodes[test_out[0]]->data_d1()[0] << endl;
       }
       
       for (int i = 0; i < test_out.size(); ++i) {
