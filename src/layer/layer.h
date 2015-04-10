@@ -70,8 +70,6 @@ const int kNextBasketData = 73;
 /*! \brief these are enumeration */
 const int kTrain = 0;
 const int kTest = 1;
-const int kBoth = 2;
-
 
 template<typename xpu>
 class Layer {
@@ -105,7 +103,7 @@ class Layer {
   
   // To implement this function you need call base function in the end
   virtual void Require() {
-    defaults["phrase_type"] = SettingV(kBoth);
+    defaults["phrase_type"] = SettingV(kTrain);
     for (std::map<std::string, SettingV>::iterator it = defaults.begin();
           it != defaults.end(); ++it) {
       std::string name = it->first;

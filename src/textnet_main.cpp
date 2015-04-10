@@ -75,14 +75,22 @@ void PrintTensor(const char * name, Tensor<cpu, 4> x) {
 }
 
 int main(int argc, char *argv[]) {
-  string model_file = "model/matching_share.model";
+  string model_file = "model/matching.textnet.model";
+  DeviceType device_type = CPU_DEVICE;
   if (argc > 1) {
     model_file = string(argv[1]);
   }
-  mshadow::Random<cpu> rnd(59);
-  Net<cpu> net(&rnd);
-  net.InitNet(model_file.c_str());
-  net.Training();
+  if (argc > 2) {
+	if (string(argv[2]) == "cpu") {
+		device_type = CPU_DEVICE;
+	}
+	if (string(argv[2]) == "gpu") {
+		device_type = GPU_DEVICE;
+	}
+  }
+  INet* net = CreateNet(device_type, kTrainValid);
+  net->InitNet(model_file);
+  net->Start();
   return 0;
 }
 

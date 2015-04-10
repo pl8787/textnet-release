@@ -1,6 +1,8 @@
 #ifndef TEXTNET_NET_NET_H_
 #define TEXTNET_NET_NET_H_
 
+#pragma once
+
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -24,13 +26,42 @@ using namespace std;
 using namespace layer;
 using namespace mshadow;
 
+typedef int NetType;
+const int kTrainValid = 0;
+const int kTrainValidTest = 1;
+const int kCrossValid = 2;
+const int kTestOnly = 3;
+
+typedef int DeviceType;
+const int CPU_DEVICE = 0;
+const int GPU_DEVICE = 1;
+
+class INet {
+  public:
+	virtual ~INet(void){}
+    virtual void InitNet(string config_file) = 0;
+    virtual void InitNet(Json::Value &net_root) = 0;
+    virtual void PropAll() = 0;
+    virtual void SetupReshape(string tag) = 0;
+    virtual void Reshape(string tag) = 0;
+    virtual void Forward(string tag) = 0;
+    virtual void Backprop(string tag) = 0;
+	virtual void Update(string tag) = 0;
+    virtual void SetupAllNets() = 0;
+	virtual void TrainOneStep(string tag, int iter) = 0;
+	virtual void TrainDisplay(string tag, int iter) = 0;
+	virtual void TestAll(string tag, int iter) = 0;
+	virtual void Start() = 0;
+    virtual void SaveModelActivation(string tag, string dir_path, vector<string> node_names, int num_iter) = 0;
+    virtual void LoadModel(Json::Value &layer_root) = 0;
+    virtual void SaveModel(string model_name) = 0;
+};
+
 template<typename xpu>
-class Net {
+class Net : public INet{
  public:
-  Net(Random<xpu>* prnd_, int device_id_ = 0) {
-    prnd = prnd_;
-    device_id = device_id_;
-    mshadow::InitTensorEngine<xpu>(device_id);
+  Net() {
+	need_reshape = false;
 	InitSettingEngine();
   }
 
@@ -79,7 +110,6 @@ class Net {
     // Phrase Type
     SettingV::SettingIntMap["Train"] = kTrain;
     SettingV::SettingIntMap["Test"] = kTest;
-    SettingV::SettingIntMap["Both"] = kBoth;
    
     using namespace initializer;
     // Initializer
@@ -137,16 +167,38 @@ class Net {
     root = net_root;
     ExpandConfig(root);
     net_name = net_root["net_name"].asString();
-    max_iters = net_root["max_iters"].asInt();
-    max_test_iters = net_root["max_test_iters"].asInt();
-    display_interval = net_root["display_interval"].asInt();
-    test_interval = net_root["test_interval"].asInt();
-    for (int i = 0; i < net_root["train_out"].size(); ++i) {
-      train_out.push_back(net_root["train_out"][i].asString());
-    }
-    for (int i = 0; i < net_root["test_out"].size(); ++i) {
-      test_out.push_back(net_root["test_out"][i].asString());
-    }
+
+	// Initial Tensor Engine
+	if (net_root["device_id"].isNull()) {
+		device_id = 0;
+	} else {
+		device_id = net_root["device_id"].asInt();
+	}
+    mshadow::InitTensorEngine<xpu>(device_id);
+	prnd = new Random<xpu>(59);
+
+	// You must define all task tag in this section
+	// if layer has no tag, that means share across all tags
+	Json::Value &net_config_root = net_root["net_config"];
+
+	for (int i = 0; i < net_config_root.size(); ++i) {
+      Json::Value &one_net = net_config_root[i];
+	  string tag = one_net["tag"].asString();
+
+      tags.push_back(tag);
+      max_iters[tag] = one_net["max_iters"].asInt();
+      display_interval[tag] = one_net["display_interval"].asInt();
+	  out_nodes[tag] = vector<string>();
+      for (int i = 0; i < one_net["out_nodes"].size(); ++i) {
+        out_nodes[tag].push_back(one_net["out_nodes"][i].asString());
+      }
+
+	  // Initial nets vector
+	  nets[tag] = vector<Layer<xpu>*>();
+	  utils::Printf("\tTag: %s", tag.c_str());
+	}
+
+	utils::Printf("\tDetect %d nets in this config.\n", tags.size());
     
     utils::Printf("\tInitializing Net: %s\n", net_name.c_str());
     
@@ -175,27 +227,14 @@ class Net {
       layer_root["layer_idx"] = i;
       new_layer->layer_idx = i;
 
-      if (!layer_root["setting"]["phrase_type"]) 
-        layer_root["setting"]["phrase_type"] = kBoth; 
-
-	  // Get Phrase Type
-	  PhraseType layer_phrase = 0;
-	  if (layer_root["setting"]["phrase_type"].type() == Json::intValue) {
-		layer_phrase = layer_root["setting"]["phrase_type"].asInt();
-	  } else if (layer_root["setting"]["phrase_type"].type() == Json::stringValue) {
-        layer_phrase = SettingV::SettingIntMap[layer_root["setting"]["phrase_type"].asString()];
+	  if (layer_root["tag"].isNull()) {
+        for (int t = 0; t < tags.size(); ++t) {
+          nets[tags[t]].push_back(new_layer);
+		}
 	  } else {
-		utils::Error("[Error] phrase type error.\n");
+	    string tag = layer_root["tag"].asString();
+	    nets[tag].push_back(new_layer);
 	  }
-    
-      if (layer_phrase == kTrain) {
-        train_net.push_back(new_layer);
-      } else if (layer_phrase == kTest) {
-        test_net.push_back(new_layer);
-      } else {
-        train_net.push_back(new_layer);
-        test_net.push_back(new_layer);
-      }  
 
       name2layer[layer_name] = new_layer;
       layers.push_back(new_layer);
@@ -203,9 +242,10 @@ class Net {
       utils::Printf("\t Layer Type: %d\t Layer Name: %s\n", layer_type, layer_name.c_str());
     }
     
-    utils::Printf("Train Layer Deep: %d\n", train_net.size());
-    utils::Printf("Test Layer Deep: %d\n", test_net.size());
-    
+	for (int i = 0; i < tags.size(); ++i) {
+      utils::Printf("\t Net[%s] has %d layers.\n", tags[i].c_str(), nets[tags[i]].size());
+	}
+
     // ******** Create Nodes ********
     utils::Printf("[Process] Creating Nodes.\n");
     for (int i = 0; i < layers_root.size(); ++i) {
@@ -289,54 +329,42 @@ class Net {
     }
   }
   
-  virtual void SetupReshape() {
+  virtual void SetupReshape(string tag) {
     utils::Printf("[Process] Setup Layers.\n");
     Json::Value &layers_root = root["layers"];
-    for (int i = 0; i < test_net.size(); ++i) {
-      int layer_idx = test_net[i]->layer_idx;
-	  utils::Printf("[layer] set layer %s\n", test_net[i]->layer_name.c_str());
-      test_net[i]->SetupLayer(layers_root[layer_idx], 
+	
+    for (int i = 0; i < nets[tag].size(); ++i) {
+      int layer_idx = nets[tag][i]->layer_idx;
+	  utils::Printf("[layer] set layer %s\n", nets[tag][i]->layer_name.c_str());
+      nets[tag][i]->SetupLayer(layers_root[layer_idx], 
           bottom_vecs[layer_idx], top_vecs[layer_idx], prnd);
-      test_net[i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
-    }
-    for (int i = 0; i < train_net.size(); ++i) {
-      int layer_idx = train_net[i]->layer_idx;
-	  utils::Printf("[layer] set layer %s\n", train_net[i]->layer_name.c_str());
-      train_net[i]->SetupLayer(layers_root[layer_idx], 
-          bottom_vecs[layer_idx], top_vecs[layer_idx], prnd);
-      train_net[i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+      nets[tag][i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
     }
   }
 
-  virtual void Reshape() {
+  virtual void Reshape(string tag) {
 	utils::Printf("[Process] Reshape network.\n");
-    if (phrase_type == kTrain) {
-      for (int i = 0; i < train_net.size(); ++i) {
-        int layer_idx = train_net[i]->layer_idx;
-        train_net[i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
-      }
-    } else if (phrase_type == kTest) {
-      for (int i = 0; i < test_net.size(); ++i) {
-        int layer_idx = test_net[i]->layer_idx;
-        test_net[i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
-      }
+    for (int i = 0; i < nets[tag].size(); ++i) {
+      int layer_idx = nets[tag][i]->layer_idx;
+      nets[tag][i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
     }
   }
   
-  virtual void SetPhrase(vector<Layer<xpu>*> &net, PhraseType phrase) {
+  virtual void SetPhrase(string tag, PhraseType phrase) {
+	if (phrase_type == phrase) return;
+
 	utils::Printf("[Process] Set Phrase to %d.\n", phrase);
 	phrase_type = phrase;
-	for (int i = 0; i < net.size(); ++i) {
-	  net[i]->SetPhrase(phrase);
+	for (int i = 0; i < nets[tag].size(); ++i) {
+	  nets[tag][i]->SetPhrase(phrase);
 	}
-    if (need_reshape) Reshape();
+    if (need_reshape) Reshape(tag);
   }
 
-  virtual void Forward() {
-    if (phrase_type == kTrain) {
-      for (int i = 0; i < train_net.size(); ++i) {
-        int layer_idx = train_net[i]->layer_idx;
-        train_net[i]->Forward(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+  virtual void Forward(string tag) {
+      for (int i = 0; i < nets[tag].size(); ++i) {
+        int layer_idx = nets[tag][i]->layer_idx;
+        nets[tag][i]->Forward(bottom_vecs[layer_idx], top_vecs[layer_idx]);
 #if DEBUG
 		cout << "Feed " ;
 		for (int j = 0; j < bottom_vecs[layer_idx].size(); ++j)
@@ -344,165 +372,124 @@ class Net {
 		cout << " and ";
 		for (int j = 0; j < top_vecs[layer_idx].size(); ++j)
 			cout << top_vecs[layer_idx][j]->node_name << ", ";
-		cout << " to " << train_net[i]->layer_name << endl;
+		cout << " to " << nets[tag][i]->layer_name << endl;
 #endif
-      }
-    } else if (phrase_type == kTest) {
-      for (int i = 0; i < test_net.size(); ++i) {
-        int layer_idx = test_net[i]->layer_idx;
-        test_net[i]->Forward(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+    }
+  }
+
+  virtual void Backprop(string tag) {
+    utils::Check(phrase_type == kTrain, 
+                  "Only call in Train Phrase.");
+    for (int i = nets[tag].size()-1; i >= 0; --i) {
+        int layer_idx = nets[tag][i]->layer_idx;
+        nets[tag][i]->ClearDiff(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+    }
+    for (int i = nets[tag].size()-1; i>=0; --i) {
+      int layer_idx = nets[tag][i]->layer_idx;
+      nets[tag][i]->Backprop(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+    }
+  }
+  
+  virtual void Update(string tag) {
+    utils::Check(phrase_type == kTrain, 
+                  "Only call in Train Phrase.");
+    for (int i = 0; i < nets[tag].size(); ++i) {
+      for (int j = 0; j < nets[tag][i]->ParamNodeNum(); ++j) {
+#if DEBUG
+        cout << "Update param in layer " << i << " params " << j << endl;
+        cout << "param data" << i << " , " << j << ": " << nets[tag][i]->GetParams()[j].data[0][0][0][0] 
+		     << "\t" << nets[tag][i]->GetParams()[j].data[0][0][0][1]
+			 << endl;
+        cout << "param data" << i << " , " << j << ": " << nets[tag][i]->GetParams()[j].diff[0][0][0][0]
+			 << "\t" << nets[tag][i]->GetParams()[j].diff[0][0][0][1]
+			 << endl;
+#endif
+        nets[tag][i]->GetParams()[j].Update();
+#if DEBUG
+        cout << "param data" << i << " , " << j << ": " << nets[tag][i]->GetParams()[j].data[0][0][0][0]
+			 << "\t" << nets[tag][i]->GetParams()[j].data[0][0][0][1]
+			 << endl;
+#endif
       }
     }
   }
 
-  virtual void Backprop() {
-    utils::Check(phrase_type == kTrain, 
-                  "Only call in Train Phrase.");
-    if (phrase_type == kTrain) {
-      for (int i = train_net.size()-1; i >= 0; --i) {
-          int layer_idx = train_net[i]->layer_idx;
-          train_net[i]->ClearDiff(bottom_vecs[layer_idx], top_vecs[layer_idx]);
-      }
-      for (int i = train_net.size()-1; i>=0; --i) {
-        int layer_idx = train_net[i]->layer_idx;
-        train_net[i]->Backprop(bottom_vecs[layer_idx], top_vecs[layer_idx]);
-      }
-    }
-  }
-  
-  virtual void Update() {
-    utils::Check(phrase_type == kTrain, 
-                  "Only call in Train Phrase.");
-    if (phrase_type == kTrain) {
-      for (int i = 0; i < train_net.size(); ++i) {
-        for (int j = 0; j < train_net[i]->ParamNodeNum(); ++j) {
-#if DEBUG
-		  cout << "Update param in layer " << i << " params " << j << endl;
-          cout << "param data" << i << " , " << j << ": " << train_net[i]->GetParams()[j].data[0][0][0][0] 
-			   << "\t" << train_net[i]->GetParams()[j].data[0][0][0][1]
-			   << endl;
-          cout << "param data" << i << " , " << j << ": " << train_net[i]->GetParams()[j].diff[0][0][0][0]
-			   << "\t" << train_net[i]->GetParams()[j].diff[0][0][0][1]
-			   << endl;
-#endif
-          train_net[i]->GetParams()[j].Update();
-#if DEBUG
-          cout << "param data" << i << " , " << j << ": " << train_net[i]->GetParams()[j].data[0][0][0][0]
-			   << "\t" << train_net[i]->GetParams()[j].data[0][0][0][1]
-			   << endl;
-#endif
-        }
-      }
-    }
-  }
-  
-  virtual void Training() {
-	need_reshape = false;
-
+  virtual void SetupAllNets() {
     // Prepare
     PropAll();
-    SetupReshape();
+	for (int i = 0; i < tags.size(); ++i) {
+      SetupReshape(tags[i]);
+	}
+  }
+  
+  virtual void TrainOneStep(string tag, int iter = 0) {
+	SetPhrase(tag, kTrain);
 
-	SetPhrase(train_net, kTrain);
-
-    for (int iter = 0; iter < max_iters; ++iter) {
-      
-      // Do job
-      Forward();
-      Backprop();
+    Forward(tag);
+    Backprop(tag);
 
 #if DEBUG
-	  // For debug
-	  //for (typename map<string, Node<xpu>*>::iterator it = nodes.begin(); it != nodes.end(); ++it) {
-	  for (int k = 0; k < node_list.size(); ++k) {
-		string name = node_list[k]->node_name; //it->first;
-		cout << "Snapshot [" << name << "]" << endl;
-		cout << "data : ";
-		for (int i = 0; i < 5; ++i) {
-			//cout << nodes[name]->data[0][0][0][i] << "\t";
-			cout << node_list[k]->data[0][0][0][i] << "\t";
-		}
-		cout << endl;
-		cout << "diff : ";
-		for (int i = 0; i < 5; ++i) {
-			//cout << nodes[name]->diff[0][0][0][i] << "\t";
-			cout << node_list[k]->diff[0][0][0][i] << "\t";
-		}
-		cout << endl;
+	// For debug
+	//for (typename map<string, Node<xpu>*>::iterator it = nodes.begin(); it != nodes.end(); ++it) {
+	for (int k = 0; k < node_list.size(); ++k) {
+	  string name = node_list[k]->node_name; //it->first;
+	  cout << "Snapshot [" << name << "]" << endl;
+	  cout << "data : ";
+	  for (int i = 0; i < 5; ++i) {
+		cout << node_list[k]->data[0][0][0][i] << "\t";
 	  }
+      cout << endl;
+	  cout << "diff : ";
+	  for (int i = 0; i < 5; ++i) {
+		cout << node_list[k]->diff[0][0][0][i] << "\t";
+	  }
+	  cout << endl;
+	}
 #endif
 
-      Update();
-      
-      // Output 
-      if (display_interval > 0 && iter % display_interval == 0) {
-        for (int i = 0; i < train_out.size(); ++i) {
-          cout << "[Train]\tIter\t" << iter 
-               << ":\tOut[" << train_out[i] << "] =\t" 
-               << nodes[train_out[i]]->data_d1()[0] << endl; 
-        }
-      }
-      
-      if (test_interval > 0 && iter % test_interval == 0) {
-        TestOne(iter);
-      }
-
-	  // Just for this time!
-	  if (false) {//iter == 1300 || iter == 5000 || iter == 0) {
-		cout << "Begin Saveing Model and Activations at iter " << iter << endl;
-
-		vector<string> node_names;
-		node_names.push_back("data");
-		node_names.push_back("label");
-		node_names.push_back("cross");
-
-		ostringstream dir_name;
-		dir_name << "act_" << iter << "/";
-
-		SaveModelActivation(dir_name.str(), node_names, 10);
-
-		ostringstream model_file;
-		model_file << "model/matching_" << iter << ".model";
-
-		SaveModel(model_file.str());
-	  }
-    }
+    Update(tag);
   }
 
-  virtual void TestOne(int iter) {
-	  SetPhrase(test_net, kTest);
+  virtual void TrainDisplay(string tag, int iter = 0) {
+    for (int i = 0; i < out_nodes[tag].size(); ++i) {
+      cout << "[Train]\tIter\t" << iter 
+           << ":\tOut[" << out_nodes[tag][i] << "] =\t" 
+           << nodes[out_nodes[tag][i]]->data_d1()[0] << endl; 
+    }
+  }
+      
+  virtual void TestAll(string tag, int iter = 0) {
+	  SetPhrase(tag, kTest);
 
       // Initial test loss
       vector<float> test_loss;
-      for (int i = 0; i < test_out.size(); ++i) {
+      for (int i = 0; i < out_nodes[tag].size(); ++i) {
         test_loss.push_back(0.0f);
       }
       
-      for (int test_iter = 0; test_iter < max_test_iters; ++test_iter) {
-        Forward();
-        for (int i = 0; i < test_out.size(); ++i) {
-          test_loss[i] += nodes[test_out[i]]->data_d1()[0];
+      for (int test_iter = 0; test_iter < max_iters[tag]; ++test_iter) {
+        Forward(tag);
+        for (int i = 0; i < out_nodes[tag].size(); ++i) {
+          test_loss[i] += nodes[out_nodes[tag][i]]->data_d1()[0];
         }
       }
       
-      for (int i = 0; i < test_out.size(); ++i) {
-        test_loss[i] /= max_test_iters;
+      for (int i = 0; i < out_nodes[tag].size(); ++i) {
+        test_loss[i] /= max_iters[tag];
       }
       
       // Output
-      for (int i = 0; i < test_out.size(); ++i) {
+      for (int i = 0; i < out_nodes[tag].size(); ++i) {
         cout << "[Test]\tIter\t" << iter 
-             << ":\tOut[" << test_out[i] << "] =\t" 
+             << ":\tOut[" << out_nodes[tag][i] << "] =\t" 
              << test_loss[i] << endl; 
       }
-        
-	  SetPhrase(train_net, kTrain);
   }
  
-  virtual void SaveModelActivation(string dir_path, vector<string> node_names, int num_iter) {
-    SetPhrase(train_net, kTrain);
+  virtual void SaveModelActivation(string tag, string dir_path, vector<string> node_names, int num_iter) {
+    SetPhrase(tag, kTrain);
 	for (int iter = 0; iter < num_iter; ++iter) {
-	  Forward();
+	  Forward(tag);
 	  cout << "Forward " << iter << " over!" << endl;
 	  for (int i = 0; i < node_names.size(); ++i) {
 		string name = node_names[i];
@@ -531,16 +518,6 @@ class Net {
     Json::StyledWriter writer;
     Json::Value net_root;
     net_root["net_name"] = net_name;
-    net_root["max_iters"] = max_iters;
-    net_root["max_test_iters"] = max_test_iters;
-    net_root["display_interval"] = display_interval;
-    net_root["test_interval"] = test_interval;
-    for (int i = 0; i < net_root["train_out"].size(); ++i) {
-      net_root["train_out"].append(train_out[i]);
-    }
-    for (int i = 0; i < net_root["test_out"].size(); ++i) {
-      net_root["test_out"].append(test_out[i]);
-    }
     Json::Value layers_root;
     for (int i = 0; i < layers.size(); ++i) {
         Json::Value layer_root;
@@ -556,68 +533,26 @@ class Net {
   virtual void LoadModel(Json::Value &layer_root) {
     
   }
+
+  virtual void Start() = 0;
   
-  void PrintTensor(const char * name, Tensor<cpu, 1> x) {
-    Shape<1> s = x.shape_;
-    cout << name << " shape " << s[0] << endl;
-    for (unsigned int d1 = 0; d1 < s[0]; ++d1) {
-      cout << x[d1] << " ";
-    }
-    cout << endl;
-  }
-
-  void PrintTensor(const char * name, Tensor<cpu, 2> x) {
-    Shape<2> s = x.shape_;
-    cout << name << " shape " << s[0] << "x" << s[1] << endl;
-    for (unsigned int d1 = 0; d1 < s[0]; ++d1) {
-      for (unsigned int d2 = 0; d2 < s[1]; ++d2) {
-        cout << x[d1][d2] << " ";
-      }
-      cout << endl;
-    }
-    cout << endl;
-  }
-
-  void PrintTensor(const char * name, Tensor<cpu, 3> x) {
-    Shape<3> s = x.shape_;
-    cout << name << " shape " << s[0] << "x" << s[1] << "x" << s[2] << endl;
-    for (unsigned int d1 = 0; d1 < s[0]; ++d1) {
-        for (unsigned int d2 = 0; d2 < s[1]; ++d2) {
-            for (unsigned int d3 = 0; d3 < s[2]; ++d3) {
-                    cout << x[d1][d2][d3] << " ";
-            }
-            cout << ";";
-        }
-        cout << endl;
-    }
-  }
-
-  void PrintTensor(const char * name, Tensor<cpu, 4> x) {
-    Shape<4> s = x.shape_;
-    cout << name << " shape " << s[0] << "x" << s[1] << "x" << s[2] << "x" << s[3] << endl;
-    for (unsigned int d1 = 0; d1 < s[0]; ++d1) {
-        for (unsigned int d2 = 0; d2 < s[1]; ++d2) {
-            for (unsigned int d3 = 0; d3 < s[2]; ++d3) {
-                for (unsigned int d4 = 0; d4 < s[3]; ++d4) {
-                    cout << x[d1][d2][d3][d4] << " ";
-                }
-                cout << "|";
-            }
-            cout << ";";
-        }
-        cout << endl;
-    }
-  }
-
  protected:
   // Net name 
   string net_name;
+  // Net type
+  NetType net_type;
   // Random Machine for all
   mshadow::Random<xpu>* prnd;
-  // Net for train model
-  vector<Layer<xpu>*> train_net;
-  // Net for test model
-  vector<Layer<xpu>*> test_net;
+  // Tag for different tasks
+  vector<string> tags;
+  // Nets for muti-tasks 
+  map<string, vector<Layer<xpu>*> > nets;
+  // max iterations for nets
+  map<string, int> max_iters;
+  // display interval for nets
+  map<string, int> display_interval;
+  // nets output nodes
+  map<string, vector<string> > out_nodes;
   // All layers
   vector<Layer<xpu>*> layers;
   map<string, Layer<xpu>*> name2layer;
@@ -631,18 +566,6 @@ class Net {
   PhraseType phrase_type;
   // Config
   Json::Value root;
-  // max iterations
-  int max_iters;
-  // max test iterations
-  int max_test_iters;
-  // train display interval
-  int display_interval;
-  // test interval
-  int test_interval;
-  // train output nodes
-  vector<string> train_out;
-  // test output nodes
-  vector<string> test_out;
   // need reshape
   bool need_reshape;
   // node list
@@ -652,6 +575,19 @@ class Net {
   int device_id;
 };
 
+INet* CreateNetCPU(NetType type);
+INet* CreateNetGPU(NetType type);
+inline INet* CreateNet(DeviceType device_type, NetType net_type) {
+  switch(device_type) {
+	case CPU_DEVICE:
+		return CreateNetCPU(net_type);
+	case GPU_DEVICE:
+		return CreateNetGPU(net_type);
+	default:
+		utils::Error("Invalid device type.");
+  }
+  return NULL;
+}
 }  // namespace net
 }  // namespace textnet
 #endif  // TEXTNET_NET_NET_H_
