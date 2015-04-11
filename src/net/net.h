@@ -219,14 +219,22 @@ class Net : public INet{
         utils::Error("[Error] layer type error.\n");
       }
       
+	  // The default mode of tag is share
+	  // Share means there is one layer share by muti net,
+	  //   such as a validation net share param with train net
+	  // New means create a new layer for this tag net,
+	  //   in order to implement Cross Validation we 
+	  //   need this kind of logic.
       string tag_mode = "share";
       if (!layer_root["tag_mode"].isNull()) {
         tag_mode = "new";
       }
       
+      string layer_name = layer_root["layer_name"].asString();
+
+	  // For a layer mode is share
       if (tag_mode == "share") { 
         Layer<xpu> * new_layer = CreateLayer<xpu>(layer_type);
-        string layer_name = layer_root["layer_name"].asString();
         new_layer->layer_name = layer_name;
 
         // Reset layer index
@@ -237,23 +245,22 @@ class Net : public INet{
           for (int t = 0; t < tags.size(); ++t) {
             nets[tags[t]].push_back(new_layer);
             name2layer[tags[t]][layer_name] = new_layer;
-            layers.push_back(new_layer);
           }
         } else {
           utils::Check(layer_root["tag"].isArray(), 
               "Tag should be an array.");
           for (int t = 0; t < layer_root["tag"].size(); ++t) {
-            string tag = layer_root["tag"][t];
+            string tag = layer_root["tag"][t].asString();
             nets[tag].push_back(new_layer);
             name2layer[tag][layer_name] = new_layer;
-            layers.push_back(new_layer);
           }
         }
+        layers.push_back(new_layer);
       } else if (tag_mode == "new") {
+	  // For a layer mode is new
         if (layer_root["tag"].isNull()) {
           for (int t = 0; t < tags.size(); ++t) {
             Layer<xpu> * new_layer = CreateLayer<xpu>(layer_type);
-            string layer_name = layer_root["layer_name"].asString();
             new_layer->layer_name = layer_name;
 
             // Reset layer index
@@ -269,14 +276,13 @@ class Net : public INet{
               "Tag should be an array.");
           for (int t = 0; t < layer_root["tag"].size(); ++t) {
             Layer<xpu> * new_layer = CreateLayer<xpu>(layer_type);
-            string layer_name = layer_root["layer_name"].asString();
             new_layer->layer_name = layer_name;
 
             // Reset layer index
             layer_root["layer_idx"] = i;
             new_layer->layer_idx = i;
 
-            string tag = layer_root["tag"][t];
+            string tag = layer_root["tag"][t].asString();
             nets[tag].push_back(new_layer);
             name2layer[tag][layer_name] = new_layer;
             layers.push_back(new_layer);
@@ -290,6 +296,7 @@ class Net : public INet{
     for (int i = 0; i < tags.size(); ++i) {
       utils::Printf("\t Net[%s] has %d layers.\n", tags[i].c_str(), nets[tags[i]].size());
     }
+	utils::Printf("\t Total number of layers is %d. \n", layers.size());
 
     // ******** Create Nodes ********
     utils::Printf("[Process] Creating Nodes.\n");
