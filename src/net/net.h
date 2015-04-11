@@ -38,7 +38,7 @@ const int GPU_DEVICE = 1;
 
 class INet {
   public:
-	virtual ~INet(void){}
+    virtual ~INet(void){}
     virtual void InitNet(string config_file) = 0;
     virtual void InitNet(Json::Value &net_root) = 0;
     virtual void PropAll() = 0;
@@ -46,12 +46,12 @@ class INet {
     virtual void Reshape(string tag) = 0;
     virtual void Forward(string tag) = 0;
     virtual void Backprop(string tag) = 0;
-	virtual void Update(string tag) = 0;
+    virtual void Update(string tag) = 0;
     virtual void SetupAllNets() = 0;
-	virtual void TrainOneStep(string tag, int iter) = 0;
-	virtual void TrainDisplay(string tag, int iter) = 0;
-	virtual void TestAll(string tag, int iter) = 0;
-	virtual void Start() = 0;
+    virtual void TrainOneStep(string tag, int iter) = 0;
+    virtual void TrainDisplay(string tag, int iter) = 0;
+    virtual void TestAll(string tag, int iter) = 0;
+    virtual void Start() = 0;
     virtual void SaveModelActivation(string tag, string dir_path, vector<string> node_names, int num_iter) = 0;
     virtual void LoadModel(Json::Value &layer_root) = 0;
     virtual void SaveModel(string model_name) = 0;
@@ -61,8 +61,8 @@ template<typename xpu>
 class Net : public INet{
  public:
   Net() {
-	need_reshape = false;
-	InitSettingEngine();
+    need_reshape = false;
+    InitSettingEngine();
   }
 
   
@@ -71,7 +71,7 @@ class Net : public INet{
   }
   
   void InitSettingEngine() {
-	utils::Printf("[Process] Initial Setting Engine.\n");
+    utils::Printf("[Process] Initial Setting Engine.\n");
 
     SettingV::SettingIntMap["UnkonwnLayer"] = kUnkonwnLayer;
     // Activation Layer 1-10
@@ -129,7 +129,7 @@ class Net : public INet{
   }
   
   void ExpandConfig(Json::Value &net_root) {
-	utils::Printf("[Process] Expand Configurations.\n");
+    utils::Printf("[Process] Expand Configurations.\n");
 
     Json::Value &global_root = net_root["global"];
     Json::Value &layers_root = net_root["layers"];
@@ -154,7 +154,7 @@ class Net : public INet{
   }
   
   virtual void InitNet(string config_file) {
-	utils::Printf("[Process] Initial Network from file: %s.\n", config_file.c_str());
+    utils::Printf("[Process] Initial Network from file: %s.\n", config_file.c_str());
 
     ifstream _if(config_file.c_str());
     _if >> root;
@@ -162,43 +162,43 @@ class Net : public INet{
   }
   
   virtual void InitNet(Json::Value &net_root) {
-	utils::Printf("[Process] Initial Network.\n");
+    utils::Printf("[Process] Initial Network.\n");
 
     root = net_root;
     ExpandConfig(root);
     net_name = net_root["net_name"].asString();
 
-	// Initial Tensor Engine
-	if (net_root["device_id"].isNull()) {
-		device_id = 0;
-	} else {
-		device_id = net_root["device_id"].asInt();
-	}
+    // Initial Tensor Engine
+    if (net_root["device_id"].isNull()) {
+        device_id = 0;
+    } else {
+        device_id = net_root["device_id"].asInt();
+    }
     mshadow::InitTensorEngine<xpu>(device_id);
-	prnd = new Random<xpu>(59);
+    prnd = new Random<xpu>(59);
 
-	// You must define all task tag in this section
-	// if layer has no tag, that means share across all tags
-	Json::Value &net_config_root = net_root["net_config"];
+    // You must define all task tag in this section
+    // if layer has no tag, that means share across all tags
+    Json::Value &net_config_root = net_root["net_config"];
 
-	for (int i = 0; i < net_config_root.size(); ++i) {
+    for (int i = 0; i < net_config_root.size(); ++i) {
       Json::Value &one_net = net_config_root[i];
-	  string tag = one_net["tag"].asString();
+      string tag = one_net["tag"].asString();
 
       tags.push_back(tag);
       max_iters[tag] = one_net["max_iters"].asInt();
       display_interval[tag] = one_net["display_interval"].asInt();
-	  out_nodes[tag] = vector<string>();
+      out_nodes[tag] = vector<string>();
       for (int i = 0; i < one_net["out_nodes"].size(); ++i) {
         out_nodes[tag].push_back(one_net["out_nodes"][i].asString());
       }
 
-	  // Initial nets vector
-	  nets[tag] = vector<Layer<xpu>*>();
-	  utils::Printf("\tTag: %s", tag.c_str());
-	}
+      // Initial nets vector
+      nets[tag] = vector<Layer<xpu>*>();
+      utils::Printf("\tTag: %s", tag.c_str());
+    }
 
-	utils::Printf("\tDetect %d nets in this config.\n", tags.size());
+    utils::Printf("\tDetect %d nets in this config.\n", tags.size());
     
     utils::Printf("\tInitializing Net: %s\n", net_name.c_str());
     
@@ -210,41 +210,86 @@ class Net : public INet{
       Json::Value &layer_root = layers_root[i];
 
       // Get Layer type
-	  LayerType layer_type = 0;
-	  if (layer_root["layer_type"].isInt()) {
-		layer_type = layer_root["layer_type"].asInt();
-	  } else if (layer_root["layer_type"].isString()) {
+      LayerType layer_type = 0;
+      if (layer_root["layer_type"].isInt()) {
+        layer_type = layer_root["layer_type"].asInt();
+      } else if (layer_root["layer_type"].isString()) {
         layer_type = SettingV::SettingIntMap[layer_root["layer_type"].asString()];
-	  } else {
-		utils::Error("[Error] layer type error.\n");
-	  }
+      } else {
+        utils::Error("[Error] layer type error.\n");
+      }
       
-      Layer<xpu> * new_layer = CreateLayer<xpu>(layer_type);
-      string layer_name = layer_root["layer_name"].asString();
-      new_layer->layer_name = layer_name;
+      string tag_mode = "share";
+      if (!layer_root["tag_mode"].isNull()) {
+        tag_mode = "new";
+      }
+      
+      if (tag_mode == "share") { 
+        Layer<xpu> * new_layer = CreateLayer<xpu>(layer_type);
+        string layer_name = layer_root["layer_name"].asString();
+        new_layer->layer_name = layer_name;
 
-      // Reset layer index
-      layer_root["layer_idx"] = i;
-      new_layer->layer_idx = i;
+        // Reset layer index
+        layer_root["layer_idx"] = i;
+        new_layer->layer_idx = i;
 
-	  if (layer_root["tag"].isNull()) {
-        for (int t = 0; t < tags.size(); ++t) {
-          nets[tags[t]].push_back(new_layer);
-		}
-	  } else {
-	    string tag = layer_root["tag"].asString();
-	    nets[tag].push_back(new_layer);
-	  }
+        if (layer_root["tag"].isNull()) {
+          for (int t = 0; t < tags.size(); ++t) {
+            nets[tags[t]].push_back(new_layer);
+            name2layer[tags[t]][layer_name] = new_layer;
+            layers.push_back(new_layer);
+          }
+        } else {
+          utils::Check(layer_root["tag"].isArray(), 
+              "Tag should be an array.");
+          for (int t = 0; t < layer_root["tag"].size(); ++t) {
+            string tag = layer_root["tag"][t];
+            nets[tag].push_back(new_layer);
+            name2layer[tag][layer_name] = new_layer;
+            layers.push_back(new_layer);
+          }
+        }
+      } else if (tag_mode == "new") {
+        if (layer_root["tag"].isNull()) {
+          for (int t = 0; t < tags.size(); ++t) {
+            Layer<xpu> * new_layer = CreateLayer<xpu>(layer_type);
+            string layer_name = layer_root["layer_name"].asString();
+            new_layer->layer_name = layer_name;
 
-      name2layer[layer_name] = new_layer;
-      layers.push_back(new_layer);
+            // Reset layer index
+            layer_root["layer_idx"] = i;
+            new_layer->layer_idx = i;
+
+            nets[tags[t]].push_back(new_layer);
+            name2layer[tags[t]][layer_name] = new_layer;
+            layers.push_back(new_layer);
+          }
+        } else {
+          utils::Check(layer_root["tag"].isArray(), 
+              "Tag should be an array.");
+          for (int t = 0; t < layer_root["tag"].size(); ++t) {
+            Layer<xpu> * new_layer = CreateLayer<xpu>(layer_type);
+            string layer_name = layer_root["layer_name"].asString();
+            new_layer->layer_name = layer_name;
+
+            // Reset layer index
+            layer_root["layer_idx"] = i;
+            new_layer->layer_idx = i;
+
+            string tag = layer_root["tag"][t];
+            nets[tag].push_back(new_layer);
+            name2layer[tag][layer_name] = new_layer;
+            layers.push_back(new_layer);
+          }
+        }
+      }
       
       utils::Printf("\t Layer Type: %d\t Layer Name: %s\n", layer_type, layer_name.c_str());
     }
     
-	for (int i = 0; i < tags.size(); ++i) {
+    for (int i = 0; i < tags.size(); ++i) {
       utils::Printf("\t Net[%s] has %d layers.\n", tags[i].c_str(), nets[tags[i]].size());
-	}
+    }
 
     // ******** Create Nodes ********
     utils::Printf("[Process] Creating Nodes.\n");
@@ -266,7 +311,7 @@ class Net : public INet{
         if (!nodes.count(node_name)) {
           nodes[node_name] = new Node<xpu>();
           nodes[node_name]->node_name = node_name;
-	      node_list.push_back(nodes[node_name]);
+          node_list.push_back(nodes[node_name]);
           utils::Printf("\t Node Name: %s\n", node_name.c_str());
         }
       }
@@ -295,31 +340,33 @@ class Net : public INet{
       }
     }
 
-	// ******** Cope with param sharing ********
-	utils::Printf("[Process] Add Params Sharing.\n");
+    // ******** Cope with param sharing ********
+    utils::Printf("[Process] Add Params Sharing.\n");
 
-	for (int i = 0; i < layers_root.size(); ++i) {
-	  Json::Value &layer_root = layers_root[i];
-	  Json::Value &shares_root = layer_root["share"];
-	  if (!shares_root.isNull()) {
-		for (int j = 0; j < shares_root.size(); ++j) {
-		  Json::Value &share_root = shares_root[j];
-		  string target_layer_name = layer_root["layer_name"].asString();
-		  string source_layer_name = share_root["source_layer_name"].asString();
+    for (int i = 0; i < layers_root.size(); ++i) {
+      Json::Value &layer_root = layers_root[i];
+      Json::Value &shares_root = layer_root["share"];
+      if (!shares_root.isNull()) {
+        for (int j = 0; j < shares_root.size(); ++j) {
+          Json::Value &share_root = shares_root[j];
+          string target_layer_name = layer_root["layer_name"].asString();
+          string source_layer_name = share_root["source_layer_name"].asString();
           int target_param_id = share_root["param_id"].asInt();
-		  int source_param_id = share_root["source_param_id"].asInt();
+          int source_param_id = share_root["source_param_id"].asInt();
 
-    //      name2layer[target_layer_name]->ShareParameter(target_param_id,
-	//			name2layer[source_layer_name]->GetParams()[source_param_id]);
+          for (int t = 0; t < tags.size(); ++t) {
+            name2layer[tags[t]][target_layer_name]->ShareParameter(target_param_id,
+               name2layer[tags[t]][source_layer_name]->GetParams()[source_param_id]); 
+          }
 
-		  utils::Printf("\t%s.param[%d] === %s.param[%d]\n", 
-				target_layer_name.c_str(),
-				target_param_id,
-				source_layer_name.c_str(),
-				source_param_id);
-	    }
-	  }
-	}
+          utils::Printf("\t%s.param[%d] === %s.param[%d]\n", 
+                target_layer_name.c_str(),
+                target_param_id,
+                source_layer_name.c_str(),
+                source_param_id);
+        }
+      }
+    }
   }
 
   virtual void PropAll() {
@@ -332,10 +379,10 @@ class Net : public INet{
   virtual void SetupReshape(string tag) {
     utils::Printf("[Process] Setup Layers.\n");
     Json::Value &layers_root = root["layers"];
-	
+    
     for (int i = 0; i < nets[tag].size(); ++i) {
       int layer_idx = nets[tag][i]->layer_idx;
-	  utils::Printf("[layer] set layer %s\n", nets[tag][i]->layer_name.c_str());
+      utils::Printf("[layer] set layer %s\n", nets[tag][i]->layer_name.c_str());
       nets[tag][i]->SetupLayer(layers_root[layer_idx], 
           bottom_vecs[layer_idx], top_vecs[layer_idx], prnd);
       nets[tag][i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
@@ -343,7 +390,7 @@ class Net : public INet{
   }
 
   virtual void Reshape(string tag) {
-	utils::Printf("[Process] Reshape network.\n");
+    utils::Printf("[Process] Reshape network.\n");
     for (int i = 0; i < nets[tag].size(); ++i) {
       int layer_idx = nets[tag][i]->layer_idx;
       nets[tag][i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
@@ -351,13 +398,13 @@ class Net : public INet{
   }
   
   virtual void SetPhrase(string tag, PhraseType phrase) {
-	if (phrase_type == phrase) return;
+    if (phrase_type == phrase) return;
 
-	utils::Printf("[Process] Set Phrase to %d.\n", phrase);
-	phrase_type = phrase;
-	for (int i = 0; i < nets[tag].size(); ++i) {
-	  nets[tag][i]->SetPhrase(phrase);
-	}
+    utils::Printf("[Process] Set Phrase to %d.\n", phrase);
+    phrase_type = phrase;
+    for (int i = 0; i < nets[tag].size(); ++i) {
+      nets[tag][i]->SetPhrase(phrase);
+    }
     if (need_reshape) Reshape(tag);
   }
 
@@ -366,13 +413,13 @@ class Net : public INet{
         int layer_idx = nets[tag][i]->layer_idx;
         nets[tag][i]->Forward(bottom_vecs[layer_idx], top_vecs[layer_idx]);
 #if DEBUG
-		cout << "Feed " ;
-		for (int j = 0; j < bottom_vecs[layer_idx].size(); ++j)
-			cout << bottom_vecs[layer_idx][j]->node_name << ", ";
-		cout << " and ";
-		for (int j = 0; j < top_vecs[layer_idx].size(); ++j)
-			cout << top_vecs[layer_idx][j]->node_name << ", ";
-		cout << " to " << nets[tag][i]->layer_name << endl;
+        cout << "Feed " ;
+        for (int j = 0; j < bottom_vecs[layer_idx].size(); ++j)
+            cout << bottom_vecs[layer_idx][j]->node_name << ", ";
+        cout << " and ";
+        for (int j = 0; j < top_vecs[layer_idx].size(); ++j)
+            cout << top_vecs[layer_idx][j]->node_name << ", ";
+        cout << " to " << nets[tag][i]->layer_name << endl;
 #endif
     }
   }
@@ -398,17 +445,17 @@ class Net : public INet{
 #if DEBUG
         cout << "Update param in layer " << i << " params " << j << endl;
         cout << "param data" << i << " , " << j << ": " << nets[tag][i]->GetParams()[j].data[0][0][0][0] 
-		     << "\t" << nets[tag][i]->GetParams()[j].data[0][0][0][1]
-			 << endl;
+             << "\t" << nets[tag][i]->GetParams()[j].data[0][0][0][1]
+             << endl;
         cout << "param data" << i << " , " << j << ": " << nets[tag][i]->GetParams()[j].diff[0][0][0][0]
-			 << "\t" << nets[tag][i]->GetParams()[j].diff[0][0][0][1]
-			 << endl;
+             << "\t" << nets[tag][i]->GetParams()[j].diff[0][0][0][1]
+             << endl;
 #endif
         nets[tag][i]->GetParams()[j].Update();
 #if DEBUG
         cout << "param data" << i << " , " << j << ": " << nets[tag][i]->GetParams()[j].data[0][0][0][0]
-			 << "\t" << nets[tag][i]->GetParams()[j].data[0][0][0][1]
-			 << endl;
+             << "\t" << nets[tag][i]->GetParams()[j].data[0][0][0][1]
+             << endl;
 #endif
       }
     }
@@ -417,34 +464,34 @@ class Net : public INet{
   virtual void SetupAllNets() {
     // Prepare
     PropAll();
-	for (int i = 0; i < tags.size(); ++i) {
+    for (int i = 0; i < tags.size(); ++i) {
       SetupReshape(tags[i]);
-	}
+    }
   }
   
   virtual void TrainOneStep(string tag, int iter = 0) {
-	SetPhrase(tag, kTrain);
+    SetPhrase(tag, kTrain);
 
     Forward(tag);
     Backprop(tag);
 
 #if DEBUG
-	// For debug
-	//for (typename map<string, Node<xpu>*>::iterator it = nodes.begin(); it != nodes.end(); ++it) {
-	for (int k = 0; k < node_list.size(); ++k) {
-	  string name = node_list[k]->node_name; //it->first;
-	  cout << "Snapshot [" << name << "]" << endl;
-	  cout << "data : ";
-	  for (int i = 0; i < 5; ++i) {
-		cout << node_list[k]->data[0][0][0][i] << "\t";
-	  }
+    // For debug
+    //for (typename map<string, Node<xpu>*>::iterator it = nodes.begin(); it != nodes.end(); ++it) {
+    for (int k = 0; k < node_list.size(); ++k) {
+      string name = node_list[k]->node_name; //it->first;
+      cout << "Snapshot [" << name << "]" << endl;
+      cout << "data : ";
+      for (int i = 0; i < 5; ++i) {
+        cout << node_list[k]->data[0][0][0][i] << "\t";
+      }
       cout << endl;
-	  cout << "diff : ";
-	  for (int i = 0; i < 5; ++i) {
-		cout << node_list[k]->diff[0][0][0][i] << "\t";
-	  }
-	  cout << endl;
-	}
+      cout << "diff : ";
+      for (int i = 0; i < 5; ++i) {
+        cout << node_list[k]->diff[0][0][0][i] << "\t";
+      }
+      cout << endl;
+    }
 #endif
 
     Update(tag);
@@ -459,7 +506,7 @@ class Net : public INet{
   }
       
   virtual void TestAll(string tag, int iter = 0) {
-	  SetPhrase(tag, kTest);
+      SetPhrase(tag, kTest);
 
       // Initial test loss
       vector<float> test_loss;
@@ -488,29 +535,29 @@ class Net : public INet{
  
   virtual void SaveModelActivation(string tag, string dir_path, vector<string> node_names, int num_iter) {
     SetPhrase(tag, kTrain);
-	for (int iter = 0; iter < num_iter; ++iter) {
-	  Forward(tag);
-	  cout << "Forward " << iter << " over!" << endl;
-	  for (int i = 0; i < node_names.size(); ++i) {
-		string name = node_names[i];
-		Json::Value node_root;
+    for (int iter = 0; iter < num_iter; ++iter) {
+      Forward(tag);
+      cout << "Forward " << iter << " over!" << endl;
+      for (int i = 0; i < node_names.size(); ++i) {
+        string name = node_names[i];
+        Json::Value node_root;
 
-		nodes[name]->SaveNode(node_root);
+        nodes[name]->SaveNode(node_root);
 
-		// Prepare for output filename
-		ostringstream file_name;
-		file_name << dir_path << name << "_" << iter << ".json";
+        // Prepare for output filename
+        ostringstream file_name;
+        file_name << dir_path << name << "_" << iter << ".json";
 
-		cout << "Save node " << name << " to " << file_name.str() << endl;
-		// Write Node to file
-		ofstream _of(file_name.str().c_str());
+        cout << "Save node " << name << " to " << file_name.str() << endl;
+        // Write Node to file
+        ofstream _of(file_name.str().c_str());
         Json::FastWriter writer;
-		string json_file = writer.write(node_root);
-		_of << json_file;
-		_of.close();
+        string json_file = writer.write(node_root);
+        _of << json_file;
+        _of.close();
 
-	  }
-	}
+      }
+    }
   }
   
   virtual void SaveModel(string model_name) {
@@ -555,7 +602,9 @@ class Net : public INet{
   map<string, vector<string> > out_nodes;
   // All layers
   vector<Layer<xpu>*> layers;
-  map<string, Layer<xpu>*> name2layer;
+  // Add tags to name search, 
+  // there exist same name in different tag net
+  map<string, map<string, Layer<xpu>*> > name2layer;
   // Nodes to store datum between layers
   map<string, Node<xpu>*> nodes;
   // bottom vectors
@@ -579,12 +628,12 @@ INet* CreateNetCPU(NetType type);
 INet* CreateNetGPU(NetType type);
 inline INet* CreateNet(DeviceType device_type, NetType net_type) {
   switch(device_type) {
-	case CPU_DEVICE:
-		return CreateNetCPU(net_type);
-	case GPU_DEVICE:
-		return CreateNetGPU(net_type);
-	default:
-		utils::Error("Invalid device type.");
+    case CPU_DEVICE:
+        return CreateNetCPU(net_type);
+    case GPU_DEVICE:
+        return CreateNetGPU(net_type);
+    default:
+        utils::Error("Invalid device type.");
   }
   return NULL;
 }
