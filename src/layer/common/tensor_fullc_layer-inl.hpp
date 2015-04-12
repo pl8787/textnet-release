@@ -1,5 +1,5 @@
-#ifndef TEXTNET_LAYER_FULLC_LAYER_INL_HPP_
-#define TEXTNET_LAYER_FULLC_LAYER_INL_HPP_
+#ifndef TEXTNET_LAYER_TENSOR_FULLC_LAYER_INL_HPP_
+#define TEXTNET_LAYER_TENSOR_FULLC_LAYER_INL_HPP_
 
 #include <mshadow/tensor.h>
 #include "../layer.h"
@@ -25,10 +25,10 @@ class TensorFullConnectLayer : public Layer<xpu> {
   typedef mshadow::Tensor<xpu, 4> Tensor4D;
   
   virtual void Require() {
+    this->defaults["mode"] = SettingV("t1w1b0"); // string value, 't*w*b*', * is 1 or 0
     // default value, just set the value you want
     // require value, set to SettingV(),
     // it will force custom to set in config
-    this->defaults["mode"] = SettingV(); // string value, 't*w*b*', * is 1 or 0
     this->defaults["num_hidden"] = SettingV();
     this->defaults["t_filler"] = SettingV();
     this->defaults["w_filler"] = SettingV();
@@ -55,30 +55,30 @@ class TensorFullConnectLayer : public Layer<xpu> {
     } else if (mode[1] == '0') {
       is_t = false;
     } else {
-      utils.Check(false, "TensorFullConnectionLayer: mode error.")
+      utils::Check(false, "TensorFullConnectionLayer: mode error.");
     }
     if (mode[3] == '1') {
       is_w = true;
     } else if (mode[3] == '0') {
       is_w = false;
     } else {
-      utils.Check(false, "TensorFullConnectionLayer: mode error.")
+      utils::Check(false, "TensorFullConnectionLayer: mode error.");
     }
     if (mode[5] == '1') {
       is_b = true;
     } else if (mode[5] == '0') {
       is_b = false;
     } else {
-      utils.Check(false, "TensorFullConnectionLayer: mode error.")
+      utils::Check(false, "TensorFullConnectionLayer: mode error.");
     }
 
-    d_hidden = setting["d_hidden"].iVal();
+    d_hidden = setting["num_hidden"].iVal();
 
     Tensor2D bottom_data = bottom[0]->data_d2();
     d_input = bottom_data.size(1);
 
-    this->params.resize(2);
-    this->params[0].Resize(d_hidden, d_input*d_input, 1, 1, true);
+    this->params.resize(3);
+    this->params[0].Resize(d_hidden, d_input, d_input, 1, true);
     this->params[1].Resize(d_hidden, d_input, 1, 1, true);
     this->params[2].Resize(d_hidden, 1, 1, 1, true);
     
@@ -110,7 +110,6 @@ class TensorFullConnectLayer : public Layer<xpu> {
     this->params[2].updater_ = 
         updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].iVal(),
           b_updater, this->prnd_);
-    
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -121,8 +120,7 @@ class TensorFullConnectLayer : public Layer<xpu> {
     Tensor2D bottom_data = bottom[0]->data_d2();
     
     batch_size = bottom_data.size(0); 
-    out_product_data.Resize(batch_size, d_hidden, d_hidden, 1, true);
-    out_product_diff.Resize(batch_size, d_hidden, d_hidden, 1, true);
+    out_product.Resize(batch_size, d_input, d_input, 1, true);
     top[0]->Resize(batch_size, d_hidden, 1, 1, true);
 
 	bottom[0]->PrintShape("bottom0");
@@ -137,7 +135,7 @@ class TensorFullConnectLayer : public Layer<xpu> {
 
     top_data = 0.f;
     if (is_t) {
-      Tensor3D out_prod = out_product_data.data_d3();
+      Tensor3D out_prod = out_product.data_d3();
       for (index_t batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
         Tensor2D one_example = bottom_data.Slice(batch_idx, batch_idx+1);
         out_prod[batch_idx] = dot(one_example.T(), one_example);
@@ -157,16 +155,15 @@ class TensorFullConnectLayer : public Layer<xpu> {
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
                         const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
-    mshadow::Tensor<xpu, 2> top_diff = top[0]->diff_d2();
-    mshadow::Tensor<xpu, 2> bottom_data = bottom[0]->data_d2();
-    mshadow::Tensor<xpu, 2> bottom_diff = bottom[0]->diff_d2();
+    Tensor2D top_diff = top[0]->diff_d2();
+    Tensor2D bottom_data = bottom[0]->data_d2();
+    Tensor2D bottom_diff = bottom[0]->diff_d2();
 
     if (is_t) {
-      assert (false); // to do
       this->params[0].diff_d2() += dot(top_diff.T(), out_product.data_d2());
-      out_product_diff.data_d2() = dot(top_diff, this->params[0].data_d2());
-      out_prod = out_product_diff.data_d3();
-      for (index_t batch_id = 0; batch_idx < batch_size; ++batch_idx) {
+      out_product.diff_d2() = dot(top_diff, this->params[0].data_d2());
+      Tensor3D out_prod = out_product.diff_d3();
+      for (index_t batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
         Tensor2D data = bottom_data.Slice(batch_idx, batch_idx+1);
         Tensor2D diff = bottom_diff.Slice(batch_idx, batch_idx+1);
         diff += dot(data, out_prod[batch_idx]);
@@ -175,18 +172,18 @@ class TensorFullConnectLayer : public Layer<xpu> {
     }
     if (is_w) {
       this->params[1].diff_d2() += dot(top_diff.T(), bottom_data);
-      bottom_diff += dot(top_diff, this->params[0].data_d2());
+      bottom_diff += dot(top_diff, this->params[1].data_d2());
     }
-    if (is_b)
+    if (is_b) {
       this->params[2].diff_d1() += sum_rows(top_diff);
     }
   }
 
  protected:
   /*! \brief random number generator */
-  int d_input, d_hidden;
+  int d_input, d_hidden, batch_size;
   bool is_t, is_w, is_b;
-  mshadow::TensorContainer<xpu, 4> out_product_data, out_product_diff;
+  Node<xpu> out_product; 
 };
 }  // namespace layer
 }  // namespace textnet

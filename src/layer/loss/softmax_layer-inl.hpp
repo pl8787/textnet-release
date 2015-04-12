@@ -54,14 +54,22 @@ class SoftmaxLayer : public Layer<xpu>{
     nbatch = bottom[0]->data.size(0);  
     top[0]->Resize(1, 1, 1, 1, true);
   }
-  
+  void checkNan(float *p, int l) {
+      for (int i = 0; i < l; ++i) {
+          assert(!isnan(p[i]));
+      }
+  }
+
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 2> bottom0_data = bottom[0]->data_d2();
     mshadow::Tensor<xpu, 1> bottom1_data = bottom[1]->data_d1();
     mshadow::Tensor<xpu, 1> top_data = top[0]->data_d1();
-    
+
+#if DEBUG
+    checkNan(bottom0_data.dptr_, bottom0_data.size(0) *bottom0_data.size(1));
+#endif
     mshadow::Softmax(bottom0_data, bottom0_data);
 	
 	top_data[0] = 0.0f;

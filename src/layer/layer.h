@@ -52,6 +52,7 @@ const int kConvolutionalLstm = 26;
 const int kRecurrent = 27;
 const int kSequenceDimReduction = 28;
 const int kConvLstmSplit = 29;
+const int kTensorFullConnect = 30;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;

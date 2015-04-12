@@ -5,6 +5,7 @@
 #include "./common/activation_layer-inl.hpp"
 #include "./common/convolution_layer-inl.hpp"
 #include "./common/fullc_layer-inl.hpp"
+#include "./common/tensor_fullc_layer-inl.hpp"
 #include "./common/pooling_layer-inl.hpp"
 #include "./common/embedding_layer-inl.hpp"
 #include "./common/cross_layer-inl.hpp"
@@ -36,27 +37,28 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kRectifiedLinear: return new ActivationLayer<xpu, op::relu, op::relu_grad>(type);
     case kConv: return new ConvolutionLayer<xpu>(type);
     case kFullConnect: return new FullConnectLayer<xpu>(type);
-    case kMaxPooling: return new PoolingLayer<mshadow::red::maximum, xpu>(kMaxPooling);
-    case kAvgPooling: return new PoolingLayer<mshadow::red::sum, xpu>(kAvgPooling);
-    case kWholePooling: return new WholePoolingLayer<xpu>(kWholePooling);
-    case kConcat: return new ConcatLayer<xpu>(kConcat);
-    case kEmbedding: return new EmbeddingLayer<xpu>(kEmbedding);
-    case kCross: return new CrossLayer<xpu>(kCross);
-    case kSplit: return new SplitLayer<xpu>(kSplit);
-    case kConvLstmSplit: return new SplitLayer<xpu>(kConvLstmSplit);
-    case kDropout: return new DropoutLayer<xpu>(kDropout);
-    case kLstm: return new LstmLayer<xpu>(kLstm);
-    case kRecurrent: return new RecurrentLayer<xpu>(kRecurrent);
-    case kSequenceDimReduction: return new SequenceDimReductionLayer<xpu>(kSequenceDimReduction);
-    case kConvolutionalLstm: return new ConvolutionalLstmLayer<xpu>(kConvolutionalLstm);
-    case kHingeLoss: return new HingeLossLayer<xpu>(kHingeLoss);
-    case kPairHingeLoss: return new PairHingeLossLayer<xpu>(kPairHingeLoss);
-    case kTextData: return new TextDataLayer<xpu>(kTextData);
-    case kNextBasketData: return new NextBasketDataLayer<xpu>(kNextBasketData);
-    case kSequenceClassificationData: return new SequenceClassificationDataLayer<xpu>(kSequenceClassificationData);
-    case kSoftmax: return new SoftmaxLayer<xpu>(kSoftmax);
-    case kAccuracy: return new AccuracyLayer<xpu>(kAccuracy);
-    case kMatch: return new MatchLayer<xpu>(kMatch);
+    case kTensorFullConnect: return new TensorFullConnectLayer<xpu>(type);
+    case kMaxPooling: return new PoolingLayer<mshadow::red::maximum, xpu>(type);
+    case kAvgPooling: return new PoolingLayer<mshadow::red::sum, xpu>(type);
+    case kWholePooling: return new WholePoolingLayer<xpu>(type);
+    case kConcat: return new ConcatLayer<xpu>(type);
+    case kEmbedding: return new EmbeddingLayer<xpu>(type);
+    case kCross: return new CrossLayer<xpu>(type);
+    case kSplit: return new SplitLayer<xpu>(type);
+    case kConvLstmSplit: return new SplitLayer<xpu>(type);
+    case kDropout: return new DropoutLayer<xpu>(type);
+    case kLstm: return new LstmLayer<xpu>(type);
+    case kRecurrent: return new RecurrentLayer<xpu>(type);
+    case kSequenceDimReduction: return new SequenceDimReductionLayer<xpu>(type);
+    case kConvolutionalLstm: return new ConvolutionalLstmLayer<xpu>(type);
+    case kHingeLoss: return new HingeLossLayer<xpu>(type);
+    case kPairHingeLoss: return new PairHingeLossLayer<xpu>(type);
+    case kTextData: return new TextDataLayer<xpu>(type);
+    case kNextBasketData: return new NextBasketDataLayer<xpu>(type);
+    case kSequenceClassificationData: return new SequenceClassificationDataLayer<xpu>(type);
+    case kSoftmax: return new SoftmaxLayer<xpu>(type);
+    case kAccuracy: return new AccuracyLayer<xpu>(type);
+    case kMatch: return new MatchLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }

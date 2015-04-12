@@ -79,7 +79,7 @@ class AccuracyLayer : public Layer<xpu>{
           bottom_data_vector.end(), std::greater<std::pair<float, int> >());
       for (int j = 0; j < topk; ++j) {
         int len = bottom1_len[i][0];
-        if (len == 0) len = 1; 
+        if (len == -1) len = bottom1_data.size(1); // support multi label, however, softmax layer does not support
         for (int k = 0; k < len; ++k) {
           int lable_value = static_cast<int>(bottom1_data[i][k]);
           if (bottom_data_vector[j].second == lable_value) {

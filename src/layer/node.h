@@ -137,7 +137,7 @@ struct Node {
       // do nothing
     } else if (init) {
       data.Resize(new_size, 0.0);
-      length.Resize(mshadow::Shape2(d1, d2), 0.0);
+      length.Resize(mshadow::Shape2(d1, d2), -1.f);
       inited_data = true;
       if (need_diff) {
         diff.Resize(new_size, 0.0);
@@ -159,7 +159,7 @@ struct Node {
       // do nothing
     } else if (init) {
       data.Resize(new_size, 0.0);
-      length.Resize(mshadow::Shape2(new_size[0], new_size[1]), 0.0);
+      length.Resize(mshadow::Shape2(new_size[0], new_size[1]), -1.f);
       inited_data = true;
       if (need_diff) {
         diff.Resize(new_size, 0.0);

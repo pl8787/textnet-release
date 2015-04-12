@@ -100,11 +100,12 @@ class WholePoolingLayer : public Layer<xpu>{
     }
   }
 
-  // void checkNan(float *p, int l) {
-  //     for (int i = 0; i < l; ++i) {
-  //         assert(!isnan(p[i]));
-  //     }
-  // }
+  void checkNan(float *p, int l) {
+      for (int i = 0; i < l; ++i) {
+          assert(!isnan(p[i]));
+      }
+  }
+
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
@@ -116,6 +117,7 @@ class WholePoolingLayer : public Layer<xpu>{
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
         int begin = 0, end = bottom_len[batch_idx][seq_idx]; 
+        utils::Assert(end >= 0, "WholePoolingLayer: sequence length error.");
 
         if (pool_type == "max") {
             wholeMaxPooling(bottom_data[batch_idx][seq_idx].Slice(begin, end), 
@@ -135,6 +137,9 @@ class WholePoolingLayer : public Layer<xpu>{
         }
       }
     }
+#if DEBUG
+    checkNan(top_data.dptr_, top_data.size(0)*top_data.size(1)*top_data.size(2)*top_data.size(3));
+#endif
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
@@ -148,6 +153,7 @@ class WholePoolingLayer : public Layer<xpu>{
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
         int begin = 0, end = bottom_len[batch_idx][seq_idx]; 
+        utils::Assert(end >= 0, "WholePoolingLayer: sequence length error.");
 
         if (this->prop_error[0]) {
           if (pool_type == "max") {

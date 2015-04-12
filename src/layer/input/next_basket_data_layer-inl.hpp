@@ -162,6 +162,7 @@ class NextBasketDataLayer : public Layer<xpu>{
       }
       top[1]->length[i][0] = dataset[exampleIdx].next_items.size();
       top[2]->data[i][0][0][0] = dataset[exampleIdx].user;
+      top[2]->length[i][0] = 1;
       for (int w = 0; w < context_window; ++w) {
         for (int k = 0; k < dataset[exampleIdx].context[w].size(); ++k) {
           top[3]->data[i][w][0][k] = dataset[exampleIdx].context[w][k];

@@ -113,7 +113,7 @@ int main(int argc, char *argv[]) {
   int max_session_len = 300;
   int context_window = 1;
   int min_doc_len = 1;
-  int batch_size = 10;
+  int batch_size = 1;
   int word_rep_dim = 50;
   int num_hidden = (context_window+1) * word_rep_dim;
   int num_item = 7973;
@@ -190,11 +190,7 @@ int main(int argc, char *argv[]) {
   vector<Node<cpu>*> nodes;
   for (int i = 0; i < senti_net.size(); ++i) { // last layers are softmax layer and accuracy layers
     int top_node_num = 0;
-    if (i == 0) {
-        top_node_num = context_window+3; 
-    } else {
-        top_node_num = senti_net[i]->TopNodeNum();
-    }
+    top_node_num = senti_net[i]->TopNodeNum();
     for (int j = 0; j < top_node_num; ++j) {
       Node<cpu>* node = new Node<cpu>();
       stringstream ss;
