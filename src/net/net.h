@@ -94,6 +94,8 @@ class Net : public INet{
     SettingV::SettingIntMap["Cross"] = kCross;
     SettingV::SettingIntMap["Match"] = kMatch;
     SettingV::SettingIntMap["Lstm"] = kLstm;
+    SettingV::SettingIntMap["Recurrent"] = kRecurrent;
+    SettingV::SettingIntMap["TensorFullConnect"] = kTensorFullConnect;
     SettingV::SettingIntMap["WholePooling"] = kWholePooling;
 
     // Loss Layer 51-70
