@@ -20,24 +20,31 @@ class NextBasketDataLayer : public Layer<xpu>{
   virtual ~NextBasketDataLayer(void) {}
   
   virtual int BottomNodeNum() { return 0; }
-  virtual int TopNodeNum() { return top_node_num; }
+  virtual int TopNodeNum() { return 4; }
   virtual int ParamNodeNum() { return 0; }
+
+  virtual void Require() {
+    // default value, just set the value you want
+    this->defaults["context_window"] = SettingV(1);
+    this->defaults["shuffle_seed"] = SettingV(123);
+    // require value, set to SettingV(),
+    // it will force custom to set in config
+    this->defaults["data_file"] = SettingV();
+    this->defaults["batch_size"] = SettingV();
+    this->defaults["max_session_len"] = SettingV();
+    
+    Layer<xpu>::Require();
+  }
+
   
   virtual void SetupLayer(std::map<std::string, SettingV> &setting,
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
-    utils::Check(setting.count("context_window"), "NextBasketDataLayer:setting problem."); 
-    utils::Check(setting.count("max_session_len"), "NextBasketDataLayer:setting problem."); 
-    utils::Check(setting.count("batch_size"), "NextBasketDataLayer:setting problem."); 
-    utils::Check(setting.count("data_file"), "NextBasketDataLayer:setting problem."); 
 
     context_window = setting["context_window"].i_val;
     max_session_len = setting["max_session_len"].i_val;
-    shuffle_seed = 113;
-    if (setting.count("shuffle_seed")) shuffle_seed = setting["shuffle_seed"].i_val;
-    top_node_num = context_window + 3; // label, label set and user
     data_file = setting["data_file"].s_val;
     batch_size = setting["batch_size"].i_val;
     
@@ -93,7 +100,6 @@ class NextBasketDataLayer : public Layer<xpu>{
         std::vector<std::string> vsTab, vsComma;
         Example e;
         splitByChar(lines[i], ' ', vsTab); 
-        assert(vsTab.size() == top_node_num-1);
         e.user = atoi(vsTab[1].c_str());
         splitByChar(vsTab[0], ',', vsComma); 
         for (int j = 0; j < vsComma.size(); ++j) {
@@ -121,16 +127,13 @@ class NextBasketDataLayer : public Layer<xpu>{
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
-    utils::Check(bottom.size() == BottomNodeNum(),
-                 "NextBasketDataLayer:bottom size problem."); 
-    utils::Check(top.size() == TopNodeNum(),
-                 "NextBasketDataLayer:top size problem.");
+    utils::Check(bottom.size() == BottomNodeNum(), "NextBasketDataLayer:bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(), "NextBasketDataLayer:top size problem.");
+
     top[0]->Resize(batch_size, 1, 1, 1, true);
     top[1]->Resize(batch_size, 1, 1, max_session_len, true);
     top[2]->Resize(batch_size, 1, 1, 1, true);
-    for (int i = 0; i < context_window; ++i) {
-      top[3+i]->Resize(batch_size, 1, 1, max_session_len, true);
-    }
+    top[3]->Resize(batch_size, context_window, 1, max_session_len, true);
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
@@ -159,11 +162,12 @@ class NextBasketDataLayer : public Layer<xpu>{
       }
       top[1]->length[i][0] = dataset[exampleIdx].next_items.size();
       top[2]->data[i][0][0][0] = dataset[exampleIdx].user;
+      top[2]->length[i][0] = 1;
       for (int w = 0; w < context_window; ++w) {
         for (int k = 0; k < dataset[exampleIdx].context[w].size(); ++k) {
-          top[w+3]->data[i][0][0][k] = dataset[exampleIdx].context[w][k];
+          top[3]->data[i][w][0][k] = dataset[exampleIdx].context[w][k];
         }
-        top[w+3]->length[i][0] = dataset[exampleIdx].context[w].size();
+        top[3]->length[i][w] = dataset[exampleIdx].context[w].size();
       }
     }
   }
@@ -182,7 +186,7 @@ class NextBasketDataLayer : public Layer<xpu>{
 
  protected:
   std::string data_file;
-  int batch_size, top_node_num, context_window;
+  int batch_size, context_window;
   int max_session_len;
   int example_ptr, test_example_ptr;
   

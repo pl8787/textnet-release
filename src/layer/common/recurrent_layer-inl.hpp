@@ -201,6 +201,7 @@ class RecurrentLayer : public Layer<xpu> {
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
         int len = bottom[0]->length[batch_idx][seq_idx];
+        utils::Assert(len >= 0, "RecurrentLayer: sequence length error.");
         if (!reverse) {
           ForwardLeft2Right(bottom_data[batch_idx][seq_idx].Slice(0,len),  
                             top_data[batch_idx][seq_idx].Slice(0,len));
@@ -299,12 +300,12 @@ class RecurrentLayer : public Layer<xpu> {
     Tensor4D top_data = top[0]->data;
     Tensor4D bottom_data = bottom[0]->data;
     Tensor4D bottom_diff = bottom[0]->diff;
-    const index_t nbatch = bottom_data.size(0);
         
     begin_h_er = 0.; 
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
         int len = bottom[0]->length[batch_idx][seq_idx];
+        utils::Assert(len >= 0, "RecurrentLayer: sequence length error.");
         if (!reverse) {
             BackpropForLeft2RightRnn(top_data[batch_idx][seq_idx].Slice(0,len), 
                                      top_diff[batch_idx][seq_idx].Slice(0,len), 

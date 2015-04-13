@@ -158,6 +158,11 @@ class Net : public INet{
 
     ifstream _if(config_file.c_str());
     _if >> root;
+    string log_file = root["log"].asString();
+    if (!log_file.empty()) {
+        freopen(log_file.c_str(), "w", stdout);
+        setvbuf(stdout, NULL, _IOLBF, 0);
+    }
     InitNet(root);
   }
   
@@ -526,6 +531,8 @@ class Net : public INet{
         for (int i = 0; i < out_nodes[tag].size(); ++i) {
           test_loss[i] += nodes[out_nodes[tag][i]]->data_d1()[0];
         }
+        // orc_tmp
+        // cout << "test loss:" << nodes[test_out[0]]->data_d1()[0] << endl;
       }
       
       for (int i = 0; i < out_nodes[tag].size(); ++i) {

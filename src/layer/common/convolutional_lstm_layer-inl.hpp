@@ -179,6 +179,7 @@ class ConvolutionalLstmLayer : public Layer<xpu> {
     for (index_t batch_idx = 0; batch_idx < concat_input_data.size(0); ++batch_idx) {
       for (index_t seq_idx = 0; seq_idx < concat_input_data.size(1); ++seq_idx) {
         int len = bottom[0]->length[batch_idx][seq_idx];
+        utils::Assert(len >= 0, "ConvolutionalLstmLayer: sequence length error.");
         Tensor2D input, output;
         input = concat_input_data[batch_idx][seq_idx].Slice(0,len);
         output = top[0]->data[batch_idx][seq_idx].Slice(0,len);
@@ -203,6 +204,7 @@ class ConvolutionalLstmLayer : public Layer<xpu> {
     for (index_t batch_idx = 0; batch_idx < top[0]->data.size(0); ++batch_idx) {
       for (index_t seq_idx = 0; seq_idx < top[0]->data.size(1); ++seq_idx) {
         int len = bottom[0]->length[batch_idx][seq_idx];
+        utils::Assert(len >= 0, "ConvolutionalLstmLayer: sequence length error.");
         Tensor2D in_data, in_diff, out_diff;
         in_data = concat_input_data[batch_idx][seq_idx].Slice(0,len);
         in_diff = concat_input_diff[batch_idx][seq_idx].Slice(0,len);

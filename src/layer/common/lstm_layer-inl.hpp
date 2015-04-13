@@ -211,6 +211,7 @@ class LstmLayer : public Layer<xpu> {
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
         int len = bottom[0]->length[batch_idx][seq_idx];
+        utils::Assert(len >= 0, "LstmLayer: sequence length error.");
         if (!reverse) {
           ForwardLeft2Right(bottom_data[batch_idx][seq_idx].Slice(0,len), 
                             g[batch_idx][seq_idx].Slice(0,len), 
@@ -365,6 +366,7 @@ class LstmLayer : public Layer<xpu> {
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
         int len = bottom[0]->length[batch_idx][seq_idx];
+        utils::Assert(len >= 0, "LstmLayer: sequence length error.");
         if (!reverse) {
             BackpropForLeft2RightLstm(top_data[batch_idx][seq_idx].Slice(0,len), 
                                       top_diff[batch_idx][seq_idx].Slice(0,len), 

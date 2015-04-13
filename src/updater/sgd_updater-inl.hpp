@@ -22,7 +22,7 @@ class SGDUpdater : public Updater<xpu, dim>{
     // default value, just set the value you want
     this->defaults["decay"] = SettingV(0.0f);
     this->defaults["momentum"] = SettingV(0.0f);
-    this->defaults["wd"] = SettingV(0.0f);
+    this->defaults["l2"] = SettingV(0.0f);
     
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -38,7 +38,7 @@ class SGDUpdater : public Updater<xpu, dim>{
     base_lr = setting["lr"].fVal();
     decay = setting["decay"].fVal();
     momentum = setting["momentum"].fVal();
-    wd = setting["wd"].fVal();
+    l2 = setting["l2"].fVal();
     iteration = 0;
 	  lr = base_lr;
   }
@@ -53,9 +53,9 @@ class SGDUpdater : public Updater<xpu, dim>{
     iteration++;
     
     if (momentum == 0.0) {
-      data -= lr * (diff + wd * data);
+      data -= lr * (diff + l2 * data);
     } else {
-      history = lr * (diff + wd * data) + momentum * history;
+      history = lr * (diff + l2 * data) + momentum * history;
       data -= history;
     }
   }
@@ -74,13 +74,13 @@ class SGDUpdater : public Updater<xpu, dim>{
       int w_idx = -1;
       for (int i = 0; i < idx.size(0); ++i) {
         w_idx = idx[i];
-        data[w_idx] -= lr * (diff[i] + wd * data[w_idx]);
+        data[w_idx] -= lr * (diff[i] + l2 * data[w_idx]);
       }
     } else {
       int w_idx = -1;
       for (int i = 0; i < idx.size(0); ++i) {
         w_idx = idx[i];
-        history[w_idx] = lr * (diff[i] + wd * data[w_idx]) + momentum * history[w_idx];
+        history[w_idx] = lr * (diff[i] + l2 * data[w_idx]) + momentum * history[w_idx];
         data[w_idx] -= history[w_idx];
       }
     }
@@ -98,7 +98,7 @@ class SGDUpdater : public Updater<xpu, dim>{
   float lr;
   float base_lr;
   float decay;
-  float wd;
+  float l2;
 };
 }  // namespace updater
 }  // namespace textnet
