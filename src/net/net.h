@@ -16,6 +16,7 @@
 #include "../utils/utils.h"
 #include "../utils/io.h"
 #include "../io/json/json.h"
+#include "../statistic/stat.h"
 
 /*! \brief namespace of textnet */
 namespace textnet {
@@ -599,7 +600,9 @@ class Net : public INet{
 
   virtual void Start() = 0;
   
- protected:
+ // protected:
+ // orc: add a friend? 
+ public:
   // Net name 
   string net_name;
   // Net type

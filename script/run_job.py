@@ -185,8 +185,8 @@ def main():
     jobQue.put(WorkerStopToken)
 
     run_nodes = get_nodes()
-    # kill_job(run_nodes[0], ['textnet'])
-    # exit(0)
+    kill_job(run_nodes[0], ['textnet'])
+    exit(0)
     # runNodes = [node168]
     worker_id = 0
     for node in run_nodes:

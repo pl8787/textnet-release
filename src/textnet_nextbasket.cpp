@@ -128,8 +128,8 @@ int main(int argc, char *argv[]) {
   int nTest = num_user; // nValid = 7, nTest = 7;
   int max_iter = (20*nTrain)/(batch_size);
   int iter_eval = (nTrain/batch_size)/20;
-  int ADA_GRAD_MAX_ITER = 1000000;
-  // int ADA_GRAD_MAX_ITER = nTrain/batch_size;
+  // int ADA_GRAD_MAX_ITER = 1000000;
+  int ADA_GRAD_MAX_ITER = (nTrain/batch_size)/3;
 
   string train_data_file = "/home/wsx/dl.shengxian/data/pengfei/tafeng_sub.textnet.train.1";
   string train_pred_data_file = "/home/wsx/dl.shengxian/data/pengfei/tafeng_sub.textnet.train_pred.1";

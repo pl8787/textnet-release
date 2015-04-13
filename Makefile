@@ -92,7 +92,7 @@ settingv.o: src/utils/settingv.cpp src/utils/*.h
 bin/textnet: src/textnet_main.cpp $(OBJ) $(CUOBJ) 
 # bin/textnet_matching: src/textnet_matching.cpp $(OBJ) $(CUOBJ)
 # bin/textnet_senti: src/textnet_senti.cpp $(OBJ) $(CUOBJ)
-# bin/textnet_nb: src/textnet_nextbasket.cpp $(OBJ) $(CUOBJ)
+bin/textnet_nb: src/textnet_nextbasket.cpp $(OBJ) $(CUOBJ)
 # bin/grad_check: src/grad_check.cpp $(OBJ) $(CUOBJ)
 # bin/textnet_test: src/textnet_test.cpp $(OBJ) $(CUOBJ)
 
