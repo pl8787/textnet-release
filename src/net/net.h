@@ -55,6 +55,11 @@ class INet {
     virtual void SaveModelActivation(string tag, string dir_path, vector<string> node_names, int num_iter) = 0;
     virtual void LoadModel(Json::Value &layer_root) = 0;
     virtual void SaveModel(string model_name) = 0;
+
+	// For Statistic
+	virtual Json::Value StatisticNode(Json::Value &req_root) = 0;
+	virtual Json::Value StatisticParam(Json::Value &req_root) = 0;
+	virtual Json::Value StatisticState(Json::Value &req_root) = 0;
 };
 
 template<typename xpu>
@@ -596,6 +601,54 @@ class Net : public INet{
   }
 
   virtual void Start() = 0;
+
+  virtual Json::Value StatisticNode(Json::Value &req_root) {
+    bool rtn = utils::Require(!req_root["node_name"].isNull(), "Require node_name!\n") &&
+		       utils::Require(!req_root["static_node"].isNull(), "Require static_node!(data or diff)\n") &&
+			   utils::Require(!req_root["static_value"].isNull(), "Require static_value!\n");
+	Json::Value rtn_root;
+	if (rtn) {
+	  string node_name = req_root["node_name"].asString();
+	  rtn_root["request"] = req_root;
+	  for (int i = 0; i < req_root["static_node"].size(); ++i) {
+		if (req_root["static_node"][i] == "data") {
+		  rtn_root["data"] = nodes[node_name]->data_statistic(req_root["static_value"]);
+		} else if (req_root["static_node"][i] == "diff") {
+		  rtn_root["diff"] = nodes[node_name]->diff_statistic(req_root["static_value"]);
+		}
+	  }
+	}
+	return rtn_root;
+  }
+
+  virtual Json::Value StatisticParam(Json::Value &req_root) {
+    bool rtn = utils::Require(!req_root["tag"].isNull(), "Require tag!\n") &&
+		       utils::Require(!req_root["layer_name"].isNull(), "Require node_name!\n") &&
+			   utils::Require(!req_root["param_id"].isNull(), "Require param_id!\n") &&
+		       utils::Require(!req_root["static_node"].isNull(), "Require static_node!(data or diff)\n") &&
+			   utils::Require(!req_root["static_value"].isNull(), "Require static_value!\n");
+	Json::Value rtn_root;
+	if (rtn) {
+	  string tag = req_root["tag"].asString();
+	  string layer_name = req_root["layer_name"].asString();
+	  int param_id = req_root["param_id"].asInt();
+	  rtn_root["request"] = req_root;
+	  for (int i = 0; i < req_root["static_node"].size(); ++i) {
+		if (req_root["static_node"][i] == "data") {
+		  rtn_root["data"] = name2layer[tag][layer_name]->GetParams()[param_id].data_statistic(req_root["static_value"]);
+		} else if (req_root["static_node"][i] == "diff") {
+		  rtn_root["diff"] = name2layer[tag][layer_name]->GetParams()[param_id].diff_statistic(req_root["static_value"]);
+		}
+	  }
+	}
+	return rtn_root;
+  }
+
+  virtual Json::Value StatisticState(Json::Value &req_root) {
+	Json::Value rtn_root;
+
+	return rtn_root;
+  }
   
  protected:
   // Net name 

@@ -39,7 +39,7 @@ export NVCCFLAGS = --use_fast_math -g -O3 -ccbin $(CXX)
 BIN = bin/textnet #bin/grad_check bin/textnet_test bin/textnet_matching bin/textnet_senti bin/textnet_nb
 OBJ = layer_cpu.o initializer_cpu.o updater_cpu.o checker_cpu.o io.o settingv.o net_cpu.o 
 CUOBJ = layer_gpu.o initializer_gpu.o updater_gpu.o checker_gpu.o net_gpu.o
-NETH = net.h
+STATISTIC = statistic.h
 
 # define it to use cpu only
 ifeq ($(CPU_ONLY), 1)
@@ -66,6 +66,13 @@ else
     CXXFLAGS += -DMSHADOW_USE_CBLAS=0
 endif
 
+# use zmq
+ifeq ($(REALTIME_SERVER), 1)
+    CXXFLAGS += -DREALTIME_SERVER=1
+    LDFLAGS += -lzmq
+else
+    CXXFLAGS += -DREALTIME_SERVER=0
+endif
 
 all: $(BIN)
 
@@ -84,12 +91,14 @@ checker_cpu.o checker_gpu.o: src/checker/checker_impl.cpp src/checker/checker_im
 net_cpu.o net_gpu.o: src/net/net_impl.cpp src/net/net_impl.cu\
 	src/net/*.h src/net/*.hpp
  
+statistic.h: src/statistic/statistic.h
+
 io.o: src/io/jsoncpp.cpp src/io/json/*.* 
 
 settingv.o: src/utils/settingv.cpp src/utils/*.h
 
 
-bin/textnet: src/textnet_main.cpp $(OBJ) $(CUOBJ) 
+bin/textnet: src/textnet_main.cpp $(OBJ) $(CUOBJ) $(STATISTIC)
 # bin/textnet_matching: src/textnet_matching.cpp $(OBJ) $(CUOBJ)
 # bin/textnet_senti: src/textnet_senti.cpp $(OBJ) $(CUOBJ)
 # bin/textnet_nb: src/textnet_nextbasket.cpp $(OBJ) $(CUOBJ)

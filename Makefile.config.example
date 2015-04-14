@@ -1,5 +1,8 @@
 # If set to 1, then use cpu only
-CPU_ONLY := 0
+CPU_ONLY := 1
+
+# If set to 1, then compile realtime analyse server
+REALTIME_SERVER := 1
 
 # To customize your choice of compiler, uncomment and set the following.
 # N.B. the default for Linux is g++ and the default for OSX is clang++
@@ -27,6 +30,10 @@ CUDA_ARCH := -gencode arch=compute_20,code=sm_20 \
 BLAS := mkl
 BLAS_INCLUDE := /home/pangliang/intel/mkl/include
 BLAS_LIB := /home/pangliang/intel/mkl/lib/intel64 /home/pangliang/intel/lib/intel64
+
+# ZeroMQ 
+ZMQ_INCLUDE := /home/pangliang/dependence/zeromq/include
+ZMQ_LIB := /home/pangliang/dependence/zeromq/lib
 
 # This is required only if you will compile the matlab interface.
 # MATLAB directory should contain the mex binary in /bin.
@@ -59,6 +66,7 @@ BLAS_LIB := /home/pangliang/intel/mkl/lib/intel64 /home/pangliang/intel/lib/inte
 # LEVELDB_LIB := /home/pangliang/dependence/leveldb
 
 # Whatever else you find you need goes here.
-INCLUDE_DIRS := $(BLAS_INCLUDE) /usr/local/include
-LIBRARY_DIRS := $(BLAS_LIB) /usr/local/lib /usr/lib 
+INCLUDE_DIRS := $(BLAS_INCLUDE) $(ZMQ_INCLUDE) /usr/local/include
+LIBRARY_DIRS := $(BLAS_LIB) $(ZMQ_LIB) /usr/local/lib /usr/lib 
+
 

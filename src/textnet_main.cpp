@@ -12,6 +12,7 @@
 
 #include "./net/net.h"
 #include "./layer/layer.h"
+#include "./statistic/statistic.h"
 #include "./io/json/json.h"
 #include "global.h"
 
@@ -90,6 +91,12 @@ int main(int argc, char *argv[]) {
   }
   INet* net = CreateNet(device_type, kTrainValid);
   net->InitNet(model_file);
+#if REALTIME_SERVER==1
+  using namespace textnet::statistic;
+  Statistic statistic;
+  statistic.SetNet(net);
+  statistic.Start();
+#endif
   net->Start();
   return 0;
 }
