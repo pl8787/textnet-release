@@ -169,6 +169,8 @@ class Statistic {
  
   void Stop() {
 	pthread_join(thread_listen, &retval);
+	zmq_close (responder);
+	zmq_term (context);
   }
 
  protected:
