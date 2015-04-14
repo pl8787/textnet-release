@@ -21,7 +21,6 @@ using namespace textnet;
 using namespace textnet::layer;
 using namespace mshadow;
 using namespace textnet::net;
-using namespace textnet::statistic;
 
 void PrintTensor(const char * name, Tensor<cpu, 1> x) {
     Shape<1> s = x.shape_;
@@ -92,8 +91,12 @@ int main(int argc, char *argv[]) {
   }
   INet* net = CreateNet(device_type, kTrainValid);
   net->InitNet(model_file);
-  Statistic statistic(net);
+#if REALTIME_SERVER==1
+  using namespace textnet::statistic;
+  Statistic statistic;
+  statistic.SetNet(net);
   statistic.Start();
+#endif
   net->Start();
   return 0;
 }

@@ -16,6 +16,7 @@ for request in range(1000):
 
     #  Get the reply.
     message = socket.recv()
+    message = json.loads(message)
     print("Received reply %s [ %s ]" % (request, message))
 
     time.sleep(5)

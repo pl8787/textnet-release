@@ -3,6 +3,8 @@
 
 #pragma once
 
+#if REALTIME_SERVER==1
+
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -40,30 +42,55 @@ const int STATE_INFO = 3;
 class Statistic {
  public:
  
-  Statistic(INet* net_):net(net_) {
-
+  Statistic(void) {
+    url_port = "tcp://127.0.0.1:5000";
+	net = NULL;
   }
 
   virtual ~Statistic(void) {
 
   }
 
+  void SetUrlPort(string url_port_) {
+    url_port = url_port_;
+  }
+
+  void SetNet(INet* net_) {
+    net = net_;
+  }
+
   string RecieveMsg() {
+	int rc = 0;
     zmq_msg_t request;
-    zmq_msg_init(&request);
-    zmq_msg_recv(&request, responder, 0);
+    rc = zmq_msg_init(&request);
+	utils::Check(rc == 0, "In RecieveMsg, zmq_msg_init.");
+    rc = zmq_msg_recv(&request, responder, 0);
+	utils::Check(rc != -1, "In RecieveMsg, zmq_msg_recv.");
+
     int size = zmq_msg_size (&request);
     string msg_rev((char *)(zmq_msg_data(&request)), size);
     zmq_msg_close (&request);
-    utils::Printf("Received: %s\n",msg_rev.c_str());
+
+	// char client_name[256];
+	// size_t name_size = 256;
+    // rc = zmq_getsockopt(responder, ZMQ_LAST_ENDPOINT, client_name, &name_size);
+	// utils::Check(rc == 0, "In RecieveMsg, zmq_getsockopt.");
+    utils::Printf("[Server] Received: %d\n", rc); //client_name);
 	return msg_rev;
   }
   
   bool SendMsg(string msg) {
+	int rc = 0;
     zmq_msg_t reply;
-    zmq_msg_init_size(&reply, msg.size());
+    rc = zmq_msg_init_size(&reply, msg.size());
+	utils::Check(rc == 0, "In RecieveMsg, zmq_msg_init_size");
+
     memcpy(zmq_msg_data(&reply), msg.c_str(), msg.size());
-    zmq_msg_send(&reply, responder, 0);
+
+    rc = zmq_msg_send(&reply, responder, 0);
+	utils::Check(rc != -1, "In RecieveMsg, zmq_getsockopt.");
+    utils::Printf("[Server] Send msg: %d\n", rc);
+
     zmq_msg_close(&reply);
 	return true;
   }
@@ -92,13 +119,11 @@ class Statistic {
           break;
       }
       res_msg = writer.write(res_root);
-      if (SendMsg(res_msg)) {
-        utils::Printf("Send msg ok!\n");
-      } else {
-        utils::Printf("Send msg error!\n");
+      if (!SendMsg(res_msg)) {
+        utils::Printf("[Server] Send msg error!\n");
       }
     } else {
-      utils::Printf("Can not parse to json.");
+      utils::Printf("[Server] Can not parse to json.\n");
     }
   }
 
@@ -125,8 +150,8 @@ class Statistic {
 
   static void * Listening(void * data) {
 	Statistic * pstatic = (Statistic *)data;
+    utils::Printf("[Server] I am listening ...\n");
     while (true) {
-      utils::Printf("I am listening...\n");
       string req_msg = pstatic->RecieveMsg();
       pstatic->Router(req_msg);
 	}
@@ -137,8 +162,8 @@ class Statistic {
 	utils::Check(net!=NULL, "Net is not avaliable.");
     context = zmq_init(1);
 	responder = zmq_socket(context, ZMQ_REP);
-	zmq_bind(responder, "tcp://127.0.0.1:5000");
-	utils::Printf("Binding on port 5000.");
+	zmq_bind(responder, url_port.c_str());
+	utils::Printf("[Server] Binding on %s.", url_port.c_str());
     pthread_create(&thread_listen, NULL, Listening, (void *)this);
   }
  
@@ -147,6 +172,8 @@ class Statistic {
   }
 
  protected:
+  // Server url and port
+  string url_port;
   // Net need monitor 
   INet * net;
   // zmq context
@@ -165,4 +192,7 @@ class Statistic {
 
 }  // namespace statistic
 }  // namespace textnet
+
+#endif // REALTIME_SERVER
+
 #endif  // TEXTNET_NET_NET_H_
