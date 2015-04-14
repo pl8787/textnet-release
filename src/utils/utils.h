@@ -108,6 +108,21 @@ inline int SPrintf(char *buf, size_t size, const char *fmt, ...) {
   return ret;
 }
 
+/*!\brief same as check, but do not exit.*/
+inline bool Require(bool exp, const char *fmt, ...) {
+  if (!exp) {
+    std::string msg(kPrintBuffer, '\0');
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(&msg[0], kPrintBuffer, fmt, args);
+    va_end(args);
+    HandlePrint(msg.c_str());
+	return false;
+  } else {
+	return true;
+  }
+}
+
 /*! \brief assert an condition is true, use this to handle debug information */
 inline void Assert(bool exp, const char *fmt, ...) {
 #ifdef DEBUG // orc this if only for debug

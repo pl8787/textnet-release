@@ -66,6 +66,10 @@ else
     CXXFLAGS += -DMSHADOW_USE_CBLAS=0
 endif
 
+# use zmq
+ifeq ($(REALTIME_SERVER), 1)
+    LDFLAGS += -lzmq
+endif
 
 all: $(BIN)
 

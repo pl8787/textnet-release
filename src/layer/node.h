@@ -7,6 +7,7 @@
 #include <string>
 #include <mshadow/tensor.h>
 #include <mshadow/tensor_container.h>
+#include "op.h"
 #include "../utils/utils.h"
 #include "../utils/io.h"
 #include "../initializer/initializer.h"
@@ -216,6 +217,84 @@ struct Node {
 
   void LoadNode(Json::Value &node_root, bool with_diff = false) {
 
+  }
+
+  Json::Value data_statistic(Json::Value &req_root) {
+	using namespace mshadow::expr;
+    Json::Value rtn_root;
+	for (int i = 0; i < req_root.size(); ++i) {
+      std::string req_tag = req_root[i].asString();
+	  if (req_tag == "mean") {
+		// rtn_root[req_tag] = sum_rows(data_d1())[0] / data.shape_.Size();
+		float rtn = 0.0f;
+		for (int j = 0; j < data.shape_.Size(); ++j) {
+          rtn += data_d1()[j];
+		}
+		rtn /= data.shape_.Size();
+		rtn_root[req_tag] = rtn;
+	  } else if (req_tag == "var") {
+		if (!rtn_root["mean"]) {
+		  float rtn = 0.0f;
+		  for (int j = 0; j < data.shape_.Size(); ++j) {
+            rtn += data_d1()[j];
+		  }
+		  rtn /= data.shape_.Size();
+		  rtn_root["mean"] = rtn;
+	      // rtn_root["mean"] = sum_rows(data_d1());
+		}
+        //rtn_root[req_tag] = sum_rows(F<op::square>(data_d1()))[0] / data.shape_.Size() 
+		//	- rtn_root["mean"].asFloat();
+		float rtn = 0.0f;
+		for (int j = 0; j < data.shape_.Size(); ++j) {
+          rtn += data_d1()[j]*data_d1()[j];
+		}
+		rtn_root[req_tag] = rtn / data.shape_.Size() - rtn_root["mean"].asFloat()*rtn_root["mean"].asFloat();
+	  } else if (req_tag == "min") {
+        
+	  } else if (req_tag == "max") {
+
+	  }
+	}
+	return rtn_root;
+  }
+
+  Json::Value diff_statistic(Json::Value &req_root) {
+ 	using namespace mshadow::expr;
+    Json::Value rtn_root;
+	for (int i = 0; i < req_root.size(); ++i) {
+      std::string req_tag = req_root[i].asString();
+	  if (req_tag == "mean") {
+		// rtn_root[req_tag] = sum_rows(data_d1())[0] / data.shape_.Size();
+		float rtn = 0.0f;
+		for (int j = 0; j < diff.shape_.Size(); ++j) {
+          rtn += diff_d1()[j];
+		}
+		rtn /= diff.shape_.Size();
+		rtn_root[req_tag] = rtn;
+	  } else if (req_tag == "var") {
+		if (!rtn_root["mean"]) {
+		  float rtn = 0.0f;
+		  for (int j = 0; j < diff.shape_.Size(); ++j) {
+            rtn += diff_d1()[j];
+		  }
+		  rtn /= diff.shape_.Size();
+		  rtn_root["mean"] = rtn;
+	      // rtn_root["mean"] = sum_rows(data_d1());
+		}
+        //rtn_root[req_tag] = sum_rows(F<op::square>(data_d1()))[0] / data.shape_.Size() 
+		//	- rtn_root["mean"].asFloat();
+		float rtn = 0.0f;
+		for (int j = 0; j < diff.shape_.Size(); ++j) {
+          rtn += diff_d1()[j]*diff_d1()[j];
+		}
+		rtn_root[req_tag] = rtn / diff.shape_.Size() - rtn_root["mean"].asFloat()*rtn_root["mean"].asFloat();
+	  } else if (req_tag == "min") {
+        
+	  } else if (req_tag == "max") {
+
+	  }
+	}
+	return rtn_root;  
   }
 
   inline mshadow::Tensor<xpu, 1> data_d1() {
