@@ -16,7 +16,7 @@
 #include "../utils/utils.h"
 #include "../utils/io.h"
 #include "../io/json/json.h"
-#include "../statistic/stat.h"
+// #include "../statistic/stat.h"
 
 /*! \brief namespace of textnet */
 namespace textnet {

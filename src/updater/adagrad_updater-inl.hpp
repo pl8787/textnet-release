@@ -20,7 +20,7 @@ class AdagradUpdater : public Updater<xpu, dim>{
   
   virtual void Require(std::map<std::string, SettingV> &setting) {
     // default value, just set the value you want
-    this->defaults["eps"] = SettingV(0.0001f);
+    this->defaults["eps"] = SettingV(0.1f);
     this->defaults["l2"] = SettingV(0.0f);
     this->defaults["max_iter"] = SettingV(-1);
 

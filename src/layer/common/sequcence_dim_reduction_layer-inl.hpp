@@ -76,6 +76,7 @@ class SequenceDimReductionLayer : public Layer<xpu> {
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 2> bottom_data = bottom[0]->data_d2_reverse();
 
+    top[0]->length = bottom[0]->length;
     top[0]->data_d2_reverse() = dot(bottom_data, this->params[0].data_d2().T());
   }
   
