@@ -54,8 +54,14 @@ class INet {
     virtual void TestAll(string tag, int iter) = 0;
     virtual void Start() = 0;
     virtual void SaveModelActivation(string tag, string dir_path, vector<string> node_names, int num_iter) = 0;
-    virtual void LoadModel(Json::Value &layer_root) = 0;
-    virtual void SaveModel(string model_name) = 0;
+    virtual void LoadModel(string tag, string model_name) = 0;
+    virtual void SaveModel(string tag, int iter) = 0;
+	virtual void SaveAllModels(int iter) = 0;
+
+	// For Statistic
+	virtual Json::Value StatisticNode(Json::Value &req_root) = 0;
+	virtual Json::Value StatisticParam(Json::Value &req_root) = 0;
+	virtual Json::Value StatisticState(Json::Value &req_root) = 0;
 };
 
 template<typename xpu>
@@ -198,6 +204,8 @@ class Net : public INet{
       tags.push_back(tag);
       max_iters[tag] = one_net["max_iters"].asInt();
       display_interval[tag] = one_net["display_interval"].asInt();
+	  save_interval[tag] = one_net["save_interval"].asInt();
+	  save_name[tag] = one_net["save_name"].asString();
       out_nodes[tag] = vector<string>();
       for (int i = 0; i < one_net["out_nodes"].size(); ++i) {
         out_nodes[tag].push_back(one_net["out_nodes"][i].asString());
@@ -516,7 +524,7 @@ class Net : public INet{
 
   virtual void TrainDisplay(string tag, int iter = 0) {
     for (int i = 0; i < out_nodes[tag].size(); ++i) {
-      cout << "[Train]\tIter\t" << iter 
+      cout << "[" << tag << ":kTrain]\tIter\t" << iter 
            << ":\tOut[" << out_nodes[tag][i] << "] =\t" 
            << nodes[out_nodes[tag][i]]->data_d1()[0] << endl; 
     }
@@ -546,7 +554,7 @@ class Net : public INet{
       
       // Output
       for (int i = 0; i < out_nodes[tag].size(); ++i) {
-        cout << "[" << tag << "]\tIter\t" << iter 
+        cout << "[" << tag << ":kTest]\tIter\t" << iter 
              << ":\tOut[" << out_nodes[tag][i] << "] =\t" 
              << test_loss[i] << endl; 
       }
@@ -578,29 +586,90 @@ class Net : public INet{
       }
     }
   }
+
+  virtual void SaveAllModels(int iter) {
+    utils::Printf("[Model] Saving models ...\n");
+    for (int t = 0; t < tags.size(); ++t) {
+      SaveModel(tags[t], iter);
+	}	
+  }
   
-  virtual void SaveModel(string model_name) {
+  virtual void SaveModel(string tag, int iter) {
+	string model_name;
+	ostringstream _oss;
+	_oss << save_name[tag] << "." << iter << "." << tag << ".textnet.weight";
+	model_name = _oss.str();
     ofstream _of(model_name.c_str());
     Json::StyledWriter writer;
     Json::Value net_root;
-    net_root["net_name"] = net_name;
+    net_root["net_name"] = net_name+":"+tag;
     Json::Value layers_root;
-    for (int i = 0; i < layers.size(); ++i) {
-        Json::Value layer_root;
-        layers[i]->SaveModel(layer_root);
-        layers_root.append(layer_root);
+	vector<Layer<xpu>*> &net = nets[tag];
+    for (int i = 0; i < net.size(); ++i) {
+      Json::Value layer_root;
+      net[i]->SaveModel(layer_root);
+      layers_root.append(layer_root);
     }
     net_root["layers"] = layers_root;
     string json_file = writer.write(net_root);
     _of << json_file;
     _of.close();
+	utils::Printf("[Model] Save [%s] to %s.\n", tag.c_str(), model_name.c_str());	
   }
 
-  virtual void LoadModel(Json::Value &layer_root) {
+  virtual void LoadModel(string tag, string model_name) {
     
   }
 
   virtual void Start() = 0;
+
+  virtual Json::Value StatisticNode(Json::Value &req_root) {
+    bool rtn = utils::Require(!req_root["node_name"].isNull(), "Require node_name!\n") &&
+		       utils::Require(!req_root["static_node"].isNull(), "Require static_node!(data or diff)\n") &&
+			   utils::Require(!req_root["static_value"].isNull(), "Require static_value!\n");
+	Json::Value rtn_root;
+	if (rtn) {
+	  string node_name = req_root["node_name"].asString();
+	  rtn_root["request"] = req_root;
+	  for (int i = 0; i < req_root["static_node"].size(); ++i) {
+		if (req_root["static_node"][i] == "data") {
+		  rtn_root["data"] = nodes[node_name]->data_statistic(req_root["static_value"]);
+		} else if (req_root["static_node"][i] == "diff") {
+		  rtn_root["diff"] = nodes[node_name]->diff_statistic(req_root["static_value"]);
+		}
+	  }
+	}
+	return rtn_root;
+  }
+
+  virtual Json::Value StatisticParam(Json::Value &req_root) {
+    bool rtn = utils::Require(!req_root["tag"].isNull(), "Require tag!\n") &&
+		       utils::Require(!req_root["layer_name"].isNull(), "Require node_name!\n") &&
+			   utils::Require(!req_root["param_id"].isNull(), "Require param_id!\n") &&
+		       utils::Require(!req_root["static_node"].isNull(), "Require static_node!(data or diff)\n") &&
+			   utils::Require(!req_root["static_value"].isNull(), "Require static_value!\n");
+	Json::Value rtn_root;
+	if (rtn) {
+	  string tag = req_root["tag"].asString();
+	  string layer_name = req_root["layer_name"].asString();
+	  int param_id = req_root["param_id"].asInt();
+	  rtn_root["request"] = req_root;
+	  for (int i = 0; i < req_root["static_node"].size(); ++i) {
+		if (req_root["static_node"][i] == "data") {
+		  rtn_root["data"] = name2layer[tag][layer_name]->GetParams()[param_id].data_statistic(req_root["static_value"]);
+		} else if (req_root["static_node"][i] == "diff") {
+		  rtn_root["diff"] = name2layer[tag][layer_name]->GetParams()[param_id].diff_statistic(req_root["static_value"]);
+		}
+	  }
+	}
+	return rtn_root;
+  }
+
+  virtual Json::Value StatisticState(Json::Value &req_root) {
+	Json::Value rtn_root;
+
+	return rtn_root;
+  }
   
  // protected:
  // orc: add a friend? 
@@ -619,6 +688,10 @@ class Net : public INet{
   map<string, int> max_iters;
   // display interval for nets
   map<string, int> display_interval;
+  // save interval for nets
+  map<string, int> save_interval;
+  // save name for nets
+  map<string, string> save_name;
   // nets output nodes
   map<string, vector<string> > out_nodes;
   // All layers

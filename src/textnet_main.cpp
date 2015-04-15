@@ -13,6 +13,7 @@
 
 #include "./net/net.h"
 #include "./layer/layer.h"
+#include "./statistic/statistic.h"
 #include "./io/json/json.h"
 #include "global.h"
 
@@ -76,7 +77,7 @@ void PrintTensor(const char * name, Tensor<cpu, 4> x) {
 }
 
 int main(int argc, char *argv[]) {
-  string model_file = "model/matching.textnet.model";
+  string model_file = "model/matching.tvt.model";
   DeviceType device_type = CPU_DEVICE;
   if (argc > 1) {
     model_file = string(argv[1]);
@@ -101,8 +102,14 @@ int main(int argc, char *argv[]) {
   int netTagType = kTrainValidTest;
 
   if (cfg["cross_validation"].isNull()) {
-    INet* net = CreateNet(device_type, netTagType);
-    net->InitNet(cfg);
+    INet* net = CreateNet(device_type, kTrainValidTest);
+    net->InitNet(model_file);
+#if REALTIME_SERVER==1
+    using namespace textnet::statistic;
+    Statistic statistic;
+    statistic.SetNet(net);
+    statistic.Start();
+#endif
     net->Start();
   } else {
     int n_fold = cfg["cross_validation"].asInt();
@@ -128,6 +135,7 @@ int main(int argc, char *argv[]) {
   }
 
   ifs.close();
+  
   return 0;
 }
 
