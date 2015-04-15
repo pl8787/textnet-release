@@ -32,6 +32,10 @@ class TrainValidNet : public Net<xpu>{
 		if (this->display_interval["Valid"] > 0 && iter % this->display_interval["Valid"] == 0) {
 			this->TestAll("Valid", iter);
 		}	
+
+		if (this->save_interval["Train"] > 0 && iter % this->save_interval["Train"] == 0) {
+            this->SaveModel("Train", iter);
+		}
 	}
   } 
 };

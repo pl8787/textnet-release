@@ -234,6 +234,28 @@ class Layer {
     }
   }
 
+  virtual void SaveParams(Json::Value &params_root) {
+    for (int i = 0; i < params.size(); ++i) {
+      Json::Value param_root;
+      Json::Value param_value_root;
+      Json::Value param_shape_root;
+      
+      param_shape_root.append(params[i].data.size(0));
+      param_shape_root.append(params[i].data.size(1));
+      param_shape_root.append(params[i].data.size(2));
+      param_shape_root.append(params[i].data.size(3));
+      
+      for (int j = 0; j < params[i].data.shape_.Size(); ++j) {
+        param_value_root.append(params[i].data.dptr_[j]);
+      }
+      
+      param_root["shape"] = param_shape_root;
+      param_root["value"] = param_value_root;
+      
+      params_root.append(param_root);
+    }
+  }
+
   virtual void SaveModel(Json::Value &layer_root, bool need_param = true) {
     // Set layer type
     layer_root["layer_type"] = layer_type;
@@ -261,26 +283,26 @@ class Layer {
     
     // Set layer weights
     Json::Value params_root;
-    for (int i = 0; i < params.size(); ++i) {
-      Json::Value param_root;
-      Json::Value param_value_root;
-      Json::Value param_shape_root;
-      
-      param_shape_root.append(params[i].data.size(0));
-      param_shape_root.append(params[i].data.size(1));
-      param_shape_root.append(params[i].data.size(2));
-      param_shape_root.append(params[i].data.size(3));
-      
-      for (int j = 0; j < params[i].data.shape_.Size(); ++j) {
-        param_value_root.append(params[i].data.dptr_[j]);
-      }
-      
-      param_root["shape"] = param_shape_root;
-      param_root["value"] = param_value_root;
-      
-      params_root.append(param_root);
-    }
+	SaveParams(params_root);
     layer_root["param"] = params_root;
+  }
+
+  virtual void LoadParams(Json::Value &params_root) {
+    params.resize(params_root.size());
+    
+    for (int i = 0; i < params_root.size(); ++i) {
+      Json::Value param_root = params_root[i];
+      Json::Value param_value_root = param_root["value"];
+      Json::Value param_shape_root = param_root["shape"];
+      
+      params[i].Resize(param_shape_root[0].asInt(), param_shape_root[1].asInt(), 
+                       param_shape_root[2].asInt(), param_shape_root[3].asInt(),
+                       true);
+                        
+      for (int j = 0; j < params[i].data.shape_.Size(); ++j) {
+        params[i].data.dptr_[j] = param_value_root[j].asFloat();
+      }
+    }
   }
 
   virtual void LoadModel(Json::Value &layer_root) {
@@ -312,23 +334,9 @@ class Layer {
     // Set layer weights
     if (!layer_root["param"]) 
       return;
+
     Json::Value params_root = layer_root["param"];
-    params.resize(params_root.size());
-    
-    for (int i = 0; i < params_root.size(); ++i) {
-      Json::Value param_root = params_root[i];
-      Json::Value param_value_root = param_root["value"];
-      Json::Value param_shape_root = param_root["shape"];
-      
-      params[i].Resize(param_shape_root[0].asInt(), param_shape_root[1].asInt(), 
-                       param_shape_root[2].asInt(), param_shape_root[3].asInt(),
-                       true);
-                        
-      for (int j = 0; j < params[i].data.shape_.Size(); ++j) {
-        params[i].data.dptr_[j] = param_value_root[j].asFloat();
-      }
-    }
-    
+    LoadParams(params_root);   
   }
   
   virtual LayerType GetLayerType() { return layer_type; }
