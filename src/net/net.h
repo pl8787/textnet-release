@@ -544,7 +544,7 @@ class Net : public INet{
       
       // Output
       for (int i = 0; i < out_nodes[tag].size(); ++i) {
-        cout << "[Test]\tIter\t" << iter 
+        cout << "[" << tag << "]\tIter\t" << iter 
              << ":\tOut[" << out_nodes[tag][i] << "] =\t" 
              << test_loss[i] << endl; 
       }

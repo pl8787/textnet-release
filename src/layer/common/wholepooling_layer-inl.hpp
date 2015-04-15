@@ -44,7 +44,7 @@ class WholePoolingLayer : public Layer<xpu>{
 
     mshadow::Shape<4> shape_in = bottom[0]->data.shape_;
     mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in[0], shape_in[1], 1, shape_in[3]);
-    top[0]->Resize(shape_out, 0.f);
+    top[0]->Resize(shape_out, true);
     pos.Resize(shape_out, -1);
   }
 

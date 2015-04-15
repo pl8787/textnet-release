@@ -4,22 +4,23 @@ import copy, os
 from gen_conf_file import *
 
 
-def gen_conv_lstm(d_mem_):
-    dataset = 'simulation'
+def gen_conv_lstm(d_mem, init):
+    dataset = 'mr'
     if dataset == 'mr':
         train_data_file = '/home/wsx/dl.shengxian/data/mr/lstm.train.nopad'
-        test_data_file = '/home/wsx/dl.shengxian/data/mr/lstm.test.pad'
+        valid_data_file = '/home/wsx/dl.shengxian/data/mr/lstm.dev.nopad'
+        test_data_file = '/home/wsx/dl.shengxian/data/mr/lstm.test.nopad'
         embedding_file = '/home/wsx/dl.shengxian/data/mr/word_rep_w2v.plpl'
         max_doc_len = 100
         vocab_size = 18766
 
         num_class = 2
-        d_mem = 100
         d_word_rep = 300 
         batch_size = 50
         n_test = 1067
+        n_valid = 1067
 
-        g_filler = gen_uniform_filter_setting(0.3)
+        g_filler = gen_uniform_filter_setting(init)
         zero_filler = gen_zero_filter_setting()
         g_updater = gen_adadelta_setting()
     elif dataset == 'simulation':
@@ -35,8 +36,7 @@ def gen_conv_lstm(d_mem_):
         vocab_size = 2000
 
         num_class = 2
-        d_mem = d_mem_
-        d_word_rep = d_mem_
+        d_word_rep = d_mem
         batch_size = 1
 
         g_filler = gen_uniform_filter_setting(0.3)
@@ -44,7 +44,6 @@ def gen_conv_lstm(d_mem_):
         g_updater = gen_adadelta_setting()
     elif dataset == 'treebank':
         assert False
-
 
     g_layer_setting = {}
     g_layer_setting['no_bias'] = True
@@ -58,13 +57,21 @@ def gen_conv_lstm(d_mem_):
 
     net = {}
     net['net_name'] = 'conv_lstm'
-    net['max_iters'] = 10000
-    net['max_test_iters'] = int(n_test/batch_size)
-    net['display_interval'] = 1
-    net['test_interval'] = 122 
-    net['train_out'] = ['loss', 'acc']
-    net['test_out']  = ['loss', 'acc']
-
+    net_cfg_train, net_cfg_valid, net_cfg_test = {}, {}, {}
+    net['net_config'] = [net_cfg_train, net_cfg_valid, net_cfg_test]
+    net_cfg_train["tag"] = "Train"
+    net_cfg_train["max_iters"] = 2000
+    net_cfg_train["display_interval"] = 100
+    net_cfg_train["out_nodes"] = ['acc']
+    net_cfg_valid["tag"] = "Valid"
+    net_cfg_valid["max_iters"] = int(n_valid/batch_size) 
+    net_cfg_valid["display_interval"] = 100
+    net_cfg_valid["out_nodes"] = ['acc']
+    net_cfg_test["tag"] = "Test"
+    net_cfg_test["max_iters"] = int(n_test/batch_size) 
+    net_cfg_test["display_interval"] = 100
+    net_cfg_test["out_nodes"] = ['acc']
+    
     layers = []
     net['layers'] = layers
 
@@ -74,6 +81,7 @@ def gen_conv_lstm(d_mem_):
     layer['top_nodes'] = ['y', 'x']
     layer['layer_name'] = 'train_data'
     layer['layer_type'] = 72
+    layer['tag'] = ['Train']
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
     setting['phrase_type'] = 0
@@ -85,8 +93,23 @@ def gen_conv_lstm(d_mem_):
     layers.append(layer) 
     layer['bottom_nodes'] = []
     layer['top_nodes'] = ['y', 'x']
+    layer['layer_name'] = 'valid_data'
+    layer['layer_type'] = 72
+    layer['tag'] = ['Valid']
+    setting = copy.deepcopy(g_layer_setting)
+    layer['setting'] = setting
+    setting['phrase_type'] = 1
+    setting['batch_size'] = batch_size 
+    setting['data_file'] = valid_data_file
+    setting['max_doc_len'] = max_doc_len
+
+    layer = {}
+    layers.append(layer) 
+    layer['bottom_nodes'] = []
+    layer['top_nodes'] = ['y', 'x']
     layer['layer_name'] = 'test_data'
     layer['layer_type'] = 72
+    layer['tag'] = ['Test']
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
     setting['phrase_type'] = 1
@@ -207,10 +230,14 @@ def gen_conv_lstm(d_mem_):
     layer['setting'] = setting
 
 
-    gen_conf_file(net, '../bin/conv_lstm_simulation.model')
+    # gen_conf_file(net, '../bin/conv_lstm_simulation.model')
 
-    return
+    return net
 
-for d_mem in [3, 5, 10, 20]:
-    gen_conv_lstm(d_mem)
-    os.system("../bin/textnet ../bin/conv_lstm_simulation.model > ../bin/simulation/neg.gen.train.{0}".format(d_mem))
+for d_mem in [100]:
+    net = gen_conv_lstm(d_mem = d_mem, init = 0.3)
+    gen_conf_file(net, '../bin/cnn_lstm_mr.model')
+    os.system("../bin/textnet ../bin/cnn_lstm_mr.model")
+
+    # os.system("../bin/textnet ../bin/conv_lstm_simulation.model > ../bin/simulation/neg.gen.train.{0}".format(d_mem))
+

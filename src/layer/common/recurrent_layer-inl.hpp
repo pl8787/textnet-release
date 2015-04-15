@@ -112,7 +112,7 @@ class RecurrentLayer : public Layer<xpu> {
     std::cout << shape_in[0] << "x" << shape_in[1] << "x" << shape_in[2] << "x" << shape_in[3] << std::endl;
     std::cout << shape_out[0] << "x" << shape_out[1] << "x" << shape_out[2] << "x" << shape_out[3] << std::endl;
 
-    top[0]->Resize(shape_out);
+    top[0]->Resize(shape_out, true);
   }
 
   void checkNan(float *p, int l) {
