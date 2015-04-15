@@ -76,7 +76,7 @@ void PrintTensor(const char * name, Tensor<cpu, 4> x) {
 }
 
 int main(int argc, char *argv[]) {
-  string model_file = "model/matching.textnet.model";
+  string model_file = "model/matching.tvt.model";
   DeviceType device_type = CPU_DEVICE;
   if (argc > 1) {
     model_file = string(argv[1]);

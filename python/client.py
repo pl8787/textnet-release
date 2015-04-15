@@ -9,6 +9,8 @@ print("Connecting to hello world server...")
 socket = context.socket(zmq.REQ)
 socket.connect("tcp://127.0.0.1:5000")
 
+data_file = open("sample.data","w")
+
 #  Do 10 requests, waiting each time for a response
 for request in range(1000):
     print("Sending request %s ..." % request)
@@ -18,5 +20,8 @@ for request in range(1000):
     message = socket.recv()
     message = json.loads(message)
     print("Received reply %s [ %s ]" % (request, message))
+    print >> data_file, message
 
-    time.sleep(5)
+    time.sleep(1)
+
+data_file.close()
