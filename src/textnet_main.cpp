@@ -92,32 +92,42 @@ int main(int argc, char *argv[]) {
   Json::Value cfg;
   ifstream ifs(model_file.c_str());
   ifs >> cfg;
-  int netTagType = kTrainValidTest;
-  string fold = cfg["cross_validation"].asString();
-  int n_fold = atoi(fold.c_str());
-  cout << fold << endl;
-  cout << n_fold << endl;
-  for (int i = 0; i < n_fold; ++i) {
-    stringstream ss;
-    ss << i;
-    Json::Value net_cfg = cfg;
-    string data_file = cfg["layers"][0]["settings"]["data_file"].asString();
-    data_file += "."+ss.str();
-    net_cfg["layers"][0]["settings"]["data_file"] = data_file;
-    data_file = cfg["layers"][1]["settings"]["data_file"].asString();
-    data_file += "."+ss.str();
-    net_cfg["layers"][1]["settings"]["data_file"] = data_file;
-    data_file = cfg["layers"][2]["settings"]["data_file"].asString();
-    data_file += "."+ss.str();
-    net_cfg["layers"][2]["settings"]["data_file"] = data_file;
-    INet* net = CreateNet(device_type, netTagType);
-    net->InitNet(net_cfg);
-    net->Start();
+  string log_file = cfg["log"].asString();
+  if (!log_file.empty()) {
+      freopen(log_file.c_str(), "w", stdout);
+      setvbuf(stdout, NULL, _IOLBF, 0);
   }
 
-  // INet* net = CreateNet(device_type, netTagType);
-  // net->InitNet(model_file);
-  // net->Start();
+  int netTagType = kTrainValidTest;
+
+  if (cfg["cross_validation"].isNull()) {
+    INet* net = CreateNet(device_type, netTagType);
+    net->InitNet(cfg);
+    net->Start();
+  } else {
+    int n_fold = cfg["cross_validation"].asInt();
+    for (int i = 0; i < n_fold; ++i) {
+      cout << "PROCESSING CROSS VALIDATION FOLD " << i << "..." << endl;
+      stringstream ss;
+      ss << i;
+      Json::Value net_cfg = cfg;
+      string data_file = cfg["layers"][0]["settings"]["data_file"].asString();
+      data_file += "."+ss.str();
+      net_cfg["layers"][0]["settings"]["data_file"] = data_file;
+      data_file = cfg["layers"][1]["settings"]["data_file"].asString();
+      data_file += "."+ss.str();
+      net_cfg["layers"][1]["settings"]["data_file"] = data_file;
+      data_file = cfg["layers"][2]["settings"]["data_file"].asString();
+      data_file += "."+ss.str();
+      net_cfg["layers"][2]["settings"]["data_file"] = data_file;
+
+      INet* net = CreateNet(device_type, netTagType);
+      net->InitNet(net_cfg);
+      net->Start();
+    }
+  }
+
+  ifs.close();
   return 0;
 }
 
