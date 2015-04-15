@@ -57,6 +57,8 @@ def gen_conv_lstm(d_mem, init):
 
     net = {}
     net['net_name'] = 'conv_lstm'
+    net['cross_validation'] = 10
+    net['log'] =  'log.cnnlstm.cv'
     net_cfg_train, net_cfg_valid, net_cfg_test = {}, {}, {}
     net['net_config'] = [net_cfg_train, net_cfg_valid, net_cfg_test]
     net_cfg_train["tag"] = "Train"
@@ -234,10 +236,9 @@ def gen_conv_lstm(d_mem, init):
 
     return net
 
-for d_mem in [100]:
+for d_mem in [50]:
     net = gen_conv_lstm(d_mem = d_mem, init = 0.3)
     gen_conf_file(net, '../bin/cnn_lstm_mr.model')
     os.system("../bin/textnet ../bin/cnn_lstm_mr.model")
 
     # os.system("../bin/textnet ../bin/conv_lstm_simulation.model > ../bin/simulation/neg.gen.train.{0}".format(d_mem))
-

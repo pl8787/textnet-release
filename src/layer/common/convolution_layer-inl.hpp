@@ -119,8 +119,19 @@ class ConvolutionLayer : public Layer<xpu> {
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
     mshadow::Tensor<xpu, 2> weight_data = this->params[0].data_d2();
     mshadow::Tensor<xpu, 1> bias_data = this->params[1].data_d1();
+    mshadow::Tensor<xpu, 2> bottom_len = bottom[0]->length;
+    mshadow::Tensor<xpu, 2> top_len = top[0]->length;
     const index_t nbatch = bottom_data.size(0);
+#if DEBUG
+    if (bottom_len.dptr_[0] >= 0) {
+       utils::Check(bottom_data.size(1) == 1, "ConvolutionLayer: variable convolution only support one sequence.");
+       utils::Check(pad_y < kernel_y && pad_x == 0, "ConvolutionLayer: pad_y is too much, will hurt the computation of length.");
+    }
+#endif
     for (index_t i = 0; i < nbatch; ++i) {
+      if (bottom_len.dptr_[0] >= 0) {
+          top_len[nbatch][0] = (bottom_len[nbatch][0] + pad_y * 2 - kernel_y)/stride + 1;
+      }
       if (pad_x == 0 && pad_y == 0) {
         temp_col_ = unpack_patch2col(bottom_data[i], kernel_y, kernel_x, stride);
       } else {
