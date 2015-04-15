@@ -11,8 +11,8 @@ ifdef CUSTOM_CXX
     CXX := $(CUSTOM_CXX)
 endif
 
-# ver = debug
-ver = release 
+ver = debug
+# ver = release 
 ifeq ($(ver), debug)
 CXXFLAGS += -g -Ddebug -I./mshadow/
 else

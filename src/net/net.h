@@ -161,16 +161,17 @@ class Net : public INet{
 
     ifstream _if(config_file.c_str());
     _if >> root;
-    string log_file = root["log"].asString();
-    if (!log_file.empty()) {
-        freopen(log_file.c_str(), "w", stdout);
-        setvbuf(stdout, NULL, _IOLBF, 0);
-    }
     InitNet(root);
   }
   
   virtual void InitNet(Json::Value &net_root) {
     utils::Printf("[Process] Initial Network.\n");
+
+    string log_file = root["log"].asString();
+    if (!log_file.empty()) {
+        freopen(log_file.c_str(), "w+", stdout);
+        setvbuf(stdout, NULL, _IOLBF, 0);
+    }
 
     root = net_root;
     ExpandConfig(root);

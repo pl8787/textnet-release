@@ -9,6 +9,7 @@
 #include <vector>
 #include <map>
 #include <climits>
+#include <sstream>
 
 #include "./net/net.h"
 #include "./layer/layer.h"
@@ -88,9 +89,35 @@ int main(int argc, char *argv[]) {
 		device_type = GPU_DEVICE;
 	}
   }
-  INet* net = CreateNet(device_type, kTrainValidTest);
-  net->InitNet(model_file);
-  net->Start();
+  Json::Value cfg;
+  ifstream ifs(model_file.c_str());
+  ifs >> cfg;
+  int netTagType = kTrainValidTest;
+  string fold = cfg["cross_validation"].asString();
+  int n_fold = atoi(fold.c_str());
+  cout << fold << endl;
+  cout << n_fold << endl;
+  for (int i = 0; i < n_fold; ++i) {
+    stringstream ss;
+    ss << i;
+    Json::Value net_cfg = cfg;
+    string data_file = cfg["layers"][0]["settings"]["data_file"].asString();
+    data_file += "."+ss.str();
+    net_cfg["layers"][0]["settings"]["data_file"] = data_file;
+    data_file = cfg["layers"][1]["settings"]["data_file"].asString();
+    data_file += "."+ss.str();
+    net_cfg["layers"][1]["settings"]["data_file"] = data_file;
+    data_file = cfg["layers"][2]["settings"]["data_file"].asString();
+    data_file += "."+ss.str();
+    net_cfg["layers"][2]["settings"]["data_file"] = data_file;
+    INet* net = CreateNet(device_type, netTagType);
+    net->InitNet(net_cfg);
+    net->Start();
+  }
+
+  // INet* net = CreateNet(device_type, netTagType);
+  // net->InitNet(model_file);
+  // net->Start();
   return 0;
 }
 
