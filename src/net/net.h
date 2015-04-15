@@ -177,20 +177,20 @@ class Net : public INet{
 
     root = net_root;
     ExpandConfig(root);
-    net_name = net_root["net_name"].asString();
+    net_name = root["net_name"].asString();
 
     // Initial Tensor Engine
-    if (net_root["device_id"].isNull()) {
+    if (root["device_id"].isNull()) {
         device_id = 0;
     } else {
-        device_id = net_root["device_id"].asInt();
+        device_id = root["device_id"].asInt();
     }
     mshadow::InitTensorEngine<xpu>(device_id);
     prnd = new Random<xpu>(59);
 
     // You must define all task tag in this section
     // if layer has no tag, that means share across all tags
-    Json::Value &net_config_root = net_root["net_config"];
+    Json::Value &net_config_root = root["net_config"];
 
     for (int i = 0; i < net_config_root.size(); ++i) {
       Json::Value &one_net = net_config_root[i];
@@ -217,7 +217,7 @@ class Net : public INet{
     
     // ******** Create Layers ********
     utils::Printf("[Process] Creating Layers.\n");
-    Json::Value &layers_root = net_root["layers"];
+    Json::Value &layers_root = root["layers"];
     
     for (int i = 0; i < layers_root.size(); ++i) {
       Json::Value &layer_root = layers_root[i];

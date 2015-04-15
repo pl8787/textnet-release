@@ -18,9 +18,9 @@ for request in range(1000):
 
     #  Get the reply.
     message = socket.recv()
+    print >> data_file, message
     message = json.loads(message)
     print("Received reply %s [ %s ]" % (request, message))
-    print >> data_file, message
 
     time.sleep(1)
 

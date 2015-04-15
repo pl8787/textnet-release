@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
 		device_type = GPU_DEVICE;
 	}
   }
-  INet* net = CreateNet(device_type, kTrainValid);
+  INet* net = CreateNet(device_type, kTrainValidTest);
   net->InitNet(model_file);
 #if REALTIME_SERVER==1
   using namespace textnet::statistic;
