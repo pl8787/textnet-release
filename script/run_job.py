@@ -166,17 +166,17 @@ def main():
     # bin = sys.args[2]
     # local_dir = sys.args[3]
     # remote_dir = sys.args[4]
-    max_proc_num = 10
+    max_proc_num = 12
     bin = 'textnet'
-    local_dir = '/home/wsx/exp/nb/log/run.2/'
-    remote_dir = '/home/wsx/log.tmp/'
+    local_dir = '/home/wsx/exp/mr/log/run.2/'
+    remote_dir = '/home/wsx/log.tmp.1/'
 
     conf_files = os.listdir(local_dir) 
     print conf_files
 
     jobQue = Queue(0)
     for i, conf_file in enumerate(conf_files):
-        if 'cfg' not in conf_file:
+        if 'cfg' not in conf_file and 'model' not in conf_file:
             continue
         conf = json.loads(open(local_dir+conf_file).read())
         log_file = conf['log']
@@ -187,7 +187,6 @@ def main():
     run_nodes = get_nodes()
     # kill_job(run_nodes[0], ['textnet'])
     # exit(0)
-    # runNodes = [node168]
     worker_id = 0
     for node in run_nodes:
         for proc in range(max_proc_num):
