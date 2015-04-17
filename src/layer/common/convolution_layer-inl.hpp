@@ -130,7 +130,7 @@ class ConvolutionLayer : public Layer<xpu> {
 #endif
     for (index_t i = 0; i < nbatch; ++i) {
       if (bottom_len.dptr_[0] >= 0) {
-          top_len[nbatch][0] = (bottom_len[nbatch][0] + pad_y * 2 - kernel_y)/stride + 1;
+          top_len[i] = (bottom_len[nbatch][0] + pad_y * 2 - kernel_y)/stride + 1;
       }
       if (pad_x == 0 && pad_y == 0) {
         temp_col_ = unpack_patch2col(bottom_data[i], kernel_y, kernel_x, stride);

@@ -46,6 +46,9 @@ class WholePoolingLayer : public Layer<xpu>{
     mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in[0], shape_in[1], 1, shape_in[3]);
     top[0]->Resize(shape_out, true);
     pos.Resize(shape_out, -1);
+
+    bottom[0]->PrintShape("bottom0");
+    top[0]->PrintShape("top0");
   }
 
   typedef mshadow::Tensor<xpu, 1> Tensor1D;

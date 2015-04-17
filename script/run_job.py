@@ -168,8 +168,8 @@ def main():
     # remote_dir = sys.args[4]
     max_proc_num = 12
     bin = 'textnet'
-    local_dir = '/home/wsx/exp/mr/log/run.2/'
-    remote_dir = '/home/wsx/log.tmp.1/'
+    local_dir = '/home/wsx/exp/mr/log/run.3/'
+    remote_dir = '/home/wsx/log.tmp/'
 
     conf_files = os.listdir(local_dir) 
     print conf_files

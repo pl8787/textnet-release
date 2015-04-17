@@ -755,30 +755,17 @@ void TestConcatLayer(mshadow::Random<cpu>* prnd) {
   bottoms.push_back(&bottom_2);
   tops.push_back(&top);
   
-  bottom_0.Resize(Shape4(2,1,1,5), true);
-  bottom_1.Resize(Shape4(2,1,1,5), true);
-  bottom_2.Resize(Shape4(2,1,1,5), true);
+  bottom_0.Resize(Shape4(2,1,2,3), true);
+  bottom_1.Resize(Shape4(2,2,2,3), true);
+  bottom_2.Resize(Shape4(2,1,2,3), true);
   prnd->SampleUniform(&bottom_0.data, -0.1, 0.1);
   prnd->SampleUniform(&bottom_1.data, -0.1, 0.1);
   prnd->SampleUniform(&bottom_2.data, -0.1, 0.1);
 
-  // bottom_0.data[0][0].Slice(0, 2) = NAN; // padding
-  // bottom_0.data[0][0].Slice(6, 10)= NAN; // padding
-  // bottom_0.data[1][0].Slice(0, 1) = NAN; // padding
-  // bottom_0.data[1][0].Slice(6, 10)= NAN; // padding
-  // bottom_1.data[0][0].Slice(0, 2) = NAN; // padding
-  // bottom_1.data[0][0].Slice(6, 10)= NAN; // padding
-  // bottom_1.data[1][0].Slice(0, 1) = NAN; // padding
-  // bottom_1.data[1][0].Slice(6, 10)= NAN; // padding
-  // bottom_2.data[0][0].Slice(0, 2) = NAN; // padding
-  // bottom_2.data[0][0].Slice(6, 10)= NAN; // padding
-  // bottom_2.data[1][0].Slice(0, 1) = NAN; // padding
-  // bottom_2.data[1][0].Slice(6, 10)= NAN; // padding
-  
   map<string, SettingV> setting;
   {
     setting["bottom_node_num"] = SettingV(3);
-    setting["pad_value"] = SettingV((float)(NAN));
+    setting["concat_dim_index"] = SettingV(1);
   }
 
   
@@ -790,20 +777,20 @@ void TestConcatLayer(mshadow::Random<cpu>* prnd) {
   prnd->SampleUniform(&top.diff, -0.1, 0.1);
   
   using namespace checker;
-  // Checker<cpu> * cker = CreateChecker<cpu>();
+  Checker<cpu> * cker = CreateChecker<cpu>();
 
-  // map<string, SettingV> setting_checker;
-  // setting_checker["range_min"] = SettingV(-0.001f);
-  // setting_checker["range_max"] = SettingV(0.001f);
-  // setting_checker["delta"] = SettingV(0.0001f);
-  // cker->SetupChecker(setting_checker, prnd);
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.001f);
+  setting_checker["range_max"] = SettingV(0.001f);
+  setting_checker["delta"] = SettingV(0.0001f);
 
-  // cout << "Check Error." << endl;
-  // cker->CheckError(layer, bottoms, tops);
+  cker->SetupChecker(setting_checker, prnd);
+
+  cout << "Check Error." << endl;
+  cker->CheckError(layer, bottoms, tops);
 
   // cout << "Check Grad." << endl;
   // cker->CheckGrad(layer, bottoms, tops);
-
 
   layer->Forward(bottoms, tops);
   layer->Backprop(bottoms, tops);
@@ -1018,13 +1005,13 @@ int main(int argc, char *argv[]) {
   // TestCrossLayer(&rnd);
   //TestDropoutLayer(&rnd);
   // TestLstmLayer(&rnd);
-  TestRnnLayer(&rnd);
+  // TestRnnLayer(&rnd);
   // TestMaxRnnLayer(&rnd);
   // TestTensorLayer(&rnd);
   // TestConvolutionalLstmLayer(&rnd);
   // TestSequenceDimReductionLayer(&rnd);
   // TestWholePoolingLayer(&rnd);
-  // TestConcatLayer(&rnd);
+  TestConcatLayer(&rnd);
   //TestHingeLossLayer(&rnd);
   return 0;
 }
