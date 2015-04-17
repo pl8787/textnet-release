@@ -109,8 +109,9 @@ def determine_node_label_by_layertype(layer, layertype, rankdir, need_details = 
     # horizontal space is not; separate words with newlines
     separator = '\n'
     
-  node_label = '%s [%s] %s' % \
+  node_label = '%s %s [%s] %s' % \
                 (layer["layer_name"],
+                 separator,
                  get_layer_type_name(layer["layer_type"]), 
                  separator)
   
@@ -133,8 +134,10 @@ def choose_color_by_layertype(layertype):
       color = '#FF5050'
   elif layertype == 'Embedding':
       color = '#FF9900'
-  elif layertype == 'InnerProduct':
+  elif layertype == 'FullConnect':
       color = '#CC33FF'
+  elif layertype == 'MaxPooling' or layertype == 'AvgPooling':
+      color = '#66CC66'
   return color
 
 
