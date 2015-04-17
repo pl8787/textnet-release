@@ -29,7 +29,7 @@ class LstmLayer : public Layer<xpu> {
   virtual void Require() {
     // default value, just set the value you want
     this->defaults["no_bias"] = SettingV(false);
-    this->defaults["reverse"] = SettingV(false);
+    // this->defaults["reverse"] = SettingV(false);
     
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -40,6 +40,7 @@ class LstmLayer : public Layer<xpu> {
     this->defaults["w_updater"] = SettingV();
     this->defaults["u_updater"] = SettingV();
     this->defaults["b_updater"] = SettingV();
+    this->defaults["reverse"] = SettingV();
     
     Layer<xpu>::Require();
   }

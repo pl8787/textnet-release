@@ -24,7 +24,7 @@ class ConcatLayer : public Layer<xpu>{
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["bottom_node_num"] = SettingV();
-
+    this->defaults["concat_dim_index"] = SettingV(); // 0, 1, 2, 3
     
     Layer<xpu>::Require();
   }
@@ -36,27 +36,29 @@ class ConcatLayer : public Layer<xpu>{
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
     utils::Check(setting.count("bottom_node_num"), "ConcatLayer: setting problem."); 
     nBottomNode = setting["bottom_node_num"].i_val;
+    concat_dim_index = setting["concat_dim_index"].i_val;
+    utils::Check(concat_dim_index < 4, "ConcatLayer: setting problem."); 
   }
   
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
-    utils::Check(bottom.size() == BottomNodeNum(),
-                 "ConcatLayer:bottom size problem."); 
-    utils::Check(top.size() == TopNodeNum(),
-                 "ConcatLayer:top size problem.");
-    int out_size = 0, batch_size = 0;
+    utils::Check(bottom.size() == BottomNodeNum(), "ConcatLayer:bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(), "ConcatLayer:top size problem.");
+
+    int out_size = 0;
+    mshadow::Shape<4> shape_in_0 = bottom[0]->data.shape_;
     for (int i = 0; i < BottomNodeNum(); ++i) {
       mshadow::Shape<4> shape_in = bottom[i]->data.shape_;
-      utils::Check(shape_in[1] == 1 && shape_in[2] == 1, "ConcatLayer: bottom size problem");
-      out_size += shape_in[3];
-      if (i == 0) {
-        batch_size = shape_in[0];
-      } else {
-        utils::Check(shape_in[0] == batch_size, "ConcatLayer: bottom size problem");
+      out_size += shape_in[concat_dim_index];
+      for (int dim = 0; dim < 4; ++dim) {
+        if (dim == concat_dim_index) 
+            continue;
+        utils::Check(shape_in[dim] == shape_in_0[dim], "ConcatLayer: bottom size problem");
       }
     }
-    mshadow::Shape<4> shape_out = mshadow::Shape4(batch_size, 1, 1, out_size);
+    mshadow::Shape<4> shape_out = shape_in_0;
+    shape_out[concat_dim_index] = out_size;
     top[0]->Resize(shape_out, true);
   }
 
@@ -65,39 +67,180 @@ class ConcatLayer : public Layer<xpu>{
   //         assert(!isnan(p[i]));
   //     }
   // }
+
+  typedef mshadow::Tensor<xpu, 1> Tensor1D;
+  typedef mshadow::Tensor<xpu, 2> Tensor2D;
+  typedef mshadow::Tensor<xpu, 3> Tensor3D;
+  typedef mshadow::Tensor<xpu, 4> Tensor4D;
+
+  void ConcatDim3(const std::vector<Node<xpu>*> &bottom,
+                  const std::vector<Node<xpu>*> &top) {
+    using namespace mshadow::expr;
+    Tensor4D top_data = top[0]->data;
+    top[0]->length = F<op::identity>(bottom[0]->length); // all bottom nodes must have the same length
+
+    // i, j, m, n
+    for (index_t i = 0; i < top_data.size(0); ++i) {
+      for (index_t j = 0; j < top_data.size(1); ++j) {
+        for (index_t m = 0; m < top_data.size(2); ++m) {
+          int cnt = 0;
+          for (index_t n = 0; n < BottomNodeNum(); ++n){
+            Tensor1D t = bottom[n]->data[i][j][m];
+            top_data[i][j][m].Slice(cnt, cnt+t.size(0)) = F<op::identity>(t);
+            cnt += t.size(0);
+          }
+        }
+      }
+    }
+  }
+  void ConcatDim2(const std::vector<Node<xpu>*> &bottom,
+                  const std::vector<Node<xpu>*> &top) {
+    using namespace mshadow::expr;
+    Tensor4D top_data = top[0]->data;
+    // not support variable length under dimension 2 concat
+
+    // i, j, m, n
+    for (index_t i = 0; i < top_data.size(0); ++i) {
+      for (index_t j = 0; j < top_data.size(1); ++j) {
+        int cnt = 0;
+        for (index_t n = 0; n < BottomNodeNum(); ++n){
+          Tensor2D t = bottom[n]->data[i][j];
+          top_data[i][j].Slice(cnt, cnt+t.size(0)) = F<op::identity>(t);
+          cnt += t.size(0);
+        }
+      }
+    }
+  }
+  void ConcatDim1(const std::vector<Node<xpu>*> &bottom,
+                  const std::vector<Node<xpu>*> &top) {
+    using namespace mshadow::expr;
+    Tensor4D top_data   = top[0]->data;
+    Tensor2D top_length = top[0]->length;
+
+    // i, j, m, n
+    for (index_t i = 0; i < top_data.size(0); ++i) {
+      int cnt = 0;
+      for (index_t n = 0; n < BottomNodeNum(); ++n){
+        Tensor3D t = bottom[n]->data[i];
+        top_data[i].Slice(cnt, cnt+t.size(0)) = F<op::identity>(t);
+        Tensor1D t_length = bottom[n]->length[i];
+        top_length[i].Slice(cnt, cnt+t.size(0)) = F<op::identity>(t_length);
+        cnt += t.size(0);
+      }
+    }
+  }
+  void ConcatDim0(const std::vector<Node<xpu>*> &bottom,
+                  const std::vector<Node<xpu>*> &top) {
+    using namespace mshadow::expr;
+    Tensor4D top_data   = top[0]->data;
+    Tensor2D top_length = top[0]->length;
+
+    // i, j, m, n
+    int cnt = 0;
+    for (index_t n = 0; n < BottomNodeNum(); ++n){
+      Tensor4D t = bottom[n]->data;
+      top_data.Slice(cnt, cnt+t.size(0)) = F<op::identity>(t);
+      Tensor2D t_length = bottom[n]->length;
+      top_length.Slice(cnt, cnt+t.size(0)) = F<op::identity>(t_length);
+      cnt += t.size(0);
+    }
+  }
+  void SplitDim3(const std::vector<Node<xpu>*> &bottom,
+                 const std::vector<Node<xpu>*> &top) {
+    using namespace mshadow::expr;
+    Tensor4D top_diff = top[0]->diff;
+
+    // i, j, m, n
+    for (index_t i = 0; i < top_diff.size(0); ++i) {
+      for (index_t j = 0; j < top_diff.size(1); ++j) {
+        for (index_t m = 0; m < top_diff.size(2); ++m) {
+          int cnt = 0;
+          for (index_t n = 0; n < BottomNodeNum(); ++n){
+            Tensor1D t = bottom[n]->diff[i][j][m];
+            t += top_diff[i][j][m].Slice(cnt, cnt+t.size(0));
+            cnt += t.size(0);
+          }
+        }
+      }
+    }
+  }
+  void SplitDim2(const std::vector<Node<xpu>*> &bottom,
+                 const std::vector<Node<xpu>*> &top) {
+    using namespace mshadow::expr;
+    Tensor4D top_diff = top[0]->diff;
+
+    // i, j, m, n
+    for (index_t i = 0; i < top_diff.size(0); ++i) {
+      for (index_t j = 0; j < top_diff.size(1); ++j) {
+        int cnt = 0;
+        for (index_t n = 0; n < BottomNodeNum(); ++n){
+          Tensor2D t = bottom[n]->diff[i][j];
+          t += top_diff[i][j].Slice(cnt, cnt+t.size(0));
+          cnt += t.size(0);
+        }
+      }
+    }
+  }
+  void SplitDim1(const std::vector<Node<xpu>*> &bottom,
+                 const std::vector<Node<xpu>*> &top) {
+    using namespace mshadow::expr;
+    Tensor4D top_diff = top[0]->diff;
+
+    // i, j, m, n
+    for (index_t i = 0; i < top_diff.size(0); ++i) {
+      int cnt = 0;
+      for (index_t n = 0; n < BottomNodeNum(); ++n){
+        Tensor3D t = bottom[n]->diff[i];
+        t += top_diff[i].Slice(cnt, cnt+t.size(0));
+        cnt += t.size(0);
+      }
+    }
+  }
+  void SplitDim0(const std::vector<Node<xpu>*> &bottom,
+                 const std::vector<Node<xpu>*> &top) {
+    using namespace mshadow::expr;
+    Tensor4D top_diff = top[0]->diff;
+
+    // i, j, m, n
+    int cnt = 0;
+    for (index_t n = 0; n < BottomNodeNum(); ++n){
+      Tensor4D t = bottom[n]->diff;
+      t += top_diff.Slice(cnt, cnt+t.size(0));
+      cnt += t.size(0);
+    }
+  }
+
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
-    using namespace mshadow::expr;
-
-    top[0]->length = F<op::identity>(bottom[0]->length);
-    for (int i = 0; i < top[0]->data.size(0); ++i) { // for each batch
-      int cnt = 0;
-      mshadow::Tensor<xpu, 1> top_data = top[0]->data[i][0][0];
-      for (int j = 0; j < BottomNodeNum(); ++j) { // for each input node
-        mshadow::Tensor<xpu, 1> bottom_data = bottom[j]->data[i][0][0];
-        top_data.Slice(cnt, cnt+bottom_data.size(0)) = F<op::identity>(bottom_data);
-        cnt += bottom_data.size(0);
-      }
-      utils::Assert(cnt == top[0]->data.size(3), "ConcatLayer: forward error.");
-    }
+    if (concat_dim_index == 0) {
+      ConcatDim0(bottom, top); 
+    } else if (concat_dim_index == 1) {
+      ConcatDim1(bottom, top); 
+    } else if (concat_dim_index == 2) {
+      ConcatDim2(bottom, top); 
+    } else if (concat_dim_index == 3) {
+      ConcatDim3(bottom, top); 
+    } else {
+      utils::Assert(false, "");
+    } 
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
                         const std::vector<Node<xpu>*> &top) {
-    using namespace mshadow::expr;
-    for (int i = 0; i < top[0]->diff.size(0); ++i) { // for each batch
-      int cnt = 0;
-      mshadow::Tensor<xpu, 1> top_diff = top[0]->diff[i][0][0];
-      for (int j = 0; j < BottomNodeNum(); ++j) { // for each input node
-        mshadow::Tensor<xpu, 1> bottom_diff = bottom[j]->diff[i][0][0];
-        bottom_diff += top_diff.Slice(cnt, cnt+bottom_diff.size(0));
-        cnt += bottom_diff.size(0);
-      }
-      utils::Assert(cnt == top[0]->diff.size(3), "ConcatLayer: bp error.");
-    }
+    if (concat_dim_index == 0) {
+      SplitDim0(bottom, top); 
+    } else if (concat_dim_index == 1) {
+      SplitDim1(bottom, top); 
+    } else if (concat_dim_index == 2) {
+      SplitDim2(bottom, top); 
+    } else if (concat_dim_index == 3) {
+      SplitDim3(bottom, top); 
+    } else {
+      utils::Assert(false, "");
+    } 
   }
  protected:
-  int nBottomNode;
+  int nBottomNode, concat_dim_index;
 };
 }  // namespace layer
 }  // namespace textnet

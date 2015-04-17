@@ -27,6 +27,7 @@ class EmbeddingLayer : public Layer<xpu>{
     // default value, just set the value you want
     this->defaults["pad_value"] = SettingV(0.f);
     this->defaults["embedding_file"] = SettingV("");
+    this->defaults["update_indication_file"] = SettingV(""); // id (0 or 1), 1 is for update, 0 is for un update
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["feat_size"] = SettingV();
@@ -49,6 +50,7 @@ class EmbeddingLayer : public Layer<xpu>{
                   "EmbeddingLayer:top size problem.");
                   
     embedding_file = setting["embedding_file"].sVal();
+    update_indication_file = setting["update_indication_file"].sVal();
     feat_size = setting["feat_size"].iVal();
     word_count = setting["word_count"].iVal();
     pad_value = setting["pad_value"].fVal();
@@ -74,8 +76,25 @@ class EmbeddingLayer : public Layer<xpu>{
     if(!embedding_file.empty()) {
       ReadInitEmbedding();
     }
+    if(!update_indication_file.empty()) {
+      ReadUpdateIndicationFile();
+    }
   }
-  
+
+  void ReadUpdateIndicationFile() {
+    utils::Printf("EmbeddingLayer: Open indication file: %s\n", update_indication_file.c_str());
+    std::ifstream ifs(update_indication_file.c_str());
+    utils::Check(ifs, "EmbeddingLayer: Open indication file problem.");
+    int word_idx, indication;
+    while (!ifs.eof()) {
+      ifs >> word_idx >> indication;
+      if (indication == 0) {
+        unupdate_words.insert(word_idx);
+      }
+    }
+    utils::Printf("EmbeddingLayer: # of un update words: %d\n", unupdate_words.size());
+  }
+
   void ReadInitEmbedding() {
     utils::Printf("Open embedding file: %s\n", embedding_file.c_str());    
     std::vector<std::string> lines;
@@ -167,6 +186,9 @@ class EmbeddingLayer : public Layer<xpu>{
           utils::Check(doc_len >= 0, "Embedding layer: length must be inited.");
           for (int k = 0; k < doc_len; ++k) {
             w_idx = (int)bottom_data[i][j][0][k];
+            if (unupdate_words.find(w_idx) != unupdate_words.end()) {
+              continue;
+            }
             if (w_idx != -1 && !idx_map.count(w_idx)) {
               idx_map[w_idx] = inc;
               inc++;
@@ -191,6 +213,9 @@ class EmbeddingLayer : public Layer<xpu>{
           utils::Check(doc_len >= 0, "Embedding layer: length must be inited.");
           for (int k = 0; k < doc_len; ++k) {
             w_idx = (int)bottom_data[i][j][0][k];
+            if (unupdate_words.find(w_idx) != unupdate_words.end()) {
+              continue;
+            }
             if (w_idx != -1) {
               weight_diff[idx_map[w_idx]] += top_diff[i][j][k];
             }
@@ -200,7 +225,7 @@ class EmbeddingLayer : public Layer<xpu>{
     }
   }
  protected:
-  std::string embedding_file;
+  std::string embedding_file, update_indication_file;
   int feat_size;
   int word_count;
   int max_doc_len;
@@ -208,6 +233,7 @@ class EmbeddingLayer : public Layer<xpu>{
   int nbatch;
   int line_count;
   float pad_value;
+  std::set<int> unupdate_words;
 };
 }  // namespace layer
 }  // namespace textnet

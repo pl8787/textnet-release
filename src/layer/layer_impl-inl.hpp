@@ -10,6 +10,7 @@
 #include "./common/embedding_layer-inl.hpp"
 #include "./common/cross_layer-inl.hpp"
 #include "./common/split_layer-inl.hpp"
+#include "./common/conv_result_transform_layer-inl.hpp"
 #include "./common/conv_lstm_split_layer-inl.hpp"
 #include "./common/dropout_layer-inl.hpp"
 #include "./common/match_layer-inl.hpp"
@@ -46,6 +47,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kEmbedding: return new EmbeddingLayer<xpu>(type);
     case kCross: return new CrossLayer<xpu>(type);
     case kSplit: return new SplitLayer<xpu>(type);
+    case kConvResultTransform: return new ConvResultTransformLayer<xpu>(type);
     case kConvLstmSplit: return new SplitLayer<xpu>(type);
     case kDropout: return new DropoutLayer<xpu>(type);
     case kLstm: return new LstmLayer<xpu>(type);
