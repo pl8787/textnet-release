@@ -123,7 +123,8 @@ for example:
 ]
 ```
 
-
+Simple Network Example
+====
 Finally, let's list a simple example here:
 
 ![Image of Simple Net](simple.png)
