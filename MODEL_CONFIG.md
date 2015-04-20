@@ -106,7 +106,8 @@ In this section, we list all layers we use as a list.
   - new : create a new layer for each net
 - setting : a map specified by different layers
 
-To cope with sharing parameters between layers we can use these configuration below:
+### Parameter Sharing
+To cope with sharing parameters between layers, we can use these configuration below:
 - share : a list of parameters for share.
   - param_id : the parameter id in current layer
   - source_layer_name : the source layer name
@@ -119,6 +120,29 @@ for example:
     "param_id" : 0,
     "source_layer_name" : "conv11",
     "source_param_id" : 0
+  }
+]
+```
+
+### Parameter Values
+To cope with the protocol with have parameter values, we use these symbols below:
+- param : the parameter section
+  - shape : the shape of the parameter
+  - value : the value of the parameter
+  
+for example:
+```json
+"param" : [
+  {
+     "shape" : [ 14727, 50, 1, 1 ],
+     "value" : [
+        -0.3041162,
+        0.4885388,
+        -0.1863326,
+        ...
+        0.789396,
+        1.03154
+     ]
   }
 ]
 ```
