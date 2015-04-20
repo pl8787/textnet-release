@@ -2,7 +2,122 @@ Model Configuration File Description (JSON)
 ====
 We use JSON as a protocol of our model. We describe each sections meaning below.
 
-First let's list a simple example here:
+Net Name
+====
+Set the name of the net.
+
+```json
+"net_name" : "simple_net"
+```
+
+Net Configuration Section
+====
+Set all tagged networks. Here we set ```Train``` and ```Valid``` networks.
+
+```json
+"net_config" : [
+  {
+    "tag" : "Train",
+    "max_iters" : 10000,
+    "display_interval": 1,
+    "save_interval": 1000,
+    "save_name": "weights/matching_net_arc2",
+    "out_nodes" : ["loss"]
+  },
+  {
+    "tag" : "Valid",
+    "max_iters" : 34,
+    "display_interval" : 100,
+    "save_interval" : 0,
+    "save_name" : "",
+    "out_nodes" : ["loss", "acc"]
+  }
+]
+```
+
+Global Section
+====
+In this section, we define some repeat parameters using in each layers, namely *place holder*. 
+
+For example:
+
+```json
+"global" : {
+  "w_updater_ph" : {
+    "w_updater" : {
+       "decay" : 0.01,
+       "lr" : 0.01,
+       "updater_type" : "SGD"
+    }
+  }
+}
+```
+
+Here ```w_updater_ph``` is an arbitrary name of a *place holder*. When it occurs in any layer, we will replace it with:
+```json
+"w_updater" : {
+   "decay" : 0.01,
+   "lr" : 0.01,
+   "updater_type" : "SGD"
+}
+```
+
+For example, in layer *Embedding* we write:
+```json
+{
+   "bottom_nodes" : [ "data" ],
+   "layer_idx" : 1,
+   "layer_name" : "embedding",
+   "layer_type" : 21,
+   "setting" : {
+      "embedding_file" : "wikicorp_50_msr.txt",
+      "feat_size" : 50,
+      "w_filler" : {
+         "init_type" : 2,
+         "range" : 0.01
+      },
+->    "w_updater_ph" : 0,    <-
+      "word_count" : 14727
+   },
+   "top_nodes" : [ "embed" ]
+}
+```
+
+
+Layers Section
+====
+In this section, we list all layers we use as a list. 
+
+- layer_name : the name of this layer
+- layer_idx : the index of this layer, set to any number you want
+- layer_type : the type of this layer, string or int
+- bottom_nodes : a list of bottom node name
+- top_nodes : a list of top node name
+- tag : the tag name list, identify which net contain this layer. If null, all net use this layer.
+- tag_mode : two type *share* or *new*
+  - share : share this layer with all net
+  - new : create a new layer for each net
+- setting : a map specified by different layers
+
+To cope with sharing parameters between layers we can use these configuration below:
+- share : a list of parameters for share.
+  - param_id : the parameter id in current layer
+  - source_layer_name : the source layer name
+  - source_param_id : the source parameter id in source layer
+      
+for example:
+```json
+"share" : [
+  {
+    "param_id" : 0,
+    "source_layer_name" : "conv11",
+    "source_param_id" : 0
+  }
+]
+```
+
+
+Finally, let's list a simple example here:
 
 ![Image of Simple Net](simple.png)
 
@@ -33,29 +148,29 @@ First let's list a simple example here:
    "net_name" : "simple_net",
    "net_config" : [
       {
-		  "tag" : "Train",
+          "tag" : "Train",
           "max_iters" : 10000,
           "display_interval": 1,
-		  "save_interval": 1000,
-		  "save_name": "weights/matching_net_arc2",
+          "save_interval": 1000,
+          "save_name": "weights/matching_net_arc2",
           "out_nodes" : ["loss"]
-	  },
-	  {
-		  "tag" : "Valid",
+      },
+      {
+          "tag" : "Valid",
           "max_iters" : 34,
           "display_interval" : 100,
-		  "save_interval" : 0,
-		  "save_name" : "",
+          "save_interval" : 0,
+          "save_name" : "",
           "out_nodes" : ["loss", "acc"]
-	  },
-	  {
-		  "tag" : "Test",
+      },
+      {
+          "tag" : "Test",
           "max_iters" : 34,
           "display_interval" : 100,
-		  "save_interval" : 0,
-		  "save_name" : "",
+          "save_interval" : 0,
+          "save_name" : "",
           "out_nodes" : ["loss", "acc"]
-	  }
+      }
    ],
 
    "layers" : [
@@ -101,7 +216,7 @@ First let's list a simple example here:
          "top_nodes" : [ "data", "label" ],
          "tag" : ["Test"]
       },
-	  {
+      {
          "bottom_nodes" : [ "data" ],
          "layer_idx" : 1,
          "layer_name" : "embedding",

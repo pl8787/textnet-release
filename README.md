@@ -14,7 +14,7 @@ Dependences
 
 Features
 =====
-See MODEL_CONFIG(MODEL_CONFIG.md)
+See [MODEL_CONFIG](MODEL_CONFIG.md)
 
 Version
 ======
