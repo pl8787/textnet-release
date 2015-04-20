@@ -14,9 +14,13 @@ Dependences
 
 Features
 =====
+See [MODEL_CONFIG](MODEL_CONFIG.md)
 
 Version
 ======
+v1.0
 
 Related Projects
 =====
+* cxxnet: [CXXNET](https://github.com/dmlc/cxxnet)
+* Caffe: [Caffe](https://github.com/BVLC/caffe)
