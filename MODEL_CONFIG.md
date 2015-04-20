@@ -4,7 +4,7 @@ We use JSON as a protocol of our model. We describe each sections meaning below.
 
 Net Name
 ====
-Set the name of the net.
+- net_name : set the name of the net.
 
 ```json
 "net_name" : "simple_net"
@@ -12,6 +12,13 @@ Set the name of the net.
 
 Net Configuration Section
 ====
+- tag : the name of tag
+- max_iters : the maximum iterations count
+- display_interval : the interval of display this net result
+- save_interval : the interval of saving this net model
+- save_name : the path and prefix name of the saving model file
+- out_nodes : the output node name list
+
 Set all tagged networks. Here we set ```Train``` and ```Valid``` networks.
 
 ```json
@@ -37,7 +44,7 @@ Set all tagged networks. Here we set ```Train``` and ```Valid``` networks.
 
 Global Section
 ====
-In this section, we define some repeat parameters using in each layers, namely *place holder*. 
+In this section, we define some repeat parameters using in each layers, namely **place holder**. 
 
 For example:
 
@@ -53,7 +60,7 @@ For example:
 }
 ```
 
-Here ```w_updater_ph``` is an arbitrary name of a *place holder*. When it occurs in any layer, we will replace it with:
+Here ```w_updater_ph``` is an arbitrary name of a **place holder**. When it occurs in any layer, we will replace it with:
 ```json
 "w_updater" : {
    "decay" : 0.01,
@@ -94,7 +101,7 @@ In this section, we list all layers we use as a list.
 - bottom_nodes : a list of bottom node name
 - top_nodes : a list of top node name
 - tag : the tag name list, identify which net contain this layer. If null, all net use this layer.
-- tag_mode : two type *share* or *new*
+- tag_mode : two type **share** or **new**
   - share : share this layer with all net
   - new : create a new layer for each net
 - setting : a map specified by different layers
