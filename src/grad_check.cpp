@@ -465,6 +465,125 @@ void TestMaxRnnLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckGrad(layer, bottoms, tops);
 }
 
+void TestConvolutionLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Convolution Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(2,1,8,5), true);
+  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+  bottom.length = 4;
+  
+  map<string, SettingV> setting;
+  {
+    setting["pad_x"] = SettingV(0);
+    setting["pad_y"] = SettingV(2);
+    setting["kernel_x"] = SettingV(5);
+    setting["kernel_y"] = SettingV(3);
+    setting["channel_out"] = SettingV(4);
+    setting["no_bias"] = SettingV(true);
+      
+    map<string, SettingV> &w_filler = *(new map<string, SettingV>());
+      w_filler["init_type"] = SettingV(initializer::kUniform);
+      w_filler["range"] = SettingV(0.01f);
+    setting["w_filler"] = SettingV(&w_filler);
+
+    map<string, SettingV> &b_filler = *(new map<string, SettingV>());
+      b_filler["init_type"] = SettingV(initializer::kZero);
+    setting["b_filler"] = SettingV(&b_filler);
+      
+    map<string, SettingV> &w_updater = *(new map<string, SettingV>());
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["eps"] = SettingV(0.01f);
+      w_updater["batch_size"] = SettingV(1);
+      w_updater["mat_iter"] = SettingV(10000);
+      w_updater["lr"] = SettingV(0.1f);
+    setting["w_updater"] = SettingV(&w_updater);
+    setting["b_updater"] = SettingV(&w_updater);
+  }
+
+  /// Test Activation Layer
+  Layer<cpu> * layer = CreateLayer<cpu>(kConv);
+  layer->PropAll();
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+  prnd->SampleUniform(&top.diff, -0.1, 0.1);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.001f);
+  setting_checker["range_max"] = SettingV(0.001f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer, bottoms, tops);
+
+  cout << "Check Grad." << endl;
+  cker->CheckGrad(layer, bottoms, tops);
+  layer->Forward(bottoms, tops);
+  layer->Backprop(bottoms, tops);
+  PrintTensor("b0_data", bottoms[0]->data);
+  PrintTensor("t_data",  tops[0]->data);
+  PrintTensor("b0_length", bottoms[0]->length);
+  PrintTensor("t_length", tops[0]->length);
+  PrintTensor("b0_diff", bottoms[0]->diff);
+  PrintTensor("t_diff", tops[0]->diff);
+  cout << "Done." << endl;
+}
+
+void TestConvResultTransformLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Conv result transform Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(2,3,10,1), true);
+  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+  bottom.length = 4;
+  
+  map<string, SettingV> setting;
+
+  /// Test Activation Layer
+  Layer<cpu> * layer = CreateLayer<cpu>(kConvResultTransform);
+  layer->PropAll();
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+  prnd->SampleUniform(&top.diff, -0.1, 0.1);
+  
+  using namespace checker;
+  // Checker<cpu> * cker = CreateChecker<cpu>();
+  // map<string, SettingV> setting_checker;
+  // setting_checker["range_min"] = SettingV(-0.001f);
+  // setting_checker["range_max"] = SettingV(0.001f);
+  // setting_checker["delta"] = SettingV(0.0001f);
+  // cker->SetupChecker(setting_checker, prnd);
+  // cout << "Check Error." << endl;
+  // cker->CheckError(layer, bottoms, tops);
+
+  // cout << "Check Grad." << endl;
+  // cker->CheckGrad(layer, bottoms, tops);
+  layer->Forward(bottoms, tops);
+  layer->Backprop(bottoms, tops);
+  PrintTensor("b0_data", bottoms[0]->data);
+  PrintTensor("t_data",  tops[0]->data);
+  PrintTensor("b0_length", bottoms[0]->length);
+  PrintTensor("t_length", tops[0]->length);
+  PrintTensor("b0_diff", bottoms[0]->diff);
+  PrintTensor("t_diff", tops[0]->diff);
+  cout << "Done." << endl;
+
+}
+
 
 void TestRnnLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Lstm Layer." << endl;
@@ -1011,7 +1130,9 @@ int main(int argc, char *argv[]) {
   // TestConvolutionalLstmLayer(&rnd);
   // TestSequenceDimReductionLayer(&rnd);
   // TestWholePoolingLayer(&rnd);
-  TestConcatLayer(&rnd);
+  // TestConcatLayer(&rnd);
+  // TestConvResultTransformLayer(&rnd);
+  TestConvolutionLayer(&rnd);
   //TestHingeLossLayer(&rnd);
   return 0;
 }
