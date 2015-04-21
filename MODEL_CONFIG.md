@@ -5,9 +5,13 @@ We use JSON as a protocol of our model. We describe each sections meaning below.
 Net Name
 ====
 - net_name : set the name of the net.
+- log: the log file for redirecting all screen outputs, default unsetted.
+- cross_validation : the # of folds if cross validation is used, default unsetted. If setted, all data file for all folds must be splited advanced and named as ($FILE_PREFIX).($i), where FILE_PREFIX is setted in input layers and i is the index of the fold.
 
 ```json
 "net_name" : "simple_net"
+"log" : "log.simple_net"
+"cross_validation" : 10
 ```
 
 Net Configuration Section
