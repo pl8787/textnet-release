@@ -34,7 +34,6 @@ class ConcatLayer : public Layer<xpu>{
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
-    utils::Check(setting.count("bottom_node_num"), "ConcatLayer: setting problem."); 
     nBottomNode = setting["bottom_node_num"].i_val;
     concat_dim_index = setting["concat_dim_index"].i_val;
     utils::Check(concat_dim_index < 4, "ConcatLayer: setting problem."); 
