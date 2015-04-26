@@ -170,7 +170,7 @@ def main():
     # bin = sys.args[2]
     # local_dir = sys.args[3]
     # remote_dir = sys.args[4]
-    max_proc_num = 20 
+    max_proc_num = 10 
     bin = 'textnet'
     local_dir = '/home/wsx/exp/gate/run.4/'
     remote_dir = '/home/wsx/log.tmp.3/'

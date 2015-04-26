@@ -4,8 +4,6 @@ import copy, os
 from gen_conf_file import *
 from dataset_cfg import *
 
-
-
 def gen_cnn(d_mem=100, init=0.01):
     net = {}
     dataset = 'mr'

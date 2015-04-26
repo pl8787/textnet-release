@@ -405,7 +405,7 @@ class Net : public INet{
     // **** read save model and activation config
     Json::Value save_model_root = root["save_model"];
     if (!save_model_root.isNull()) {
-      model_save_interval = save_model_root["save_iterval"].asInt();
+      model_save_interval = save_model_root["save_interval"].asInt();
       model_save_file_prefix = save_model_root["file_prefix"].asString();
     }
     Json::Value save_act_root = root["save_activation"];
@@ -420,7 +420,12 @@ class Net : public INet{
         Json::Value save_nodes_root = tag_act_root["save_nodes"];
         vector<string> save_nodes;
         if (save_nodes_root.isNull()) {
-          save_nodes = out_nodes[tag];
+          for (size_t l = 0; l < nets[tag].size(); ++l) {
+            int layer_idx = nets[tag][l]->layer_idx;
+            for (size_t node_idx = 0; node_idx < top_vecs[layer_idx].size(); ++node_idx) {
+              save_nodes.push_back(top_vecs[layer_idx][node_idx]->node_name);
+            }
+          }
         } else {
           for (int name_idx = 0; name_idx < save_nodes_root.size(); ++name_idx) {
             save_nodes.push_back(save_nodes_root[name_idx].asString());
@@ -714,6 +719,9 @@ class Net : public INet{
       layers_params_root.append(layer_params_root);
     }
     net_root["layers_params"] = layers_params_root;
+    string json_file = writer.write(net_root);
+    ofs << json_file;
+    ofs.close();
   }
 
   void LoadParams(Json::Value &layers_params_root) {

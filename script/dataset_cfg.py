@@ -51,15 +51,20 @@ class DatasetCfg:
             self.n_test = 1821
         elif dataset == 'simulation':
             self.train_data_file = '/home/wsx/dl.shengxian/data/simulation/neg.gen.train'
-            self.test_data_file  = '/home/wsx/dl.shengxian/data/simulation/neg.gen.train'
-            self.n_test = 300 
+            self.valid_data_file  = '/home/wsx/dl.shengxian/data/simulation/neg.gen.train'
+            self.test_data_file  = '/home/wsx/dl.shengxian/data/simulation/neg.gen.test'
             self.embedding_file = ''
-            self.max_doc_len = 100
+            
+            self.max_doc_len = 20
             self.vocab_size = 2000
 
+            self.dp_rate = 0.5
             self.num_class = 2
-            self.d_word_rep = 30
+            self.d_word_rep = 20
             self.batch_size = 1
+            self.n_train = 300
+            self.n_valid = 300
+            self.n_test = 200
         else:
             assert False
 
