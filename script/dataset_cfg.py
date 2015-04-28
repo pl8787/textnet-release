@@ -25,7 +25,7 @@ class DatasetCfg:
 
             self.dp_rate = 0.5
             self.batch_size = 50
-            self.max_doc_len = 100
+            self.max_doc_len = 56
             self.vocab_size = 21701
             self.num_class = 5
             self.d_word_rep = 300 
@@ -41,7 +41,7 @@ class DatasetCfg:
 
             self.dp_rate = 0.5
             self.batch_size = 50
-            self.max_doc_len = 100
+            self.max_doc_len = 56
             self.vocab_size = 21701
             self.num_class = 2
             self.d_word_rep = 300 
