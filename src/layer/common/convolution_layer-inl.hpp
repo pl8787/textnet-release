@@ -26,6 +26,7 @@ class ConvolutionLayer : public Layer<xpu> {
     this->defaults["pad_y"] = SettingV(0);
     this->defaults["stride"] = SettingV(1);
     this->defaults["no_bias"] = SettingV(false);
+    this->defaults["d1_var_len"] = SettingV(false);
     
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -59,6 +60,7 @@ class ConvolutionLayer : public Layer<xpu> {
     channel_in = bottom[0]->data.size(1);
     channel_out = setting["channel_out"].iVal();
     no_bias = setting["no_bias"].bVal();
+    d1_var_len = setting["d1_var_len"].bVal();
     
     this->params.resize(2);
     this->params[0].Resize(channel_out, channel_in * kernel_x * kernel_y, 1, 1, true);
@@ -122,15 +124,17 @@ class ConvolutionLayer : public Layer<xpu> {
     mshadow::Tensor<xpu, 2> bottom_len = bottom[0]->length;
     mshadow::Tensor<xpu, 2> top_len = top[0]->length;
     const index_t nbatch = bottom_data.size(0);
-#if DEBUG
-    if (bottom_len.dptr_[0] >= 0) {
-       utils::Check(bottom_data.size(1) == 1, "ConvolutionLayer: variable convolution only support one sequence.");
-       utils::Check(pad_y < kernel_y && pad_x == 0, "ConvolutionLayer: pad_y is too much, will hurt the computation of length.");
+    if (d1_var_len) { // variable length, all input channels in one example should have the same length
+      utils::Check(bottom_len.dptr_[0] >= 0, 
+                   "ConvolutionLayer: length error.");
+      utils::Check(pad_x == 0 && kernel_x == bottom_data.size(3),
+                   "ConvolutionLayer: varibale length convolution only supports 1D, kernel_x size error.");
+      utils::Check(pad_y < kernel_y,
+                   "ConvolutionLayer: pad_y is too much, will hurt the computation of length.");
     }
-#endif
     for (index_t i = 0; i < nbatch; ++i) {
-      if (bottom_len.dptr_[0] >= 0) {
-          top_len[i] = (bottom_len[i][0] + pad_y * 2 - kernel_y)/stride + 1;
+      if (d1_var_len) {
+          top_len[i] = (bottom_len[i][0] + pad_y * 2 - kernel_y)/stride + 1; // all input channels shoud have the same length
       }
       if (pad_x == 0 && pad_y == 0) {
         temp_col_ = unpack_patch2col(bottom_data[i], kernel_y, kernel_x, stride);
@@ -202,7 +206,7 @@ class ConvolutionLayer : public Layer<xpu> {
   int stride;
   int channel_in;
   int channel_out;
-  bool no_bias;
+  bool no_bias, d1_var_len;
   mshadow::TensorContainer<xpu, 2> temp_col_;
   mshadow::TensorContainer<xpu, 2> temp_dif_;
   mshadow::TensorContainer<xpu, 2> temp_data_;
