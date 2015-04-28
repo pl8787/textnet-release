@@ -163,7 +163,7 @@ class Statistic {
     context = zmq_init(1);
 	responder = zmq_socket(context, ZMQ_REP);
 	zmq_bind(responder, url_port.c_str());
-	utils::Printf("[Server] Binding on %s.", url_port.c_str());
+	utils::Printf("[Server] Binding on %s.\n", url_port.c_str());
     pthread_create(&thread_listen, NULL, Listening, (void *)this);
   }
  
