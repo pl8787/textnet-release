@@ -162,13 +162,17 @@ def get_nodes():
     return [node_169]
 
 def main():
+    run_nodes = get_nodes()
+    # kill_job(run_nodes[0], ['textnet'])
+    # exit(0)
+
     # max_proc_num = sys.args[1]
     # bin = sys.args[2]
     # local_dir = sys.args[3]
     # remote_dir = sys.args[4]
-    max_proc_num = 12
+    max_proc_num = 10 
     bin = 'textnet'
-    local_dir = '/home/wsx/exp/mr/log/run.3/'
+    local_dir = '/home/wsx/exp/tb/log/run.2/'
     remote_dir = '/home/wsx/log.tmp/'
 
     conf_files = os.listdir(local_dir) 
@@ -184,9 +188,6 @@ def main():
         jobQue.put(job)
     jobQue.put(WorkerStopToken)
 
-    run_nodes = get_nodes()
-    # kill_job(run_nodes[0], ['textnet'])
-    # exit(0)
     worker_id = 0
     for node in run_nodes:
         for proc in range(max_proc_num):

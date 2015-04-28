@@ -118,15 +118,14 @@ int main(int argc, char *argv[]) {
       stringstream ss;
       ss << i;
       Json::Value net_cfg = cfg;
-      string data_file = cfg["layers"][0]["settings"]["data_file"].asString();
-      data_file += "."+ss.str();
-      net_cfg["layers"][0]["settings"]["data_file"] = data_file;
-      data_file = cfg["layers"][1]["settings"]["data_file"].asString();
-      data_file += "."+ss.str();
-      net_cfg["layers"][1]["settings"]["data_file"] = data_file;
-      data_file = cfg["layers"][2]["settings"]["data_file"].asString();
-      data_file += "."+ss.str();
-      net_cfg["layers"][2]["settings"]["data_file"] = data_file;
+      for (int layer_idx = 0; layer_idx < net_cfg["layers"].size(); ++layer_idx) {
+        if (net_cfg["layers"][layer_idx]["setting"]["data_file"].isNull()) {
+          continue;
+        }
+        string data_file = cfg["layers"][layer_idx]["setting"]["data_file"].asString();
+        data_file += "."+ss.str();
+        net_cfg["layers"][layer_idx]["setting"]["data_file"] = data_file;
+      }
 
       INet* net = CreateNet(device_type, netTagType);
       net->InitNet(net_cfg);
