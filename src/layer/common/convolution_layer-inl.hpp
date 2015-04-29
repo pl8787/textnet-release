@@ -122,7 +122,7 @@ class ConvolutionLayer : public Layer<xpu> {
     mshadow::Tensor<xpu, 2> bottom_len = bottom[0]->length;
     mshadow::Tensor<xpu, 2> top_len = top[0]->length;
     const index_t nbatch = bottom_data.size(0);
-#if DEBUG
+#if 0 
     if (bottom_len.dptr_[0] >= 0) {
        utils::Check(bottom_data.size(1) == 1, "ConvolutionLayer: variable convolution only support one sequence. %d", bottom_data.size(1));
        utils::Check(pad_y < kernel_y && pad_x == 0, "ConvolutionLayer: pad_y is too much, will hurt the computation of length.");
