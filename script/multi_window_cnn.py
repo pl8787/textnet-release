@@ -112,6 +112,7 @@ def gen_cnn(d_mem=100, init=0.01):
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
     setting['w_filler'] = conv_w_filler
+    setting['d1_var_len'] = True
     setting['channel_out'] = d_mem
     setting['pad_y'] = 5-1
     setting['kernel_y'] = 5 
@@ -126,6 +127,7 @@ def gen_cnn(d_mem=100, init=0.01):
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
     setting['w_filler'] = conv_w_filler
+    setting['d1_var_len'] = True
     setting['channel_out'] = d_mem
     setting['pad_y'] = 4-1
     setting['kernel_y'] = 4
@@ -140,6 +142,7 @@ def gen_cnn(d_mem=100, init=0.01):
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
     setting['w_filler'] = conv_w_filler
+    setting['d1_var_len'] = True
     setting['channel_out'] = d_mem
     setting['pad_y'] = 3-1
     setting['kernel_y'] = 3

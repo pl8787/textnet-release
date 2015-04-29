@@ -94,6 +94,20 @@ For example, in layer *Embedding* we write:
 }
 ```
 
+Model Save Section
+====
+In this section, we configure how to save intermediate models and node activations.
+
+- save_model: configure how to save model parameters
+  - save_interval: the interval of batches for saving a model
+  -	file_prefix: the prefix of the model file which will be subfixed by the iter id
+- save_activation: config how to save node activations, this is a list value for saving different tags
+  - tag: the tag of the net for saving
+  - save_interval: the interval of batches for saving activations
+  -	file_prefix: the prefix of the model file which will be subfixed by the iter id
+  - save_iter_num: the # of batches for saving
+  - save_nodes: the node names for saving, default all nodes of the net.
+  
 
 Layers Section
 ====
@@ -345,7 +359,34 @@ Finally, let's list a simple example here:
          "top_nodes" : [ "acc" ],
          "tag" : ["Valid", "Test"]
       }
-   ]
+   ],
+   "save_activation": [
+    {   
+      "file_prefix": "./model/train", 
+      "save_interval": 500, 
+      "save_iter_num": 20, 
+      "tag": "Train",
+      "save_nodes" : ["x", "y", "acc", "loss", "softmax"]
+    },  
+    {   
+      "file_prefix": "./model/valid", 
+      "save_interval": 500, 
+      "save_iter_num": 20, 
+      "tag": "Valid",
+      "save_nodes" : ["x", "y", "acc", "loss", "softmax"]
+    },  
+    {   
+      "file_prefix": "./model/test", 
+      "save_interval": 500, 
+      "save_iter_num": 20, 
+      "tag": "Test",
+      "save_nodes" : ["x", "y", "acc", "loss", "softmax"]
+    }   
+  ],  
+  "save_model": {
+    "file_prefix": "./model/model", 
+    "save_interval": 500 
+  }
    
 }
 ```

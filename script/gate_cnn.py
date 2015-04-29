@@ -112,6 +112,7 @@ def gen_gate_cnn(d_mem, init, window=5, l2_gate = 0.):
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
     setting['w_filler'] = conv_w_filler
+    setting['d1_var_len'] = True
     setting['channel_out'] = d_mem
     setting['pad_y'] = window-1
     setting['kernel_y'] = window
