@@ -15,6 +15,7 @@
 #include "./common/dropout_layer-inl.hpp"
 #include "./common/match_layer-inl.hpp"
 #include "./common/lstm_layer-inl.hpp"
+#include "./common/product_layer-inl.hpp"
 #include "./common/recurrent_layer-inl.hpp"
 #include "./common/max_recurrent_layer-inl.hpp"
 #include "./common/convolutional_lstm_layer-inl.hpp"
@@ -53,6 +54,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kConvLstmSplit: return new SplitLayer<xpu>(type);
     case kDropout: return new DropoutLayer<xpu>(type);
     case kLstm: return new LstmLayer<xpu>(type);
+    case kProduct: return new ProductLayer<xpu>(type);
     case kRecurrent: return new RecurrentLayer<xpu>(type);
     case kMaxRecurrent: return new MaxRecurrentLayer<xpu>(type);
     case kSequenceDimReduction: return new SequenceDimReductionLayer<xpu>(type);

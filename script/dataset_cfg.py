@@ -65,6 +65,22 @@ class DatasetCfg:
             self.n_train = 300
             self.n_valid = 300
             self.n_test = 200
+        elif dataset == 'simulation_topk':
+            self.train_data_file = '/home/wsx/dl.shengxian/data/simulation/gen.train.topk'
+            self.valid_data_file  = '/home/wsx/dl.shengxian/data/simulation/gen.train.topk'
+            self.test_data_file  = '/home/wsx/dl.shengxian/data/simulation/gen.test.topk'
+            self.embedding_file = ''
+            
+            self.max_doc_len = 10
+            self.vocab_size = 10000
+
+            self.dp_rate = 0.5
+            self.num_class = 2
+            self.d_word_rep = 30
+            self.batch_size = 10
+            self.n_train = 3000
+            self.n_valid = 3000
+            self.n_test = 2000
         else:
             assert False
 
