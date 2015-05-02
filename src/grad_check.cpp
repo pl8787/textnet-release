@@ -464,6 +464,60 @@ void TestMaxRnnLayer(mshadow::Random<cpu>* prnd) {
   cout << "Check Grad." << endl;
   cker->CheckGrad(layer, bottoms, tops);
 }
+
+void TestTopkPoolingLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Gate Layer." << endl;
+  Node<cpu> gate, rep, top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&gate);
+  bottoms.push_back(&rep);
+  tops.push_back(&top);
+  
+  gate.Resize(Shape4(2,1,4,1), true);
+  rep.Resize(Shape4(2,1,4,2), true);
+  prnd->SampleUniform(&gate.data, -1.0, 1.0);
+  prnd->SampleUniform(&rep.data,  -1.0, 1.0);
+  gate.length = 3;
+  rep.length = 3;
+  
+  map<string, SettingV> setting;
+  setting["k"] = SettingV(2);
+
+  Layer<cpu> * layer = CreateLayer<cpu>(kTopkPooling);
+  layer->PropAll();
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+  // prnd->SampleUniform(&ttom.data, -0.1, 0.1);
+  // prnd->SampleUniform(&top.diff, -0.1, 0.1);
+  // top.diff = gate.data;
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.001f);
+  setting_checker["range_max"] = SettingV(0.001f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer, bottoms, tops);
+
+  // cout << "Check Grad." << endl;
+  // cker->CheckGrad(layer, bottoms, tops);
+
+  // layer->Forward(bottoms, tops);
+  // layer->Backprop(bottoms, tops);
+  // PrintTensor("b0_data", bottoms[0]->data);
+  // PrintTensor("t_data",  tops[0]->data);
+  // PrintTensor("b0_length", bottoms[0]->length);
+  // PrintTensor("t_length", tops[0]->length);
+  // PrintTensor("b0_diff", bottoms[0]->diff);
+  // PrintTensor("t_diff", tops[0]->diff);
+  cout << "Done." << endl;
+}
+
+
 void TestGateLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Gate Layer." << endl;
   Node<cpu> bottom;
@@ -1203,7 +1257,8 @@ int main(int argc, char *argv[]) {
   // TestConcatLayer(&rnd);
   // TestConvResultTransformLayer(&rnd);
   // TestConvolutionLayer(&rnd);
-  TestGateLayer(&rnd);
+  // TestGateLayer(&rnd);
+  TestTopkPoolingLayer(&rnd);
   //TestHingeLossLayer(&rnd);
   return 0;
 }

@@ -378,12 +378,14 @@ class Net : public INet{
       }
     }
 
+    SetupAllNets();
+
     // ******** Cope with param sharing ********
     utils::Printf("[Process] Add Params Sharing.\n");
 
     for (int i = 0; i < layers_root.size(); ++i) {
       Json::Value &layer_root = layers_root[i];
-      Json::Value &shares_root = layer_root["share"];
+      Json::Value &shares_root = layer_root["setting"]["share"];
       if (!shares_root.isNull()) {
         for (int j = 0; j < shares_root.size(); ++j) {
           Json::Value &share_root = shares_root[j];
@@ -392,12 +394,13 @@ class Net : public INet{
           int target_param_id = share_root["param_id"].asInt();
           int source_param_id = share_root["source_param_id"].asInt();
 
+          // orc: may be a bug, layer may not occur in all tags
           for (int t = 0; t < tags.size(); ++t) {
             name2layer[tags[t]][target_layer_name]->ShareParameter(target_param_id,
                name2layer[tags[t]][source_layer_name]->GetParams()[source_param_id]); 
           }
 
-          utils::Printf("\t%s.param[%d] === %s.param[%d]\n", 
+          utils::Printf("\t%s.param[%d] <=== %s.param[%d]\n", 
             target_layer_name.c_str(),
             target_param_id,
             source_layer_name.c_str(),

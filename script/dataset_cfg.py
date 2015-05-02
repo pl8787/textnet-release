@@ -28,7 +28,7 @@ class DatasetCfg:
 
             self.dp_rate = 0.5
             # self.batch_size = 200 
-            self.train_batch_size = 300 
+            self.train_batch_size = 20 
             self.valid_batch_size = 10 
             self.test_batch_size  = 10 
             self.max_doc_len = 56
@@ -47,7 +47,7 @@ class DatasetCfg:
 
             self.dp_rate = 0.5
             # self.batch_size = 200
-            self.train_batch_size = 300 
+            self.train_batch_size = 20 
             self.valid_batch_size = 10 
             self.test_batch_size  = 10 
             self.max_doc_len = 56
