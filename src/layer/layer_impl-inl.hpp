@@ -19,7 +19,8 @@
 #include "./common/recurrent_layer-inl.hpp"
 #include "./common/max_recurrent_layer-inl.hpp"
 #include "./common/convolutional_lstm_layer-inl.hpp"
-#include "./common/wholepooling_layer-inl.hpp"
+#include "./common/whole_pooling_layer-inl.hpp"
+#include "./common/topk_pooling_layer-inl.hpp"
 #include "./common/concat_layer-inl.hpp"
 #include "./common/gate_layer-inl.hpp"
 #include "./common/gate_alldim_layer-inl.hpp"
@@ -46,6 +47,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kMaxPooling: return new PoolingLayer<mshadow::red::maximum, xpu>(type);
     case kAvgPooling: return new PoolingLayer<mshadow::red::sum, xpu>(type);
     case kWholePooling: return new WholePoolingLayer<xpu>(type);
+    case kTopkPooling: return new TopkPoolingLayer<xpu>(type);
     case kConcat: return new ConcatLayer<xpu>(type);
     case kEmbedding: return new EmbeddingLayer<xpu>(type);
     case kCross: return new CrossLayer<xpu>(type);

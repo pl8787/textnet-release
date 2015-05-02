@@ -202,6 +202,10 @@ class Net : public INet{
     mshadow::InitTensorEngine<xpu>(device_id);
     prnd = new Random<xpu>(59);
 
+    if (!root["need_reshape"].isNull()) {
+        need_reshape = root["need_reshape"].asBool();
+    }
+
     // You must define all task tag in this section
     // if layer has no tag, that means share across all tags
     Json::Value &net_config_root = root["net_config"];

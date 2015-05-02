@@ -194,8 +194,6 @@ class ConvolutionLayer : public Layer<xpu> {
       }
       
     }
-      
-    
   }
 
  protected:

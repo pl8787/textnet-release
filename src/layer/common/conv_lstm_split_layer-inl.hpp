@@ -94,8 +94,8 @@ class ConvLstmSplitLayer : public Layer<xpu>{
         // for (index_t j = 0; j < doc_count; ++j) {
           for (index_t m = 0; m < doc_len; ++m) {
             for (index_t n = 0; n < feat_size; ++n) {
-              bottom_diff[i][0][m][n] = top0_diff[i][n][m][0];
-              bottom_diff[i][1][m][n] = top1_diff[i][n][m][0];
+              bottom_diff[i][0][m][n] += top0_diff[i][n][m][0];
+              bottom_diff[i][1][m][n] += top1_diff[i][n][m][0];
             }
           }
         // }

@@ -58,6 +58,7 @@ const int kConvResultTransform = 32;
 const int kGate = 33;
 const int kGateAlldim = 34;
 const int kProduct = 35;
+const int kTopkPooling = 36;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;

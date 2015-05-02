@@ -44,8 +44,8 @@ class ProductLayer : public Layer<xpu> {
     utils::Check(bottom.size() == BottomNodeNum(), "ProductLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "ProductLayer:top size problem.");
     
-    mshadow::Shape<4> shape0 = bottom[0]->data.shape;
-    mshadow::Shape<4> shape1 = bottom[1]->data.shape;
+    mshadow::Shape<4> shape0 = bottom[0]->data.shape_;
+    mshadow::Shape<4> shape1 = bottom[1]->data.shape_;
 
     utils::Check(shape0[0] == shape1[0], "ProductLayer: bottom sizes does not match.");
     utils::Check(shape0[1] == shape1[1], "ProductLayer: bottom sizes does not match.");
@@ -59,6 +59,7 @@ class ProductLayer : public Layer<xpu> {
     top[0]->Resize(shape0[0], shape0[1], shape0[2], output_size, true);
 
 	bottom[0]->PrintShape("bottom0");
+	bottom[1]->PrintShape("bottom1");
 	top[0]->PrintShape("top0");
   }
   
@@ -75,7 +76,13 @@ class ProductLayer : public Layer<xpu> {
       top_data = bottom0_data * bottom1_data;
     } else {
       for (int i = 0; i < bottom0_data.size(0); ++i) {
-        top_data[i] = bottom0_data[i] * bottom1_data[i];
+        if (bottom0_data.size(1) == 1) {
+          top_data[i] = bottom0_data[i][0] * bottom1_data[i];
+        } else if (bottom1_data.size(1) == 1) {
+          top_data[i] = bottom0_data[i]    * bottom1_data[i][0];
+        } else {
+          utils::Assert(false, "ProductLayer: ff data size error.");
+        }
       }
     }
   }
@@ -95,12 +102,12 @@ class ProductLayer : public Layer<xpu> {
     } else {
       for (int i = 0; i < bottom0_data.size(0); ++i) {
         if (bottom0_data.size(1) == 1) {
-          bottom1_diff[i] += top_diff[i] * bottom0_data[i];
+          bottom1_diff[i] += top_diff[i] * bottom0_data[i][0];
           for (int j = 0; j < bottom1_data.size(1); ++j) {
             bottom0_diff[i][0] += top_diff[i][j] * bottom1_data[i][j];
           }
         } else if (bottom1_data.size(1) == 1) {
-          bottom0_diff[i] += top_diff[i] * bottom1_data[i];
+          bottom0_diff[i] += top_diff[i] * bottom1_data[i][0];
           for (int j = 0; j < bottom0_data.size(1); ++j) {
             bottom1_diff[i][0] += top_diff[i][j] * bottom0_data[i][j];
           }

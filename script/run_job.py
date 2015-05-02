@@ -158,8 +158,9 @@ class SshWorker(Thread):
         scp2local(self.node, job.remote_log_file(), job.local_log_file())
 
 def get_nodes():
-    node_169 = Node('10.60.1.169', 'wsx')
-    return [node_169]
+    # node_169 = Node('10.60.1.169', 'wsx')
+    node_168 = Node('10.60.1.168', 'wsx')
+    return [node_168]
 
 def main():
     run_nodes = get_nodes()
@@ -173,7 +174,7 @@ def main():
     max_proc_num = 12
     bin = 'textnet'
     # local_dir = '/home/wsx/exp/topk_simulation/run.4/'
-    local_dir = '/home/wsx/exp/gate/adagrad/'
+    local_dir = '/home/wsx/exp/gate/run.15/'
     remote_dir = '/home/wsx/log.tmp/'
 
     conf_files = os.listdir(local_dir) 
