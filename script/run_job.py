@@ -113,15 +113,23 @@ class SshWorker(Thread):
         while True:
             # 防止所有线程同时启动，同时检查到系统free，然后开太多进程
             time.sleep(random.randint(1,100))
-            job = self.job_queue.get()
-            if job is WorkerStopToken:
-                self.job_queue.put(job)
-                print('all job done, worker {0} stop.'.format(self.name))
-                break
+            isDone = False
+            while True:
+                job = self.job_queue.get()
+                if job is WorkerStopToken:
+                    self.job_queue.put(job)
+                    print('all job done, worker {0} stop.'.format(self.name))
+                    isDone = True
+                    break
+                if not is_node_free(self.node, [job.bin], self.options['max_proc_num']):
+                    print '{0}: is waiting job begin...'.format(self.name)
+                    self.job_queue.put(job)
+                    time.sleep(600)
+                else:
+                    break
 
-            while not is_node_free(self.node, [job.bin], self.options['max_proc_num']):
-                print '{0}: is waiting job begin...'.format(self.name)
-                time.sleep(600)
+            if isDone:
+                break
 
             try:
                 p = self.run_one(job)
@@ -174,7 +182,7 @@ def main():
     max_proc_num = 12
     bin = 'textnet'
     # local_dir = '/home/wsx/exp/topk_simulation/run.4/'
-    local_dir = '/home/wsx/exp/gate/lstm/run.1/'
+    local_dir = '/home/wsx/exp/gate/lstm/run.7/'
     remote_dir = '/home/wsx/log.tmp/'
 
     conf_files = os.listdir(local_dir) 

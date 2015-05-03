@@ -5,8 +5,8 @@ from gen_conf_file import *
 from dataset_cfg import *
 
 def gen_bilstm(d_mem, init, lr, dataset):
-    print "ORC: left & right lstm share parameters"
-    is_share = True
+    # print "ORC: left & right lstm share parameters"
+    is_share = False
     net = {}
     # dataset = 'tb_fine'
     # dataset = 'mr'
@@ -114,7 +114,7 @@ def gen_bilstm(d_mem, init, lr, dataset):
     layer['top_nodes'] = ['l_pool_rep']
     layer['layer_name'] = 'l_wholePooling'
     layer['layer_type'] =  25 
-    setting = {"pool_type":"last"}
+    setting = {"pool_type":"max"}
     layer['setting'] = setting
 
     layer = {}
@@ -151,7 +151,7 @@ def gen_bilstm(d_mem, init, lr, dataset):
     layer['top_nodes'] = ['r_pool_rep']
     layer['layer_name'] = 'r_wholePooling'
     layer['layer_type'] =  25 
-    setting = {"pool_type":"first"}
+    setting = {"pool_type":"max"}
     layer['setting'] = setting
 
     layer = {}
@@ -211,8 +211,8 @@ for dataset in ['mr', 'tb_fine', 'tb_binary']:
         for init in [0.3, 0.1, 0.03]:
             for lr in [0.3, 0.1, 0.03]:
                 net = gen_bilstm(d_mem = d_mem, init = init, lr =lr, dataset=dataset)
-                net['log'] = 'log.bilstm.last.{0}.d{1}.share.{2}'.format(dataset, str(d_mem), str(idx))
+                net['log'] = 'log.bilstm.max.{0}.d{1}.{2}'.format(dataset, str(d_mem), str(idx))
                 # gen_conf_file(net, '/home/wsx/exp/tb/log/run.3/bilstm.max.tb_fine.model.' + str(idx))
-                gen_conf_file(net, '/home/wsx/exp/gate/lstm/run.1/model.bilstm.last.{0}.d{1}.share.{2}'.format(dataset, str(d_mem), str(idx)))
+                gen_conf_file(net, '/home/wsx/exp/gate/lstm/run.4/model.bilstm.max.{0}.d{1}.{2}'.format(dataset, str(d_mem), str(idx)))
                 idx += 1
                 # os.system("../bin/textnet ../bin/conv_lstm_simulation.model > ../bin/simulation/neg.gen.train.{0}".format(d_mem))
