@@ -23,6 +23,7 @@
 #include "./common/gate_layer-inl.hpp"
 #include "./common/gate_alldim_layer-inl.hpp"
 #include "./common/sequcence_dim_reduction_layer-inl.hpp"
+#include "./common/gating_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
 #include "./input/sequence_classification_data_layer-inl.hpp"
@@ -59,6 +60,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kConvolutionalLstm: return new ConvolutionalLstmLayer<xpu>(type);
     case kGate: return new GateLayer<xpu>(type);
     case kGateAlldim: return new GateAlldimLayer<xpu>(type);
+	case kGating: return new GatingLayer<xpu>(type);
     case kHingeLoss: return new HingeLossLayer<xpu>(type);
     case kPairHingeLoss: return new PairHingeLossLayer<xpu>(type);
     case kTextData: return new TextDataLayer<xpu>(type);

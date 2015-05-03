@@ -533,6 +533,127 @@ void TestGateLayer(mshadow::Random<cpu>* prnd) {
   cout << "Done." << endl;
 }
 
+void TestGatingLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Gating Layer." << endl;
+  Node<cpu> bottom0;
+  Node<cpu> bottom1;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom0);
+  bottoms.push_back(&bottom1);
+  tops.push_back(&top);
+  
+  bottom0.Resize(Shape4(2,2,3,2), true);
+  bottom1.Resize(Shape4(2,2,3,1), true);
+
+  bottom0.data[0][0][0][0] = 0.2;
+  bottom0.data[0][0][0][1] = 0.3;
+  bottom0.data[0][0][1][0] = 0.2;
+  bottom0.data[0][0][1][1] = 0.3;
+  bottom0.data[0][0][2][0] = 0.2;
+  bottom0.data[0][0][2][1] = 0.2;
+  bottom0.data[0][1][0][0] = 0.2;
+  bottom0.data[0][1][0][1] = 0.2;
+  bottom0.data[0][1][1][0] = 0.2;
+  bottom0.data[0][1][1][1] = 0.3;
+  bottom0.data[0][1][2][0] = 1.5;
+  bottom0.data[0][1][2][1] = -0.5;
+  bottom0.data[1][0][0][0] = 0.3;
+  bottom0.data[1][0][0][1] = 1.5;
+  bottom0.data[1][0][1][0] = -0.5;
+  bottom0.data[1][0][1][1] = 0.3;
+  bottom0.data[1][0][2][0] = 1.5;
+  bottom0.data[1][0][2][1] = -0.5;
+  bottom0.data[1][1][0][0] = 0.3;
+  bottom0.data[1][1][0][1] = 1.5;
+  bottom0.data[1][1][1][0] = -0.5;
+  bottom0.data[1][1][1][1] = 0.3;
+  bottom0.data[1][1][2][0] = 1.5;
+  bottom0.data[1][1][2][1] = -0.5;
+
+  bottom1.data[0][0][0][0] = 2;
+  bottom1.data[0][0][1][0] = 5;
+  bottom1.data[0][0][2][0] = -1;
+  bottom1.data[0][1][0][0] = 2;
+  bottom1.data[0][1][1][0] = 2;
+  bottom1.data[0][1][2][0] = 5;
+  bottom1.data[1][0][0][0] = 3;
+  bottom1.data[1][0][1][0] = -1;
+  bottom1.data[1][0][2][0] = -1;
+  bottom1.data[1][1][0][0] = 3;
+  bottom1.data[1][1][1][0] = 5;
+  bottom1.data[1][1][2][0] = 5;
+
+  bottom0.length = 1; // useless
+  
+  map<string, SettingV> setting;
+  {
+	setting["gate_type"] = SettingV("word-share");
+	setting["word_count"] = SettingV(10);
+	setting["feat_size"] = SettingV(2);
+
+    map<string, SettingV> &w_filler = *(new map<string, SettingV>());
+      //w_filler["init_type"] = SettingV(initializer::kUniform);
+      //w_filler["range"] = SettingV(0.01f);
+      w_filler["init_type"] = SettingV(initializer::kConstant);
+      w_filler["value"] = SettingV(0.1f);
+    setting["w_filler"] = SettingV(&w_filler);
+
+    map<string, SettingV> &w_updater = *(new map<string, SettingV>());
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["eps"] = SettingV(0.01f);
+      w_updater["batch_size"] = SettingV(1);
+      w_updater["mat_iter"] = SettingV(10000);
+      w_updater["lr"] = SettingV(0.1f);
+    setting["w_updater"] = SettingV(&w_updater);
+  }
+
+  Layer<cpu> * layer = CreateLayer<cpu>(kGating);
+  layer->PropAll();
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+  
+  layer->Forward(bottoms, tops);
+
+  PrintTensor("bottom0", bottom0.data);
+  PrintTensor("bottom1", bottom1.data);
+  PrintTensor("param", layer->GetParams()[0].data);
+  PrintTensor("top", top.data);
+  
+  top.diff = 1.0f;
+  // layer->Backprop(bottoms, tops);
+  PrintTensor("top", top.data);
+  PrintTensor("top_diff", top.diff);
+  PrintTensor("bottom_diff", bottom0.diff);
+  PrintTensor("bottom_diff", bottom1.diff);
+  PrintTensor("param_diff", layer->GetParams()[0].diff);
+
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.001f);
+  setting_checker["range_max"] = SettingV(0.001f);
+  setting_checker["delta"] = SettingV(0.001f);
+  cker->SetupChecker(setting_checker, prnd);
+
+  bottom0.diff = 0;
+  bottom1.diff = 0;
+  top.data = 0;
+  top.diff = 0;
+  cout << "Check Error." << endl;
+  cker->CheckError(layer, bottoms, tops);
+
+  bottom0.diff = 0;
+  bottom1.diff = 0;
+  top.data = 0;
+  top.diff = 0;
+  cout << "Check Grad." << endl;
+  cker->CheckGrad(layer, bottoms, tops);
+
+  cout << "Done." << endl;
+}
 
 
 void TestConvolutionLayer(mshadow::Random<cpu>* prnd) {
@@ -1203,7 +1324,8 @@ int main(int argc, char *argv[]) {
   // TestConcatLayer(&rnd);
   // TestConvResultTransformLayer(&rnd);
   // TestConvolutionLayer(&rnd);
-  TestGateLayer(&rnd);
+  // TestGateLayer(&rnd);
+  TestGatingLayer(&rnd);
   //TestHingeLossLayer(&rnd);
   return 0;
 }
