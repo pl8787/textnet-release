@@ -170,10 +170,10 @@ def main():
     # bin = sys.args[2]
     # local_dir = sys.args[3]
     # remote_dir = sys.args[4]
-    max_proc_num = 10 
+    max_proc_num = 15
     bin = 'textnet'
-    local_dir = '/home/wsx/exp/tb/log/run.2/'
-    remote_dir = '/home/wsx/log.tmp/'
+    local_dir = '/home/wsx/exp/gate/run.7/'
+    remote_dir = '/home/wsx/log.tmp.6/'
 
     conf_files = os.listdir(local_dir) 
     print conf_files

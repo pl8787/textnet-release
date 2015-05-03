@@ -8,6 +8,25 @@
 namespace textnet {
 namespace updater {
 
+template<int dim>
+void norm2ByRow(mshadow::Tensor<cpu, dim> t, mshadow::Tensor<cpu, 1> &norm2row) {
+    utils::Check(norm2row.size(0) == t.size(0), "norm2ByRow: size error.");
+    utils::Check(t.size(1) >  1, "norm2ByRow: size error.");
+    utils::Check(t.size(2) == 1, "norm2ByRow: size error.");
+    utils::Check(t.size(3) == 1, "norm2ByRow: size error.");
+    
+    int num_row = t.size(0);
+    int num_col = t.size(1);
+    norm2row = 0.f;
+    for (int i = 0; i < num_row; ++i) {
+        for (int j = 0; j < num_col; ++j) {
+            norm2row[i] += t.dptr_[i * num_col + j] * t.dptr_[i * num_col + j];
+        }
+        norm2row[i] = sqrt(norm2row[i]);
+    }
+    return;
+}
+
 template<typename xpu, int dim>
 class AdaDeltaUpdater : public Updater<xpu, dim>{
  public:
@@ -23,6 +42,7 @@ class AdaDeltaUpdater : public Updater<xpu, dim>{
     this->defaults["eps"] = SettingV(0.000001f);
     this->defaults["rho"] = SettingV(0.95f);
     this->defaults["l2"] = SettingV(0.0f);
+    this->defaults["norm2"] = SettingV(0.0f);
     
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -39,6 +59,7 @@ class AdaDeltaUpdater : public Updater<xpu, dim>{
     eps = setting["eps"].fVal();
     rho = setting["rho"].fVal();
     wd = setting["l2"].fVal(); 
+    norm2 = setting["norm2"].fVal(); 
     iter = 0;
   }
 
@@ -66,8 +87,23 @@ class AdaDeltaUpdater : public Updater<xpu, dim>{
     sumDeltaSquare = rho * sumDeltaSquare + (1-rho) * (delta * delta);
 
     data -= delta;
-    if (wd > 0.) {
+    if (wd > 0.f) {
       data -= (wd) * data;
+    }
+    if (norm2 > 0.f) {
+      float sqrt_norm2 = sqrt(norm2);
+      mshadow::Shape<1> shape = mshadow::Shape1(data.size(0));
+      mshadow::TensorContainer<cpu, 1> norm2row(shape);
+      norm2ByRow(data, norm2row);      
+      for (int i = 0; i < norm2row.size(0); ++i) {
+          float n2 = norm2row[i];
+          if (n2 > sqrt_norm2) {
+            float scale = sqrt_norm2/n2;
+            for (int j = 0; j < data.size(1); ++j) {
+                data.dptr_[i*data.size(1)+j] *= scale;
+            }
+          }
+      }
     }
   }
   
@@ -110,7 +146,7 @@ class AdaDeltaUpdater : public Updater<xpu, dim>{
  protected: 
   int iter, batch_size;
   mshadow::TensorContainer<xpu, dim> sumGradSquare, sumDeltaSquare, delta;
-  float eps, rho, wd;
+  float eps, rho, wd, norm2;
 
 };
 }  // namespace updater

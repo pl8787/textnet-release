@@ -53,10 +53,13 @@ class INet {
     virtual void TrainDisplay(string tag, int iter) = 0;
     virtual void TestAll(string tag, int iter) = 0;
     virtual void Start() = 0;
-    virtual void SaveModelActivation(string tag, string dir_path, vector<string> node_names, int num_iter) = 0;
-    virtual void LoadModel(string tag, string model_name) = 0;
-    virtual void SaveModel(string tag, int iter) = 0;
-	virtual void SaveAllModels(int iter) = 0;
+    // virtual void SaveModelActivation(string tag, string dir_path, vector<string> node_names, int num_iter) = 0;
+    virtual void SaveModelActivation(string tag, vector<string> node_names, int num_iter, string file_name) = 0;
+    // virtual void LoadModel(string tag, string model_name) = 0;
+    // virtual void SaveModel(string tag, int iter) = 0;
+    virtual void LoadModel(string model_file) = 0;
+    virtual void SaveModel(int cur_iter) = 0;
+	// virtual void SaveAllModels(int iter) = 0;
 
 	// For Statistic
 	virtual Json::Value StatisticNode(Json::Value &req_root) = 0;
@@ -69,6 +72,7 @@ class Net : public INet{
  public:
   Net() {
     need_reshape = false;
+    model_save_interval = 0;
     InitSettingEngine();
   }
 
@@ -137,6 +141,7 @@ class Net : public INet{
     SettingV::SettingIntMap["SGDSparse"] = kSGDSparse;
   }
   
+  // expand global_settings to all layer local settings
   void ExpandConfig(Json::Value &net_root) {
     utils::Printf("[Process] Expand Configurations.\n");
 
@@ -145,12 +150,12 @@ class Net : public INet{
     Json::Value::Members member = global_root.getMemberNames();
     for (Json::Value::Members::iterator it = member.begin();
            it != member.end(); ++it) {
-      std::string name = *it;
+      std::string name = *it; // the place holder
       Json::Value &value = global_root[name];
       Json::Value::Members sub_member = value.getMemberNames();
       
       for (int i = 0; i < layers_root.size(); ++i) {
-        if (layers_root[i]["setting"].isMember(name)) {
+        if (layers_root[i]["setting"].isMember(name)) { // user should set this place holder in the config file
           layers_root[i]["setting"].removeMember(name);
           for (Json::Value::Members::iterator it = sub_member.begin();
                  it != sub_member.end(); ++it) {
@@ -167,19 +172,23 @@ class Net : public INet{
 
     ifstream _if(config_file.c_str());
     _if >> root;
+    _if.close();
     InitNet(root);
+  }
+
+  // redirect stdout to log file
+  void setLogFile() {
+    if (!root["log"].isNull()) {
+      freopen(root["log"].asString().c_str(), "a", stdout);
+      setvbuf(stdout, NULL, _IOLBF, 0);
+    }
   }
   
   virtual void InitNet(Json::Value &net_root) {
-    utils::Printf("[Process] Initial Network.\n");
-
     root = net_root;
-    
-    string log_file = root["log"].asString();
-    if (!log_file.empty()) {
-        freopen(log_file.c_str(), "a", stdout);
-        setvbuf(stdout, NULL, _IOLBF, 0);
-    }
+    setLogFile();
+
+    utils::Printf("[Process] Initial Network.\n");
 
     ExpandConfig(root);
     net_name = root["net_name"].asString();
@@ -204,8 +213,8 @@ class Net : public INet{
       tags.push_back(tag);
       max_iters[tag] = one_net["max_iters"].asInt();
       display_interval[tag] = one_net["display_interval"].asInt();
-	  save_interval[tag] = one_net["save_interval"].asInt();
-	  save_name[tag] = one_net["save_name"].asString();
+	  // save_interval[tag] = one_net["save_interval"].asInt();
+	  // save_name[tag] = one_net["save_name"].asString();
       out_nodes[tag] = vector<string>();
       for (int i = 0; i < one_net["out_nodes"].size(); ++i) {
         out_nodes[tag].push_back(one_net["out_nodes"][i].asString());
@@ -385,11 +394,44 @@ class Net : public INet{
           }
 
           utils::Printf("\t%s.param[%d] === %s.param[%d]\n", 
-                target_layer_name.c_str(),
-                target_param_id,
-                source_layer_name.c_str(),
-                source_param_id);
+            target_layer_name.c_str(),
+            target_param_id,
+            source_layer_name.c_str(),
+            source_param_id);
         }
+      }
+    }
+
+    // **** read save model and activation config
+    Json::Value save_model_root = root["save_model"];
+    if (!save_model_root.isNull()) {
+      model_save_interval = save_model_root["save_interval"].asInt();
+      model_save_file_prefix = save_model_root["file_prefix"].asString();
+    }
+    Json::Value save_act_root = root["save_activation"];
+    if (!save_act_root.isNull()) {
+      for (int i = 0; i < save_act_root.size(); ++i) {
+        Json::Value tag_act_root = save_act_root[i];
+        string tag = tag_act_root["tag"].asString();
+        activation_save_file_prefix[tag] = tag_act_root["file_prefix"].asString();
+        activation_save_interval[tag] = tag_act_root["save_interval"].asInt();
+        activation_save_iter_num[tag] = tag_act_root["save_iter_num"].asInt();
+        
+        Json::Value save_nodes_root = tag_act_root["save_nodes"];
+        vector<string> save_nodes;
+        if (save_nodes_root.isNull()) {
+          for (size_t l = 0; l < nets[tag].size(); ++l) {
+            int layer_idx = nets[tag][l]->layer_idx;
+            for (size_t node_idx = 0; node_idx < top_vecs[layer_idx].size(); ++node_idx) {
+              save_nodes.push_back(top_vecs[layer_idx][node_idx]->node_name);
+            }
+          }
+        } else {
+          for (int name_idx = 0; name_idx < save_nodes_root.size(); ++name_idx) {
+            save_nodes.push_back(save_nodes_root[name_idx].asString());
+          }
+        }
+        activation_save_nodes[tag] = save_nodes;
       }
     }
   }
@@ -559,67 +601,187 @@ class Net : public INet{
              << test_loss[i] << endl; 
       }
   }
+
+  inline int str2int(string s) {
+    return str2int(s.c_str());
+  }
+  inline int str2float(string s) {
+    return str2float(s.c_str());
+  }
+  inline int str2int(const char *p) {
+    int i = 0;
+    stringstream ss(p);
+    ss >> i;
+    return i;
+  }
+  inline float str2float(const char *p) {
+    float f = 0;
+    stringstream ss(p);
+    ss >> f;
+    return f;
+  }
+  inline string int2str(int i){
+    stringstream s;
+    s << i;
+    return s.str();
+  }
+  inline string float2str(float f){
+    stringstream s;
+    s << f;
+    return s.str();
+  }
+
+  virtual void SaveModelActivation(int cur_iter) {
+    for (map<string, int>::iterator it = activation_save_interval.begin();
+         it != activation_save_interval.end(); ++it) {
+      const string &tag = it->first;
+      if (cur_iter % it->second != 0) {
+          continue;
+      }
+      string file_name = activation_save_file_prefix[tag] + "." + int2str(cur_iter);
+      SaveModelActivation(tag, activation_save_nodes[tag], activation_save_iter_num[tag], file_name);
+    }
+  }
+
+  virtual void SaveModel(int cur_iter) {
+    if (model_save_interval <= 0 || cur_iter % model_save_interval != 0) {
+        return;
+    }
+    string file_name = model_save_file_prefix + "." + int2str(cur_iter);
+    SaveModel(file_name);
+  }
  
-  virtual void SaveModelActivation(string tag, string dir_path, vector<string> node_names, int num_iter) {
-    SetPhrase(tag, kTrain);
+  virtual void SaveModelActivation(string tag, vector<string> node_names, int num_iter, string file_name) {
+    SetPhrase(tag, kTest);
+    Json::Value iters_root;
     for (int iter = 0; iter < num_iter; ++iter) {
       Forward(tag);
-      cout << "Forward " << iter << " over!" << endl;
+      Json::Value nodes_root;
       for (int i = 0; i < node_names.size(); ++i) {
         string name = node_names[i];
         Json::Value node_root;
+        nodes[name]->SaveNode(node_root, false);
+        nodes_root[name] = node_root;
+      }
+      iters_root.append(nodes_root);
+    }
+    ofstream ofs(file_name.c_str());
+    Json::FastWriter writer;
+    string json_file = writer.write(iters_root);
+    ofs << json_file;
+    ofs.close();
+  }
+  
+  // virtual void SaveModelActivation(string tag, string dir_path, vector<string> node_names, int num_iter) {
+  //   SetPhrase(tag, kTrain);
+  //   for (int iter = 0; iter < num_iter; ++iter) {
+  //     Forward(tag);
+  //     cout << "Forward " << iter << " over!" << endl;
+  //     for (int i = 0; i < node_names.size(); ++i) {
+  //       string name = node_names[i];
+  //       Json::Value node_root;
 
-        nodes[name]->SaveNode(node_root);
+  //       nodes[name]->SaveNode(node_root);
 
-        // Prepare for output filename
-        ostringstream file_name;
-        file_name << dir_path << name << "_" << iter << ".json";
+  //       // Prepare for output filename
+  //       ostringstream file_name;
+  //       file_name << dir_path << name << "_" << iter << ".json";
 
-        cout << "Save node " << name << " to " << file_name.str() << endl;
-        // Write Node to file
-        ofstream _of(file_name.str().c_str());
-        Json::FastWriter writer;
-        string json_file = writer.write(node_root);
-        _of << json_file;
-        _of.close();
+  //       cout << "Save node " << name << " to " << file_name.str() << endl;
+  //       // Write Node to file
+  //       ofstream _of(file_name.str().c_str());
+  //       Json::FastWriter writer;
+  //       string json_file = writer.write(node_root);
+  //       _of << json_file;
+  //       _of.close();
 
+  //     }
+  //   }
+  // }
+
+  virtual void SaveModel(string model_file) {
+    ofstream ofs(model_file.c_str());
+    Json::StyledWriter writer;
+    Json::Value net_root, layers_params_root;
+    net_root["config"] = root;
+    for (int layer_idx = 0; layer_idx < layers.size(); ++layer_idx) {
+      Json::Value layer_params_root;
+      for (int param_idx = 0; param_idx < layers[layer_idx]->ParamNodeNum(); ++param_idx) {
+        if (layers[layer_idx]->params[param_idx].is_share) {
+            layer_params_root.append(0);
+            continue;
+        }
+        // save the content of the matrix
+        Json::Value node_root;
+        layers[layer_idx]->params[param_idx].SaveNode(node_root, false);
+        layer_params_root.append(node_root);
+      }
+      layers_params_root.append(layer_params_root);
+    }
+    net_root["layers_params"] = layers_params_root;
+    string json_file = writer.write(net_root);
+    ofs << json_file;
+    ofs.close();
+  }
+
+  void LoadParams(Json::Value &layers_params_root) {
+    for (int layer_idx = 0; layer_idx < layers.size(); ++layer_idx) {
+      for (int param_idx = 0; param_idx < layers[layer_idx]->ParamNodeNum(); ++param_idx) {
+        if (layers[layer_idx]->params[param_idx].is_share) {
+            continue;
+        }
+        Json::Value node_root = layers_params_root[layer_idx][param_idx];
+        layers[layer_idx]->params[param_idx].LoadNode(node_root, false);
       }
     }
   }
 
-  virtual void SaveAllModels(int iter) {
-    utils::Printf("[Model] Saving models ...\n");
-    for (int t = 0; t < tags.size(); ++t) {
-      SaveModel(tags[t], iter);
-	}	
-  }
-  
-  virtual void SaveModel(string tag, int iter) {
-	string model_name;
-	ostringstream _oss;
-	_oss << save_name[tag] << "." << iter << "." << tag << ".textnet.weight";
-	model_name = _oss.str();
-    ofstream _of(model_name.c_str());
-    Json::StyledWriter writer;
+  virtual void LoadModel(string model_file) {
     Json::Value net_root;
-    net_root["net_name"] = net_name+":"+tag;
-    Json::Value layers_root;
-	vector<Layer<xpu>*> &net = nets[tag];
-    for (int i = 0; i < net.size(); ++i) {
-      Json::Value layer_root;
-      net[i]->SaveModel(layer_root);
-      layers_root.append(layer_root);
-    }
-    net_root["layers"] = layers_root;
-    string json_file = writer.write(net_root);
-    _of << json_file;
-    _of.close();
-	utils::Printf("[Model] Save [%s] to %s.\n", tag.c_str(), model_name.c_str());	
+    ifstream ifs(model_file.c_str());
+    ifs >> net_root;
+    ifs.close();
+    root = net_root["config"];
+    InitNet(root);
+    LoadParams(net_root["layers_params"]);
   }
 
-  virtual void LoadModel(string tag, string model_name) {
+  // virtual void SaveActivation(vector<string> &node_names, act_file) {
+  // }
+
+  // virtual void SaveAllModels(int iter) {
+  //   utils::Printf("[Model] Saving models ...\n");
+  //   for (int t = 0; t < tags.size(); ++t) {
+  //     SaveModel(tags[t], iter);
+  //   }	
+  // }
+
+  // virtual void SaveModel(string tag, int iter) {
+  //   string model_name;
+  //   ostringstream _oss;
+  //   _oss << save_name[tag] << "." << iter << "." << tag << ".textnet.weight";
+  //   model_name = _oss.str();
+  //   ofstream _of(model_name.c_str());
+  //   Json::StyledWriter writer;
+  //   Json::Value net_root;
+  //   net_root["net_name"] = net_name+":"+tag;
+  //   Json::Value layers_root;
+  //   vector<Layer<xpu>*> &net = nets[tag];
+  //   for (int i = 0; i < net.size(); ++i) {
+  //     Json::Value layer_root;
+  //     net[i]->SaveModel(layer_root);
+  //     layers_root.append(layer_root);
+  //   }
+  //   net_root["layers"] = layers_root;
+  //   string json_file = writer.write(net_root);
+  //   _of << json_file;
+  //   _of.close();
+  //   utils::Printf("[Model] Save [%s] to %s.\n", tag.c_str(), model_name.c_str());	
+  // }
+
+  // virtual void LoadModel(string tag, string model_name) {
     
-  }
+  // }
 
   virtual void Start() = 0;
 
@@ -671,8 +833,6 @@ class Net : public INet{
 	return rtn_root;
   }
   
- // protected:
- // orc: add a friend? 
  public:
   // Net name 
   string net_name;
@@ -689,9 +849,17 @@ class Net : public INet{
   // display interval for nets
   map<string, int> display_interval;
   // save interval for nets
-  map<string, int> save_interval;
-  // save name for nets
-  map<string, string> save_name;
+  map<string, int> activation_save_interval;
+  // save iter num for nets
+  map<string, int> activation_save_iter_num;
+  // save file prefix, subfixed by training iter num
+  map<string, string> activation_save_file_prefix;
+  // save nodes
+  map<string, vector<string> > activation_save_nodes;
+  int model_save_interval;
+  string model_save_file_prefix;
+  // is save best or not, output file is file_prefix + ".best" // to do
+  // map<string, bool> save_best;
   // nets output nodes
   map<string, vector<string> > out_nodes;
   // All layers

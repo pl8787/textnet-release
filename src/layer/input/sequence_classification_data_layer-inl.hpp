@@ -73,7 +73,7 @@ class SequenceClassificationDataLayer : public Layer<xpu>{
         iss >> data_set[i][0][0][j++];
       }
       length[i] = j;
-      utils::Check(j < max_doc_len, "SequenceClassificationDataLayer: doc length error.");
+      utils::Check(j <= max_doc_len, "SequenceClassificationDataLayer: doc length error.");
     }
   }
   

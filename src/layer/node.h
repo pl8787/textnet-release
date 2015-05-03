@@ -176,7 +176,7 @@ struct Node {
       }
     }
   }
-  
+
   void SaveNode(Json::Value &node_root, bool with_diff = false) {
     Json::Value data_root;
 	Json::Value diff_root;
@@ -216,7 +216,36 @@ struct Node {
   }
 
   void LoadNode(Json::Value &node_root, bool with_diff = false) {
-
+    Json::Value data_root = node_root["data"];
+    int s0 = data_root["shape"][0].asInt();
+    int s1 = data_root["shape"][1].asInt();
+    int s2 = data_root["shape"][2].asInt();
+    int s3 = data_root["shape"][3].asInt();
+    mshadow::Shape<4> shape = mshadow::Shape4(s0, s1, s2, s3);
+    if (!(shape == data.shape_)) {
+      Resize(shape);
+    }
+    int size = s0*s1*s2*s3;
+    for (int i = 0; i < size; ++i) {
+      data.dptr_[i] = data_root["value"][i].asFloat();
+    }
+    
+    // if doesn't need diff just jump out
+	if (!with_diff) return;
+    utils::Check(need_diff, "Node: try to load diff but without need_diff");
+    Json::Value diff_root = node_root["diff"];
+    s0 = diff_root["shape"][0].asInt();
+    s1 = diff_root["shape"][1].asInt();
+    s2 = diff_root["shape"][2].asInt();
+    s3 = diff_root["shape"][3].asInt();
+    shape = mshadow::Shape4(s0, s1, s2, s3);
+    if (!(shape == diff.shape_)) {
+      Resize(shape);
+    }
+    size = s0*s1*s2*s3;
+    for (int i = 0; i < size; ++i) {
+      diff.dptr_[i] = diff_root["value"][i].asFloat();
+    }
   }
 
   Json::Value data_statistic(Json::Value &req_root) {
