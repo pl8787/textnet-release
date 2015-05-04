@@ -548,6 +548,10 @@ void TestGatingLayer(mshadow::Random<cpu>* prnd) {
   bottom0.Resize(Shape4(2,2,3,2), true);
   bottom1.Resize(Shape4(2,2,3,1), true);
 
+  // prnd->SampleUniform(&bottom0.data, -0.1, 0.1);
+
+  bottom1.data = 1;
+
   bottom0.data[0][0][0][0] = 0.2;
   bottom0.data[0][0][0][1] = 0.3;
   bottom0.data[0][0][1][0] = 0.2;
@@ -590,8 +594,8 @@ void TestGatingLayer(mshadow::Random<cpu>* prnd) {
   
   map<string, SettingV> setting;
   {
-	setting["gate_type"] = SettingV("word-wise");
-	setting["activefun_type"] = SettingV("relu");
+	setting["gate_type"] = SettingV("word-share");
+	setting["activefun_type"] = SettingV("sigmoid");
 	setting["word_count"] = SettingV(10);
 	setting["feat_size"] = SettingV(2);
 
