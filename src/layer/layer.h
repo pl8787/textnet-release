@@ -60,6 +60,7 @@ const int kGateAlldim = 34;
 const int kProduct = 35;
 const int kTopkPooling = 36;
 const int kSoftmaxFunc = 37;
+const int kSoftmaxFuncVarLen = 38;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;
