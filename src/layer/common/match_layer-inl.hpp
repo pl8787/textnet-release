@@ -87,7 +87,7 @@ class MatchLayer : public Layer<xpu>{
         for (int k = 0; k < bottom1_len[i]; k++) {
 		  if (op == "xor") {
 			utils::Check(bottom0_data2[i][j]!=-1 && bottom1_data2[i][k]!=-1, 
-			  "In Match Layer: please check length setting.");
+			  "In Match Layer: please check length setting. (%d, %d, %d)", i, j, k);
             top_data[i][0][j][k] = (bottom0_data2[i][j] == bottom1_data2[i][k]) ? 1 : 0;
 		  } else if (op == "mul") {
             for (int m = 0; m < feat_size; ++m) {

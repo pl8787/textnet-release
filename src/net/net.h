@@ -108,6 +108,7 @@ class Net : public INet{
     SettingV::SettingIntMap["Recurrent"] = kRecurrent;
     SettingV::SettingIntMap["TensorFullConnect"] = kTensorFullConnect;
     SettingV::SettingIntMap["WholePooling"] = kWholePooling;
+	SettingV::SettingIntMap["Gating"] = kGating;
 
     // Loss Layer 51-70
     SettingV::SettingIntMap["Softmax"] = kSoftmax;

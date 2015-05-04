@@ -74,6 +74,12 @@ class Checker {
                   std::vector<layer::Node<xpu>*> tops) {
     using namespace mshadow::expr;
     using namespace std;
+
+	utils::Check(layer->BottomNodeNum() > 0, 
+			"CheckError: This layer does not has input, so remove this check.");
+	utils::Check(layer->TopNodeNum() > 0, 
+			"CheckError: This layer does not has output, so remove this check.");
+
     std::vector<mshadow::TensorContainer<xpu, 4> > calculate_error;
     std::vector<mshadow::TensorContainer<xpu, 4> > estimate_error;
     
@@ -99,6 +105,7 @@ class Checker {
     
     // Estimate by delta
     for (int i = 0; i < bottoms.size(); ++i) {
+	  if (!layer->prop_error[i]) continue;
       for (int j = 0; j < bottoms[i]->data.shape_.Size(); ++j) {
         float positive_act = 0.0f;
         float negative_act = 0.0f;
@@ -141,6 +148,9 @@ class Checker {
     using namespace std;
     std::vector<mshadow::TensorContainer<xpu, 4> > calculate_grad;
     std::vector<mshadow::TensorContainer<xpu, 4> > estimate_grad;
+
+	utils::Check(layer->ParamNodeNum() > 0, 
+			"CheckGrad: This layer does not has parameters, so remove this check.");
     
     std::vector<layer::Node<xpu> > &params = layer->GetParams();
     
@@ -167,6 +177,7 @@ class Checker {
     
     // Estimate by delta
     for (int i = 0; i < params.size(); ++i) {
+	  if (!layer->prop_grad[i]) continue;
       for (int j = 0; j < params[i].data.shape_.Size(); ++j) {
         float positive_act = 0.0f;
         float negative_act = 0.0f;
