@@ -16,6 +16,7 @@
 #include "./common/match_layer-inl.hpp"
 #include "./common/lstm_layer-inl.hpp"
 #include "./common/product_layer-inl.hpp"
+#include "./common/sum_layer-inl.hpp"
 #include "./common/recurrent_layer-inl.hpp"
 #include "./common/max_recurrent_layer-inl.hpp"
 #include "./common/convolutional_lstm_layer-inl.hpp"
@@ -73,6 +74,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kSoftmax: return new SoftmaxLayer<xpu>(type);
     case kSoftmaxFunc: return new SoftmaxFuncLayer<xpu>(type);
     case kSoftmaxFuncVarLen: return new SoftmaxFuncVarLenLayer<xpu>(type);
+    case kSumByAxis: return new SumLayer<xpu>(type);
     case kAccuracy: return new AccuracyLayer<xpu>(type);
     case kMatch: return new MatchLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;

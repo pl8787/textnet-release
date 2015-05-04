@@ -61,6 +61,7 @@ class SoftmaxFuncLayer : public Layer<xpu>{
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
+    top[0]->length = F<op::identity>(bottom[0]->length); 
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
     mshadow::Shape<4>       bottom_shape= bottom[0]->data.shape_;
     mshadow::Tensor<xpu, 4> top_data    = top[0]->data;
