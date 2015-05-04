@@ -590,7 +590,8 @@ void TestGatingLayer(mshadow::Random<cpu>* prnd) {
   
   map<string, SettingV> setting;
   {
-	setting["gate_type"] = SettingV("word-share");
+	setting["gate_type"] = SettingV("word-wise");
+	setting["activefun_type"] = SettingV("relu");
 	setting["word_count"] = SettingV(10);
 	setting["feat_size"] = SettingV(2);
 
@@ -633,22 +634,14 @@ void TestGatingLayer(mshadow::Random<cpu>* prnd) {
   using namespace checker;
   Checker<cpu> * cker = CreateChecker<cpu>();
   map<string, SettingV> setting_checker;
-  setting_checker["range_min"] = SettingV(-0.001f);
-  setting_checker["range_max"] = SettingV(0.001f);
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
   setting_checker["delta"] = SettingV(0.001f);
   cker->SetupChecker(setting_checker, prnd);
 
-  bottom0.diff = 0;
-  bottom1.diff = 0;
-  top.data = 0;
-  top.diff = 0;
   cout << "Check Error." << endl;
   cker->CheckError(layer, bottoms, tops);
 
-  bottom0.diff = 0;
-  bottom1.diff = 0;
-  top.data = 0;
-  top.diff = 0;
   cout << "Check Grad." << endl;
   cker->CheckGrad(layer, bottoms, tops);
 

@@ -24,6 +24,10 @@ class GatingLayer : public Layer<xpu> {
 	this->defaults["gate_type"] = SettingV("word-wise");
 	// word-wise : each word has a gate weight
 	// word-share : weight depended on word vector
+	this->defaults["activefun_type"] = SettingV("linear");
+	// linear : indentity
+	// sigmoid : sigmoid * 2
+	// tanh : tanh + 1
 
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -47,8 +51,14 @@ class GatingLayer : public Layer<xpu> {
     gate_type = setting["gate_type"].sVal();
 	word_count = setting["word_count"].iVal();
 	feat_size = setting["feat_size"].iVal();
+	activefun_type = setting["activefun_type"].sVal();
 
 	utils::Check(feat_size == bottom[0]->data.size(3), "GatingLayer: feat size not fit");
+	utils::Check(gate_type == "word-wise" || gate_type == "word-share", 
+			"GatingLayer: Only support word-wise or word-share.");
+	utils::Check(activefun_type == "linear" || activefun_type == "sigmoid" 
+			     || activefun_type == "tanh" || activefun_type == "relu",
+			"GatingLayer: Only support linear or sigmoid or tanh or relu.");
 
     this->params.resize(1);
 	if (gate_type == "word-wise") {
@@ -67,6 +77,9 @@ class GatingLayer : public Layer<xpu> {
     this->params[0].updater_ = 
         updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].iVal(),
           w_updater, this->prnd_);
+	
+	// Don't prop down bottom1 error
+	this->prop_error[1] = false;
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -84,6 +97,7 @@ class GatingLayer : public Layer<xpu> {
 	
 	total_words = batch_size * num_seq * max_length;
     gate_value.Resize(mshadow::Shape2(total_words, 1));
+    gate_grad.Resize(mshadow::Shape2(1, total_words));
 	word_bias.Resize(mshadow::Shape2(total_words, 1));	
 	word_p_diff.Resize(mshadow::Shape2(total_words, feat_size));
 	word_sum.Resize(mshadow::Shape1(total_words));
@@ -116,6 +130,16 @@ class GatingLayer : public Layer<xpu> {
 	} else if (gate_type == "word-share") {
       gate_value  = dot(bottom0_data,  gate_data);
 	}
+
+	// Apply active function
+	if (activefun_type == "sigmoid") {
+      gate_value = F<gate_sigmoid>(gate_value, 2.0f);
+	} else if (activefun_type == "tanh") {
+      gate_value = F<gate_tanh>(gate_value);
+	} else if (activefun_type == "relu") {
+	  gate_value = F<gate_relu>(gate_value);
+	}
+
 	for (int i = 0; i < total_words; ++i) {
 	  word_idx = static_cast<int>(bottom1_data[i]);
 	  if (word_idx == -1) continue;
@@ -136,9 +160,19 @@ class GatingLayer : public Layer<xpu> {
 	int word_idx = -1;
 	gate_diff = 0;
 
-	if (gate_type == "word-share" && (this->prop_error[0] || this->prop_grad[0])) {
+	if (this->prop_error[0] || this->prop_grad[0]) {
 		word_p_diff = bottom0_data * top_diff;
 		word_sum = sumall_except_dim<0>(word_p_diff);
+		if (activefun_type == "sigmoid") {
+			gate_grad = F<gate_sigmoid_grad>(gate_value.T(), 2.0f); 
+			word_sum *= gate_grad[0];
+		} else if (activefun_type == "tanh") {
+			gate_grad = F<gate_tanh_grad>(gate_value.T());
+			word_sum *= gate_grad[0];
+		} else if (activefun_type == "relu") {
+			gate_grad = F<gate_relu_grad>(gate_value.T());
+			word_sum *= gate_grad[0];
+		}
 	}
 
 	if (this->prop_error[0]) {
@@ -177,14 +211,55 @@ class GatingLayer : public Layer<xpu> {
  protected:
   /*! \brief random number generator */
   std::string gate_type;
+  std::string activefun_type;
   int feat_size;
   int word_count;
   // Temp var
   mshadow::TensorContainer<xpu, 2> gate_value;
+  mshadow::TensorContainer<xpu, 2> gate_grad;
   mshadow::TensorContainer<xpu, 2> word_bias;
   mshadow::TensorContainer<xpu, 2> word_p_diff;
   mshadow::TensorContainer<xpu, 1> word_sum;
   int total_words;
+  
+  // Active function for gate only
+  /*! \brief sigmoid unit */
+  struct gate_sigmoid {
+    MSHADOW_XINLINE static real_t Map(real_t a, real_t rate) {
+      return rate / (1.0f + expf(-a));
+    }
+  };
+  struct gate_sigmoid_grad {
+    MSHADOW_XINLINE static real_t Map(real_t a, real_t rate) {
+      return a * (1.0f - a / rate);
+    }
+  };
+  /*! \brief Rectified Linear Operation */
+  struct gate_relu {
+    MSHADOW_XINLINE static real_t Map(real_t a) {
+      using namespace std;
+      return max(a, 0.0f);
+    }
+  };
+  struct gate_relu_grad {
+    MSHADOW_XINLINE static real_t Map(real_t a) {
+      return a > 0.0f ? 1.0f : 0.0f;
+    }
+  };
+  /*! \brief Rectified Linear Operation */
+  struct gate_tanh {
+    MSHADOW_XINLINE static real_t Map(real_t a) {
+      return tanhf( a ) + 1.0f;
+    }
+  };
+  
+  struct gate_tanh_grad {
+    MSHADOW_XINLINE static real_t Map(real_t a) {
+      return 1.0f - (a-1.0f) * (a-1.0f);
+    }
+  };
+
+
 };
 }  // namespace layer
 }  // namespace textnet

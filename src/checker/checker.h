@@ -99,6 +99,7 @@ class Checker {
     
     // Estimate by delta
     for (int i = 0; i < bottoms.size(); ++i) {
+	  if (!layer->prop_error[i]) continue;
       for (int j = 0; j < bottoms[i]->data.shape_.Size(); ++j) {
         float positive_act = 0.0f;
         float negative_act = 0.0f;
