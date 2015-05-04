@@ -24,6 +24,7 @@
 #include "./common/concat_layer-inl.hpp"
 #include "./common/gate_layer-inl.hpp"
 #include "./common/gate_alldim_layer-inl.hpp"
+#include "./common/softmax_func_layer-inl.hpp"
 #include "./common/sequcence_dim_reduction_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
@@ -69,6 +70,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kNextBasketData: return new NextBasketDataLayer<xpu>(type);
     case kSequenceClassificationData: return new SequenceClassificationDataLayer<xpu>(type);
     case kSoftmax: return new SoftmaxLayer<xpu>(type);
+    case kSoftmaxFunc: return new SoftmaxFuncLayer<xpu>(type);
     case kAccuracy: return new AccuracyLayer<xpu>(type);
     case kMatch: return new MatchLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
