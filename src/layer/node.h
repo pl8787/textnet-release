@@ -89,7 +89,7 @@ struct Node {
     if (is_share) return;
 	utils::Check(inited_data, "Must init data before clear.");
 	data = 0.f;
-	length = 0.f;
+	length = -1.f;
   }
 
   // Clear Diff data
