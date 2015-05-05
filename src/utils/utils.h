@@ -7,6 +7,8 @@
  */
 #define _CRT_SECURE_NO_WARNINGS
 #include <cstdio>
+#include <iostream>
+#include <sstream>
 #include <string>
 #include <cstdlib>
 #include <vector>
@@ -186,6 +188,42 @@ inline const T *BeginPtr(const std::vector<T> &vec) {
   } else {
     return &vec[0];
   }
+}
+
+using namespace std;
+
+inline int str2int(string s) {
+  return str2int(s.c_str());
+}
+
+inline int str2float(string s) {
+  return str2float(s.c_str());
+}
+
+inline int str2int(const char *p) {
+  int i = 0;
+  stringstream ss(p);
+  ss >> i;
+  return i;
+}
+
+inline float str2float(const char *p) {
+  float f = 0;
+  stringstream ss(p);
+  ss >> f;
+  return f;
+}
+
+inline string int2str(int i){
+  stringstream s;
+  s << i;
+  return s.str();
+}
+
+inline string float2str(float f){
+  stringstream s;
+  s << f;
+  return s.str();
 }
 
 }  // namespace textnet
