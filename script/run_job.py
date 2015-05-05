@@ -71,9 +71,10 @@ class WorkerStopToken:  # used to notify the worker to stop or if a worker is de
     pass
 
 class Node:
-    def __init__(self, ip, user):
+    def __init__(self, ip, user, num_proc):
         self.ip = ip
         self.user = user
+        self.num_proc = num_proc
     def get_user_at_ip(self):
         return self.user + '@' + self.ip
 
@@ -113,15 +114,23 @@ class SshWorker(Thread):
         while True:
             # 防止所有线程同时启动，同时检查到系统free，然后开太多进程
             time.sleep(random.randint(1,100))
-            job = self.job_queue.get()
-            if job is WorkerStopToken:
-                self.job_queue.put(job)
-                print('all job done, worker {0} stop.'.format(self.name))
-                break
+            isDone = False
+            while True:
+                job = self.job_queue.get()
+                if job is WorkerStopToken:
+                    self.job_queue.put(job)
+                    print('all job done, worker {0} stop.'.format(self.name))
+                    isDone = True
+                    break
+                if not is_node_free(self.node, [job.bin], self.options['max_proc_num']):
+                    print '{0}: is waiting job begin...'.format(self.name)
+                    self.job_queue.put(job)
+                    time.sleep(600)
+                else:
+                    break
 
-            while not is_node_free(self.node, [job.bin], self.options['max_proc_num']):
-                print '{0}: is waiting job begin...'.format(self.name)
-                time.sleep(600)
+            if isDone:
+                break
 
             try:
                 p = self.run_one(job)
@@ -158,21 +167,23 @@ class SshWorker(Thread):
         scp2local(self.node, job.remote_log_file(), job.local_log_file())
 
 def get_nodes():
-    node_169 = Node('10.60.1.169', 'wsx')
-    return [node_169]
+    node_169 = Node('10.60.1.169', 'wsx', 12)
+    node_168 = Node('10.60.1.168', 'wsx', 6)
+    return [node_168, node_169]
 
 def main():
     run_nodes = get_nodes()
-    # kill_job(run_nodes[0], ['textnet'])
+    # kill_job(run_nodes[0] , ['textnet'])
+    # kill_job(run_nodes[1] , ['textnet'])
     # exit(0)
 
     # max_proc_num = sys.args[1]
     # bin = sys.args[2]
     # local_dir = sys.args[3]
     # remote_dir = sys.args[4]
-    max_proc_num = 8 
     bin = 'textnet'
-    local_dir = '/home/wsx/exp/gate/run.9/'
+    # local_dir = '/home/wsx/exp/topk_simulation/run.4/'
+    local_dir = '/home/wsx/exp/gate/lstm/run.7/'
     remote_dir = '/home/wsx/log.tmp/'
 
     conf_files = os.listdir(local_dir) 
@@ -190,8 +201,8 @@ def main():
 
     worker_id = 0
     for node in run_nodes:
-        for proc in range(max_proc_num):
-            worker = SshWorker('worker_'+str(worker_id), node, 'cpu', jobQue, {'max_proc_num':max_proc_num})
+        for proc in range(node.num_proc):
+            worker = SshWorker('worker_'+str(worker_id), node, 'cpu', jobQue, {'max_proc_num':node.num_proc})
             print 'start worker:', worker_id
             worker.start()
             worker_id += 1

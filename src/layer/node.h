@@ -32,11 +32,10 @@ struct Node {
   bool is_sparse;
   // always true
   bool must_contiguous;
-
   bool inited_data;
   bool inited_diff;
+  // for sharing parameters, if true, will not use local data and diff
   bool is_share;
-
   std::string node_name;
   int node_idx;
 
@@ -48,12 +47,13 @@ struct Node {
   // Initializer interface
   initializer::Initializer<xpu, 4>* initializer_;
 
-  Node *master; // share
+  // for sharing parameters, a pointer to the master node
+  Node *master; 
 
   // constructor
   Node(bool need_diff_ = true) : must_contiguous(true), need_diff(need_diff_) {
-    data.shape_ = mshadow::Shape4(0,0,0,0);
-    diff.shape_ = mshadow::Shape4(0,0,0,0);
+    // data.shape_ = mshadow::Shape4(0,0,0,0);
+    // diff.shape_ = mshadow::Shape4(0,0,0,0);
     // data.set_pad(false);
     // diff.set_pad(false);
     inited_data = false;
@@ -63,11 +63,13 @@ struct Node {
 	updater_ = NULL;
     initializer_ = NULL;
     master = NULL;
+    node_idx = -1;
   }
   
   inline void FreeSpace(void) {
     if (inited_data){
       mshadow::FreeSpace(&data);
+      mshadow::FreeSpace(&length);
     }
     if (need_diff && inited_diff){
       mshadow::FreeSpace(&diff);
@@ -86,15 +88,14 @@ struct Node {
   void ClearData(void) {
     if (is_share) return;
 	utils::Check(inited_data, "Must init data before clear.");
-	if (!inited_data) return;
 	data = 0.f;
+	length = -1.f;
   }
 
   // Clear Diff data
   void ClearDiff(void) {
     if (is_share) return;
 	utils::Check(inited_diff || !need_diff, "Must init diff before clear.");
-	if (!inited_diff && need_diff) return;
     if (is_sparse) {
 	  // if is_sparse we need delete its shape
 	  diff.Resize(mshadow::Shape4(0,0,0,0));
@@ -106,7 +107,7 @@ struct Node {
 
   // Share with other node
   void Share(Node &other) {
-    // is_share = true;
+    is_share = true;
 	is_sparse = other.is_sparse;
     data.Resize(mshadow::Shape4(0,0,0,0));
     diff.Resize(mshadow::Shape4(0,0,0,0));
@@ -114,7 +115,9 @@ struct Node {
     length.Resize(mshadow::Shape2(0,0));
     // assert(!is_sparse);
     // utils::Check(!is_sparse, "Node: sparse parameter sharing is not supported yet");
-    (*(mshadow::Tensor<xpu, 4> *)&data) = other.data;
+    
+    // use tensor container as a tensor without realloc space
+    (*(mshadow::Tensor<xpu, 4> *)&data)   = other.data;
     (*(mshadow::Tensor<xpu, 2> *)&length) = other.length;
     if (!is_sparse)  {
       (*(mshadow::Tensor<xpu, 4> *)&diff) = other.diff;
@@ -133,29 +136,13 @@ struct Node {
   }
  
   inline void Resize(int d1, int d2, int d3, int d4, bool init=false) {
+    utils::Check(!is_share, "Node: Share node does not manage memory.");
     mshadow::Shape<4> new_size = mshadow::Shape4(d1, d2, d3, d4);
-    if (4 == data.shape_.kDimension && new_size == data.shape_ && !init) {
-      // do nothing
-    } else if (init) {
-      data.Resize(new_size, 0.0);
-      length.Resize(mshadow::Shape2(d1, d2), -1.f);
-      inited_data = true;
-      if (need_diff) {
-        diff.Resize(new_size, 0.0);
-        inited_diff = true;
-      }
-    } else {
-      data.Resize(new_size);
-      length.Resize(mshadow::Shape2(d1, d2));
-      inited_data = true;
-      if (need_diff) {
-        diff.Resize(new_size);
-        inited_diff = true;
-      }
-    }
+    Resize(new_size, init);
   }
   
   inline void Resize(mshadow::Shape<4> new_size, bool init=false) {
+    utils::Check(!is_share, "Node: Share node does not manage memory.");
     if (4 == data.shape_.kDimension && new_size == data.shape_ && !init) {
       // do nothing
     } else if (init) {

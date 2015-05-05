@@ -57,7 +57,12 @@ const int kMaxRecurrent = 31;
 const int kConvResultTransform = 32;
 const int kGate = 33;
 const int kGateAlldim = 34;
-const int kGating = 35;
+const int kProduct = 35;
+const int kTopkPooling = 36;
+const int kSoftmaxFunc = 37;
+const int kSoftmaxFuncVarLen = 38;
+const int kSumByAxis = 39;
+const int kGating = 40;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;
@@ -66,6 +71,7 @@ const int kMultiLogistic = 53;
 const int kHingeLoss = 54;
 const int kPairHingeLoss = 55;
 const int kAccuracy = 56;
+const int kCrossEntropyLoss = 57;
 
 // Input Layer 71-
 const int kTextData = 71;
