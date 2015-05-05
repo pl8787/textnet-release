@@ -32,6 +32,7 @@
 #include "./input/next_basket_data_layer-inl.hpp"
 #include "./input/sequence_classification_data_layer-inl.hpp"
 #include "./loss/hingeloss_layer-inl.hpp"
+#include "./loss/cross_entropy_loss_layer-inl.hpp"
 #include "./loss/pairhingeloss_layer-inl.hpp"
 #include "./loss/softmax_layer-inl.hpp"
 #include "./loss/accuracy_layer-inl.hpp"
@@ -68,6 +69,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kGateAlldim: return new GateAlldimLayer<xpu>(type);
     case kHingeLoss: return new HingeLossLayer<xpu>(type);
     case kPairHingeLoss: return new PairHingeLossLayer<xpu>(type);
+    case kCrossEntropyLoss: return new CrossEntropyLossLayer<xpu>(type);
     case kTextData: return new TextDataLayer<xpu>(type);
     case kNextBasketData: return new NextBasketDataLayer<xpu>(type);
     case kSequenceClassificationData: return new SequenceClassificationDataLayer<xpu>(type);

@@ -125,6 +125,8 @@ class WholePoolingLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 2> bottom_len  = bottom[0]->length;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
 
+    // conv var len to static len, no need to forward length info
+
     top_data = 0;
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {

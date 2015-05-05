@@ -100,7 +100,7 @@ class TopkPoolingLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 2> bottom_len  = bottom[0]->length;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
 
-    top[0]->length = k;
+    // top[0]->length = k; // var len to static len
 
     top_data = 0;
     for (index_t batch_idx = 0; batch_idx < gate_data.size(0); ++batch_idx) {

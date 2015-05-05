@@ -57,10 +57,19 @@ class SumLayer : public Layer<xpu> {
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
-    top[0]->length = F<op::identity>(bottom[0]->length); 
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
     mshadow::Shape<4>       bottom_shape= bottom[0]->data.shape_;
     mshadow::Tensor<xpu, 4> top_data    = top[0]->data;
+
+    if (axis == 3) { 
+      top[0]->length = F<op::identity>(bottom[0]->length); 
+    } else if (axis == 1) {
+      for (int i = 0; i < bottom_shape[0]; ++i) {
+        top[0]->length[i][0] = bottom[0]->length[i][0]; 
+      }
+    } else if (axis == 0) {
+      top[0]->length[0] = F<op::identity>(bottom[0]->length[0]); 
+    }
 
     if (axis == 2 && bottom[0]->length[0][0] > -1) { // var len, this is just for check, not for flag
       int length = bottom[0]->length[0][0];

@@ -13,6 +13,7 @@
 namespace textnet {
 namespace layer {
 
+// this layer conduct softmax only on axis 2
 template<typename xpu>
 class SoftmaxFuncVarLenLayer : public Layer<xpu>{
  public:
@@ -63,12 +64,20 @@ class SoftmaxFuncVarLenLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 2> top_len     = top[0]->length;
     top_len = F<op::identity_grad>(bottom_len);
 
+    top_data = 0.f;
     for (int batch_idx = 0; batch_idx < bottom_shape[0]; ++batch_idx) {
       for (int seq_idx = 0; seq_idx < bottom_shape[1]; ++seq_idx) {
         int length = bottom_len[batch_idx][seq_idx] * bottom_shape[3];
         mshadow::Tensor<xpu,1> input  = bottom_data[batch_idx][seq_idx].Slice(0, length);
         mshadow::Tensor<xpu,1> output =    top_data[batch_idx][seq_idx].Slice(0, length);
         mshadow::Softmax(output, input);
+        for (int i = 0; i < output.size(0); ++i) {
+            if (output[i] < 0.00001f) {
+              cout << "SoftmaxFuncVarLenLayer: WARNING, prob too small, crop." << endl;
+              output[i] = 0.00001f;
+            }
+          }
+        }
       }
     }
   }
@@ -104,10 +113,10 @@ class SoftmaxFuncVarLenLayer : public Layer<xpu>{
     }
   }
   
- protected:
+ // protected:
 };
 }  // namespace layer
 }  // namespace textnet
-#endif  // LAYER_SOFTMAX_FUNC_LAYER_INL_HPP_
+#endif  // LAYER_SOFTMAX_VAR_LEN_FUNC_LAYER_INL_HPP_
 
 

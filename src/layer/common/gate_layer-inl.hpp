@@ -104,7 +104,7 @@ class GateLayer : public Layer<xpu> {
     gate_data = F<op::sigmoid>(gate_data);
 
     top_data = 0.f;
-    // orc, this layer dose not deal variable length
+    // orc, this layer dose not deal with variable length
     for (int i = 0; i < bottom_data.size(0); ++i) {
         top_data[i] = bottom_data[i] * gate_data[i][0] * 2; // the middle of sigmoid is 0.5, rescale to 1
     }

@@ -58,6 +58,13 @@ class SoftmaxFuncLayer : public Layer<xpu>{
     top[0]->Resize(bottom[0]->data.shape_, true);
   }
 
+  void checkNan(float *p, int l) {
+      for (int i = 0; i < l; ++i) {
+          assert(!isnan(p[i]));
+      }
+  }
+
+
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
@@ -77,6 +84,17 @@ class SoftmaxFuncLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 2> input(bottom_data.dptr_, mshadow::Shape2(row, col));
     mshadow::Tensor<xpu, 2> output(top_data.dptr_,   mshadow::Shape2(row, col));
     mshadow::Softmax(output, input);
+    for (int i = 0; i < output.size(0); ++i) {
+      for (int j = 0; j < output.size(1); ++j) {
+        if (output[i][j] < 0.00001f) {
+          cout << "SoftmaxFuncLayer: WARNING, prob too small, crop." << endl;
+          output[i][j] = 0.00001f;
+        }
+      }
+    }
+#if DEBUG
+    checkNan(top[0]->data.dptr_, top[0]->data.shape_.Size());
+#endif
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
@@ -104,13 +122,16 @@ class SoftmaxFuncLayer : public Layer<xpu>{
           float p_0 = output_data[row_idx][col_idx];
           float p_1 = output_data[row_idx][jacobi_row_idx];
           if (jacobi_row_idx == col_idx) {
-            input_diff[row_idx][col_idx] += top * (-p_0 * p_0 + p_0);
+            input_diff[row_idx][col_idx] += top * (-(p_0*p_0) + p_0);
           } else {
-            input_diff[row_idx][col_idx] += top * (-p_0 * p_1);
+            input_diff[row_idx][col_idx] += top * (-(p_0*p_1));
           }
         }
       }
     }
+#if DEBUG
+    checkNan(bottom[0]->diff.dptr_, bottom[0]->diff.shape_.Size());
+#endif
   }
   
  protected:
