@@ -1,3 +1,6 @@
+# To compile release version or debug version
+COMPILE_VERSION = release # debug 
+
 # If set to 1, then use cpu only
 CPU_ONLY := 1
 

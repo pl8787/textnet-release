@@ -442,8 +442,6 @@ class Net : public INet{
         activation_save_nodes[tag] = save_nodes;
       }
     }
-
-	SetupAllNets();
   }
 
   virtual void PropAll() {
