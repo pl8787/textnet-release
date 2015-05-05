@@ -72,10 +72,9 @@ class SoftmaxFuncVarLenLayer : public Layer<xpu>{
         mshadow::Tensor<xpu,1> output =    top_data[batch_idx][seq_idx].Slice(0, length);
         mshadow::Softmax(output, input);
         for (int i = 0; i < output.size(0); ++i) {
-            if (output[i] < 0.00001f) {
-              cout << "SoftmaxFuncVarLenLayer: WARNING, prob too small, crop." << endl;
-              output[i] = 0.00001f;
-            }
+          if (output[i] < 0.00001f) {
+            std::cout << "SoftmaxFuncVarLenLayer: WARNING, prob too small, crop." << std::endl;
+            output[i] = 0.00001f;
           }
         }
       }
