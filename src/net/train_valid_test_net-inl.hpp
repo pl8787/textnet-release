@@ -15,8 +15,6 @@ class TrainValidTestNet : public Net<xpu>{
   
   virtual void Start() {
 
-	this->SetupAllNets();
-
 	utils::Check(this->nets.count("Train"), 
 			"No [Train] tag in config.");
 	utils::Check(this->nets.count("Valid"),
@@ -26,9 +24,11 @@ class TrainValidTestNet : public Net<xpu>{
     
 
 	for (int iter = 0; iter < this->max_iters["Train"]; ++iter) {
-		this->TrainOneStep("Train");
+
         this->SaveModel(iter);
         this->SaveModelActivation(iter);
+
+		this->TrainOneStep("Train");
 
 		if (this->display_interval["Train"] > 0 && iter % this->display_interval["Train"] == 0) {
 			this->TrainDisplay("Train", iter);
@@ -42,9 +42,6 @@ class TrainValidTestNet : public Net<xpu>{
 			this->TestAll("Test", iter);
 		}	
 
-		// if (this->save_interval["Train"] > 0 && iter % this->save_interval["Train"] == 0) {
-        //     this->SaveModel("Train", iter);
-		// }
 	}
   } 
 };

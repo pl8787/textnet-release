@@ -79,39 +79,48 @@ void PrintTensor(const char * name, Tensor<cpu, 4> x) {
 int main(int argc, char *argv[]) {
   string model_file = "model/matching.tvt.model";
   DeviceType device_type = CPU_DEVICE;
+  bool need_cross_valid = false;
+  bool need_param = false;
   if (argc > 1) {
     model_file = string(argv[1]);
   }
-  if (argc > 2) {
-	if (string(argv[2]) == "cpu") {
+  for (int i = 2; i < argc; ++i) {
+	if (string(argv[i]) == "cpu") {
 		device_type = CPU_DEVICE;
 	}
-	if (string(argv[2]) == "gpu") {
+	if (string(argv[i]) == "gpu") {
 		device_type = GPU_DEVICE;
 	}
+	if (string(argv[i]) == "-cv") {
+		need_cross_valid = true;
+	}
+	if (string(argv[i]) == "-param") {
+		need_param = true;
+	}
+	
   }
-  Json::Value cfg;
-  ifstream ifs(model_file.c_str());
-  ifs >> cfg;
-  string log_file = cfg["log"].asString();
-  if (!log_file.empty()) {
-      freopen(log_file.c_str(), "w", stdout);
-      setvbuf(stdout, NULL, _IOLBF, 0);
-  }
-
+  
   int netTagType = kTrainValidTest;
 
-  if (cfg["cross_validation"].isNull()) {
+  if ( !need_cross_valid ) {
     INet* net = CreateNet(device_type, kTrainValidTest);
-    net->InitNet(model_file);
+	if ( !need_param ) {
+		net->InitNet(model_file);
+	} else {
+		net->LoadModel(model_file);
+	}
+
 #if REALTIME_SERVER==1
     using namespace textnet::statistic;
     Statistic statistic;
     statistic.SetNet(net);
     statistic.Start();
 #endif
+
     net->Start();
-  } else {
+  } 
+#if 0  
+  else {
     int n_fold = cfg["cross_validation"].asInt();
     for (int i = 0; i < n_fold; ++i) {
       cout << "PROCESSING CROSS VALIDATION FOLD " << i << "..." << endl;
@@ -134,7 +143,7 @@ int main(int argc, char *argv[]) {
   }
 
   ifs.close();
-  
+#endif 
   return 0;
 }
 

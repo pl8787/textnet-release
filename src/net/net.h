@@ -318,7 +318,7 @@ class Net : public INet{
         }
       }
       
-      utils::Printf("\t Layer Type: %d\t Layer Name: %s\n", layer_type, layer_name.c_str());
+      utils::Printf("\t Layer Type: %d\t Layer Name: %s\n", layer_type, layer_name.c_str());  
     }
     
     for (int i = 0; i < tags.size(); ++i) {
@@ -435,6 +435,8 @@ class Net : public INet{
         activation_save_nodes[tag] = save_nodes;
       }
     }
+
+	SetupAllNets();
   }
 
   virtual void PropAll() {
@@ -701,6 +703,7 @@ class Net : public INet{
   // }
 
   virtual void SaveModel(string model_file) {
+    utils::Printf("[Process] Save model to %s.\n", model_file.c_str());
     ofstream ofs(model_file.c_str());
     Json::StyledWriter writer;
     Json::Value net_root, layers_params_root;
@@ -726,12 +729,18 @@ class Net : public INet{
   }
 
   void LoadParams(Json::Value &layers_params_root) {
+    utils::Printf("[Process] Set Params to Net.\n");
+	cout << "total layer count: " << layers.size() << endl;
     for (int layer_idx = 0; layer_idx < layers.size(); ++layer_idx) {
+	  cout << "layer " << layer_idx << endl;
       for (int param_idx = 0; param_idx < layers[layer_idx]->ParamNodeNum(); ++param_idx) {
+		cout << "param " << param_idx << endl;
         if (layers[layer_idx]->params[param_idx].is_share) {
             continue;
         }
+		cout << "here" << endl;
         Json::Value node_root = layers_params_root[layer_idx][param_idx];
+		cout << "next" << endl;
         layers[layer_idx]->params[param_idx].LoadNode(node_root, false);
       }
     }
@@ -742,6 +751,8 @@ class Net : public INet{
     ifstream ifs(model_file.c_str());
     ifs >> net_root;
     ifs.close();
+	utils::Check(!net_root["config"].isNull(), "No [config] section.");
+	utils::Check(!net_root["layers_params"].isNull(), "No [layers_params] section.");
     root = net_root["config"];
     InitNet(root);
     LoadParams(net_root["layers_params"]);
