@@ -87,7 +87,7 @@ class SoftmaxFuncLayer : public Layer<xpu>{
     for (int i = 0; i < output.size(0); ++i) {
       for (int j = 0; j < output.size(1); ++j) {
         if (output[i][j] < 0.00001f) {
-          cout << "SoftmaxFuncLayer: WARNING, prob too small, crop." << endl;
+          std::cout << "SoftmaxFuncLayer: WARNING, prob too small, crop." << std::endl;
           output[i][j] = 0.00001f;
         }
       }
