@@ -464,6 +464,278 @@ void TestMaxRnnLayer(mshadow::Random<cpu>* prnd) {
   cout << "Check Grad." << endl;
   cker->CheckGrad(layer, bottoms, tops);
 }
+
+void TestTopkPoolingLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Gate Layer." << endl;
+  Node<cpu> gate, rep, top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&gate);
+  bottoms.push_back(&rep);
+  tops.push_back(&top);
+  
+  gate.Resize(Shape4(2,1,4,1), true);
+  rep.Resize(Shape4(2,1,4,2), true);
+  prnd->SampleUniform(&gate.data, -1.0, 1.0);
+  prnd->SampleUniform(&rep.data,  -1.0, 1.0);
+  gate.length = 3;
+  rep.length = 3;
+  
+  map<string, SettingV> setting;
+  setting["k"] = SettingV(2);
+
+  Layer<cpu> * layer = CreateLayer<cpu>(kTopkPooling);
+  layer->PropAll();
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+  // prnd->SampleUniform(&ttom.data, -0.1, 0.1);
+  // prnd->SampleUniform(&top.diff, -0.1, 0.1);
+  // top.diff = gate.data;
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.001f);
+  setting_checker["range_max"] = SettingV(0.001f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer, bottoms, tops);
+
+  // cout << "Check Grad." << endl;
+  // cker->CheckGrad(layer, bottoms, tops);
+
+  // layer->Forward(bottoms, tops);
+  // layer->Backprop(bottoms, tops);
+  // PrintTensor("b0_data", bottoms[0]->data);
+  // PrintTensor("t_data",  tops[0]->data);
+  // PrintTensor("b0_length", bottoms[0]->length);
+  // PrintTensor("t_length", tops[0]->length);
+  // PrintTensor("b0_diff", bottoms[0]->diff);
+  // PrintTensor("t_diff", tops[0]->diff);
+  cout << "Done." << endl;
+}
+
+void TestSoftmaxVarLenFuncLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check SoftmaxVarLenFunc Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(1,2,3,4), true);
+  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+  PrintTensor("b0_data", bottom.data);
+  bottom.length = 1;
+  
+  map<string, SettingV> setting;
+  {
+    setting["axis"] = SettingV(2);
+  }
+
+  Layer<cpu> * layer = CreateLayer<cpu>(kSoftmaxFunc);
+  layer->PropAll();
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+  // prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+  prnd->SampleUniform(&top.diff, -1.0, 1.0);
+  // top.diff = bottom.data;
+  layer->Forward(bottoms, tops);
+  PrintTensor("b0_data", bottoms[0]->data);
+  PrintTensor("t_data",  tops[0]->data);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.001f);
+  setting_checker["range_max"] = SettingV(0.001f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer, bottoms, tops);
+
+  // cout << "Check Grad." << endl;
+  // cker->CheckGrad(layer, bottoms, tops);
+
+  // layer->Forward(bottoms, tops);
+  // layer->Backprop(bottoms, tops);
+  // PrintTensor("b0_data", bottoms[0]->data);
+  // PrintTensor("t_data",  tops[0]->data);
+  // PrintTensor("b0_length", bottoms[0]->length);
+  // PrintTensor("t_length", tops[0]->length);
+  // PrintTensor("b0_diff", bottoms[0]->diff);
+  // PrintTensor("t_diff", tops[0]->diff);
+  cout << "Done." << endl;
+}
+
+void TestSumLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Sum Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(2,2,5,4), true);
+  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+  prnd->SampleUniform(&top.diff, -1.0, 1.0);
+  bottom.length = 5;
+  
+  map<string, SettingV> setting;
+  setting["axis"] = SettingV(2);
+
+  Layer<cpu> * layer = CreateLayer<cpu>(kSumByAxis);
+  layer->PropAll();
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+
+  // top.diff = bottom.data;
+  layer->Forward(bottoms, tops);
+  PrintTensor("b0_data", bottoms[0]->data);
+  PrintTensor("t_data",  tops[0]->data);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.001f);
+  setting_checker["range_max"] = SettingV(0.001f);
+  setting_checker["delta"] = SettingV(0.001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer, bottoms, tops);
+
+  // cout << "Check Grad." << endl;
+  // cker->CheckGrad(layer, bottoms, tops);
+
+  // layer->Forward(bottoms, tops);
+  // layer->Backprop(bottoms, tops);
+  // PrintTensor("b0_data", bottoms[0]->data);
+  // PrintTensor("t_data",  tops[0]->data);
+  // PrintTensor("b0_length", bottoms[0]->length);
+  // PrintTensor("t_length", tops[0]->length);
+  // PrintTensor("b0_diff", bottoms[0]->diff);
+  // PrintTensor("t_diff", tops[0]->diff);
+  cout << "Done." << endl;
+}
+
+void TestSoftmaxFuncLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check SoftmaxVarLenFunc Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(2,2,5,4), true);
+  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+  prnd->SampleUniform(&top.diff, -1.0, 1.0);
+  bottom.length = 3;
+  
+  map<string, SettingV> setting;
+
+  Layer<cpu> * layer = CreateLayer<cpu>(kSoftmaxFuncVarLen);
+  layer->PropAll();
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+
+  // top.diff = bottom.data;
+  layer->Forward(bottoms, tops);
+  PrintTensor("b0_data", bottoms[0]->data);
+  PrintTensor("t_data",  tops[0]->data);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.001f);
+  setting_checker["range_max"] = SettingV(0.001f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer, bottoms, tops);
+
+  // cout << "Check Grad." << endl;
+  // cker->CheckGrad(layer, bottoms, tops);
+
+  // layer->Forward(bottoms, tops);
+  // layer->Backprop(bottoms, tops);
+  // PrintTensor("b0_data", bottoms[0]->data);
+  // PrintTensor("t_data",  tops[0]->data);
+  // PrintTensor("b0_length", bottoms[0]->length);
+  // PrintTensor("t_length", tops[0]->length);
+  // PrintTensor("b0_diff", bottoms[0]->diff);
+  // PrintTensor("t_diff", tops[0]->diff);
+  cout << "Done." << endl;
+}
+
+void TestProductLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Product Layer." << endl;
+  Node<cpu> bottom0, bottom1;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom0);
+  bottoms.push_back(&bottom1);
+  tops.push_back(&top);
+  
+  bottom0.Resize(Shape4(2,2,3,5), true);
+  bottom1.Resize(Shape4(2,2,3,1), true);
+  prnd->SampleUniform(&bottom0.data, -0.1, 0.1);
+  prnd->SampleUniform(&bottom1.data, -0.1, 0.1);
+  
+  map<string, SettingV> setting;
+
+  Layer<cpu> *layer = CreateLayer<cpu>(kProduct);
+  layer->PropAll();
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+  // prnd->SampleUniform(&bottom.data, -0.1, 0.1);
+  // prnd->SampleUniform(&top.diff, -0.1, 0.1);
+  layer->Forward(bottoms, tops);
+  top.diff = 1.f; // bottom.data;
+  PrintTensor("bottom0", bottom0.data);
+  PrintTensor("bottom1", bottom1.data);
+  PrintTensor("top", top.data);
+  PrintTensor("top_diff", top.diff);
+  PrintTensor("bottom0_diff", bottom0.diff);
+  PrintTensor("bottom1_diff", bottom1.diff);
+  // PrintTensor("param_diff", layer->GetParams()[0].diff);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer, bottoms, tops);
+
+  // cout << "Check Grad." << endl;
+  // cker->CheckGrad(layer, bottoms, tops);
+
+  // layer->Forward(bottoms, tops);
+  // layer->Backprop(bottoms, tops);
+  // PrintTensor("b0_data", bottoms[0]->data);
+  // PrintTensor("t_data",  tops[0]->data);
+  // PrintTensor("b0_length", bottoms[0]->length);
+  // PrintTensor("t_length", tops[0]->length);
+  // PrintTensor("b0_diff", bottoms[0]->diff);
+  // PrintTensor("t_diff", tops[0]->diff);
+  cout << "Done." << endl;
+}
+
+
+
+
 void TestGateLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Gate Layer." << endl;
   Node<cpu> bottom;
@@ -474,17 +746,41 @@ void TestGateLayer(mshadow::Random<cpu>* prnd) {
   bottoms.push_back(&bottom);
   tops.push_back(&top);
   
-  bottom.Resize(Shape4(2,1,3,2), true);
-  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+  bottom.Resize(Shape4(2,20,30,50), true);
+  prnd->SampleUniform(&bottom.data, -0.1, 0.1);
   bottom.length = 1;
+  // bottom.data[0][0][0][0] = 0.2;
+  // bottom.data[0][0][0][1] = 0.3;
+  // bottom.data[0][0][1][0] = 0.2;
+  // bottom.data[0][0][1][1] = 0.3;
+  // bottom.data[0][0][2][0] = 0.2;
+  // bottom.data[0][0][2][1] = 0.2;
+  // bottom.data[0][1][0][0] = 0.2;
+  // bottom.data[0][1][0][1] = 0.2;
+  // bottom.data[0][1][1][0] = 0.2;
+  // bottom.data[0][1][1][1] = 0.3;
+  // bottom.data[0][1][2][0] = 1.5;
+  // bottom.data[0][1][2][1] = -0.5;
+  // bottom.data[1][0][0][0] = 0.3;
+  // bottom.data[1][0][0][1] = 1.5;
+  // bottom.data[1][0][1][0] = -0.5;
+  // bottom.data[1][0][1][1] = 0.3;
+  // bottom.data[1][0][2][0] = 1.5;
+  // bottom.data[1][0][2][1] = -0.5;
+  // bottom.data[1][1][0][0] = 0.3;
+  // bottom.data[1][1][0][1] = 1.5;
+  // bottom.data[1][1][1][0] = -0.5;
+  // bottom.data[1][1][1][1] = 0.3;
+  // bottom.data[1][1][2][0] = 1.5;
+  // bottom.data[1][1][2][1] = -0.5;
   
   map<string, SettingV> setting;
   {
     setting["no_bias"] = SettingV(true);
       
     map<string, SettingV> &w_filler = *(new map<string, SettingV>());
-      w_filler["init_type"] = SettingV(initializer::kUniform);
-      w_filler["range"] = SettingV(0.01f);
+      w_filler["init_type"] = SettingV(initializer::kConstant);
+      w_filler["value"] = SettingV(0.1f);
     setting["w_filler"] = SettingV(&w_filler);
 
     map<string, SettingV> &b_filler = *(new map<string, SettingV>());
@@ -505,25 +801,30 @@ void TestGateLayer(mshadow::Random<cpu>* prnd) {
   layer->PropAll();
   layer->SetupLayer(setting, bottoms, tops, prnd);
   layer->Reshape(bottoms, tops);
-  prnd->SampleUniform(&bottom.data, -0.1, 0.1);
+  // prnd->SampleUniform(&bottom.data, -0.1, 0.1);
   // prnd->SampleUniform(&top.diff, -0.1, 0.1);
-  top.diff = bottom.data;
+  layer->Forward(bottoms, tops);
+  top.diff = 1.f; // bottom.data;
+  PrintTensor("top", top.data);
+  PrintTensor("top_diff", top.diff);
+  PrintTensor("bottom_diff", bottom.diff);
+  PrintTensor("param_diff", layer->GetParams()[0].diff);
   
   using namespace checker;
-  // Checker<cpu> * cker = CreateChecker<cpu>();
-  // map<string, SettingV> setting_checker;
-  // setting_checker["range_min"] = SettingV(-0.001f);
-  // setting_checker["range_max"] = SettingV(0.001f);
-  // setting_checker["delta"] = SettingV(0.0001f);
-  // cker->SetupChecker(setting_checker, prnd);
-  // cout << "Check Error." << endl;
-  // cker->CheckError(layer, bottoms, tops);
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer, bottoms, tops);
 
   // cout << "Check Grad." << endl;
   // cker->CheckGrad(layer, bottoms, tops);
 
-  layer->Forward(bottoms, tops);
-  layer->Backprop(bottoms, tops);
+  // layer->Forward(bottoms, tops);
+  // layer->Backprop(bottoms, tops);
   // PrintTensor("b0_data", bottoms[0]->data);
   // PrintTensor("t_data",  tops[0]->data);
   // PrintTensor("b0_length", bottoms[0]->length);
@@ -1321,9 +1622,14 @@ int main(int argc, char *argv[]) {
   // TestConcatLayer(&rnd);
   // TestConvResultTransformLayer(&rnd);
   // TestConvolutionLayer(&rnd);
+  // 
   // TestGateLayer(&rnd);
-  TestGatingLayer(&rnd);
-  //TestHingeLossLayer(&rnd);
+  // TestProductLayer(&rnd);
+  // TestSoftmaxFuncLayer(&rnd);
+  // TestGatingLayer(&rnd);
+  TestSumLayer(&rnd);
+  // TestTopkPoolingLayer(&rnd);
+  // TestHingeLossLayer(&rnd);
   return 0;
 }
 

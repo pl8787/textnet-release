@@ -15,19 +15,25 @@
 #include "./common/dropout_layer-inl.hpp"
 #include "./common/match_layer-inl.hpp"
 #include "./common/lstm_layer-inl.hpp"
+#include "./common/product_layer-inl.hpp"
+#include "./common/sum_layer-inl.hpp"
 #include "./common/recurrent_layer-inl.hpp"
 #include "./common/max_recurrent_layer-inl.hpp"
 #include "./common/convolutional_lstm_layer-inl.hpp"
-#include "./common/wholepooling_layer-inl.hpp"
+#include "./common/whole_pooling_layer-inl.hpp"
+#include "./common/topk_pooling_layer-inl.hpp"
 #include "./common/concat_layer-inl.hpp"
 #include "./common/gate_layer-inl.hpp"
 #include "./common/gate_alldim_layer-inl.hpp"
+#include "./common/softmax_func_layer-inl.hpp"
+#include "./common/softmax_func_var_len_layer-inl.hpp"
 #include "./common/sequcence_dim_reduction_layer-inl.hpp"
 #include "./common/gating_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
 #include "./input/sequence_classification_data_layer-inl.hpp"
 #include "./loss/hingeloss_layer-inl.hpp"
+#include "./loss/cross_entropy_loss_layer-inl.hpp"
 #include "./loss/pairhingeloss_layer-inl.hpp"
 #include "./loss/softmax_layer-inl.hpp"
 #include "./loss/accuracy_layer-inl.hpp"
@@ -46,6 +52,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kMaxPooling: return new PoolingLayer<mshadow::red::maximum, xpu>(type);
     case kAvgPooling: return new PoolingLayer<mshadow::red::sum, xpu>(type);
     case kWholePooling: return new WholePoolingLayer<xpu>(type);
+    case kTopkPooling: return new TopkPoolingLayer<xpu>(type);
     case kConcat: return new ConcatLayer<xpu>(type);
     case kEmbedding: return new EmbeddingLayer<xpu>(type);
     case kCross: return new CrossLayer<xpu>(type);
@@ -54,6 +61,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kConvLstmSplit: return new SplitLayer<xpu>(type);
     case kDropout: return new DropoutLayer<xpu>(type);
     case kLstm: return new LstmLayer<xpu>(type);
+    case kProduct: return new ProductLayer<xpu>(type);
     case kRecurrent: return new RecurrentLayer<xpu>(type);
     case kMaxRecurrent: return new MaxRecurrentLayer<xpu>(type);
     case kSequenceDimReduction: return new SequenceDimReductionLayer<xpu>(type);
@@ -63,10 +71,14 @@ Layer<xpu>* CreateLayer_(LayerType type) {
 	case kGating: return new GatingLayer<xpu>(type);
     case kHingeLoss: return new HingeLossLayer<xpu>(type);
     case kPairHingeLoss: return new PairHingeLossLayer<xpu>(type);
+    case kCrossEntropyLoss: return new CrossEntropyLossLayer<xpu>(type);
     case kTextData: return new TextDataLayer<xpu>(type);
     case kNextBasketData: return new NextBasketDataLayer<xpu>(type);
     case kSequenceClassificationData: return new SequenceClassificationDataLayer<xpu>(type);
     case kSoftmax: return new SoftmaxLayer<xpu>(type);
+    case kSoftmaxFunc: return new SoftmaxFuncLayer<xpu>(type);
+    case kSoftmaxFuncVarLen: return new SoftmaxFuncVarLenLayer<xpu>(type);
+    case kSumByAxis: return new SumLayer<xpu>(type);
     case kAccuracy: return new AccuracyLayer<xpu>(type);
     case kMatch: return new MatchLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;

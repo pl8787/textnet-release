@@ -81,7 +81,6 @@ class SplitLayer : public Layer<xpu>{
 	  top0_len[i] = F<op::identity>(bottom_len[i].Slice(0, 1));
 	  top1_len[i] = F<op::identity>(bottom_len[i].Slice(1, 2));
     }
-    
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,

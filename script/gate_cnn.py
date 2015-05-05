@@ -6,11 +6,12 @@ from dataset_cfg import *
 
 
 
-def gen_gate_cnn(d_mem, init, window=5, l2_gate = 0.):
+def gen_gate_cnn(d_mem, init, window, lr, l2 = 0., l2_gate = 0., dataset = dataset):
     net = {}
     # dataset = 'tb_binary'
-    norm2 = 9
-    dataset = 'mr'
+    # norm2 = 9
+    # dataset = 'mr'
+    # dataset = 'simulation_topk'
     if dataset == 'mr':
         net['cross_validation'] = 10
 
@@ -18,12 +19,12 @@ def gen_gate_cnn(d_mem, init, window=5, l2_gate = 0.):
     g_filler = gen_uniform_filter_setting(init)
     conv_w_filler = gen_uniform_filter_setting(0.01)
     zero_filler = gen_zero_filter_setting()
-    g_updater = gen_adadelta_setting(batch_size = ds.batch_size)
-    norm2_updater = gen_adadelta_setting(batch_size = ds.batch_size, norm2 = norm2)
+    # g_updater = gen_adadelta_setting(batch_size = ds.batch_size)
+    g_updater = gen_adagrad_setting(lr = lr, l2 = l2, batch_size = ds.batch_size)
+    # norm2_updater = gen_adadelta_setting(batch_size = ds.batch_size, norm2 = norm2)
 
     g_layer_setting = {}
-    g_layer_setting['no_bias'] = False
-    g_layer_setting['phrase_type'] = 2
+    g_layer_setting['no_bias'] = True
     g_layer_setting['w_filler'] = g_filler 
     g_layer_setting['u_filler'] = g_filler
     g_layer_setting['b_filler'] = zero_filler
@@ -32,19 +33,20 @@ def gen_gate_cnn(d_mem, init, window=5, l2_gate = 0.):
     g_layer_setting['b_updater'] = g_updater
 
     net['net_name'] = 'cnn'
+    net['need_reshape'] = True
     net_cfg_train, net_cfg_valid, net_cfg_test = {}, {}, {}
     net['net_config'] = [net_cfg_train, net_cfg_valid, net_cfg_test]
     net_cfg_train["tag"] = "Train"
-    net_cfg_train["max_iters"] = (ds.n_train * 10)/ ds.batch_size 
-    net_cfg_train["display_interval"] = (ds.n_train/ds.batch_size)/300
+    net_cfg_train["max_iters"] = (ds.n_train * 100)/ ds.train_batch_size 
+    net_cfg_train["display_interval"] = (ds.n_train/ds.train_batch_size)/300
     net_cfg_train["out_nodes"] = ['acc']
     net_cfg_valid["tag"] = "Valid"
-    net_cfg_valid["max_iters"] = int(ds.n_valid/ds.batch_size) 
-    net_cfg_valid["display_interval"] = (ds.n_train/ds.batch_size)/3
+    net_cfg_valid["max_iters"] = int(ds.n_valid/ds.valid_batch_size) 
+    net_cfg_valid["display_interval"] = (ds.n_train/ds.train_batch_size)/3
     net_cfg_valid["out_nodes"] = ['acc']
     net_cfg_test["tag"] = "Test"
-    net_cfg_test["max_iters"] = int(ds.n_test/ds.batch_size) 
-    net_cfg_test["display_interval"] = (ds.n_train/ds.batch_size)/3
+    net_cfg_test["max_iters"] = int(ds.n_test/ds.test_batch_size) 
+    net_cfg_test["display_interval"] = (ds.n_train/ds.train_batch_size)/3
     net_cfg_test["out_nodes"] = ['acc']
     layers = []
     net['layers'] = layers
@@ -58,8 +60,7 @@ def gen_gate_cnn(d_mem, init, window=5, l2_gate = 0.):
     layer['tag'] = ['Train']
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
-    setting['phrase_type'] = 0
-    setting['batch_size'] = ds.batch_size
+    setting['batch_size'] = ds.train_batch_size
     setting['data_file'] = ds.train_data_file
     setting['max_doc_len'] = ds.max_doc_len
 
@@ -72,8 +73,7 @@ def gen_gate_cnn(d_mem, init, window=5, l2_gate = 0.):
     layer['tag'] = ['Valid']
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
-    setting['phrase_type'] = 1
-    setting['batch_size'] = ds.batch_size 
+    setting['batch_size'] = ds.valid_batch_size 
     setting['data_file'] = ds.valid_data_file
     setting['max_doc_len'] = ds.max_doc_len
 
@@ -86,8 +86,7 @@ def gen_gate_cnn(d_mem, init, window=5, l2_gate = 0.):
     layer['tag'] = ['Test']
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
-    setting['phrase_type'] = 1
-    setting['batch_size'] = ds.batch_size 
+    setting['batch_size'] = ds.test_batch_size 
     setting['data_file'] = ds.test_data_file
     setting['max_doc_len'] = ds.max_doc_len
 
@@ -124,7 +123,7 @@ def gen_gate_cnn(d_mem, init, window=5, l2_gate = 0.):
     layer['top_nodes'] = ['conv_activation']
     layer['layer_name'] = 'nonlinear'
     layer['layer_type'] = 1 
-    setting = {"phrase_type":2}
+    setting = {}
     layer['setting'] = setting
         
     layer = {}
@@ -133,7 +132,7 @@ def gen_gate_cnn(d_mem, init, window=5, l2_gate = 0.):
     layer['top_nodes'] = ['conv_ret_trans']
     layer['layer_name'] = 'conv_ret_transform'
     layer['layer_type'] =  32 
-    setting = {"phrase_type":2}
+    setting = {}
     layer['setting'] = setting
 
     layer = {}
@@ -142,7 +141,7 @@ def gen_gate_cnn(d_mem, init, window=5, l2_gate = 0.):
     layer['top_nodes'] = ['gate_result']
     layer['layer_name'] = 'gate'
     print "ORC: gate on one"
-    layer['layer_type'] =  33 
+    layer['layer_type'] =  33
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
     setting['no_bias'] = True
@@ -155,7 +154,7 @@ def gen_gate_cnn(d_mem, init, window=5, l2_gate = 0.):
     layer['top_nodes'] = ['pool_rep']
     layer['layer_name'] = 'wholePooling'
     layer['layer_type'] =  25 
-    setting = {"phrase_type":2, "pool_type":"max"}
+    setting = {"pool_type":"max"}
     layer['setting'] = setting
 
     layer = {}
@@ -164,7 +163,8 @@ def gen_gate_cnn(d_mem, init, window=5, l2_gate = 0.):
     layer['top_nodes'] = ['drop_rep']
     layer['layer_name'] = 'dropout'
     layer['layer_type'] =  13
-    setting = {'phrase_type':2, 'rate':0.5}
+    print "ORC, dropout rate 0.5"
+    setting = {'rate':0.5}
     layer['setting'] = setting
 
     layer = {}
@@ -177,7 +177,8 @@ def gen_gate_cnn(d_mem, init, window=5, l2_gate = 0.):
     layer['setting'] = setting
     setting['num_hidden'] = ds.num_class
     setting['w_filler'] = zero_filler
-    setting['w_updater'] = norm2_updater
+    print "ORC, without using norm 2"
+    # setting['w_updater'] = norm2_updater
 
     layer = {}
     layers.append(layer) 
@@ -185,10 +186,8 @@ def gen_gate_cnn(d_mem, init, window=5, l2_gate = 0.):
     layer['top_nodes'] = ['loss']
     layer['layer_name'] = 'softmax_activation'
     layer['layer_type'] = 51 
-    setting = {'phrase_type':2}
+    setting = {}
     layer['setting'] = setting
-
-
 
     layer = {}
     layers.append(layer) 
@@ -196,13 +195,23 @@ def gen_gate_cnn(d_mem, init, window=5, l2_gate = 0.):
     layer['top_nodes'] = ['acc']
     layer['layer_name'] = 'accuracy'
     layer['layer_type'] = 56 
-    setting = {'phrase_type':2, 'topk':1}
+    setting = {'topk':1}
     layer['setting'] = setting
-
 
     # gen_conf_file(net, '../bin/conv_lstm_simulation.model')
 
     return net
+idx = 0
+for dataset in ['mr', 'tb_fine', 'tb_binary']:
+    for d_mem in [100]:
+        for window in [5]:
+            for lr in [1, 0.3, 0.1, 0.03, 0.01, 0.003]:
+                net = gen_gate_cnn(d_mem = d_mem, init = 0.01, window = window, lr=lr, dataset=dataset)
+                net['log'] = 'log.gate_cnn.topk.max.' + str(idx)
+                gen_conf_file(net, '/home/wsx/exp/gate/run.16/model.gate_cnn.topk.max.'+str(idx))#  + str(idx))
+                idx += 1
+ 
+exit(0)
 
 idx = 0
 init = 0.01

@@ -67,6 +67,8 @@ class DropoutLayer : public Layer<xpu>{
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
+    top[0]->length = F<op::identity>(bottom[0]->length);
+
     const float pkeep = 1.0f - rate;
     if (this->phrase_type == kTrain) {
       mask = F<op::threshold>(this->prnd_->uniform(mask.shape_), pkeep); 

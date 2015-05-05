@@ -1,5 +1,5 @@
-#ifndef TEXTNET_LAYER_WHOLEPOOLING_LAYER_INL_HPP_
-#define TEXTNET_LAYER_WHOLEPOOLING_LAYER_INL_HPP_
+#ifndef TEXTNET_LAYER_WHOLE_POOLING_LAYER_INL_HPP_
+#define TEXTNET_LAYER_WHOLE_POOLING_LAYER_INL_HPP_
 
 #include <mshadow/tensor.h>
 #include "../layer.h"
@@ -64,6 +64,15 @@ class WholePoolingLayer : public Layer<xpu>{
     utils::Check(in.size(1) == out.size(1) && in.size(0) == 1, "WholePoolingLayer:pooling io size error");
     out += repmat(in[0] / (float)(out.size(0)), out.size(0));
   }
+  void wholeSumPooling(Tensor2D in, Tensor2D out) {
+    utils::Check(in.size(1) == out.size(1) && out.size(0) == 1, "WholePoolingLayer:pooling io size error");
+    out[0] = sum_rows(in);
+  }
+  void wholeUnSumPooling(Tensor2D in, Tensor2D out) {
+    utils::Check(in.size(1) == out.size(1) && in.size(0) == 1, "WholePoolingLayer:pooling io size error");
+    out += repmat(in[0], out.size(0));
+  }
+
   void wholeFirstPooling(Tensor2D in, Tensor2D out) {
     utils::Check(in.size(1) == out.size(1) && out.size(0) == 1, "WholePoolingLayer:pooling io size error");
     out = mshadow::expr::F<op::identity>(in.Slice(0,1));
@@ -116,6 +125,8 @@ class WholePoolingLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 2> bottom_len  = bottom[0]->length;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
 
+    // conv var len to static len, no need to forward length info
+
     top_data = 0;
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
@@ -128,6 +139,9 @@ class WholePoolingLayer : public Layer<xpu>{
                             top_data[batch_idx][seq_idx]);
         } else if (pool_type == "ave") {
             wholeAvePooling(bottom_data[batch_idx][seq_idx].Slice(begin, end), 
+                            top_data[batch_idx][seq_idx]);
+        } else if (pool_type == "sum") {
+            wholeSumPooling(bottom_data[batch_idx][seq_idx].Slice(begin, end), 
                             top_data[batch_idx][seq_idx]);
         } else if (pool_type == "first") {
             wholeFirstPooling(bottom_data[batch_idx][seq_idx].Slice(begin, end), 
@@ -165,6 +179,9 @@ class WholePoolingLayer : public Layer<xpu>{
                                 bottom_diff[batch_idx][seq_idx].Slice(begin, end));
           } else if (pool_type == "ave") {
               wholeUnAvePooling(top_diff[batch_idx][seq_idx], 
+                                bottom_diff[batch_idx][seq_idx].Slice(begin, end));
+          } else if (pool_type == "sum") {
+              wholeUnSumPooling(top_diff[batch_idx][seq_idx], 
                                 bottom_diff[batch_idx][seq_idx].Slice(begin, end));
           } else if (pool_type == "first") {
               wholeUnFirstPooling(top_diff[batch_idx][seq_idx],

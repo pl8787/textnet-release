@@ -145,7 +145,7 @@ class ConvolutionLayer : public Layer<xpu> {
       temp_data_ = dot(weight_data, temp_col_);
       top_data.Slice(i,i+1) = reshape(temp_data_, top_data.Slice(i,i+1).shape_);
     }
-    if (no_bias == 0) {
+    if (!no_bias) {
       // add bias, broadcast bias to dim 1: channel
       top_data += broadcast<1>(bias_data, top_data.shape_);
     }
@@ -194,8 +194,6 @@ class ConvolutionLayer : public Layer<xpu> {
       }
       
     }
-      
-    
   }
 
  protected:

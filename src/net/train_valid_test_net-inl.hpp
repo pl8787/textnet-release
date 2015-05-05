@@ -15,7 +15,8 @@ class TrainValidTestNet : public Net<xpu>{
   
   virtual void Start() {
 
-	this->SetupAllNets();
+    // orc
+	// this->SetupAllNets();
 
 	utils::Check(this->nets.count("Train"), 
 			"No [Train] tag in config.");
