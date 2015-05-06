@@ -96,6 +96,7 @@ class SumLayer : public Layer<xpu> {
         }
       }
     } 
+    int tmp = 0;
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,

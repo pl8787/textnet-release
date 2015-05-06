@@ -62,7 +62,7 @@ class SoftmaxFuncVarLenLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 2> bottom_len  = bottom[0]->length;
     mshadow::Tensor<xpu, 3> top_data    = top[0]->data_d3();
     mshadow::Tensor<xpu, 2> top_len     = top[0]->length;
-    top_len = F<op::identity_grad>(bottom_len);
+    top_len = F<op::identity>(bottom_len);
 
     top_data = 0.f;
     for (int batch_idx = 0; batch_idx < bottom_shape[0]; ++batch_idx) {
@@ -99,19 +99,19 @@ class SoftmaxFuncVarLenLayer : public Layer<xpu>{
         for (int col_idx = 0; col_idx < length; ++col_idx) {
           for (int jacobi_row_idx = 0; jacobi_row_idx < length; ++jacobi_row_idx) {
             float top = output_diff[jacobi_row_idx];
+            if (top == 0.f) continue;
             float p_0 = output_data[col_idx];
             float p_1 = output_data[jacobi_row_idx];
             if (jacobi_row_idx == col_idx) {
-              input_diff[col_idx] += top * (-p_0 * p_0 + p_0);
+              input_diff[col_idx] += top * (-(p_0*p_0) + p_0);
             } else {
-              input_diff[col_idx] += top * (-p_0 * p_1);
+              input_diff[col_idx] += top * (-(p_0*p_1));
             }
           }
         }
       }
     }
   }
-  
  // protected:
 };
 }  // namespace layer

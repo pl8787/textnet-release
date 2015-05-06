@@ -527,22 +527,19 @@ void TestSoftmaxVarLenFuncLayer(mshadow::Random<cpu>* prnd) {
   bottoms.push_back(&bottom);
   tops.push_back(&top);
   
-  bottom.Resize(Shape4(1,2,3,4), true);
+  bottom.Resize(Shape4(2,2,10,4), true);
   prnd->SampleUniform(&bottom.data, -1.0, 1.0);
   PrintTensor("b0_data", bottom.data);
-  bottom.length = 1;
+  bottom.length = 6;
   
   map<string, SettingV> setting;
-  {
-    setting["axis"] = SettingV(2);
-  }
 
-  Layer<cpu> * layer = CreateLayer<cpu>(kSoftmaxFunc);
+  Layer<cpu> * layer = CreateLayer<cpu>(kSoftmaxFuncVarLen);
   layer->PropAll();
   layer->SetupLayer(setting, bottoms, tops, prnd);
   layer->Reshape(bottoms, tops);
   // prnd->SampleUniform(&bottom.data, -1.0, 1.0);
-  prnd->SampleUniform(&top.diff, -1.0, 1.0);
+  // prnd->SampleUniform(&top.diff, -10.0, 10.0);
   // top.diff = bottom.data;
   layer->Forward(bottoms, tops);
   PrintTensor("b0_data", bottoms[0]->data);
@@ -551,9 +548,9 @@ void TestSoftmaxVarLenFuncLayer(mshadow::Random<cpu>* prnd) {
   using namespace checker;
   Checker<cpu> * cker = CreateChecker<cpu>();
   map<string, SettingV> setting_checker;
-  setting_checker["range_min"] = SettingV(-0.001f);
-  setting_checker["range_max"] = SettingV(0.001f);
-  setting_checker["delta"] = SettingV(0.0001f);
+  setting_checker["range_min"] = SettingV(-0.00001f);
+  setting_checker["range_max"] = SettingV(0.00001f);
+  setting_checker["delta"] = SettingV(0.001f);
   cker->SetupChecker(setting_checker, prnd);
   cout << "Check Error." << endl;
   cker->CheckError(layer, bottoms, tops);
@@ -605,7 +602,7 @@ void TestSumLayer(mshadow::Random<cpu>* prnd) {
   map<string, SettingV> setting_checker;
   setting_checker["range_min"] = SettingV(-0.001f);
   setting_checker["range_max"] = SettingV(0.001f);
-  setting_checker["delta"] = SettingV(0.001f);
+  setting_checker["delta"] = SettingV(0.0001f);
   cker->SetupChecker(setting_checker, prnd);
   cout << "Check Error." << endl;
   cker->CheckError(layer, bottoms, tops);
@@ -1627,7 +1624,8 @@ int main(int argc, char *argv[]) {
   // TestProductLayer(&rnd);
   // TestSoftmaxFuncLayer(&rnd);
   // TestGatingLayer(&rnd);
-  TestSumLayer(&rnd);
+  TestSoftmaxVarLenFuncLayer(&rnd);
+  // TestSumLayer(&rnd);
   // TestTopkPoolingLayer(&rnd);
   // TestHingeLossLayer(&rnd);
   return 0;
