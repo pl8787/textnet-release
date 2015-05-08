@@ -53,6 +53,9 @@ class Lr2softmaxLayer : public Layer<xpu> {
     shape_out[1] = 2;
 
     top[0]->Resize(shape_out, true);
+
+	bottom[0]->PrintShape("bottom0");
+	top[0]->PrintShape("top0");
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
@@ -72,7 +75,6 @@ class Lr2softmaxLayer : public Layer<xpu> {
     for (int i = 0; i < bottom_diff.size(0); ++i) {
       bottom_diff[i] += top_diff[i][score_class];
     }
-
   }
  protected:
   int score_class;

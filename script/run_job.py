@@ -169,7 +169,7 @@ class SshWorker(Thread):
 def get_nodes():
     node_169 = Node('10.60.1.169', 'wsx', 12)
     node_168 = Node('10.60.1.168', 'wsx', 12)
-    return [node_168]
+    return [node_168, node_169]
 
 def main():
     run_nodes = get_nodes()
@@ -184,7 +184,8 @@ def main():
     bin = 'textnet'
     # local_dir = '/home/wsx/exp/topk_simulation/run.4/'
     # local_dir = '/home/wsx/exp/gate/lstm/run.9/'
-    local_dir = '/home/wsx/exp/match/bilstm_mlp/run.2/'
+    local_dir = '/home/wsx/exp/match/birnn_mlp/run.1/'
+    # local_dir = '/home/wsx/exp/match/bilstm_cos/run.2/'
     remote_dir = '/home/wsx/log.tmp/'
 
     conf_files = os.listdir(local_dir) 

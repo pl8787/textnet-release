@@ -702,19 +702,19 @@ void TestProductLayer(mshadow::Random<cpu>* prnd) {
   PrintTensor("bottom1", bottom1.data);
   PrintTensor("top", top.data);
   PrintTensor("top_diff", top.diff);
-  PrintTensor("bottom0_diff", bottom0.diff);
-  PrintTensor("bottom1_diff", bottom1.diff);
   // PrintTensor("param_diff", layer->GetParams()[0].diff);
   
   using namespace checker;
   Checker<cpu> * cker = CreateChecker<cpu>();
   map<string, SettingV> setting_checker;
-  setting_checker["range_min"] = SettingV(-0.0001f);
-  setting_checker["range_max"] = SettingV(0.0001f);
-  setting_checker["delta"] = SettingV(0.001f);
+  setting_checker["range_min"] = SettingV(-0.000001f);
+  setting_checker["range_max"] = SettingV(0.000001f);
+  setting_checker["delta"] = SettingV(0.0001f);
   cker->SetupChecker(setting_checker, prnd);
   cout << "Check Error." << endl;
   cker->CheckError(layer, bottoms, tops);
+  PrintTensor("bottom0_diff", bottom0.diff);
+  PrintTensor("bottom1_diff", bottom1.diff);
 
   // cout << "Check Grad." << endl;
   // cker->CheckGrad(layer, bottoms, tops);
@@ -1621,10 +1621,10 @@ int main(int argc, char *argv[]) {
   // TestConvolutionLayer(&rnd);
   // 
   // TestGateLayer(&rnd);
-  // TestProductLayer(&rnd);
+  TestProductLayer(&rnd);
   // TestSoftmaxFuncLayer(&rnd);
   // TestGatingLayer(&rnd);
-  TestSoftmaxVarLenFuncLayer(&rnd);
+  // TestSoftmaxVarLenFuncLayer(&rnd);
   // TestSumLayer(&rnd);
   // TestTopkPoolingLayer(&rnd);
   // TestHingeLossLayer(&rnd);

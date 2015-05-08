@@ -59,6 +59,11 @@ class ConcatLayer : public Layer<xpu>{
     mshadow::Shape<4> shape_out = shape_in_0;
     shape_out[concat_dim_index] = out_size;
     top[0]->Resize(shape_out, true);
+
+    for (int i = 0; i < nBottomNode; ++i) {
+	  bottom[i]->PrintShape("bottom_i");
+    }
+	top[0]->PrintShape("top0");
   }
 
   // void checkNan(float *p, int l) {
