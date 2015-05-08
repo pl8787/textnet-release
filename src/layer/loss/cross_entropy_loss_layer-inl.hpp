@@ -39,7 +39,7 @@ class CrossEntropyLossLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(), "CrossEntropyLossLayer:top size problem.");
                   
     int batch_size = bottom[0]->data.size(0);    
-    top[0]->Resize(batch_size, 1, 1, 1, true);
+    top[0]->Resize(1, 1, 1, 1, true);
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

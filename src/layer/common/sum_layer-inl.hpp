@@ -52,6 +52,9 @@ class SumLayer : public Layer<xpu> {
     shape_out[axis] = 1;
 
     top[0]->Resize(shape_out, true);
+
+	bottom[0]->PrintShape("bottom0");
+	top[0]->PrintShape("top0");
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
@@ -96,6 +99,7 @@ class SumLayer : public Layer<xpu> {
         }
       }
     } 
+    int tmp = 0;
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
