@@ -42,6 +42,18 @@ Layer2Name = {
   27: 'Recurrent', 
   28: 'SequenceDimReduction', 
   29: 'ConvLstmSplit', 
+  30: 'TensorFullConnect',
+  31: 'MaxRecurrent',
+  32: 'ConvResultTransform',
+  33: 'Gate',
+  34: 'GateAlldim',
+  35: 'Product',
+  36: 'TopkPooling',
+  37: 'SoftmaxFunc',
+  38: 'SoftmaxFuncVarLen',
+  39: 'SumByAxis',
+  40: 'Gating',
+  41: 'Lr2softmax',
 
   # Loss Layer 51-70
   51: 'Softmax', 
@@ -50,6 +62,7 @@ Layer2Name = {
   54: 'HingeLoss', 
   55: 'PairHingeLoss', 
   56: 'Accuracy', 
+  57: 'CrossEntropyLoss', 
 
   # Input Layer 71-
   71: 'TextData', 

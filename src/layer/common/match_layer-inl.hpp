@@ -29,6 +29,7 @@ class MatchLayer : public Layer<xpu>{
 	// xor: can not bp
 	// mul: can bp
 	// plus: can bp
+	// cos: can bp
     
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -47,6 +48,9 @@ class MatchLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(),
                   "MatchLayer:top size problem.");
     op = setting["op"].sVal();
+
+	utils::Check(op=="xor" || op=="mul" || op=="plus" || op=="cos", 
+			"MatchLayer: one of xor, mul, plus or cos.");
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -67,6 +71,11 @@ class MatchLayer : public Layer<xpu>{
     top[0]->Resize(nbatch, 1, doc_len, doc_len, true);
     bottom[0]->PrintShape("bottom0");
     top[0]->PrintShape("top0");
+
+	if (op == "cos") {
+      m_norm.Resize(mshadow::Shape3(nbatch, 2, doc_len), 0.f);
+	  m_dot.Resize(mshadow::Shape3(nbatch, doc_len, doc_len), 0.f);
+	}
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
@@ -81,8 +90,26 @@ class MatchLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
 
 	top_data = 0.0f;
+	m_norm = 0.0f;
+	m_dot = 0.0f;
     
-    for (int i = 0; i < nbatch; i++) {
+    if (op == "cos") {
+      for (int i = 0; i < nbatch; i++) {
+		for (int j = 0; j < bottom0_len[i]; j++) {
+		  for (int m = 0; m < feat_size; ++m) {
+            m_norm[i][0][j] += bottom0_data4[i][0][j][m] * bottom0_data4[i][0][j][m];
+		  }
+		}
+		for (int k = 0; k < bottom1_len[i]; k++) {
+		  for (int m = 0; m < feat_size; ++m) {
+            m_norm[i][1][k] += bottom1_data4[i][0][k][m] * bottom1_data4[i][0][k][m];
+		  }
+		}
+	  }
+	  m_norm = F<op::square_root >(m_norm);
+	}
+
+	for (int i = 0; i < nbatch; i++) {
       for (int j = 0; j < bottom0_len[i]; j++) {
         for (int k = 0; k < bottom1_len[i]; k++) {
 		  if (op == "xor") {
@@ -97,7 +124,12 @@ class MatchLayer : public Layer<xpu>{
             for (int m = 0; m < feat_size; ++m) {
               top_data[i][0][j][k] += bottom0_data4[i][0][j][m] + bottom1_data4[i][0][k][m];
 			}
-		  } else {
+		  } else if (op =="cos") {
+			for (int m = 0; m < feat_size; ++m) {
+              m_dot[i][j][k] += bottom0_data4[i][0][j][m] * bottom1_data4[i][0][k][m];
+			}
+		    top_data[i][0][j][k] = m_dot[i][j][k] / (m_norm[i][0][j] * m_norm[i][1][k]);	
+		  }  else {
 			utils::Error("In Match Layer: no op named %s.\n", op.c_str());
 		  }
         }
@@ -138,7 +170,16 @@ class MatchLayer : public Layer<xpu>{
 				bottom0_diff[i][0][j][m] += top_diff[i][0][j][k];
 			  if (this->prop_error[1])
 				bottom1_diff[i][0][k][m] += top_diff[i][0][j][k];
-			} 
+			} else if (op == "cos") {
+              if (this->prop_error[0])
+				bottom0_diff[i][0][j][m] += (bottom1_data[i][0][k][m] / (m_norm[i][0][j] * m_norm[i][1][k]) 
+						                     - bottom0_data[i][0][j][m] * m_dot[i][j][k] / (pow(m_norm[i][0][j], 3) * m_norm[i][1][k]))
+											* top_diff[i][0][j][k];
+			  if (this->prop_error[1])
+			    bottom1_diff[i][0][k][m] += (bottom0_data[i][0][j][m] / (m_norm[i][0][j] * m_norm[i][1][k]) 
+						                     - bottom1_data[i][0][k][m] * m_dot[i][j][k] / (m_norm[i][0][j] * pow(m_norm[i][1][k], 3)))
+											* top_diff[i][0][j][k];
+			}
 		  }
 		}
 	  }
@@ -150,6 +191,8 @@ class MatchLayer : public Layer<xpu>{
   int feat_size;
   int nbatch;
   std::string op;
+  mshadow::TensorContainer<xpu, 3> m_norm;
+  mshadow::TensorContainer<xpu, 3> m_dot;
 
 };
 }  // namespace layer
