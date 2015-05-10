@@ -29,6 +29,8 @@
 #include "./common/softmax_func_var_len_layer-inl.hpp"
 #include "./common/sequcence_dim_reduction_layer-inl.hpp"
 #include "./common/gating_layer-inl.hpp"
+#include "./common/dynamic_pooling_layer-inl.hpp"
+#include "./common/duplicate4lstm_layer-inl.hpp"
 #include "./common/lr2softmax_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
@@ -58,9 +60,11 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kEmbedding: return new EmbeddingLayer<xpu>(type);
     case kCross: return new CrossLayer<xpu>(type);
     case kSplit: return new SplitLayer<xpu>(type);
+    case kDup4lstm: return new Duplicate4lstmLayer<xpu>(type);
     case kConvResultTransform: return new ConvResultTransformLayer<xpu>(type);
     case kConvLstmSplit: return new SplitLayer<xpu>(type);
     case kDropout: return new DropoutLayer<xpu>(type);
+    case kDynamicPooling: return new DynamicPoolingLayer<xpu>(type);
     case kLstm: return new LstmLayer<xpu>(type);
     case kProduct: return new ProductLayer<xpu>(type);
     case kRecurrent: return new RecurrentLayer<xpu>(type);
