@@ -109,6 +109,7 @@ class Net : public INet{
     SettingV::SettingIntMap["TensorFullConnect"] = kTensorFullConnect;
     SettingV::SettingIntMap["WholePooling"] = kWholePooling;
 	SettingV::SettingIntMap["Gating"] = kGating;
+	SettingV::SettingIntMap["SwapAxis"] = kSwapAxis;
 
     // Loss Layer 51-70
     SettingV::SettingIntMap["Softmax"] = kSoftmax;

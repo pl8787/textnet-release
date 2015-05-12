@@ -63,6 +63,7 @@ const int kSoftmaxFunc = 37;
 const int kSoftmaxFuncVarLen = 38;
 const int kSumByAxis = 39;
 const int kGating = 40;
+const int kSwapAxis = 41;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;

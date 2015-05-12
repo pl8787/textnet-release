@@ -29,6 +29,8 @@
 #include "./common/softmax_func_var_len_layer-inl.hpp"
 #include "./common/sequcence_dim_reduction_layer-inl.hpp"
 #include "./common/gating_layer-inl.hpp"
+#include "./common/swap_axis_layer-inl.hpp"
+#include "./common/flatten_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
 #include "./input/sequence_classification_data_layer-inl.hpp"
@@ -81,6 +83,8 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kSumByAxis: return new SumLayer<xpu>(type);
     case kAccuracy: return new AccuracyLayer<xpu>(type);
     case kMatch: return new MatchLayer<xpu>(type);
+    case kSwapAxis: return new SwapAxisLayer<xpu>(type);
+    case kFlatten: return new FlattenLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }
