@@ -58,6 +58,82 @@ class DatasetCfg:
             self.n_train = 67349
             self.n_valid = 872 
             self.n_test = 1821
+        elif dataset == 'msrp':
+            self.train_data_file = '/home/wsx/data/msrp/msr_paraphrase_local_train_wid_dup.txt'
+            self.valid_data_file = '/home/wsx/data/msrp/msr_paraphrase_local_valid_wid.txt'
+            self.test_data_file  = '/home/wsx/data/msrp/msr_paraphrase_test_wid.txt'
+            self.embedding_file  = '/home/wsx/data/msrp/wikicorp_50_msr_norm.txt'
+            self.update_indication_file = '/home/wsx/data/msrp/wikicorp_50_msr_ind.txt'
+            
+            self.max_doc_len = 31 
+            self.min_doc_len = 5 
+            self.vocab_size = 14727
+
+            self.dp_rate = 0.5
+            self.num_class = 2
+            self.d_word_rep = 50
+            self.batch_size = 50
+            self.train_batch_size = 50
+            self.valid_batch_size = 50
+            self.test_batch_size  = 50 
+            # self.n_train = 3000
+            # self.n_valid = 3000
+            # self.n_test = 2000
+            self.train_display_interval = 1 
+            self.valid_display_interval = 100
+            self.test_display_interval  = 100 
+            self.train_max_iters = 40000
+            self.valid_max_iters = 34 
+            self.test_max_iters  = 34 
+        elif dataset == 'relation':
+            self.train_data_file = '/home/wsx/data/relation/relation.train.wid.txt'
+            self.valid_data_file = '/home/wsx/data/relation/relation.valid.wid.txt'
+            self.test_data_file  = '/home/wsx/data/relation/relation.test.wid.txt'
+            self.embedding_file  = '/home/wsx/data/relation/wikicorp_50_english_norm.txt'
+            self.update_indication_file = '/home/wsx/data/relation/wikicorp_50_english_ind.txt'
+            
+            self.max_doc_len = 32 
+            self.min_doc_len = 4
+            self.vocab_size = 415472
+
+            self.dp_rate = 0.5
+            self.num_class = 2
+            self.d_word_rep = 50
+            self.batch_size = 32 
+            self.train_batch_size = 32
+            self.valid_batch_size = 32
+            self.test_batch_size  = 32 
+            self.train_display_interval = 1 
+            self.valid_display_interval = 2000
+            self.test_display_interval  = 2000 
+            self.train_max_iters = 200000
+            self.valid_max_iters = 1000
+            self.test_max_iters  = 1000 
+        elif dataset == 'relation_dep':
+            self.train_data_file = '/home/wsx/data/relation_dep/relation.train.wid.txt'
+            self.valid_data_file = '/home/wsx/data/relation_dep/relation.valid.wid.txt'
+            self.test_data_file  = '/home/wsx/data/relation_dep/relation.test.wid.txt'
+            self.embedding_file  = '/home/wsx/data/relation_dep/wikicorp_50_english_norm.txt'
+            self.update_indication_file = '/home/wsx/data/relation_dep/wikicorp_50_english_ind.txt'
+            
+            self.max_doc_len = 32 
+            self.min_doc_len = 4
+            self.vocab_size = 415472
+
+            self.dp_rate = 0.5
+            self.num_class = 2
+            self.d_word_rep = 50
+            self.batch_size = 32 
+            self.train_batch_size = 32
+            self.valid_batch_size = 32
+            self.test_batch_size  = 32 
+            self.train_display_interval = 1 
+            self.valid_display_interval = 2000
+            self.test_display_interval  = 2000 
+            self.train_max_iters = 200000
+            self.valid_max_iters = 1000
+            self.test_max_iters  = 1000 
+
         elif dataset == 'simulation':
             self.train_data_file = '/home/wsx/dl.shengxian/data/simulation/neg.gen.train'
             self.valid_data_file  = '/home/wsx/dl.shengxian/data/simulation/neg.gen.train'

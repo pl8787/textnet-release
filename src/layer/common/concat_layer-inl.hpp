@@ -60,9 +60,10 @@ class ConcatLayer : public Layer<xpu>{
     shape_out[concat_dim_index] = out_size;
     top[0]->Resize(shape_out, true);
 
-	for (int i = 0; i < nBottomNode; ++i)
-		bottom[i]->PrintShape("bottom");
-    top[0]->PrintShape("top");
+    for (int i = 0; i < nBottomNode; ++i) {
+	  bottom[i]->PrintShape("bottom_i");
+    }
+	top[0]->PrintShape("top0");
   }
 
   // void checkNan(float *p, int l) {

@@ -95,8 +95,7 @@ class SequenceDimReductionLayer : public Layer<xpu> {
 
  protected:
   /*! \brief random number generator */
-  int num_input;
-  int num_hidden;
+  int num_input, num_hidden;
 };
 }  // namespace layer
 }  // namespace textnet

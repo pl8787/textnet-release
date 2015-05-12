@@ -105,15 +105,14 @@ class LstmLayer : public Layer<xpu> {
     mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in[0], shape_in[1], shape_in[2], d_mem);
     mshadow::Shape<4> shape_gate= mshadow::Shape4(shape_in[0], shape_in[1], shape_in[2], d_mem*4);
 
-    std::cout << "Lstm io shape:" << std::endl;
-    std::cout << shape_in[0] << "x" << shape_in[1] << "x" << shape_in[2] << "x" << shape_in[3] << std::endl;
-    std::cout << shape_out[0] << "x" << shape_out[1] << "x" << shape_out[2] << "x" << shape_out[3] << std::endl;
-
     top[0]->Resize(shape_out, true);
     c.Resize(shape_out, 0.f);
     g.Resize(shape_gate, 0.f);
     c_er.Resize(shape_out, 0.f);
     g_er.Resize(shape_gate, 0.f);
+
+	bottom[0]->PrintShape("bottom0");
+	top[0]->PrintShape("top0");
   }
 
   void checkNan(float *p, int l) {

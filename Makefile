@@ -11,7 +11,13 @@ ifdef CUSTOM_CXX
     CXX := $(CUSTOM_CXX)
 endif
 
+<<<<<<< HEAD
 ifeq ($(COMPILE_VERSION), debug)
+=======
+# ver = debug
+ver = release 
+ifeq ($(ver), debug)
+>>>>>>> oracle
 CXXFLAGS += -g -Ddebug -I./mshadow/
 else
 CXXFLAGS += -Wall -O3 -msse3 -Wno-unknown-pragmas -funroll-loops -I./mshadow/

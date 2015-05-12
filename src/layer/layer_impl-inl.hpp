@@ -31,6 +31,7 @@
 #include "./common/gating_layer-inl.hpp"
 #include "./common/swap_axis_layer-inl.hpp"
 #include "./common/flatten_layer-inl.hpp"
+#include "./common/lr2softmax_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
 #include "./input/sequence_classification_data_layer-inl.hpp"
@@ -69,6 +70,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kSequenceDimReduction: return new SequenceDimReductionLayer<xpu>(type);
     case kConvolutionalLstm: return new ConvolutionalLstmLayer<xpu>(type);
     case kGate: return new GateLayer<xpu>(type);
+    case kLr2softmax: return new Lr2softmaxLayer<xpu>(type);
     case kGateAlldim: return new GateAlldimLayer<xpu>(type);
 	case kGating: return new GatingLayer<xpu>(type);
     case kHingeLoss: return new HingeLossLayer<xpu>(type);
