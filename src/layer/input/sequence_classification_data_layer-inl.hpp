@@ -113,6 +113,7 @@ class SequenceClassificationDataLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 4> top1_data = top[1]->data;
     mshadow::Tensor<xpu, 2> top1_length = top[1]->length;
 
+    utils::Check(top1_data.size(0) == batch_size, "ORC: error, need reshape.");
     for (int i = 0; i < batch_size; ++i) {
       if (this->phrase_type == kTrain && line_ptr == 0) {
         this->sampler.Shuffle(example_ids);

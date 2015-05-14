@@ -8,8 +8,8 @@ class DatasetCfg:
             self.embedding_file  = '/home/wsx/data/movie_review/word_rep_w2v'
 
             self.dp_rate = 0.5
-            self.batch_size = 10
-            self.train_batch_size = 10
+            self.batch_size = 50
+            self.train_batch_size = 50
             self.valid_batch_size = 10
             self.test_batch_size = 10
             self.max_doc_len = 56
@@ -58,20 +58,40 @@ class DatasetCfg:
             self.n_train = 67349
             self.n_valid = 872 
             self.n_test = 1821
+        elif dataset == 'trec':
+            self.train_data_file = '/home/wsx/data/trec/train'
+            self.valid_data_file = '/home/wsx/data/trec/valid'
+            self.test_data_file  = '/home/wsx/data/trec/test'
+            self.embedding_file  = '/home/wsx/data/trec/word.rep'
+
+            self.dp_rate = 0.5
+            self.batch_size = 50
+            self.train_batch_size = 50
+            self.valid_batch_size = 50
+            self.test_batch_size = 50
+            self.max_doc_len = 40 
+            self.vocab_size = 9593 
+            self.num_class = 6
+            self.d_word_rep = 300 
+
+            self.n_train = 4952
+            self.n_valid = 500
+            self.n_test = 500
+
         elif dataset == 'msrp':
             self.train_data_file = '/home/wsx/data/msrp/msr_paraphrase_local_train_wid_dup.txt'
             self.valid_data_file = '/home/wsx/data/msrp/msr_paraphrase_local_valid_wid.txt'
             self.test_data_file  = '/home/wsx/data/msrp/msr_paraphrase_test_wid.txt'
-            self.embedding_file  = '/home/wsx/data/msrp/wikicorp_50_msr_norm.txt'
+            self.embedding_file  = '/home/wsx/data/msrp/wikicorp_100_msr_norm.txt'
             self.update_indication_file = '/home/wsx/data/msrp/wikicorp_50_msr_ind.txt'
             
             self.max_doc_len = 31 
             self.min_doc_len = 5 
             self.vocab_size = 14727
 
-            self.dp_rate = 0.0
+            self.dp_rate = 0.5
             self.num_class = 2
-            self.d_word_rep = 50
+            self.d_word_rep = 100
             self.batch_size = 10
             self.train_batch_size = 10
             self.valid_batch_size = 10
