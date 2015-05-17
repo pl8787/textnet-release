@@ -4,7 +4,7 @@ import copy, os
 from gen_conf_file import *
 from dataset_cfg import *
 
-def gen_conv_bilstm(d_mem, init, l2, lr, dataset, batch_size):
+def gen_conv_bilstm(d_mem, init, l2, lr, dataset, batch_size, lstm_norm2):
     net = {}
     # dataset = 'tb_fine'
     if dataset == 'mr':
@@ -12,16 +12,16 @@ def gen_conv_bilstm(d_mem, init, l2, lr, dataset, batch_size):
 
     ds = DatasetCfg(dataset)
     # ds.batch_size = batch_size
-    ds.train_batch_size = 40
-    # ds.train_batch_size = batch_size
+    # ds.train_batch_size = 40
+    ds.train_batch_size = batch_size
     print "ds.train_batch_size:", ds.train_batch_size
     g_filler = gen_uniform_filter_setting(init)
     zero_filler = gen_zero_filter_setting()
-    # print "Batch size, not use batch_size in ADA_DELTA"
-    # g_updater = gen_adadelta_setting(l2 = l2)
-    # zero_l2_updater = gen_adadelta_setting(l2 = 0.)
-    g_updater = gen_adadelta_setting(l2 = l2, batch_size = batch_size)
-    zero_l2_updater = gen_adadelta_setting(l2 = 0., batch_size = batch_size)
+    print "Batch size, not use batch_size in ADA_DELTA"
+    g_updater = gen_adadelta_setting(l2 = l2)
+    zero_l2_updater = gen_adadelta_setting(l2 = 0.)
+    # g_updater = gen_adadelta_setting(l2 = l2, batch_size = batch_size)
+    # zero_l2_updater = gen_adadelta_setting(l2 = 0., batch_size = batch_size)
     # g_updater = gen_adagrad_setting(lr = lr, l2 = 0., batch_size = ds.train_batch_size)
 
     g_layer_setting = {}
@@ -116,6 +116,7 @@ def gen_conv_bilstm(d_mem, init, l2, lr, dataset, batch_size):
     layer['setting'] = setting
     setting['d_mem'] = d_mem
     setting['reverse'] = False
+    setting['grad_norm2'] = lstm_norm2
 
     layer = {}
     layers.append(layer) 
@@ -127,6 +128,7 @@ def gen_conv_bilstm(d_mem, init, l2, lr, dataset, batch_size):
     layer['setting'] = setting
     setting['d_mem'] = d_mem
     setting['reverse'] = True 
+    setting['grad_norm2'] = lstm_norm2
 
     layer = {}
     layers.append(layer) 
@@ -186,7 +188,7 @@ def gen_conv_bilstm(d_mem, init, l2, lr, dataset, batch_size):
     layer['top_nodes'] = ['drop_rep']
     layer['layer_name'] = 'dropout'
     layer['layer_type'] =  13
-    # ds.dp_rate = 0.
+    ds.dp_rate = 0.
     print "ORC, dp_rate:", ds.dp_rate
     setting = {'rate':ds.dp_rate}
     layer['setting'] = setting
@@ -222,29 +224,19 @@ def gen_conv_bilstm(d_mem, init, l2, lr, dataset, batch_size):
 
     return net
 
-run = 15 
+run = 5 
+lr = 0.
 for dataset in ['mr']:
     for d_mem in [50]:
         idx = 0
-        for init in [0.1]:
-            for l2 in [0.00001, 0.0001]:# , 0.00001, 0.0001, 0.001]:
-                for batch_size in [2, 5, 10, 20, 40]:
-                    lr = 0.
-                    net = gen_conv_bilstm(d_mem = d_mem, init = init, lr =lr, dataset=dataset, l2 = l2, batch_size=batch_size)
-                    net['log'] = 'log.conv_bilstm.max.{0}.d{1}.run{2}.{3}'.format(dataset, str(d_mem), str(run),str(idx))
-                    # gen_conf_file(net, '/home/wsx/exp/tb/log/run.3/bilstm.max.tb_fine.model.' + str(idx))
-                    gen_conf_file(net, '/home/wsx/exp/ccir2015/run.15/model.conv_bilstm.max.{0}.d{1}.run{2}.{3}'.format(dataset, str(d_mem), str(run), str(idx)))
-                    idx += 1
- 
-# idx = 0
-# for d_mem in [25, 50, 70]:
-#     # for init in [0.3, 0.1, 0.03, 0.01]:
-#     for init in [0.3, 0.1, 0.03]:
-#         for l2 in [0.000001, 0.000003, 0.00001, 0.00003]:
-#             net = gen_conv_bilstm(d_mem = d_mem, init = init, l2=l2)
-#             net['log'] = 'log.conv_bilstm.max.mr.' + str(idx)
-#             # gen_conf_file(net, '/home/wsx/exp/tb/log/run.4/conv_bilstm.max.tb_fine.model.' + str(idx))
-#             gen_conf_file(net, '/home/wsx/exp/mr/log/run.10/conv_bilstm.max.mr.model.' + str(idx))
-#             idx += 1
-#     # os.system("../bin/textnet ../bin/cnn_lstm_mr.model")
-#     # os.system("../bin/textnet ../bin/conv_lstm_simulation.model > ../bin/simulation/neg.gen.train.{0}".format(d_mem))
+        for init in [1, 0.5, 0.3]:
+            for l2 in [0.000003, 0.00001]:# , 0.00001, 0.0001, 0.001]:
+                for lstm_norm2 in [2, 1, 0.5]:
+                    for batch_size in [5, 10]:
+                        net = gen_conv_bilstm(d_mem=d_mem, init=init, lr=lr, dataset=dataset, \
+                                              l2=l2, batch_size=batch_size, lstm_norm2=lstm_norm2)
+                        net['log'] = 'log.conv_bilstm.max.{0}.d{1}.run{2}.{3}'.\
+                                      format(dataset, str(d_mem), str(run),str(idx))
+                        gen_conf_file(net, '/home/wsx/exp/ccir2015/{0}/conv_bilstm/run.5/model.conv_bilstm.max.{1}.d{2}.run{3}.{4}'.\
+                                      format(dataset, dataset, str(d_mem), str(run), str(idx)))
+                        idx += 1

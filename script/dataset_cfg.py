@@ -77,31 +77,59 @@ class DatasetCfg:
             self.n_train = 4952
             self.n_valid = 500
             self.n_test = 500
-
         elif dataset == 'msrp':
-            self.train_data_file = '/home/wsx/data/msrp/msr_paraphrase_local_train_wid_dup.txt'
-            self.valid_data_file = '/home/wsx/data/msrp/msr_paraphrase_local_valid_wid.txt'
-            self.test_data_file  = '/home/wsx/data/msrp/msr_paraphrase_test_wid.txt'
-            self.embedding_file  = '/home/wsx/data/msrp/wikicorp_100_msr_norm.txt'
-            self.update_indication_file = '/home/wsx/data/msrp/wikicorp_50_msr_ind.txt'
+            self.train_data_file = '/home/wsx/data/msrp/msr_paraphrase_num_local_train_wid_dup.txt'
+            self.valid_data_file = '/home/wsx/data/msrp/msr_paraphrase_num_local_valid_wid.txt'
+            self.test_data_file  = '/home/wsx/data/msrp/msr_paraphrase_num_test_wid.txt'
+            self.embedding_file  = '/home/wsx/data/msrp/wikicorp_num_50_msr_norm.txt'
+            self.update_indication_file = '/home/wsx/data/msrp/wikicorp_num_50_msr_ind.txt'
             
-            self.max_doc_len = 31 
+            self.max_doc_len = 33
             self.min_doc_len = 5 
-            self.vocab_size = 14727
+            self.vocab_size = 15586
 
             self.dp_rate = 0.5
             self.num_class = 2
-            self.d_word_rep = 100
-            self.batch_size = 10
-            self.train_batch_size = 10
-            self.valid_batch_size = 10
-            self.test_batch_size  = 10 
+            self.d_word_rep = 50
+            self.batch_size = 50
+            self.train_batch_size = 50
+            self.valid_batch_size = 50
+            self.test_batch_size  = 50 
             self.n_train = 6152
             self.n_valid = 1000
             self.n_test = 1725 
             self.train_display_interval = 1 
-            self.valid_display_interval = 100
-            self.test_display_interval  = 100 
+            self.valid_display_interval = 50
+            self.test_display_interval  = 50 
+            self.train_max_iters = 4000
+            self.valid_max_iters = self.n_valid/ self.valid_batch_size
+            self.test_max_iters  = self.n_test / self.test_batch_size
+        elif dataset == 'paper':
+            self.train_data_file = '/home/wsx/data/PaperData/relation.train.wid.txt'
+            self.valid_data_file = '/home/wsx/data/PaperData/relation.valid.wid.txt'
+            self.test_data_file  = '/home/wsx/data/PaperData/relation.test.wid.txt'
+            self.embedding_file  = '/home/wsx/data/PaperData/wikicorp_50_english_norm.txt'
+            self.update_indication_file = ''
+            
+            self.max_doc_len = 32 
+            self.min_doc_len = 4
+            self.vocab_size = 256017
+
+            self.dp_rate = 0.5
+            self.num_class = 2
+            self.d_word_rep = 50
+            self.batch_size = 128 
+            self.train_batch_size = 128 
+            self.valid_batch_size = 128
+            self.test_batch_size  = 128 
+
+            # self.n_train = 6152
+            self.n_valid = 119829
+            self.n_test = 119883
+            self.train_display_interval = 1 
+            self.valid_display_interval = 2000
+            self.test_display_interval  = 2000 
+
             self.train_max_iters = 40000
             self.valid_max_iters = self.n_valid/ self.valid_batch_size
             self.test_max_iters  = self.n_test / self.test_batch_size

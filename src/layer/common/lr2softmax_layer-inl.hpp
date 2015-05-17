@@ -26,6 +26,7 @@ class Lr2softmaxLayer : public Layer<xpu> {
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["score_class"] = SettingV(); // the other class will be pad as zero
+    this->defaults["rescale"]     = SettingV(); // this is to rescale the score value
     
     Layer<xpu>::Require();
   }
@@ -39,6 +40,7 @@ class Lr2softmaxLayer : public Layer<xpu> {
     utils::Check(bottom.size() == BottomNodeNum(), "Lr2softmaxLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "Lr2softmaxLayer:top size problem.");
     score_class = setting["score_class"].iVal();
+    rescale = setting["rescale"].fVal();
     utils::Check(0 == score_class || 1 == score_class, "Lr2softmaxLayer: score class setting error.");
 
     this->params.resize(1);
@@ -79,7 +81,7 @@ class Lr2softmaxLayer : public Layer<xpu> {
     top_data = 0.f;
     int bias_class = score_class == 0 ? 1 : 0;
     for (int i = 0; i < bottom_data.size(0); ++i) {
-      top_data[i][score_class] = bottom_data[i]; 
+      top_data[i][score_class] = bottom_data[i] * rescale; 
       top_data[i][bias_class]  = b_data[0];
     }
   }
@@ -97,6 +99,7 @@ class Lr2softmaxLayer : public Layer<xpu> {
   }
  protected:
   int score_class;
+  float rescale;
 };
 }  // namespace layer
 }  // namespace textnet
