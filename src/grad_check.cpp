@@ -301,46 +301,6 @@ void TestDropoutLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckError(layer_dropout, bottoms, tops);
 }
 
-void TestHingeLossLayer(mshadow::Random<cpu>* prnd) {
-  cout << "G Check HingeLoss Layer." << endl;
-  Node<cpu> bottom0;
-  Node<cpu> bottom1;
-  Node<cpu> top;
-  vector<Node<cpu>*> bottoms;
-  vector<Node<cpu>*> tops;
-  
-  bottoms.push_back(&bottom0);
-  bottoms.push_back(&bottom1);
-  tops.push_back(&top);
-  
-  bottom0.Resize(Shape4(4,1,1,1));
-  bottom1.Resize(Shape4(4,1,1,1));
-
-  bottom0.data[0][0][0][0] = 0.2;
-  bottom0.data[1][0][0][0] = 0.3;
-  bottom0.data[2][0][0][0] = 1.5;
-  bottom0.data[3][0][0][0] = -0.5;
-
-  bottom1.data[0][0][0][0] = 1;
-  bottom1.data[1][0][0][0] = 0;
-  bottom1.data[2][0][0][0] = 1;
-  bottom1.data[3][0][0][0] = 0;
-  
-  map<string, SettingV> setting;
-  setting["delta"] = SettingV(1.0f);
-  
-  /// Test Activation Layer
-  Layer<cpu> * layer_hingeloss = CreateLayer<cpu>(kHingeLoss);
-  layer_hingeloss->PropAll();
-  layer_hingeloss->SetupLayer(setting, bottoms, tops, prnd);
-  layer_hingeloss->Reshape(bottoms, tops);
-  layer_hingeloss->Forward(bottoms, tops);
-  layer_hingeloss->Backprop(bottoms, tops);
-  
-  PrintTensor("top data", top.data);
-  PrintTensor("bottom diff", bottom0.diff);
-}
-
 void TestConvLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Conv Layer." << endl;
   Node<cpu> bottom;
