@@ -269,67 +269,35 @@ class DiagRecurrentLayer : public Layer<xpu> {
                                          Tensor3D bottom_data, Tensor3D bottom_diff,
                                          int begin_row, int begin_col) {
       utils::Check(begin_row == 0 || begin_col == 0, "DiagRecurrentLayer: ff input error.");
-      utils::Check(begin_row < in.size(0) || begin_col < in.size(1), "DiagRecurrentLayer: ff input error.");
-      utils::Check(out.size(0) == in.size(0) && out.size(1) == in.size(1), "DiagRecurrentLayer: ff input error.");
+      utils::Check(begin_row < top_data.size(0) || begin_col < top_data.size(1), "DiagRecurrentLayer: ff input error.");
 
       Tensor2D pre_h, pre_h_er;
-      for (int row_idx = end-1; row_idx >= begin; --row_idx) {
-        if (row_idx == begin) {
-            pre_h = begin_h;
-            pre_h_er = begin_h_er;
-        } else {
-            pre_h = top_data.Slice(row_idx-1, row_idx);
-            pre_h_er = top_diff.Slice(row_idx-1, row_idx);
-        }
-        BpOneStep(top_diff.Slice(row_idx, row_idx+1), 
-                  top_data.Slice(row_idx, row_idx+1),
-                  pre_h,
-                  bottom_data.Slice(row_idx, row_idx+1), 
-                  pre_h_er,
-                  bottom_diff.Slice(row_idx, row_idx+1));
+      int num_row = in.size(0), num_col = in.size(1);
+      int step = -1;
+      if ((num_row-begin_row) > (num_col-begin_col)) {
+        step = num_col-begin_col;
+      } else {
+        step = num_row-begin_row;
       }
-  }
-// the tensor must be sliced for var len 
-  void ForwardLeftTop2RightBottom(Tensor3D in, Tensor3D out, int begin_row, int begin_col) {
-      utils::Check(begin_row == 0 || begin_col == 0, "DiagRecurrentLayer: ff input error.");
-      utils::Check(begin_row < in.size(0) || begin_col < in.size(1), "DiagRecurrentLayer: ff input error.");
-      utils::Check(out.size(0) == in.size(0) && out.size(1) == in.size(1), "DiagRecurrentLayer: ff input error.");
-      
-      Tensor2D pre_h;
-      // not need any padding, begin h and c are set to 0
-      for (index_t row_idx = begin_row, col_idx = begin_col; 
-           row_idx < in.size(0) && col_idx < in.size(1); 
-           ++row_idx, ++col_idx) {
+      int end_row_idx = begin_row + step - 1, 
+      int end_col_idx = begin_col + step - 1;
+
+      for (int row_idx = end_row_idx, col_idx = end_col_idx; 
+           row_idx >= 0 && col_idx >= 0; 
+           --row_idx, --col_idx) {
         if (row_idx == 0 || col_idx == 0) {
-          pre_h = begin_h;
-        } else {
-          pre_h = out[row_idx-1].Slice(col_idx-1, col_idx);
-        }
-        ForwardOneStep(pre_h,
-                       in[row_idx].Slice(col_idx, col_idx+1),
-                       out[row_idx].Slice(col_idx, col_idx+1));
-      }
-  }
-
-  void BackpropForRight2LeftRnn(Tensor2D top_data, Tensor2D top_diff, 
-                                Tensor2D bottom_data, Tensor2D bottom_diff) {
-      int begin = 0, end = top_data.size(0);
-
-      Tensor2D pre_h, pre_h_er;
-      for (int row_idx = begin; row_idx < end; ++row_idx) {
-        if (row_idx == end-1) {
             pre_h = begin_h;
             pre_h_er = begin_h_er;
         } else {
-            pre_h = top_data.Slice(row_idx+1, row_idx+2);
-            pre_h_er = top_diff.Slice(row_idx+1, row_idx+2);
+            pre_h = top_data[row_idx-1].Slice(col_idx-1, col_idx);
+            pre_h_er = top_diff[row_idx-1].Slice(col_idx-1, col_idx);
         }
-        BpOneStep(top_diff.Slice(row_idx, row_idx+1), 
-                  top_data.Slice(row_idx, row_idx+1),
+        BpOneStep(top_diff[row_idx].Slice(col_idx, col_idx+1), 
+                  top_data[row_idx].Slice(col_idx, col_idx+1),
                   pre_h,
-                  bottom_data.Slice(row_idx, row_idx+1), 
+                  bottom_data[row_idx].Slice(col_idx, col_idx+1), 
                   pre_h_er,
-                  bottom_diff.Slice(row_idx, row_idx+1));
+                  bottom_diff[row_idx].Slice(col_idx, col_idx+1));
       }
   }
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
@@ -340,22 +308,28 @@ class DiagRecurrentLayer : public Layer<xpu> {
     Tensor4D top_data = top[0]->data;
     Tensor4D bottom_data = bottom[0]->data;
     Tensor4D bottom_diff = bottom[0]->diff;
-        
+    Tensor2D l_sen_len = bottom[1]->length;
+    Tensor2D r_sen_len = bottom[2]->length;
+
     begin_h_er = 0.; 
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
-        int len = bottom[0]->length[batch_idx][seq_idx];
-        utils::Assert(len >= 0, "DiagRecurrentLayer: sequence length error.");
+        int l_len = l_sen_len[batch_idx][seq_idx];
+        int r_len = r_sen_len[batch_idx][seq_idx];
+        utils::Assert(l_len >= 0 && r_len >= 0, "DiagRecurrentLayer: sequence length error.");
         if (!reverse) {
-            BackpropForLeft2RightRnn(top_data[batch_idx][seq_idx].Slice(0,len), 
-                                     top_diff[batch_idx][seq_idx].Slice(0,len), 
-                                     bottom_data[batch_idx][seq_idx].Slice(0,len), 
-                                     bottom_diff[batch_idx][seq_idx].Slice(0,len));
+          for (index_t begin_col = 0; begin_col < r_len; ++begin_col) {
+            BackpropForLeftTop2RightBottomRnn(bottom_data[batch_idx].Slice(0, l_len).Slice(0, r_len),
+                                              top_data[batch_idx].Slice(0, l_len).Slice(0, r_len),
+                                              0, begin_col);
+          }
+          for (index_t begin_row = 1; begin_row < l_len; ++begin_row) {
+            BackpropForLeftTop2RightBottomRnn(bottom_data[batch_idx].Slice(0, l_len).Slice(0, r_len),
+                                              top_data[batch_idx].Slice(0, l_len).Slice(0, r_len),
+                                              begin_row, 0);
+          }
         } else {
-            BackpropForRight2LeftRnn(top_data[batch_idx][seq_idx].Slice(0,len), 
-                                     top_diff[batch_idx][seq_idx].Slice(0,len), 
-                                     bottom_data[batch_idx][seq_idx].Slice(0,len), 
-                                     bottom_diff[batch_idx][seq_idx].Slice(0,len));
+          utils::Check(false, "DiagRecurrentLayer: to do.");
         }
       }
     }
