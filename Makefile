@@ -79,6 +79,7 @@ layer_cpu.o layer_gpu.o: src/layer/layer_impl.cpp src/layer/layer_impl.cu\
 
 updater_cpu.o updater_gpu.o: src/updater/updater_impl.cpp src/updater/updater_impl.cu\
 	src/updater/*.hpp src/updater/*.h src/utils/*.h
+  
 initializer_cpu.o initializer_gpu.o: src/initializer/initializer_impl.cpp src/initializer/initializer_impl.cu\
   src/initializer/*.hpp src/initializer/*.h src/utils/*.h
   
@@ -87,6 +88,7 @@ checker_cpu.o checker_gpu.o: src/checker/checker_impl.cpp src/checker/checker_im
  
 net_cpu.o net_gpu.o: src/net/net_impl.cpp src/net/net_impl.cu\
 	src/net/*.h src/net/*.hpp
+ 
 statistic.h: src/statistic/statistic.h
 
 io.o: src/io/jsoncpp.cpp src/io/json/*.* 
