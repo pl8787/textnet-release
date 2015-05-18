@@ -208,24 +208,22 @@ class DiagRecurrentLayer : public Layer<xpu> {
 
     top_data = 0.f;
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
-      for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
-        int l_len = l_sen_len[batch_idx][seq_idx];
-        int r_len = r_sen_len[batch_idx][seq_idx];
-        utils::Assert(l_len >= 0 && r_len >= 0, "DiagRecurrentLayer: sequence length error.");
-        if (!reverse) {
-          for (index_t begin_col = 0; begin_col < r_len; ++begin_col) {
-            ForwardLeftTop2RightBottom(bottom_data[batch_idx].Slice(0, l_len).Slice(0, r_len),
-                                       top_data[batch_idx].Slice(0, l_len).Slice(0, r_len),
-                                       0, begin_col);
-          }
-          for (index_t begin_row = 1; begin_row < l_len; ++begin_row) {
-            ForwardLeftTop2RightBottom(bottom_data[batch_idx].Slice(0, l_len).Slice(0, r_len),
-                                       top_data[batch_idx].Slice(0, l_len).Slice(0, r_len),
-                                       begin_row, 0);
-          }
-        } else {
-          utils::Check(false, "DiagRecurrentLayer: to do.");
+      int l_len = l_sen_len[batch_idx][0];
+      int r_len = r_sen_len[batch_idx][0];
+      utils::Assert(l_len >= 0 && r_len >= 0, "DiagRecurrentLayer: sequence length error.");
+      if (!reverse) {
+        for (index_t begin_col = 0; begin_col < r_len; ++begin_col) {
+          ForwardLeftTop2RightBottom(bottom_data[batch_idx].Slice(0, l_len).Slice(0, r_len),
+                                     top_data[batch_idx].Slice(0, l_len).Slice(0, r_len),
+                                     0, begin_col);
         }
+        for (index_t begin_row = 1; begin_row < l_len; ++begin_row) {
+          ForwardLeftTop2RightBottom(bottom_data[batch_idx].Slice(0, l_len).Slice(0, r_len),
+                                     top_data[batch_idx].Slice(0, l_len).Slice(0, r_len),
+                                     begin_row, 0);
+        }
+      } else {
+        utils::Check(false, "DiagRecurrentLayer: to do.");
       }
     }
     // checkNanParams();
@@ -275,11 +273,6 @@ class DiagRecurrentLayer : public Layer<xpu> {
       utils::Check(out.size(0) == in.size(0) && out.size(1) == in.size(1), "DiagRecurrentLayer: ff input error.");
 
       Tensor2D pre_h, pre_h_er;
-
-      for (index_t row_idx = begin_row, col_idx = begin_col; 
-           row_idx < in.size(0) && col_idx < in.size(1); 
-           ++row_idx, ++col_idx) {
-      }
       for (int row_idx = end-1; row_idx >= begin; --row_idx) {
         if (row_idx == begin) {
             pre_h = begin_h;
