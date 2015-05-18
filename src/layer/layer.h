@@ -82,6 +82,7 @@ const int kNextBasketData = 73;
 
 
 /*! \brief these are enumeration */
+const int kInit = -1;
 const int kTrain = 0;
 const int kTest = 1;
 

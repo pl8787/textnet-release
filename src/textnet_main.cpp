@@ -81,6 +81,8 @@ int main(int argc, char *argv[]) {
   DeviceType device_type = CPU_DEVICE;
   bool need_cross_valid = false;
   bool need_param = false;
+  int netTagType = kTrainValidTest;
+
   if (argc > 1) {
     model_file = string(argv[1]);
   }
@@ -97,13 +99,19 @@ int main(int argc, char *argv[]) {
 	if (string(argv[i]) == "-param") {
 		need_param = true;
 	}
+	if (string(argv[i]) == "-nettype") {
+		++i;
+		if (string(argv[i]) == "Train") {
+			netTagType = kTrainValidTest;
+		} else if (string(argv[i]) == "Test") {
+			netTagType = kTestOnly;
+		}
+	}
 	
   }
   
-  int netTagType = kTrainValidTest;
-
   if ( !need_cross_valid ) {
-    INet* net = CreateNet(device_type, kTrainValidTest);
+    INet* net = CreateNet(device_type, netTagType);
 	if ( !need_param ) {
 		net->InitNet(model_file);
 	} else {

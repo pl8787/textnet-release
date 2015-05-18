@@ -217,6 +217,9 @@ class Net : public INet{
 
 	ReadParamShare();
 	ReadSave();
+
+	// Set init phrase type
+	phrase_type = kInit;
   }
 
   void ReadNetConfig() {
@@ -710,6 +713,14 @@ class Net : public INet{
         if (layers[layer_idx]->params[param_idx].is_share) {
             continue;
         }
+		if (layers_params_root[layer_idx].isNull()) {
+			utils::Printf("\tNo Initial Params at layer: %d\n", layer_idx);
+			continue;
+		}
+		if (layers_params_root[layer_idx][param_idx].isNull()) {
+			utils::Printf("\tNo Initial Params at layer: %d, param: \n", layer_idx, param_idx);
+            continue;
+		}
         Json::Value node_root = layers_params_root[layer_idx][param_idx];
         layers[layer_idx]->params[param_idx].LoadNode(node_root, false);
       }

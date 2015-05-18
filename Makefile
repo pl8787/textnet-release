@@ -34,7 +34,7 @@ LDFLAGS += $(foreach librarydir,$(LIBRARY_DIRS),-L$(librarydir)) \
 export NVCCFLAGS = --use_fast_math -g -O3 -ccbin $(CXX)
 
 # specify tensor path
-BIN = bin/textnet bin/grad_check # bin/textnet_test bin/textnet_matching bin/textnet_senti bin/textnet_nb
+BIN = bin/textnet bin/grad_check bin/textnet_testonly# bin/textnet_test bin/textnet_matching bin/textnet_senti bin/textnet_nb
 OBJ = layer_cpu.o initializer_cpu.o updater_cpu.o checker_cpu.o io.o settingv.o net_cpu.o 
 CUOBJ = layer_gpu.o initializer_gpu.o updater_gpu.o checker_gpu.o net_gpu.o
 STATISTIC = statistic.h
@@ -97,6 +97,7 @@ settingv.o: src/utils/settingv.cpp src/utils/*.h
 
 
 bin/textnet: src/textnet_main.cpp $(OBJ) $(CUOBJ) $(STATISTIC)
+bin/textnet_testonly: src/textnet_testonly.cpp $(OBJ) $(STATISTIC)
 # bin/textnet_matching: src/textnet_matching.cpp $(OBJ) $(CUOBJ)
 # bin/textnet_senti: src/textnet_senti.cpp $(OBJ) $(CUOBJ)
 bin/textnet_nb: src/textnet_nextbasket.cpp $(OBJ) $(CUOBJ)
