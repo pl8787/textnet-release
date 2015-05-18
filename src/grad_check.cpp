@@ -719,6 +719,92 @@ void TestSoftmaxFuncLayer(mshadow::Random<cpu>* prnd) {
   cout << "Done." << endl;
 }
 
+void TestDiagRecurrentLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Diag Recurrent Layer." << endl;
+  Node<cpu> bottom0, bottom1, bottom2;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom0);
+  bottoms.push_back(&bottom1);
+  bottoms.push_back(&bottom2);
+  tops.push_back(&top);
+  
+  bottom0.Resize(Shape4(1,10,12, 5), true);
+  bottom1.Resize(Shape4(1,1,10,2), true);
+  bottom2.Resize(Shape4(1,1,12,2), true);
+  bottom1.length = 4;
+  bottom2.length = 5;
+  prnd->SampleUniform(&bottom0.data, -0.1, 0.1);
+  
+  map<string, SettingV> setting;
+  {
+    setting["d_mem"] = 2;
+    map<string, SettingV> &w_filler = *(new map<string, SettingV>());
+      w_filler["init_type"] = SettingV(initializer::kUniform);
+      w_filler["range"] = SettingV(1.f);
+    setting["w_filler"] = SettingV(&w_filler);
+    setting["u_filler"] = SettingV(&w_filler);
+
+    map<string, SettingV> &b_filler = *(new map<string, SettingV>());
+      b_filler["init_type"] = SettingV(initializer::kZero);
+    setting["b_filler"] = SettingV(&b_filler);
+      
+    map<string, SettingV> &w_updater = *(new map<string, SettingV>());
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["eps"] = SettingV(0.01f);
+      w_updater["batch_size"] = SettingV(1);
+      w_updater["mat_iter"] = SettingV(10000);
+      w_updater["lr"] = SettingV(0.1f);
+    setting["w_updater"] = SettingV(&w_updater);
+    setting["u_updater"] = SettingV(&w_updater);
+    setting["b_updater"] = SettingV(&w_updater);
+  }
+
+  Layer<cpu> *layer = CreateLayer<cpu>(kDiagRecurrent);
+  layer->PropAll();
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+  layer->Forward(bottoms, tops);
+  top.diff = top.data;
+  // PrintTensor("bottom0", bottom0.data);
+  // PrintTensor("bottom1", bottom1.data);
+  // PrintTensor("top", top.data);
+  // PrintTensor("top_diff", top.diff);
+  // PrintTensor("param_diff", layer->GetParams()[0].diff);
+  
+  using namespace checker;
+  // Checker<cpu> * cker = CreateChecker<cpu>();
+  // map<string, SettingV> setting_checker;
+  // setting_checker["range_min"] = SettingV(-0.0001f);
+  // setting_checker["range_max"] = SettingV(0.0001f);
+  // setting_checker["delta"] = SettingV(0.0001f);
+  // cker->SetupChecker(setting_checker, prnd);
+  // cout << "Check Error." << endl;
+  // cker->CheckError(layer, bottoms, tops);
+  // // PrintTensor("bottom0_diff", bottom0.diff);
+  // // PrintTensor("bottom1_diff", bottom1.diff);
+
+  // cout << "Check Grad." << endl;
+  // cker->CheckGrad(layer, bottoms, tops);
+
+  // layer->Forward(bottoms, tops);
+  PrintTensor("t_diff",  tops[0]->diff);
+  layer->Backprop(bottoms, tops);
+  // PrintTensor("b0_data", bottoms[0]->data);
+  // PrintTensor("t_data",  tops[0]->data);
+  PrintTensor("t_diff",  tops[0]->diff);
+  // PrintTensor("b0_diff", bottoms[0]->diff);
+  // PrintTensor("w_data", bottoms[0]->diff);
+  // PrintTensor("b0_length", bottoms[0]->length);
+  // PrintTensor("t_length", tops[0]->length);
+  // PrintTensor("b0_diff", bottoms[0]->diff);
+  // PrintTensor("t_diff", tops[0]->diff);
+  cout << "Done." << endl;
+}
+
+
 void TestDynamicPoolingLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Product Layer." << endl;
   Node<cpu> bottom0, bottom1, bottom2;
@@ -1733,7 +1819,7 @@ int main(int argc, char *argv[]) {
   // TestMatchLayer(&rnd);
 
   // TestGateLayer(&rnd);
-  TestDynamicPoolingLayer(&rnd);
+  TestDiagRecurrentLayer(&rnd);
   // TestSoftmaxFuncLayer(&rnd);
   // TestGatingLayer(&rnd);
   // TestSoftmaxVarLenFuncLayer(&rnd);

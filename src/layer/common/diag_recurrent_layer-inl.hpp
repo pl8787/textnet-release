@@ -162,15 +162,17 @@ class DiagRecurrentLayer : public Layer<xpu> {
     }
   }
   // the tensor must be sliced for var len 
-  void ForwardLeftTop2RightBottom(Tensor3D in, Tensor3D out, int begin_row, int begin_col) {
+  void ForwardLeftTop2RightBottom(Tensor3D in, Tensor3D out, 
+                                  int begin_row, int begin_col, 
+                                  int max_row, int max_col) {
       utils::Check(begin_row == 0 || begin_col == 0, "DiagRecurrentLayer: ff input error.");
-      utils::Check(begin_row < in.size(0) || begin_col < in.size(1), "DiagRecurrentLayer: ff input error.");
+      utils::Check(begin_row < max_row || begin_col < max_col, "DiagRecurrentLayer: ff input error.");
       utils::Check(out.size(0) == in.size(0) && out.size(1) == in.size(1), "DiagRecurrentLayer: ff input error.");
       
       Tensor2D pre_h;
       // not need any padding, begin h and c are set to 0
       for (index_t row_idx = begin_row, col_idx = begin_col; 
-           row_idx < in.size(0) && col_idx < in.size(1); 
+           row_idx < max_row && col_idx < max_col;
            ++row_idx, ++col_idx) {
         if (row_idx == 0 || col_idx == 0) {
           pre_h = begin_h;
@@ -213,14 +215,16 @@ class DiagRecurrentLayer : public Layer<xpu> {
       utils::Assert(l_len >= 0 && r_len >= 0, "DiagRecurrentLayer: sequence length error.");
       if (!reverse) {
         for (index_t begin_col = 0; begin_col < r_len; ++begin_col) {
-          ForwardLeftTop2RightBottom(bottom_data[batch_idx].Slice(0, l_len).Slice(0, r_len),
-                                     top_data[batch_idx].Slice(0, l_len).Slice(0, r_len),
-                                     0, begin_col);
+          ForwardLeftTop2RightBottom(bottom_data[batch_idx],
+                                     top_data[batch_idx],
+                                     0, begin_col,
+                                     l_len, r_len);
         }
         for (index_t begin_row = 1; begin_row < l_len; ++begin_row) {
-          ForwardLeftTop2RightBottom(bottom_data[batch_idx].Slice(0, l_len).Slice(0, r_len),
-                                     top_data[batch_idx].Slice(0, l_len).Slice(0, r_len),
-                                     begin_row, 0);
+          ForwardLeftTop2RightBottom(bottom_data[batch_idx],
+                                     top_data[batch_idx],
+                                     begin_row, 0,
+                                     l_len, r_len);
         }
       } else {
         utils::Check(false, "DiagRecurrentLayer: to do.");
@@ -267,21 +271,21 @@ class DiagRecurrentLayer : public Layer<xpu> {
 
   void BackpropForLeftTop2RightBottomRnn(Tensor3D top_data, Tensor3D top_diff, 
                                          Tensor3D bottom_data, Tensor3D bottom_diff,
-                                         int begin_row, int begin_col) {
+                                         int begin_row, int begin_col,
+                                         int max_row, int max_col) {
       utils::Check(begin_row == 0 || begin_col == 0, "DiagRecurrentLayer: ff input error.");
-      utils::Check(begin_row < top_data.size(0) || begin_col < top_data.size(1), "DiagRecurrentLayer: ff input error.");
+      utils::Check(begin_row < max_row || begin_col < max_col, "DiagRecurrentLayer: ff input error.");
 
-      Tensor2D pre_h, pre_h_er;
-      int num_row = in.size(0), num_col = in.size(1);
       int step = -1;
-      if ((num_row-begin_row) > (num_col-begin_col)) {
-        step = num_col-begin_col;
+      if ((max_row-begin_row) > (max_col-begin_col)) {
+        step = max_col-begin_col;
       } else {
-        step = num_row-begin_row;
+        step = max_row-begin_row;
       }
-      int end_row_idx = begin_row + step - 1, 
+      int end_row_idx = begin_row + step - 1; 
       int end_col_idx = begin_col + step - 1;
 
+      Tensor2D pre_h, pre_h_er;
       for (int row_idx = end_row_idx, col_idx = end_col_idx; 
            row_idx >= 0 && col_idx >= 0; 
            --row_idx, --col_idx) {
@@ -313,24 +317,28 @@ class DiagRecurrentLayer : public Layer<xpu> {
 
     begin_h_er = 0.; 
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
-      for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
-        int l_len = l_sen_len[batch_idx][seq_idx];
-        int r_len = r_sen_len[batch_idx][seq_idx];
-        utils::Assert(l_len >= 0 && r_len >= 0, "DiagRecurrentLayer: sequence length error.");
-        if (!reverse) {
-          for (index_t begin_col = 0; begin_col < r_len; ++begin_col) {
-            BackpropForLeftTop2RightBottomRnn(bottom_data[batch_idx].Slice(0, l_len).Slice(0, r_len),
-                                              top_data[batch_idx].Slice(0, l_len).Slice(0, r_len),
-                                              0, begin_col);
-          }
-          for (index_t begin_row = 1; begin_row < l_len; ++begin_row) {
-            BackpropForLeftTop2RightBottomRnn(bottom_data[batch_idx].Slice(0, l_len).Slice(0, r_len),
-                                              top_data[batch_idx].Slice(0, l_len).Slice(0, r_len),
-                                              begin_row, 0);
-          }
-        } else {
-          utils::Check(false, "DiagRecurrentLayer: to do.");
+      int l_len = l_sen_len[batch_idx][0];
+      int r_len = r_sen_len[batch_idx][0];
+      utils::Assert(l_len >= 0 && r_len >= 0, "DiagRecurrentLayer: sequence length error.");
+      if (!reverse) {
+        for (index_t begin_col = 0; begin_col < r_len; ++begin_col) {
+          BackpropForLeftTop2RightBottomRnn(top_data[batch_idx],
+                                            top_diff[batch_idx],
+                                            bottom_data[batch_idx],
+                                            bottom_diff[batch_idx],
+                                            0, begin_col,
+                                            l_len, r_len);
         }
+        for (index_t begin_row = 1; begin_row < l_len; ++begin_row) {
+          BackpropForLeftTop2RightBottomRnn(top_data[batch_idx],
+                                            top_diff[batch_idx],
+                                            bottom_data[batch_idx],
+                                            bottom_diff[batch_idx],
+                                            begin_row, 0,
+                                            l_len, r_len);
+        }
+      } else {
+        utils::Check(false, "DiagRecurrentLayer: to do.");
       }
     }
   }

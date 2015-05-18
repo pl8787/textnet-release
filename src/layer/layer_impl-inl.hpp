@@ -19,6 +19,7 @@
 #include "./common/sum_layer-inl.hpp"
 #include "./common/recurrent_layer-inl.hpp"
 #include "./common/max_recurrent_layer-inl.hpp"
+#include "./common/diag_recurrent_layer-inl.hpp"
 #include "./common/convolutional_lstm_layer-inl.hpp"
 #include "./common/whole_pooling_layer-inl.hpp"
 #include "./common/topk_pooling_layer-inl.hpp"
@@ -69,6 +70,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kProduct: return new ProductLayer<xpu>(type);
     case kRecurrent: return new RecurrentLayer<xpu>(type);
     case kMaxRecurrent: return new MaxRecurrentLayer<xpu>(type);
+    case kDiagRecurrent: return new DiagRecurrentLayer<xpu>(type);
     case kSequenceDimReduction: return new SequenceDimReductionLayer<xpu>(type);
     case kConvolutionalLstm: return new ConvolutionalLstmLayer<xpu>(type);
     case kGate: return new GateLayer<xpu>(type);

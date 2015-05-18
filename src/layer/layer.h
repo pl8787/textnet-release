@@ -66,6 +66,7 @@ const int kGating = 40;
 const int kLr2softmax = 41;
 const int kDup4lstm = 42;
 const int kDynamicPooling = 43;
+const int kDiagRecurrent = 44;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;
