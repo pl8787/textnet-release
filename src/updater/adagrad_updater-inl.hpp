@@ -23,6 +23,8 @@ class AdagradUpdater : public Updater<xpu, dim>{
     this->defaults["eps"] = SettingV(0.1f);
     this->defaults["l2"] = SettingV(0.0f);
     this->defaults["max_iter"] = SettingV(-1);
+    this->defaults["lr_decay_factor"] = SettingV(1.f);
+    this->defaults["lr_decay_interval"] = SettingV(0);
 
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -41,6 +43,8 @@ class AdagradUpdater : public Updater<xpu, dim>{
     max_iter = setting["max_iter"].iVal(); 
     batch_size = setting["batch_size"].iVal(); 
     wd = setting["l2"].fVal(); 
+    lr_decay_interval = setting["lr_decay_interval"].iVal(); 
+    lr_decay_factor   = setting["lr_decay_factor"].fVal(); 
     
     iter = 0;
   }
@@ -54,13 +58,14 @@ class AdagradUpdater : public Updater<xpu, dim>{
   virtual void Update(mshadow::Tensor<xpu, dim> data, 
                       mshadow::Tensor<xpu, dim> diff) {
 
-    if (iter == 0) {
+    if (iter == 0 || ((max_iter > 0) && (iter % max_iter == 0))) {
       sumGradSquare.Resize(data.shape_, 0.);
     }
+    if ((iter > 0) && (lr_decay_interval > 0) && (iter % lr_decay_interval == 0)) {
+      lr *= lr_decay_factor;
+    }
+
     ++iter;
-    if (max_iter > 0) {
-      iter %= max_iter;
-    } 
     
     if (batch_size > 1) {
         diff /= float(batch_size);
@@ -77,13 +82,14 @@ class AdagradUpdater : public Updater<xpu, dim>{
                             mshadow::Tensor<xpu, dim> diff, 
                             mshadow::Tensor<xpu, 1> idx) {
 
-    if (iter == 0) {
-      sumGradSquare.Resize(data.shape_, 0.0f);
+    if (iter == 0 || ((max_iter > 0) && (iter % max_iter == 0))) {
+      sumGradSquare.Resize(data.shape_, 0.);
     }
+    if ((iter > 0) && (lr_decay_interval > 0) && (iter % lr_decay_interval == 0)) {
+      lr *= lr_decay_factor;
+    }
+
     ++iter;
-    if (max_iter > 0) {
-      iter %= max_iter;
-    } 
 
     if (batch_size > 1) {
         diff /= float(batch_size);
@@ -106,9 +112,9 @@ class AdagradUpdater : public Updater<xpu, dim>{
     }
   }
  protected: 
-  int iter, max_iter, batch_size;
+  int iter, max_iter, batch_size, lr_decay_interval;
   mshadow::TensorContainer<xpu, dim> sumGradSquare;
-  float eps, lr, wd;
+  float eps, lr, wd, lr_decay_factor;
 
 };
 }  // namespace updater

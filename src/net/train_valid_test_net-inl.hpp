@@ -26,12 +26,6 @@ class TrainValidTestNet : public Net<xpu>{
 	for (int iter = 0; iter < this->max_iters["Train"]; ++iter) {
 
         this->SaveModel(iter);
-
-
-		if (this->display_interval["Train"] > 0 && iter % this->display_interval["Train"] == 0) {
-			this->TrainDisplay("Train", iter);
-		}
-
         this->SaveModelActivation(iter);
 
 		if (this->display_interval["Valid"] > 0 && iter % this->display_interval["Valid"] == 0) {
@@ -43,6 +37,9 @@ class TrainValidTestNet : public Net<xpu>{
 		}	
 
 		this->TrainOneStep("Train");
+		if (this->display_interval["Train"] > 0 && iter % this->display_interval["Train"] == 0) {
+			this->TrainDisplay("Train", iter);
+		}
 	}
   } 
 };

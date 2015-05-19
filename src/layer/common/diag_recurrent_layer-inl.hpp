@@ -166,8 +166,9 @@ class DiagRecurrentLayer : public Layer<xpu> {
                                   int begin_row, int begin_col, 
                                   int max_row, int max_col) {
       utils::Check(begin_row == 0 || begin_col == 0, "DiagRecurrentLayer: ff input error.");
-      utils::Check(begin_row < max_row || begin_col < max_col, "DiagRecurrentLayer: ff input error.");
+      utils::Check(begin_row < max_row && begin_col < max_col, "DiagRecurrentLayer: ff input error.");
       utils::Check(out.size(0) == in.size(0) && out.size(1) == in.size(1), "DiagRecurrentLayer: ff input error.");
+      utils::Check(max_row <= in.size(0) && max_col <= in.size(1), "DiagRecurrentLayer: ff input error.");
       
       Tensor2D pre_h;
       // not need any padding, begin h and c are set to 0
@@ -273,8 +274,9 @@ class DiagRecurrentLayer : public Layer<xpu> {
                                          Tensor3D bottom_data, Tensor3D bottom_diff,
                                          int begin_row, int begin_col,
                                          int max_row, int max_col) {
-      utils::Check(begin_row == 0 || begin_col == 0, "DiagRecurrentLayer: ff input error.");
-      utils::Check(begin_row < max_row || begin_col < max_col, "DiagRecurrentLayer: ff input error.");
+      utils::Check(begin_row == 0 || begin_col == 0, "DiagRecurrentLayer: bp input error.");
+      utils::Check(begin_row < max_row && begin_col < max_col, "DiagRecurrentLayer: bp input error.");
+      utils::Check(max_row <= top_data.size(0) && max_col <= top_data.size(1), "DiagRecurrentLayer: bp input error.");
 
       int step = -1;
       if ((max_row-begin_row) > (max_col-begin_col)) {
