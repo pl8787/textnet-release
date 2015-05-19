@@ -56,6 +56,7 @@ class INet {
     // virtual void SaveModelActivation(string tag, string dir_path, vector<string> node_names, int num_iter) = 0;
     virtual void SaveModelActivation(string tag, vector<string> node_names, int num_iter, string file_name) = 0;
     // virtual void LoadModel(string tag, string model_name) = 0;
+    virtual void LoadModel(Json::Value &net_root) = 0;
     // virtual void SaveModel(string tag, int iter) = 0;
     virtual void LoadModel(string model_file) = 0;
     virtual void SaveModel(int cur_iter) = 0;
@@ -206,6 +207,7 @@ class Net : public INet{
 
     if (!root["need_reshape"].isNull()) {
         need_reshape = root["need_reshape"].asBool();
+        utils::Printf("Set need_reshape to %d\n", need_reshape);
     }
 
 	ReadNetConfig();
@@ -732,12 +734,17 @@ class Net : public INet{
     ifstream ifs(model_file.c_str());
     ifs >> net_root;
     ifs.close();
+    LoadModel(net_root);
+  }
+
+  virtual void LoadModel(Json::Value &net_root) {
 	utils::Check(!net_root["config"].isNull(), "No [config] section.");
 	utils::Check(!net_root["layers_params"].isNull(), "No [layers_params] section.");
     root = net_root["config"];
     InitNet(root);
     LoadParams(net_root["layers_params"]);
   }
+
   
   virtual void Start() = 0;
 

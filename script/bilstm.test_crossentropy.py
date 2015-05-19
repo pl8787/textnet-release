@@ -4,19 +4,19 @@ import copy, os
 from gen_conf_file import *
 from dataset_cfg import *
 
-def gen_bilstm(d_mem, init, lr, dataset, l2, batch_size):
+def gen_bilstm(d_mem, init, lr, dataset):
     # print "ORC: left & right lstm share parameters"
     is_share = False
     net = {}
+    # dataset = 'tb_fine'
+    # dataset = 'mr'
     if dataset == 'mr':
         net['cross_validation'] = 10
     ds = DatasetCfg(dataset)
     g_filler = gen_uniform_filter_setting(init)
     zero_filler = gen_zero_filter_setting()
     # g_updater = gen_adadelta_setting()
-    print "Batch size, only rescale gradient"
-    g_updater = gen_adagrad_setting(lr = lr, l2 = 0., batch_size = batch_size)
-    zero_l2_updater = gen_adadelta_setting(l2 = 0., batch_size = batch_size)
+    g_updater = gen_adagrad_setting(lr = lr, l2 = 0., batch_size = ds.train_batch_size)
 
     g_layer_setting = {}
     g_layer_setting['no_bias'] = True
@@ -32,7 +32,7 @@ def gen_bilstm(d_mem, init, lr, dataset, l2, batch_size):
     net_cfg_train, net_cfg_valid, net_cfg_test = {}, {}, {}
     net['net_config'] = [net_cfg_train, net_cfg_valid, net_cfg_test]
     net_cfg_train["tag"] = "Train"
-    net_cfg_train["max_iters"] = (ds.n_train * 15)/ ds.train_batch_size 
+    net_cfg_train["max_iters"] = (ds.n_train * 10)/ ds.train_batch_size 
     net_cfg_train["display_interval"] = (ds.n_train/ds.train_batch_size)/300
     net_cfg_train["out_nodes"] = ['acc']
     net_cfg_valid["tag"] = "Valid"
@@ -93,8 +93,6 @@ def gen_bilstm(d_mem, init, lr, dataset, l2, batch_size):
     layer['layer_type'] = 21
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
-    print "ORC: without weight decay on word embedding"
-    setting['w_updater'] = zero_l2_updater
     setting['embedding_file'] = ds.embedding_file
     setting['feat_size'] = ds.d_word_rep
     setting['word_count'] = ds.vocab_size
@@ -116,7 +114,7 @@ def gen_bilstm(d_mem, init, lr, dataset, l2, batch_size):
     layer['top_nodes'] = ['l_pool_rep']
     layer['layer_name'] = 'l_wholePooling'
     layer['layer_type'] =  25 
-    setting = {"pool_type":"last"}
+    setting = {"pool_type":"max"}
     layer['setting'] = setting
 
     layer = {}
@@ -153,7 +151,7 @@ def gen_bilstm(d_mem, init, lr, dataset, l2, batch_size):
     layer['top_nodes'] = ['r_pool_rep']
     layer['layer_name'] = 'r_wholePooling'
     layer['layer_type'] =  25 
-    setting = {"pool_type":"first"}
+    setting = {"pool_type":"max"}
     layer['setting'] = setting
 
     layer = {}
@@ -173,14 +171,13 @@ def gen_bilstm(d_mem, init, lr, dataset, l2, batch_size):
     layer['top_nodes'] = ['drop_rep']
     layer['layer_name'] = 'dropout'
     layer['layer_type'] =  13
-    print "ORC, dp_rate:", ds.dp_rate
     setting = {'rate':ds.dp_rate}
     layer['setting'] = setting
 
     layer = {}
     layers.append(layer) 
     layer['bottom_nodes'] = ['drop_rep']
-    layer['top_nodes'] = ['softmax_ret']
+    layer['top_nodes'] = ['softmax_score']
     layer['layer_name'] = 'softmax_fullconnect'
     layer['layer_type'] = 11 
     setting = copy.deepcopy(g_layer_setting)
@@ -190,16 +187,34 @@ def gen_bilstm(d_mem, init, lr, dataset, l2, batch_size):
 
     layer = {}
     layers.append(layer) 
-    layer['bottom_nodes'] = ['softmax_ret', 'y']
-    layer['top_nodes'] = ['loss']
+    layer['bottom_nodes'] = ['softmax_score']
+    layer['top_nodes'] = ['softmax_prob']
     layer['layer_name'] = 'softmax_activation'
-    layer['layer_type'] = 51 
-    setting = {}
+    layer['layer_type'] = 37 # softmax_func
+    setting = {'axis':1}
     layer['setting'] = setting
 
     layer = {}
     layers.append(layer) 
-    layer['bottom_nodes'] = ['softmax_ret', 'y']
+    layer['bottom_nodes'] = ['softmax_prob', 'y']
+    layer['top_nodes'] = ['loss']
+    layer['layer_name'] = 'cross_entropy'
+    layer['layer_type'] = 57 # loss
+    setting = {}
+    layer['setting'] = setting
+
+    # layer = {}
+    # layers.append(layer) 
+    # layer['bottom_nodes'] = ['softmax_ret', 'y']
+    # layer['top_nodes'] = ['loss']
+    # layer['layer_name'] = 'softmax_activation'
+    # layer['layer_type'] = 51 
+    # setting = {}
+    # layer['setting'] = setting
+
+    layer = {}
+    layers.append(layer) 
+    layer['bottom_nodes'] = ['softmax_prob', 'y']
     layer['top_nodes'] = ['acc']
     layer['layer_name'] = 'accuracy'
     layer['layer_type'] = 56 
@@ -208,16 +223,16 @@ def gen_bilstm(d_mem, init, lr, dataset, l2, batch_size):
 
     return net
 
-run = 1
-for dataset in ['mr']:
-    for d_mem in [50]:
+for dataset in ['mr', 'tb_fine', 'tb_binary']:
+    for d_mem in [50, 75]:
         idx = 0
         for init in [0.3, 0.1, 0.03]:
-            for l2 in [0.0]:
-                for batch_size in [1, 2, 5, 10]:
-                    net = gen_bilstm(d_mem = d_mem, init = init, lr =lr, dataset=dataset, l2=l2, batch_size=batch_size)
-                    net['log'] = 'log.bilstm.{0}.d{1}.run{2}.{3}'.format(dataset, str(d_mem), str(run), str(idx))
-                    # gen_conf_file(net, '/home/wsx/exp/tb/log/run.3/bilstm.max.tb_fine.model.' + str(idx))
-                    gen_conf_file(net, '/home/wsx/exp/gate/lstm/run.4/model.bilstm.{0}.d{1}.{2}'.format(dataset, str(d_mem), str(idx)))
-                    idx += 1
-                    # os.system("../bin/textnet ../bin/conv_lstm_simulation.model > ../bin/simulation/neg.gen.train.{0}".format(d_mem))
+            for lr in [0.3, 0.1, 0.03]:
+                net = gen_bilstm(d_mem = d_mem, init = init, lr =lr, dataset=dataset)
+                net['log'] = 'log.bilstm.max.{0}.d{1}.{2}'.format(dataset, str(d_mem), str(idx))
+                # gen_conf_file(net, '/home/wsx/exp/tb/log/run.3/bilstm.max.tb_fine.model.' + str(idx))
+                # gen_conf_file(net, '/home/wsx/exp/gate/lstm/run.4/model.bilstm.max.{0}.d{1}.{2}'.format(dataset, str(d_mem), str(idx)))
+                gen_conf_file(net, '/home/wsx/exp/gate/lstm/run.4/model.test_crossentropy_bilstm.max.{0}.d{1}.{2}'.format(dataset, str(d_mem), str(idx)))
+                idx += 1
+                exit(0)
+                # os.system("../bin/textnet ../bin/conv_lstm_simulation.model > ../bin/simulation/neg.gen.train.{0}".format(d_mem))

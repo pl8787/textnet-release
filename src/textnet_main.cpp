@@ -76,16 +76,59 @@ void PrintTensor(const char * name, Tensor<cpu, 4> x) {
     cout << endl;
 }
 
+void run_one(Json::Value &cfg_root, int netTagType) {
+  DeviceType device_type = CPU_DEVICE;
+  INet* net = CreateNet(device_type, netTagType);
+  if (cfg_root["layers_params"].isNull()) { // new model
+    net->InitNet(cfg_root);
+  } else {
+    net->LoadModel(cfg_root);
+  }
+#if REALTIME_SERVER==1
+    using namespace textnet::statistic;
+    Statistic statistic;
+    statistic.SetNet(net);
+    statistic.Start();
+#endif
+  net->Start();
+}
+
+void run_cv(Json::Value &cfg_root, int netTagType, int cv_fold) {
+  vector<int> data_file_layer_idx;
+  if (netTagType == kTrainValidTest) {
+    data_file_layer_idx.push_back(0);
+    data_file_layer_idx.push_back(1);
+    data_file_layer_idx.push_back(2);
+  } else {
+      mshadow::utils::Check(false, "CV: need to set cv data file layer idx.");
+  }
+
+  for (int i = 0; i < cv_fold; ++i) {
+    cout << "PROCESSING CROSS VALIDATION FOLD " << i << "..." << endl;
+    stringstream ss;
+    ss << i;
+    Json::Value cv_cfg = cfg_root;
+    for (size_t j = 0; j < data_file_layer_idx.size(); ++j) {
+      int layer_idx = data_file_layer_idx[j];
+      if (cv_cfg["layers"][layer_idx]["setting"]["data_file"].isNull()) {
+        mshadow::utils::Check(false, "CV: no data file section in this layer.");
+      }
+      string data_file = cfg_root["layers"][layer_idx]["setting"]["data_file"].asString();
+      data_file += "."+ss.str();
+      cv_cfg["layers"][layer_idx]["setting"]["data_file"] = data_file;
+    }
+    run_one(cv_cfg, netTagType);
+  }
+}
+
 int main(int argc, char *argv[]) {
   string model_file = "model/matching.tvt.model";
-  DeviceType device_type = CPU_DEVICE;
   bool need_cross_valid = false;
-  bool need_param = false;
-  int netTagType = kTrainValidTest;
-
+  // bool need_param = false;
   if (argc > 1) {
     model_file = string(argv[1]);
   }
+  /*
   for (int i = 2; i < argc; ++i) {
 	if (string(argv[i]) == "cpu") {
 		device_type = CPU_DEVICE;
@@ -99,59 +142,22 @@ int main(int argc, char *argv[]) {
 	if (string(argv[i]) == "-param") {
 		need_param = true;
 	}
-	if (string(argv[i]) == "-nettype") {
-		++i;
-		if (string(argv[i]) == "Train") {
-			netTagType = kTrainValidTest;
-		} else if (string(argv[i]) == "Test") {
-			netTagType = kTestOnly;
-		}
-	}
-	
-  }
-  
-  if ( !need_cross_valid ) {
-    INet* net = CreateNet(device_type, netTagType);
-	if ( !need_param ) {
-		net->InitNet(model_file);
-	} else {
-		net->LoadModel(model_file);
-	}
-
-#if REALTIME_SERVER==1
-    using namespace textnet::statistic;
-    Statistic statistic;
-    statistic.SetNet(net);
-    statistic.Start();
-#endif
-
-    net->Start();
-  } 
-#if 0  
-  else {
-    int n_fold = cfg["cross_validation"].asInt();
-    for (int i = 0; i < n_fold; ++i) {
-      cout << "PROCESSING CROSS VALIDATION FOLD " << i << "..." << endl;
-      stringstream ss;
-      ss << i;
-      Json::Value net_cfg = cfg;
-      for (int layer_idx = 0; layer_idx < net_cfg["layers"].size(); ++layer_idx) {
-        if (net_cfg["layers"][layer_idx]["setting"]["data_file"].isNull()) {
-          continue;
-        }
-        string data_file = cfg["layers"][layer_idx]["setting"]["data_file"].asString();
-        data_file += "."+ss.str();
-        net_cfg["layers"][layer_idx]["setting"]["data_file"] = data_file;
-      }
-
-      INet* net = CreateNet(device_type, netTagType);
-      net->InitNet(net_cfg);
-      net->Start();
-    }
-  }
-
+  }*/
+  Json::Value net_root;
+  ifstream ifs(model_file.c_str());
+  ifs >> net_root;
   ifs.close();
-#endif 
-  return 0;
+
+  if (net_root["layers_params"].isNull() && !net_root["cross_validation"].isNull()) { 
+    need_cross_valid = true;
+  }
+
+  int netTagType = kTrainValidTest;
+  if (!need_cross_valid) {
+    run_one(net_root, netTagType);
+  } else {
+    int n_fold = net_root["cross_validation"].asInt();
+    run_cv(net_root, netTagType, n_fold);
+  }
 }
 

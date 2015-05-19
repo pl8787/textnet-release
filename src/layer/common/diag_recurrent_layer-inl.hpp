@@ -1,5 +1,5 @@
-#ifndef TEXTNET_LAYER_RECURRENT_LAYER_INL_HPP_
-#define TEXTNET_LAYER_RECURRENT_LAYER_INL_HPP_
+#ifndef TEXTNET_LAYER_DIAG_RECURRENT_LAYER_INL_HPP_
+#define TEXTNET_LAYER_DIAG_RECURRENT_LAYER_INL_HPP_
 
 #include <iostream>
 
@@ -11,13 +11,17 @@
 namespace textnet {
 namespace layer {
 
+// The input  format is (batch_size, height, width, input_feat_num).
+// The output format is (batch_size, height, width, output_feat_num).
+// For that textnet doesnot support 2D variable length, 
+// this layer need another 2 nodes to give the length.
 template<typename xpu>
-class RecurrentLayer : public Layer<xpu> {
+class DiagRecurrentLayer : public Layer<xpu> {
  public:
-  RecurrentLayer(LayerType type) { this->layer_type = type; }
-  virtual ~RecurrentLayer(void) {}
+  DiagRecurrentLayer(LayerType type) { this->layer_type = type; }
+  virtual ~DiagRecurrentLayer(void) {}
   
-  virtual int BottomNodeNum() { return 1; }
+  virtual int BottomNodeNum() { return 3; }
   virtual int TopNodeNum() { return 1; }
   virtual int ParamNodeNum() { return 3; }
 
@@ -52,8 +56,8 @@ class RecurrentLayer : public Layer<xpu> {
                           mshadow::Random<xpu> *prnd) {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);                        
     
-    utils::Check(bottom.size() == BottomNodeNum(), "RecurrentLayer:bottom size problem."); 
-    utils::Check(top.size() == TopNodeNum(), "RecurrentLayer:top size problem.");
+    utils::Check(bottom.size() == BottomNodeNum(), "DiagRecurrentLayer:bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(), "DiagRecurrentLayer:top size problem.");
                   
     d_mem   = setting["d_mem"].iVal();
     d_input = bottom[0]->data.size(3);
@@ -62,7 +66,7 @@ class RecurrentLayer : public Layer<xpu> {
     input_transform = setting["input_transform"].bVal();
     nonlinear_type = setting["nonlinear_type"].sVal();
     if (!input_transform) {
-        utils::Check(d_input == d_mem, "RecurrentLayer:input does not match with memory, need transform.");
+        utils::Check(d_input == d_mem, "DiagRecurrentLayer:input does not match with memory, need transform.");
     }
 
     begin_h.Resize(mshadow::Shape2(1, d_mem), 0.f);
@@ -101,14 +105,16 @@ class RecurrentLayer : public Layer<xpu> {
   // bottom should be padded with only one zero on both sides
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
-    utils::Check(bottom.size() == BottomNodeNum(), "RecurrentLayer:bottom size problem."); 
-    utils::Check(top.size() == TopNodeNum(), "RecurrentLayer:top size problem.");
+    utils::Check(bottom.size() == BottomNodeNum(), "DiagRecurrentLayer:bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(), "DiagRecurrentLayer:top size problem.");
     
     mshadow::Shape<4> shape_in  = bottom[0]->data.shape_;
     mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in[0], shape_in[1], shape_in[2], d_mem);
     top[0]->Resize(shape_out, true);
 
 	bottom[0]->PrintShape("bottom0");
+	bottom[1]->PrintShape("bottom1");
+	bottom[2]->PrintShape("bottom2");
 	top[0]->PrintShape("top0");
   }
 
@@ -152,60 +158,76 @@ class RecurrentLayer : public Layer<xpu> {
     } else if (nonlinear_type == "rectifier") {
       cur_h = mshadow::expr::F<op::relu>(cur_h);    // relu_grad
     } else {
-      utils::Check(false, "RecurrentLayer:nonlinear type error.");
+      utils::Check(false, "DiagRecurrentLayer:nonlinear type error.");
     }
   }
-
-  void ForwardLeft2Right(Tensor2D in, Tensor2D out) {
-      int begin = 0, end = in.size(0);
+  // the tensor must be sliced for var len 
+  void ForwardLeftTop2RightBottom(Tensor3D in, Tensor3D out, 
+                                  int begin_row, int begin_col, 
+                                  int max_row, int max_col) {
+      utils::Check(begin_row == 0 || begin_col == 0, "DiagRecurrentLayer: ff input error.");
+      utils::Check(begin_row < max_row || begin_col < max_col, "DiagRecurrentLayer: ff input error.");
+      utils::Check(out.size(0) == in.size(0) && out.size(1) == in.size(1), "DiagRecurrentLayer: ff input error.");
+      
       Tensor2D pre_h;
       // not need any padding, begin h and c are set to 0
-      for (index_t row_idx = begin; row_idx < end; ++row_idx) {
-        if (row_idx == begin) {
+      for (index_t row_idx = begin_row, col_idx = begin_col; 
+           row_idx < max_row && col_idx < max_col;
+           ++row_idx, ++col_idx) {
+        if (row_idx == 0 || col_idx == 0) {
           pre_h = begin_h;
         } else {
-          pre_h = out.Slice(row_idx-1, row_idx);
+          pre_h = out[row_idx-1].Slice(col_idx-1, col_idx);
         }
         ForwardOneStep(pre_h,
-                       in.Slice(row_idx, row_idx+1),
-                       out.Slice(row_idx, row_idx+1));
+                       in[row_idx].Slice(col_idx, col_idx+1),
+                       out[row_idx].Slice(col_idx, col_idx+1));
       }
   }
-  void ForwardRight2Left(Tensor2D in, Tensor2D out) {
-      int begin = 0, end = in.size(0);
-      Tensor2D pre_h;
-      // not need any padding, begin h and c are set to 0
-      for (int row_idx = end-1; row_idx >= begin; --row_idx) {
-        if (row_idx == end-1) {
-          pre_h = begin_h;
-        } else {
-          pre_h = out.Slice(row_idx+1, row_idx+2);
-        }
-        ForwardOneStep(pre_h,
-                       in.Slice(row_idx, row_idx+1),
-                       out.Slice(row_idx, row_idx+1));
-      }
-  }
+  // void ForwardRight2Left(Tensor2D in, Tensor2D out) {
+  //     int begin = 0, end = in.size(0);
+  //     Tensor2D pre_h;
+  //     // not need any padding, begin h and c are set to 0
+  //     for (int row_idx = end-1; row_idx >= begin; --row_idx) {
+  //       if (row_idx == end-1) {
+  //         pre_h = begin_h;
+  //       } else {
+  //         pre_h = out.Slice(row_idx+1, row_idx+2);
+  //       }
+  //       ForwardOneStep(pre_h,
+  //                      in.Slice(row_idx, row_idx+1),
+  //                      out.Slice(row_idx, row_idx+1));
+  //     }
+  // }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     // checkNanParams();
     Tensor4D bottom_data = bottom[0]->data;
     Tensor4D top_data = top[0]->data;
-    top[0]->length = mshadow::expr::F<op::identity>(bottom[0]->length);
+    Tensor2D l_sen_len = bottom[1]->length;
+    Tensor2D r_sen_len = bottom[2]->length;
 
     top_data = 0.f;
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
-      for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
-        int len = bottom[0]->length[batch_idx][seq_idx];
-        utils::Assert(len >= 0, "RecurrentLayer: sequence length error.");
-        if (!reverse) {
-          ForwardLeft2Right(bottom_data[batch_idx][seq_idx].Slice(0,len),  
-                            top_data[batch_idx][seq_idx].Slice(0,len));
-        } else {
-          ForwardRight2Left(bottom_data[batch_idx][seq_idx].Slice(0,len), 
-                            top_data[batch_idx][seq_idx].Slice(0,len));
+      int l_len = l_sen_len[batch_idx][0];
+      int r_len = r_sen_len[batch_idx][0];
+      utils::Assert(l_len >= 0 && r_len >= 0, "DiagRecurrentLayer: sequence length error.");
+      if (!reverse) {
+        for (index_t begin_col = 0; begin_col < r_len; ++begin_col) {
+          ForwardLeftTop2RightBottom(bottom_data[batch_idx],
+                                     top_data[batch_idx],
+                                     0, begin_col,
+                                     l_len, r_len);
         }
+        for (index_t begin_row = 1; begin_row < l_len; ++begin_row) {
+          ForwardLeftTop2RightBottom(bottom_data[batch_idx],
+                                     top_data[batch_idx],
+                                     begin_row, 0,
+                                     l_len, r_len);
+        }
+      } else {
+        utils::Check(false, "DiagRecurrentLayer: to do.");
       }
     }
     // checkNanParams();
@@ -230,7 +252,7 @@ class RecurrentLayer : public Layer<xpu> {
     } else if (nonlinear_type == "rectifier") {
       cur_h_er *= mshadow::expr::F<op::relu_grad>(cur_h);    // relu_grad
     } else {
-      utils::Check(false, "RecurrentLayer:nonlinear type error.");
+      utils::Check(false, "DiagRecurrentLayer:nonlinear type error.");
     }
 
     pre_h_er += dot(cur_h_er, u_data.T());
@@ -247,46 +269,39 @@ class RecurrentLayer : public Layer<xpu> {
     }
   }
 
-  void BackpropForLeft2RightRnn(Tensor2D top_data, Tensor2D top_diff, 
-                                Tensor2D bottom_data, Tensor2D bottom_diff) {
-      int begin = 0, end = top_data.size(0);
+  void BackpropForLeftTop2RightBottomRnn(Tensor3D top_data, Tensor3D top_diff, 
+                                         Tensor3D bottom_data, Tensor3D bottom_diff,
+                                         int begin_row, int begin_col,
+                                         int max_row, int max_col) {
+      utils::Check(begin_row == 0 || begin_col == 0, "DiagRecurrentLayer: ff input error.");
+      utils::Check(begin_row < max_row || begin_col < max_col, "DiagRecurrentLayer: ff input error.");
 
-      Tensor2D pre_h, pre_h_er;
-      for (int row_idx = end-1; row_idx >= begin; --row_idx) {
-        if (row_idx == begin) {
-            pre_h = begin_h;
-            pre_h_er = begin_h_er;
-        } else {
-            pre_h = top_data.Slice(row_idx-1, row_idx);
-            pre_h_er = top_diff.Slice(row_idx-1, row_idx);
-        }
-        BpOneStep(top_diff.Slice(row_idx, row_idx+1), 
-                  top_data.Slice(row_idx, row_idx+1),
-                  pre_h,
-                  bottom_data.Slice(row_idx, row_idx+1), 
-                  pre_h_er,
-                  bottom_diff.Slice(row_idx, row_idx+1));
+      int step = -1;
+      if ((max_row-begin_row) > (max_col-begin_col)) {
+        step = max_col-begin_col;
+      } else {
+        step = max_row-begin_row;
       }
-  }
-  void BackpropForRight2LeftRnn(Tensor2D top_data, Tensor2D top_diff, 
-                                Tensor2D bottom_data, Tensor2D bottom_diff) {
-      int begin = 0, end = top_data.size(0);
+      int end_row_idx = begin_row + step - 1; 
+      int end_col_idx = begin_col + step - 1;
 
       Tensor2D pre_h, pre_h_er;
-      for (int row_idx = begin; row_idx < end; ++row_idx) {
-        if (row_idx == end-1) {
+      for (int row_idx = end_row_idx, col_idx = end_col_idx; 
+           row_idx >= 0 && col_idx >= 0; 
+           --row_idx, --col_idx) {
+        if (row_idx == 0 || col_idx == 0) {
             pre_h = begin_h;
             pre_h_er = begin_h_er;
         } else {
-            pre_h = top_data.Slice(row_idx+1, row_idx+2);
-            pre_h_er = top_diff.Slice(row_idx+1, row_idx+2);
+            pre_h = top_data[row_idx-1].Slice(col_idx-1, col_idx);
+            pre_h_er = top_diff[row_idx-1].Slice(col_idx-1, col_idx);
         }
-        BpOneStep(top_diff.Slice(row_idx, row_idx+1), 
-                  top_data.Slice(row_idx, row_idx+1),
+        BpOneStep(top_diff[row_idx].Slice(col_idx, col_idx+1), 
+                  top_data[row_idx].Slice(col_idx, col_idx+1),
                   pre_h,
-                  bottom_data.Slice(row_idx, row_idx+1), 
+                  bottom_data[row_idx].Slice(col_idx, col_idx+1), 
                   pre_h_er,
-                  bottom_diff.Slice(row_idx, row_idx+1));
+                  bottom_diff[row_idx].Slice(col_idx, col_idx+1));
       }
   }
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
@@ -297,23 +312,33 @@ class RecurrentLayer : public Layer<xpu> {
     Tensor4D top_data = top[0]->data;
     Tensor4D bottom_data = bottom[0]->data;
     Tensor4D bottom_diff = bottom[0]->diff;
-        
+    Tensor2D l_sen_len = bottom[1]->length;
+    Tensor2D r_sen_len = bottom[2]->length;
+
     begin_h_er = 0.; 
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
-      for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
-        int len = bottom[0]->length[batch_idx][seq_idx];
-        utils::Assert(len >= 0, "RecurrentLayer: sequence length error.");
-        if (!reverse) {
-            BackpropForLeft2RightRnn(top_data[batch_idx][seq_idx].Slice(0,len), 
-                                     top_diff[batch_idx][seq_idx].Slice(0,len), 
-                                     bottom_data[batch_idx][seq_idx].Slice(0,len), 
-                                     bottom_diff[batch_idx][seq_idx].Slice(0,len));
-        } else {
-            BackpropForRight2LeftRnn(top_data[batch_idx][seq_idx].Slice(0,len), 
-                                     top_diff[batch_idx][seq_idx].Slice(0,len), 
-                                     bottom_data[batch_idx][seq_idx].Slice(0,len), 
-                                     bottom_diff[batch_idx][seq_idx].Slice(0,len));
+      int l_len = l_sen_len[batch_idx][0];
+      int r_len = r_sen_len[batch_idx][0];
+      utils::Assert(l_len >= 0 && r_len >= 0, "DiagRecurrentLayer: sequence length error.");
+      if (!reverse) {
+        for (index_t begin_col = 0; begin_col < r_len; ++begin_col) {
+          BackpropForLeftTop2RightBottomRnn(top_data[batch_idx],
+                                            top_diff[batch_idx],
+                                            bottom_data[batch_idx],
+                                            bottom_diff[batch_idx],
+                                            0, begin_col,
+                                            l_len, r_len);
         }
+        for (index_t begin_row = 1; begin_row < l_len; ++begin_row) {
+          BackpropForLeftTop2RightBottomRnn(top_data[batch_idx],
+                                            top_diff[batch_idx],
+                                            bottom_data[batch_idx],
+                                            bottom_diff[batch_idx],
+                                            begin_row, 0,
+                                            l_len, r_len);
+        }
+      } else {
+        utils::Check(false, "DiagRecurrentLayer: to do.");
       }
     }
   }

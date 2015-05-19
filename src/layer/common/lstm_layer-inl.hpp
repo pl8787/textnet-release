@@ -33,6 +33,7 @@ class LstmLayer : public Layer<xpu> {
     
     // require value, set to SettingV(),
     // it will force custom to set in config
+    this->defaults["grad_norm2"] = SettingV();
     this->defaults["d_mem"] = SettingV();
     this->defaults["w_filler"] = SettingV();
     this->defaults["u_filler"] = SettingV();
@@ -59,6 +60,7 @@ class LstmLayer : public Layer<xpu> {
     d_input = bottom[0]->data.size(3);
     no_bias = setting["no_bias"].bVal();
     reverse = setting["reverse"].bVal();
+    grad_norm2 = setting["grad_norm2"].fVal();
 
     begin_h.Resize(mshadow::Shape2(1, d_mem), 0.f);
     begin_c.Resize(mshadow::Shape2(1, d_mem), 0.f);
@@ -239,6 +241,17 @@ class LstmLayer : public Layer<xpu> {
     cc= Tensor2D(g.dptr_ + 3 * d_mem, mshadow::Shape2(1, d_mem));
   }
 
+  float norm2(Tensor2D t) {
+    float norm2 = 0.f;
+    for (int i = 0; i < t.size(0); ++i) {
+      for (int j = 0; j < t.size(1); ++j) {
+        norm2 += t[i][j] * t[i][j];
+      }
+    }
+    if (norm2 == 0.f) norm2 = 0.0000000001;
+    return sqrt(norm2);
+  }
+
   void BpOneStep(Tensor2D cur_h_er,
                  Tensor2D pre_c,
                  Tensor2D pre_h,
@@ -257,6 +270,13 @@ class LstmLayer : public Layer<xpu> {
     Tensor2D w_er = this->params[0].diff[0][0];
     Tensor2D u_er = this->params[1].diff[0][0];
     Tensor2D b_er = this->params[2].diff[0][0];
+
+    // gradient normalization by norm 2
+    float n2 = norm2(cur_h_er);
+    if (n2 > grad_norm2) {
+      // utils::Printf("LSTM: grad norm, %f,%f\n", n2, grad_norm2);
+      cur_h_er *= (grad_norm2/n2);
+    }
     
     Tensor2D i, f, o, cc, i_er, f_er, o_er, cc_er;
     SplitGate(cur_g, i, f, o, cc);
@@ -396,6 +416,7 @@ class LstmLayer : public Layer<xpu> {
  protected:
   int d_mem, d_input;
   bool no_bias, reverse; 
+  float grad_norm2;
   mshadow::TensorContainer<xpu, 4> c, g, c_er, g_er;
   mshadow::TensorContainer<xpu, 2> begin_h, begin_c, begin_c_er, begin_h_er;
 };

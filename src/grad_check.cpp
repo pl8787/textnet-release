@@ -73,6 +73,119 @@ void PrintTensor(const char * name, Tensor<cpu, 4> x) {
     }
     cout << endl;
 }
+void TestSwapAxisLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check SwapAxis Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.data.Resize(Shape4(2,1,5,5), 1.0);
+  bottom.diff.Resize(Shape4(2,1,5,5), 0.0);
+  
+  map<string, SettingV> setting;
+  setting["axis1"] = SettingV(1);
+  setting["axis2"] = SettingV(3);
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_swap = CreateLayer<cpu>(kSwapAxis);
+  layer_swap->PropAll();
+  layer_swap->SetupLayer(setting, bottoms, tops, prnd);
+  layer_swap->Reshape(bottoms, tops);
+  layer_swap->Forward(bottoms, tops);
+
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("top", top.data);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.1f);
+  setting_checker["range_max"] = SettingV(0.1f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cker->CheckError(layer_swap, bottoms, tops);
+}
+
+void TestFlattenLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Flatten Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.data.Resize(Shape4(2,1,5,5), 1.0);
+  bottom.diff.Resize(Shape4(2,1,5,5), 0.0);
+ 
+  map<string, SettingV> setting;
+  setting["axis1"] = SettingV(1);
+  setting["axis2"] = SettingV(3);
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_flat = CreateLayer<cpu>(kFlatten);
+  layer_flat->PropAll();
+  layer_flat->SetupLayer(setting, bottoms, tops, prnd);
+  layer_flat->Reshape(bottoms, tops);
+  layer_flat->Forward(bottoms, tops);
+
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("top", top.data);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.1f);
+  setting_checker["range_max"] = SettingV(0.1f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cker->CheckError(layer_flat, bottoms, tops);
+}
+
+void TestHingeLossLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check HingeLoss Layer." << endl;
+  Node<cpu> bottom0;
+  Node<cpu> bottom1;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom0);
+  bottoms.push_back(&bottom1);
+  tops.push_back(&top);
+  
+  bottom0.Resize(Shape4(4,1,1,1));
+  bottom1.Resize(Shape4(4,1,1,1));
+
+  bottom0.data[0][0][0][0] = 0.2;
+  bottom0.data[1][0][0][0] = 0.3;
+  bottom0.data[2][0][0][0] = 1.5;
+  bottom0.data[3][0][0][0] = -0.5;
+
+  bottom1.data[0][0][0][0] = 1;
+  bottom1.data[1][0][0][0] = 0;
+  bottom1.data[2][0][0][0] = 1;
+  bottom1.data[3][0][0][0] = 0;
+  
+  map<string, SettingV> setting;
+  setting["delta"] = SettingV(1.0f);
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_hingeloss = CreateLayer<cpu>(kHingeLoss);
+  layer_hingeloss->PropAll();
+  layer_hingeloss->SetupLayer(setting, bottoms, tops, prnd);
+  layer_hingeloss->Reshape(bottoms, tops);
+  layer_hingeloss->Forward(bottoms, tops);
+  layer_hingeloss->Backprop(bottoms, tops);
+  
+  PrintTensor("top data", top.data);
+  PrintTensor("bottom diff", bottom0.diff);
+}
 
 void TestMatchLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Match Layer." << endl;
@@ -186,120 +299,6 @@ void TestDropoutLayer(mshadow::Random<cpu>* prnd) {
   setting_checker["delta"] = SettingV(0.0001f);
   cker->SetupChecker(setting_checker, prnd);
   cker->CheckError(layer_dropout, bottoms, tops);
-}
-
-void TestSwapAxisLayer(mshadow::Random<cpu>* prnd) {
-  cout << "G Check SwapAxis Layer." << endl;
-  Node<cpu> bottom;
-  Node<cpu> top;
-  vector<Node<cpu>*> bottoms;
-  vector<Node<cpu>*> tops;
-  
-  bottoms.push_back(&bottom);
-  tops.push_back(&top);
-  
-  bottom.data.Resize(Shape4(2,1,5,5), 1.0);
-  bottom.diff.Resize(Shape4(2,1,5,5), 0.0);
-  
-  map<string, SettingV> setting;
-  setting["axis1"] = SettingV(1);
-  setting["axis2"] = SettingV(3);
-  
-  /// Test Activation Layer
-  Layer<cpu> * layer_swap = CreateLayer<cpu>(kSwapAxis);
-  layer_swap->PropAll();
-  layer_swap->SetupLayer(setting, bottoms, tops, prnd);
-  layer_swap->Reshape(bottoms, tops);
-  layer_swap->Forward(bottoms, tops);
-
-  PrintTensor("bottom", bottom.data);
-  PrintTensor("top", top.data);
-  
-  using namespace checker;
-  Checker<cpu> * cker = CreateChecker<cpu>();
-  map<string, SettingV> setting_checker;
-  setting_checker["range_min"] = SettingV(-0.1f);
-  setting_checker["range_max"] = SettingV(0.1f);
-  setting_checker["delta"] = SettingV(0.0001f);
-  cker->SetupChecker(setting_checker, prnd);
-  cker->CheckError(layer_swap, bottoms, tops);
-}
-
-void TestFlattenLayer(mshadow::Random<cpu>* prnd) {
-  cout << "G Check Flatten Layer." << endl;
-  Node<cpu> bottom;
-  Node<cpu> top;
-  vector<Node<cpu>*> bottoms;
-  vector<Node<cpu>*> tops;
-  
-  bottoms.push_back(&bottom);
-  tops.push_back(&top);
-  
-  bottom.data.Resize(Shape4(2,1,5,5), 1.0);
-  bottom.diff.Resize(Shape4(2,1,5,5), 0.0);
-  
-  map<string, SettingV> setting;
-  setting["axis1"] = SettingV(1);
-  setting["axis2"] = SettingV(3);
-  
-  /// Test Activation Layer
-  Layer<cpu> * layer_flat = CreateLayer<cpu>(kFlatten);
-  layer_flat->PropAll();
-  layer_flat->SetupLayer(setting, bottoms, tops, prnd);
-  layer_flat->Reshape(bottoms, tops);
-  layer_flat->Forward(bottoms, tops);
-
-  PrintTensor("bottom", bottom.data);
-  PrintTensor("top", top.data);
-  
-  using namespace checker;
-  Checker<cpu> * cker = CreateChecker<cpu>();
-  map<string, SettingV> setting_checker;
-  setting_checker["range_min"] = SettingV(-0.1f);
-  setting_checker["range_max"] = SettingV(0.1f);
-  setting_checker["delta"] = SettingV(0.0001f);
-  cker->SetupChecker(setting_checker, prnd);
-  cker->CheckError(layer_flat, bottoms, tops);
-}
-
-void TestHingeLossLayer(mshadow::Random<cpu>* prnd) {
-  cout << "G Check HingeLoss Layer." << endl;
-  Node<cpu> bottom0;
-  Node<cpu> bottom1;
-  Node<cpu> top;
-  vector<Node<cpu>*> bottoms;
-  vector<Node<cpu>*> tops;
-  
-  bottoms.push_back(&bottom0);
-  bottoms.push_back(&bottom1);
-  tops.push_back(&top);
-  
-  bottom0.Resize(Shape4(4,1,1,1));
-  bottom1.Resize(Shape4(4,1,1,1));
-
-  bottom0.data[0][0][0][0] = 0.2;
-  bottom0.data[1][0][0][0] = 0.3;
-  bottom0.data[2][0][0][0] = 1.5;
-  bottom0.data[3][0][0][0] = -0.5;
-
-  bottom1.data[0][0][0][0] = 1;
-  bottom1.data[1][0][0][0] = 0;
-  bottom1.data[2][0][0][0] = 1;
-  bottom1.data[3][0][0][0] = 0;
-  
-  map<string, SettingV> setting;
-  setting["delta"] = SettingV(1.0f);
-  
-  /// Test Activation Layer
-  Layer<cpu> * layer_hingeloss = CreateLayer<cpu>(kHingeLoss);
-  layer_hingeloss->PropAll();
-  layer_hingeloss->SetupLayer(setting, bottoms, tops, prnd);
-  layer_hingeloss->Reshape(bottoms, tops);
-  layer_hingeloss->Forward(bottoms, tops);
-  layer_hingeloss->Backprop(bottoms, tops);
-  
-  PrintTensor("top data", top.data);
-  PrintTensor("bottom diff", bottom0.diff);
 }
 
 void TestConvLayer(mshadow::Random<cpu>* prnd) {
@@ -792,6 +791,156 @@ void TestSoftmaxFuncLayer(mshadow::Random<cpu>* prnd) {
   // PrintTensor("t_diff", tops[0]->diff);
   cout << "Done." << endl;
 }
+
+void TestDiagRecurrentLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Diag Recurrent Layer." << endl;
+  Node<cpu> bottom0, bottom1, bottom2;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom0);
+  bottoms.push_back(&bottom1);
+  bottoms.push_back(&bottom2);
+  tops.push_back(&top);
+  
+  bottom0.Resize(Shape4(1,10,12, 5), true);
+  bottom1.Resize(Shape4(1,1,10,2), true);
+  bottom2.Resize(Shape4(1,1,12,2), true);
+  bottom1.length = 4;
+  bottom2.length = 5;
+  prnd->SampleUniform(&bottom0.data, -0.1, 0.1);
+  
+  map<string, SettingV> setting;
+  {
+    setting["d_mem"] = 2;
+    map<string, SettingV> &w_filler = *(new map<string, SettingV>());
+      w_filler["init_type"] = SettingV(initializer::kUniform);
+      w_filler["range"] = SettingV(1.f);
+    setting["w_filler"] = SettingV(&w_filler);
+    setting["u_filler"] = SettingV(&w_filler);
+
+    map<string, SettingV> &b_filler = *(new map<string, SettingV>());
+      b_filler["init_type"] = SettingV(initializer::kZero);
+    setting["b_filler"] = SettingV(&b_filler);
+      
+    map<string, SettingV> &w_updater = *(new map<string, SettingV>());
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["eps"] = SettingV(0.01f);
+      w_updater["batch_size"] = SettingV(1);
+      w_updater["mat_iter"] = SettingV(10000);
+      w_updater["lr"] = SettingV(0.1f);
+    setting["w_updater"] = SettingV(&w_updater);
+    setting["u_updater"] = SettingV(&w_updater);
+    setting["b_updater"] = SettingV(&w_updater);
+  }
+
+  Layer<cpu> *layer = CreateLayer<cpu>(kDiagRecurrent);
+  layer->PropAll();
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+  layer->Forward(bottoms, tops);
+  top.diff = top.data;
+  // PrintTensor("bottom0", bottom0.data);
+  // PrintTensor("bottom1", bottom1.data);
+  // PrintTensor("top", top.data);
+  // PrintTensor("top_diff", top.diff);
+  // PrintTensor("param_diff", layer->GetParams()[0].diff);
+  
+  using namespace checker;
+  // Checker<cpu> * cker = CreateChecker<cpu>();
+  // map<string, SettingV> setting_checker;
+  // setting_checker["range_min"] = SettingV(-0.0001f);
+  // setting_checker["range_max"] = SettingV(0.0001f);
+  // setting_checker["delta"] = SettingV(0.0001f);
+  // cker->SetupChecker(setting_checker, prnd);
+  // cout << "Check Error." << endl;
+  // cker->CheckError(layer, bottoms, tops);
+  // // PrintTensor("bottom0_diff", bottom0.diff);
+  // // PrintTensor("bottom1_diff", bottom1.diff);
+
+  // cout << "Check Grad." << endl;
+  // cker->CheckGrad(layer, bottoms, tops);
+
+  // layer->Forward(bottoms, tops);
+  PrintTensor("t_diff",  tops[0]->diff);
+  layer->Backprop(bottoms, tops);
+  // PrintTensor("b0_data", bottoms[0]->data);
+  // PrintTensor("t_data",  tops[0]->data);
+  PrintTensor("t_diff",  tops[0]->diff);
+  // PrintTensor("b0_diff", bottoms[0]->diff);
+  // PrintTensor("w_data", bottoms[0]->diff);
+  // PrintTensor("b0_length", bottoms[0]->length);
+  // PrintTensor("t_length", tops[0]->length);
+  // PrintTensor("b0_diff", bottoms[0]->diff);
+  // PrintTensor("t_diff", tops[0]->diff);
+  cout << "Done." << endl;
+}
+
+
+void TestDynamicPoolingLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Product Layer." << endl;
+  Node<cpu> bottom0, bottom1, bottom2;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom0);
+  bottoms.push_back(&bottom1);
+  bottoms.push_back(&bottom2);
+  tops.push_back(&top);
+  
+  bottom0.Resize(Shape4(2,2,20,30), true);
+  bottom1.Resize(Shape4(2,2,20,2), true);
+  bottom2.Resize(Shape4(2,2,30,2), true);
+  bottom1.length = 4;
+  bottom2.length = 5;
+  prnd->SampleUniform(&bottom0.data, -0.1, 0.1);
+  
+  map<string, SettingV> setting;
+  {
+      setting["row"] = 10;
+      setting["col"] = 25;
+  }
+
+  Layer<cpu> *layer = CreateLayer<cpu>(kDynamicPooling);
+  layer->PropAll();
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+  // layer->Forward(bottoms, tops);
+  // top.diff = 1.f; // bottom.data;
+  // PrintTensor("bottom0", bottom0.data);
+  // PrintTensor("bottom1", bottom1.data);
+  // PrintTensor("top", top.data);
+  // PrintTensor("top_diff", top.diff);
+  // PrintTensor("param_diff", layer->GetParams()[0].diff);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer, bottoms, tops);
+  // PrintTensor("bottom0_diff", bottom0.diff);
+  // PrintTensor("bottom1_diff", bottom1.diff);
+
+  // cout << "Check Grad." << endl;
+  // cker->CheckGrad(layer, bottoms, tops);
+
+  // layer->Forward(bottoms, tops);
+  // layer->Backprop(bottoms, tops);
+  // PrintTensor("b0_data", bottoms[0]->data);
+  // PrintTensor("t_data",  tops[0]->data);
+  // PrintTensor("b0_length", bottoms[0]->length);
+  // PrintTensor("t_length", tops[0]->length);
+  // PrintTensor("b0_diff", bottoms[0]->diff);
+  // PrintTensor("t_diff", tops[0]->diff);
+  cout << "Done." << endl;
+}
+
 
 void TestProductLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Product Layer." << endl;
@@ -1741,11 +1890,9 @@ int main(int argc, char *argv[]) {
   // TestConvResultTransformLayer(&rnd);
   // TestConvolutionLayer(&rnd);
   // TestMatchLayer(&rnd);
-  // TestSwapAxisLayer(&rnd);
-     TestFlattenLayer(&rnd);
 
   // TestGateLayer(&rnd);
-  TestProductLayer(&rnd);
+  TestDiagRecurrentLayer(&rnd);
   // TestSoftmaxFuncLayer(&rnd);
   // TestGatingLayer(&rnd);
   // TestSoftmaxVarLenFuncLayer(&rnd);
@@ -1754,4 +1901,3 @@ int main(int argc, char *argv[]) {
   // TestHingeLossLayer(&rnd);
   return 0;
 }
-

@@ -19,6 +19,7 @@
 #include "./common/sum_layer-inl.hpp"
 #include "./common/recurrent_layer-inl.hpp"
 #include "./common/max_recurrent_layer-inl.hpp"
+#include "./common/diag_recurrent_layer-inl.hpp"
 #include "./common/convolutional_lstm_layer-inl.hpp"
 #include "./common/whole_pooling_layer-inl.hpp"
 #include "./common/topk_pooling_layer-inl.hpp"
@@ -29,6 +30,8 @@
 #include "./common/softmax_func_var_len_layer-inl.hpp"
 #include "./common/sequcence_dim_reduction_layer-inl.hpp"
 #include "./common/gating_layer-inl.hpp"
+#include "./common/dynamic_pooling_layer-inl.hpp"
+#include "./common/duplicate4lstm_layer-inl.hpp"
 #include "./common/swap_axis_layer-inl.hpp"
 #include "./common/flatten_layer-inl.hpp"
 #include "./common/lr2softmax_layer-inl.hpp"
@@ -60,13 +63,16 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kEmbedding: return new EmbeddingLayer<xpu>(type);
     case kCross: return new CrossLayer<xpu>(type);
     case kSplit: return new SplitLayer<xpu>(type);
+    case kDup4lstm: return new Duplicate4lstmLayer<xpu>(type);
     case kConvResultTransform: return new ConvResultTransformLayer<xpu>(type);
     case kConvLstmSplit: return new SplitLayer<xpu>(type);
     case kDropout: return new DropoutLayer<xpu>(type);
+    case kDynamicPooling: return new DynamicPoolingLayer<xpu>(type);
     case kLstm: return new LstmLayer<xpu>(type);
     case kProduct: return new ProductLayer<xpu>(type);
     case kRecurrent: return new RecurrentLayer<xpu>(type);
     case kMaxRecurrent: return new MaxRecurrentLayer<xpu>(type);
+    case kDiagRecurrent: return new DiagRecurrentLayer<xpu>(type);
     case kSequenceDimReduction: return new SequenceDimReductionLayer<xpu>(type);
     case kConvolutionalLstm: return new ConvolutionalLstmLayer<xpu>(type);
     case kGate: return new GateLayer<xpu>(type);
