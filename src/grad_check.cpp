@@ -1893,6 +1893,8 @@ int main(int argc, char *argv[]) {
 
   // TestGateLayer(&rnd);
   TestDiagRecurrentLayer(&rnd);
+  // TestSwapAxisLayer(mshadow::Random<cpu>* prnd);
+  // TestFlattenLayer(mshadow::Random<cpu>* prnd);
   // TestSoftmaxFuncLayer(&rnd);
   // TestGatingLayer(&rnd);
   // TestSoftmaxVarLenFuncLayer(&rnd);

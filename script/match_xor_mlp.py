@@ -13,10 +13,10 @@ def gen_match_xor_mlp(d_mem, init, lr, dataset, l2):
     g_filler    = gen_uniform_filter_setting(init)
     zero_filler = gen_zero_filter_setting()
     g_updater   = gen_adagrad_setting(lr = lr, l2 = l2, batch_size = ds.train_batch_size)
-    zero_l2_updater   = gen_adagrad_setting(lr = lr, batch_size = ds.train_batch_size)
 
     g_layer_setting = {}
-    g_layer_setting['no_bias'] = True
+    g_layer_setting['no_bias'] = False
+    print "ORC: nobias:", g_layer_setting['no_bias']
     g_layer_setting['w_filler'] = g_filler 
     g_layer_setting['u_filler'] = g_filler
     g_layer_setting['b_filler'] = zero_filler
@@ -102,17 +102,17 @@ def gen_match_xor_mlp(d_mem, init, lr, dataset, l2):
     layer['layer_type'] = 23 
     layer['setting'] = {'op':'xor'}
 
-    # layer = {}
-    # layers.append(layer) 
-    # layer['bottom_nodes'] = ['dot_similarity', 'l_sentence', 'r_sentence']
-    # layer['top_nodes'] = ['dpool_rep']
-    # layer['layer_name'] = 'dynamic_pooling'
-    # layer['layer_type'] = 43
-    # layer['setting'] = {'row':10, 'col':10}
+    layer = {}
+    layers.append(layer) 
+    layer['bottom_nodes'] = ['xor_similarity', 'l_sentence', 'r_sentence']
+    layer['top_nodes'] = ['dpool_rep']
+    layer['layer_name'] = 'dynamic_pooling'
+    layer['layer_type'] = 43
+    layer['setting'] = {'row':10, 'col':10}
 
     layer = {}
     layers.append(layer) 
-    layer['bottom_nodes'] = ['xor_similarity']
+    layer['bottom_nodes'] = ['dpool_rep']
     layer['top_nodes'] = ['hidden_trans']
     layer['layer_name'] = 'mlp_hidden'
     layer['layer_type'] = 11 
@@ -136,6 +136,7 @@ def gen_match_xor_mlp(d_mem, init, lr, dataset, l2):
     layer['top_nodes'] = ['hidden_drop_rep']
     layer['layer_name'] = 'dropout'
     layer['layer_type'] =  13
+    ds.dp_rate = 0.
     print "ORC, dp rate:", ds.dp_rate
     setting = {'rate':ds.dp_rate}
     layer['setting'] = setting
@@ -171,19 +172,19 @@ def gen_match_xor_mlp(d_mem, init, lr, dataset, l2):
     layer['setting'] = setting
     return net
 
-run = 1
+run = 4
 l2 = 0.
 # for dataset in ['paper']:
 for dataset in ['msrp']:
     for d_mem in [50]:
         idx = 0
         for init in [0.1]:
-            for lr in [1, 0.5, 0.3, 0.1, 0.05]:
+            for lr in [1, 0.5, 0.3, 0.1, 0.05, 0.03, 0.01, 0.003]:
                 for lstm_norm2 in [10000]:
                     net = gen_match_xor_mlp(d_mem=d_mem, init=init, lr=lr, dataset=dataset, l2=l2)
-                    net['log'] = 'log.match.xor_mlp.{0}.d{1}.nodrop.run{2}.{3}'.format\
+                    net['log'] = 'log.match.xor_mlp.{0}.d{1}.run{2}.{3}'.format\
                                  (dataset, str(d_mem), str(run), str(idx))
                     gen_conf_file(net, '/home/wsx/exp/match/{0}/xor_mlp/run.{1}/'.format(dataset,str(run)) + \
-                                       'model.match.xor_mlp.{0}.d{1}.nodrop.run{2}.{3}'.format\
+                                       'model.match.xor_mlp.{0}.d{1}.run{2}.{3}'.format\
                                        (dataset, str(d_mem), str(run), str(idx)))
                     idx += 1

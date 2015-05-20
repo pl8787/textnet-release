@@ -66,7 +66,7 @@ class DynamicPoolingLayer : public Layer<xpu>{
                          int begin_col, int end_col, 
                          int &max_row,  int &max_col) {
     max_row = max_col = -1;
-    int max_val = -100000000.f;
+    float max_val = -100000000.f;
     for (int row_idx = begin_row; row_idx < end_row; ++row_idx) {
       for (int col_idx = begin_col; col_idx < end_col; ++col_idx) {
         int real_row_idx = row_idx % input_row;
@@ -127,6 +127,8 @@ class DynamicPoolingLayer : public Layer<xpu>{
                           Tensor2DInt row_pos, Tensor2DInt col_pos) {
     utils::Check(t_out.size(0) == pool_row && t_out.size(1) == pool_col, "DynamicPoolingLayer: size error.");
     utils::Check(t_in.size(0) >= input_row && t_in.size(1) >= input_col, "DynamicPoolingLayer: size error.");
+    utils::Check(t_in.size(0) >= pool_row  && t_in.size(1) >= pool_col, "DynamicPoolingLayer: size error.");
+
     vector<int> begin_pos_row, begin_pos_col;
     dynamic_split(input_row, pool_row, begin_pos_row);
     dynamic_split(input_col, pool_col, begin_pos_col);
@@ -171,11 +173,11 @@ class DynamicPoolingLayer : public Layer<xpu>{
 
     top_data = 0;
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
-      for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
-        pooling_one_matrix(bottom_data[batch_idx][seq_idx], top_data[batch_idx][seq_idx],
-                           bottom_len_l[batch_idx][seq_idx], bottom_len_r[batch_idx][seq_idx],
+      for (index_t channel_idx = 0; channel_idx < bottom_data.size(1); ++channel_idx) {
+        pooling_one_matrix(bottom_data[batch_idx][channel_idx], top_data[batch_idx][channel_idx],
+                           bottom_len_l[batch_idx][0], bottom_len_r[batch_idx][0],
                            row, col,
-                           pos_row[batch_idx][seq_idx], pos_col[batch_idx][seq_idx]);
+                           pos_row[batch_idx][channel_idx], pos_col[batch_idx][channel_idx]);
       }
     }
   }
@@ -187,10 +189,10 @@ class DynamicPoolingLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 4> top_diff     = top[0]->diff;
 
     for (index_t batch_idx = 0; batch_idx < bottom_diff.size(0); ++batch_idx) {
-      for (index_t seq_idx = 0; seq_idx < bottom_diff.size(1); ++seq_idx) {
-        unpooling_one_matrix(bottom_diff[batch_idx][seq_idx], top_diff[batch_idx][seq_idx],
+      for (index_t channel_idx = 0; channel_idx < bottom_diff.size(1); ++channel_idx) {
+        unpooling_one_matrix(bottom_diff[batch_idx][channel_idx], top_diff[batch_idx][channel_idx],
                              row, col,
-                             pos_row[batch_idx][seq_idx], pos_col[batch_idx][seq_idx]);
+                             pos_row[batch_idx][channel_idx], pos_col[batch_idx][channel_idx]);
         
       }
     }
