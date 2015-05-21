@@ -49,7 +49,7 @@ class MatchLayer : public Layer<xpu>{
                   "MatchLayer:top size problem.");
     op = setting["op"].sVal();
 
-	utils::Check(op=="xor" || op=="mul" || op=="plus" || op=="cos", 
+	utils::Check(op=="xor" || op=="mul" || op=="plus" || op=="cos" || op=="elemwise_product", 
 			"MatchLayer: one of xor, mul, plus or cos.");
   }
   
@@ -68,7 +68,11 @@ class MatchLayer : public Layer<xpu>{
 	  feat_size = bottom[0]->data.size(3);
 	}		
                   
-    top[0]->Resize(nbatch, 1, doc_len, doc_len, true);
+    if (op == "elemwise_product") {
+      top[0]->Resize(nbatch, feat_size, doc_len, doc_len, true);
+    } else {
+      top[0]->Resize(nbatch, 1, doc_len, doc_len, true);
+    }
     bottom[0]->PrintShape("bottom0");
     top[0]->PrintShape("top0");
 
@@ -129,13 +133,17 @@ class MatchLayer : public Layer<xpu>{
               m_dot[i][j][k] += bottom0_data4[i][0][j][m] * bottom1_data4[i][0][k][m];
 			}
 		    top_data[i][0][j][k] = m_dot[i][j][k] / (m_norm[i][0][j] * m_norm[i][1][k]);	
+		  } else if (op =="elemwise_product") {
+            for (int m = 0; m < feat_size; ++m) {
+              top_data[i][m][j][k] = bottom0_data4[i][0][j][m] + bottom1_data4[i][0][k][m];
+			}
 		  }  else {
 			utils::Error("In Match Layer: no op named %s.\n", op.c_str());
 		  }
         }
       }
     }
-    
+
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
@@ -179,7 +187,12 @@ class MatchLayer : public Layer<xpu>{
 			    bottom1_diff[i][0][k][m] += (bottom0_data[i][0][j][m] / (m_norm[i][0][j] * m_norm[i][1][k]) 
 						                     - bottom1_data[i][0][k][m] * m_dot[i][j][k] / (m_norm[i][0][j] * pow(m_norm[i][1][k], 3)))
 											* top_diff[i][0][j][k];
-			}
+		    } else if (op == "elemwise_product") {
+			  if (this->prop_error[0])
+                bottom0_diff[i][0][j][m] += bottom1_data[i][0][k][m] * top_diff[i][m][j][k];
+			  if (this->prop_error[1])
+				bottom1_diff[i][0][k][m] += bottom0_data[i][0][j][m] * top_diff[i][m][j][k];
+            }
 		  }
 		}
 	  }
