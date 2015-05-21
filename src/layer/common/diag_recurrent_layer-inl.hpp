@@ -165,42 +165,51 @@ class DiagRecurrentLayer : public Layer<xpu> {
   void ForwardLeftTop2RightBottom(Tensor3D in, Tensor3D out, 
                                   int begin_row, int begin_col, 
                                   int max_row, int max_col) {
-      utils::Check(begin_row == 0 || begin_col == 0, "DiagRecurrentLayer: ff input error.");
-      utils::Check(begin_row < max_row && begin_col < max_col, "DiagRecurrentLayer: ff input error.");
-      utils::Check(out.size(0) == in.size(0) && out.size(1) == in.size(1), "DiagRecurrentLayer: ff input error.");
-      utils::Check(max_row <= in.size(0) && max_col <= in.size(1), "DiagRecurrentLayer: ff input error.");
-      
-      Tensor2D pre_h;
-      // not need any padding, begin h and c are set to 0
-      for (index_t row_idx = begin_row, col_idx = begin_col; 
-           row_idx < max_row && col_idx < max_col;
-           ++row_idx, ++col_idx) {
-        if (row_idx == 0 || col_idx == 0) {
-          pre_h = begin_h;
-        } else {
-          pre_h = out[row_idx-1].Slice(col_idx-1, col_idx);
-        }
-        ForwardOneStep(pre_h,
-                       in[row_idx].Slice(col_idx, col_idx+1),
-                       out[row_idx].Slice(col_idx, col_idx+1));
+    utils::Check(begin_row == 0 || begin_col == 0, "DiagRecurrentLayer: ff input error.");
+    utils::Check(begin_row < max_row && begin_col < max_col, "DiagRecurrentLayer: ff input error.");
+    utils::Check(out.size(0) == in.size(0) && out.size(1) == in.size(1), "DiagRecurrentLayer: ff input error.");
+    utils::Check(max_row <= in.size(0) && max_col <= in.size(1), "DiagRecurrentLayer: ff input error.");
+    
+    Tensor2D pre_h;
+    // not need any padding, begin h and c are set to 0
+    for (index_t row_idx = begin_row, col_idx = begin_col; 
+         row_idx < max_row && col_idx < max_col;
+         ++row_idx, ++col_idx) {
+      if (row_idx == 0 || col_idx == 0) {
+        pre_h = begin_h;
+      } else {
+        pre_h = out[row_idx-1].Slice(col_idx-1, col_idx);
       }
+      ForwardOneStep(pre_h,
+                     in[row_idx].Slice(col_idx, col_idx+1),
+                     out[row_idx].Slice(col_idx, col_idx+1));
+    }
   }
-  // void ForwardRight2Left(Tensor2D in, Tensor2D out) {
-  //     int begin = 0, end = in.size(0);
-  //     Tensor2D pre_h;
-  //     // not need any padding, begin h and c are set to 0
-  //     for (int row_idx = end-1; row_idx >= begin; --row_idx) {
-  //       if (row_idx == end-1) {
-  //         pre_h = begin_h;
-  //       } else {
-  //         pre_h = out.Slice(row_idx+1, row_idx+2);
-  //       }
-  //       ForwardOneStep(pre_h,
-  //                      in.Slice(row_idx, row_idx+1),
-  //                      out.Slice(row_idx, row_idx+1));
-  //     }
-  // }
-  
+  // the tensor must be sliced for var len 
+  void ForwardRightBottom2LeftTop(Tensor3D in, Tensor3D out, 
+                                  int begin_row, int begin_col, 
+                                  int max_row, int max_col) {
+    utils::Check(begin_row == max_row-1 || begin_col == max_col-1, "DiagRecurrentLayer: ff input error.");
+    utils::Check(begin_row < max_row && begin_col < max_col, "DiagRecurrentLayer: ff input error.");
+    utils::Check(out.size(0) == in.size(0) && out.size(1) == in.size(1), "DiagRecurrentLayer: ff input error.");
+    utils::Check(max_row <= in.size(0) && max_col <= in.size(1), "DiagRecurrentLayer: ff input error.");
+    
+    Tensor2D pre_h;
+    // not need any padding, begin h and c are set to 0
+    for (int row_idx = begin_row, col_idx = begin_col; 
+         row_idx >= 0 && col_idx >= 0;
+         --row_idx, --col_idx) {
+      if (row_idx == max_row-1 || col_idx == max_col-1) {
+        pre_h = begin_h;
+      } else {
+        pre_h = out[row_idx+1].Slice(col_idx+1, col_idx+2);
+      }
+      ForwardOneStep(pre_h,
+                     in[row_idx].Slice(col_idx, col_idx+1),
+                     out[row_idx].Slice(col_idx, col_idx+1));
+    }
+  }
+
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     // checkNanParams();
@@ -228,7 +237,18 @@ class DiagRecurrentLayer : public Layer<xpu> {
                                      l_len, r_len);
         }
       } else {
-        utils::Check(false, "DiagRecurrentLayer: to do.");
+        for (index_t begin_col = 0; begin_col < r_len; ++begin_col) {
+          ForwardRightBottom2LeftTop(bottom_data[batch_idx],
+                                     top_data[batch_idx],
+                                     l_len-1, begin_col,
+                                     l_len, r_len);
+        }
+        for (index_t begin_row = 0; begin_row < l_len-1; ++begin_row) {
+          ForwardRightBottom2LeftTop(bottom_data[batch_idx],
+                                     top_data[batch_idx],
+                                     begin_row, r_len-1,
+                                     l_len, r_len);
+        }
       }
     }
     // checkNanParams();
@@ -274,38 +294,77 @@ class DiagRecurrentLayer : public Layer<xpu> {
                                          Tensor3D bottom_data, Tensor3D bottom_diff,
                                          int begin_row, int begin_col,
                                          int max_row, int max_col) {
-      utils::Check(begin_row == 0 || begin_col == 0, "DiagRecurrentLayer: bp input error.");
-      utils::Check(begin_row < max_row && begin_col < max_col, "DiagRecurrentLayer: bp input error.");
-      utils::Check(max_row <= top_data.size(0) && max_col <= top_data.size(1), "DiagRecurrentLayer: bp input error.");
+    utils::Check(begin_row == 0 || begin_col == 0, "DiagRecurrentLayer: bp input error.");
+    utils::Check(begin_row < max_row && begin_col < max_col, "DiagRecurrentLayer: bp input error.");
+    utils::Check(max_row <= top_data.size(0) && max_col <= top_data.size(1), "DiagRecurrentLayer: bp input error.");
 
-      int step = -1;
-      if ((max_row-begin_row) > (max_col-begin_col)) {
-        step = max_col-begin_col;
+    int step = -1;
+    if ((max_row-begin_row) > (max_col-begin_col)) {
+      step = max_col-begin_col;
+    } else {
+      step = max_row-begin_row;
+    }
+    int end_row_idx = begin_row + step - 1; 
+    int end_col_idx = begin_col + step - 1;
+
+    Tensor2D pre_h, pre_h_er;
+    for (int row_idx = end_row_idx, col_idx = end_col_idx; 
+         row_idx >= 0 && col_idx >= 0; 
+         --row_idx, --col_idx) {
+      if (row_idx == 0 || col_idx == 0) {
+          pre_h = begin_h;
+          pre_h_er = begin_h_er;
       } else {
-        step = max_row-begin_row;
+          pre_h = top_data[row_idx-1].Slice(col_idx-1, col_idx);
+          pre_h_er = top_diff[row_idx-1].Slice(col_idx-1, col_idx);
       }
-      int end_row_idx = begin_row + step - 1; 
-      int end_col_idx = begin_col + step - 1;
-
-      Tensor2D pre_h, pre_h_er;
-      for (int row_idx = end_row_idx, col_idx = end_col_idx; 
-           row_idx >= 0 && col_idx >= 0; 
-           --row_idx, --col_idx) {
-        if (row_idx == 0 || col_idx == 0) {
-            pre_h = begin_h;
-            pre_h_er = begin_h_er;
-        } else {
-            pre_h = top_data[row_idx-1].Slice(col_idx-1, col_idx);
-            pre_h_er = top_diff[row_idx-1].Slice(col_idx-1, col_idx);
-        }
-        BpOneStep(top_diff[row_idx].Slice(col_idx, col_idx+1), 
-                  top_data[row_idx].Slice(col_idx, col_idx+1),
-                  pre_h,
-                  bottom_data[row_idx].Slice(col_idx, col_idx+1), 
-                  pre_h_er,
-                  bottom_diff[row_idx].Slice(col_idx, col_idx+1));
-      }
+      BpOneStep(top_diff[row_idx].Slice(col_idx, col_idx+1), 
+                top_data[row_idx].Slice(col_idx, col_idx+1),
+                pre_h,
+                bottom_data[row_idx].Slice(col_idx, col_idx+1), 
+                pre_h_er,
+                bottom_diff[row_idx].Slice(col_idx, col_idx+1));
+    }
   }
+  void BackpropForRightBottom2LeftTopRnn(Tensor3D top_data, Tensor3D top_diff, 
+                                         Tensor3D bottom_data, Tensor3D bottom_diff,
+                                         int begin_row, int begin_col,
+                                         int max_row, int max_col) {
+    utils::Check(begin_row == max_row-1 || begin_col == max_col-1, "DiagRecurrentLayer: bp input error.");
+    utils::Check(begin_row < max_row && begin_col < max_col, "DiagRecurrentLayer: bp input error.");
+    utils::Check(max_row <= top_data.size(0) && max_col <= top_data.size(1), "DiagRecurrentLayer: bp input error.");
+
+    int step = -1;
+    if (begin_row > begin_col) {
+      step = begin_col+1;
+    } else {
+      step = begin_row+1;
+    }
+    int end_row_idx = begin_row - step + 1; 
+    int end_col_idx = begin_col - step + 1;
+    utils::Check(end_row_idx == 0 || end_col_idx == 0, "DiagRecurrentLayer: bp input error.");
+    utils::Check(end_row_idx >= 0 && end_col_idx >= 0, "DiagRecurrentLayer: bp input error.");
+
+    Tensor2D pre_h, pre_h_er;
+    for (int row_idx = end_row_idx, col_idx = end_col_idx; 
+         row_idx <= begin_row && col_idx <= begin_col;
+         ++row_idx, ++col_idx) {
+      if (row_idx == begin_row || col_idx == begin_col) {
+          pre_h = begin_h;
+          pre_h_er = begin_h_er;
+      } else {
+          pre_h = top_data[row_idx+1].Slice(col_idx+1, col_idx+2);
+          pre_h_er = top_diff[row_idx+1].Slice(col_idx+1, col_idx+2);
+      }
+      BpOneStep(top_diff[row_idx].Slice(col_idx, col_idx+1), 
+                top_data[row_idx].Slice(col_idx, col_idx+1),
+                pre_h,
+                bottom_data[row_idx].Slice(col_idx, col_idx+1), 
+                pre_h_er,
+                bottom_diff[row_idx].Slice(col_idx, col_idx+1));
+    }
+  }
+
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
                         const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
@@ -340,7 +399,22 @@ class DiagRecurrentLayer : public Layer<xpu> {
                                             l_len, r_len);
         }
       } else {
-        utils::Check(false, "DiagRecurrentLayer: to do.");
+        for (index_t begin_col = 0; begin_col < r_len; ++begin_col) {
+          BackpropForRightBottom2LeftTopRnn(top_data[batch_idx],
+                                            top_diff[batch_idx],
+                                            bottom_data[batch_idx],
+                                            bottom_diff[batch_idx],
+                                            l_len-1, begin_col,
+                                            l_len, r_len);
+        }
+        for (index_t begin_row = 0; begin_row < l_len-1; ++begin_row) {
+          BackpropForRightBottom2LeftTopRnn(top_data[batch_idx],
+                                            top_diff[batch_idx],
+                                            bottom_data[batch_idx],
+                                            bottom_diff[batch_idx],
+                                            begin_row, r_len-1,
+                                            l_len, r_len);
+        }
       }
     }
   }

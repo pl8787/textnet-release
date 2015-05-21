@@ -7,21 +7,22 @@ from dataset_cfg import *
 
 def gen_conv_birnn(d_mem, init, l2, lr, dataset, batch_size):
     net = {}
-    # dataset = 'tb_fine'
     if dataset == 'mr':
         net['cross_validation'] = 10
 
     ds = DatasetCfg(dataset)
 
     ds = DatasetCfg(dataset)
-    ds.batch_size = batch_size
-    ds.train_batch_size = 80
+    ds.train_batch_size = batch_size
+    # ds.train_batch_size = 80
     print 'ds.train_batch_size', ds.train_batch_size
     g_filler = gen_uniform_filter_setting(init)
     zero_filler = gen_zero_filter_setting()
     print "Batch size, use batch_size in ADA_DELTA"
-    g_updater = gen_adadelta_setting(l2 = l2, batch_size = batch_size)
-    zero_l2_updater = gen_adadelta_setting(l2 = 0., batch_size = batch_size)
+    g_updater = gen_adadelta_setting(l2 = l2)
+    zero_l2_updater = gen_adadelta_setting(l2 = 0.)
+    # g_updater = gen_adadelta_setting(l2 = l2, batch_size = batch_size)
+    # zero_l2_updater = gen_adadelta_setting(l2 = 0., batch_size = batch_size)
     # g_updater = gen_adagrad_setting(lr = lr, l2 = 0., batch_size = ds.train_batch_size)
 
     g_layer_setting = {}
@@ -38,7 +39,7 @@ def gen_conv_birnn(d_mem, init, l2, lr, dataset, batch_size):
     net_cfg_train, net_cfg_valid, net_cfg_test = {}, {}, {}
     net['net_config'] = [net_cfg_train, net_cfg_valid, net_cfg_test]
     net_cfg_train["tag"] = "Train"
-    net_cfg_train["max_iters"] = (ds.n_train * 15)/ ds.train_batch_size 
+    net_cfg_train["max_iters"] = (ds.n_train * 10)/ ds.train_batch_size 
     net_cfg_train["display_interval"] = (ds.n_train/ds.train_batch_size)/50
     net_cfg_train["out_nodes"] = ['acc']
     net_cfg_valid["tag"] = "Valid"
@@ -187,7 +188,7 @@ def gen_conv_birnn(d_mem, init, l2, lr, dataset, batch_size):
     layer['top_nodes'] = ['drop_rep']
     layer['layer_name'] = 'dropout'
     layer['layer_type'] =  13
-    # ds.dp_rate = 0.
+    ds.dp_rate = 0.
     print "dropout:", ds.dp_rate
     setting = {'rate':ds.dp_rate}
     layer['setting'] = setting
@@ -223,18 +224,17 @@ def gen_conv_birnn(d_mem, init, l2, lr, dataset, batch_size):
 
     return net
 
-run = 16
+run = 1
+lr = 0
 for dataset in ['mr']:
-    for d_mem in [100]:
-        idx = 6
-        for init in [0.03]:
+    for d_mem in [50]:
+        idx = 0
+        for init in [0.3, 0.1, 0.03, 0.01]:
             for l2 in [0.]: # , 0.000001, 0.00001, 0.0001]:
-            # for batch_size in [40, 60, 80, 120, 160]:
-                for batch_size in [20, 40, 60]:
-                    lr = 0.
-                    net = gen_conv_birnn(d_mem = d_mem, init = init, lr =lr, dataset=dataset, l2 = 0., batch_size = batch_size)
+                for batch_size in [5, 20, 50, 100]:
+                    net = gen_conv_birnn(d_mem=d_mem, init=init, lr=lr, dataset=dataset, l2=0., batch_size=batch_size)
                     net['log'] = 'log.conv_birnn.max.{0}.d{1}.run{2}.{3}'.format(dataset, str(d_mem), str(run), str(idx))
-                    gen_conf_file(net, '/home/wsx/exp/ccir2015/run.16/model.conv_birnn.max.{0}.d{1}.run{2}.{3}'.format(dataset, str(d_mem), str(run), str(idx)))
+                    gen_conf_file(net, '/home/wsx/exp/ccir2015/mr/conv_birnn/run.1/model.conv_birnn.max.{0}.d{1}.run{2}.{3}'.format(dataset, str(d_mem), str(run), str(idx)))
                     idx += 1
  
 # idx = 0

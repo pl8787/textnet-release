@@ -99,8 +99,8 @@ class DatasetCfg:
             self.n_valid = 1000
             self.n_test = 1725 
             self.train_display_interval = 1 
-            self.valid_display_interval = 50
-            self.test_display_interval  = 50 
+            self.valid_display_interval = 200
+            self.test_display_interval  = 200 
             self.train_max_iters = 40000
             self.valid_max_iters = self.n_valid/ self.valid_batch_size
             self.test_max_iters  = self.n_test / self.test_batch_size

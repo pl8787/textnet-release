@@ -814,6 +814,7 @@ void TestDiagRecurrentLayer(mshadow::Random<cpu>* prnd) {
   map<string, SettingV> setting;
   {
     setting["d_mem"] = 2;
+    setting["reverse"] = true;
     map<string, SettingV> &w_filler = *(new map<string, SettingV>());
       w_filler["init_type"] = SettingV(initializer::kUniform);
       w_filler["range"] = SettingV(1.f);
@@ -839,8 +840,8 @@ void TestDiagRecurrentLayer(mshadow::Random<cpu>* prnd) {
   layer->PropAll();
   layer->SetupLayer(setting, bottoms, tops, prnd);
   layer->Reshape(bottoms, tops);
-  layer->Forward(bottoms, tops);
-  top.diff = top.data;
+  // layer->Forward(bottoms, tops);
+  // top.diff = top.data;
   // PrintTensor("bottom0", bottom0.data);
   // PrintTensor("bottom1", bottom1.data);
   // PrintTensor("top", top.data);
@@ -848,14 +849,14 @@ void TestDiagRecurrentLayer(mshadow::Random<cpu>* prnd) {
   // PrintTensor("param_diff", layer->GetParams()[0].diff);
   
   using namespace checker;
-  // Checker<cpu> * cker = CreateChecker<cpu>();
-  // map<string, SettingV> setting_checker;
-  // setting_checker["range_min"] = SettingV(-0.0001f);
-  // setting_checker["range_max"] = SettingV(0.0001f);
-  // setting_checker["delta"] = SettingV(0.0001f);
-  // cker->SetupChecker(setting_checker, prnd);
-  // cout << "Check Error." << endl;
-  // cker->CheckError(layer, bottoms, tops);
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer, bottoms, tops);
   // // PrintTensor("bottom0_diff", bottom0.diff);
   // // PrintTensor("bottom1_diff", bottom1.diff);
 
@@ -863,11 +864,11 @@ void TestDiagRecurrentLayer(mshadow::Random<cpu>* prnd) {
   // cker->CheckGrad(layer, bottoms, tops);
 
   // layer->Forward(bottoms, tops);
-  PrintTensor("t_diff",  tops[0]->diff);
-  layer->Backprop(bottoms, tops);
+  // PrintTensor("t_diff",  tops[0]->diff);
+  // layer->Backprop(bottoms, tops);
   // PrintTensor("b0_data", bottoms[0]->data);
   // PrintTensor("t_data",  tops[0]->data);
-  PrintTensor("t_diff",  tops[0]->diff);
+  // PrintTensor("t_diff",  tops[0]->diff);
   // PrintTensor("b0_diff", bottoms[0]->diff);
   // PrintTensor("w_data", bottoms[0]->diff);
   // PrintTensor("b0_length", bottoms[0]->length);

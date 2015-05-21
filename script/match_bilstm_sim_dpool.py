@@ -16,7 +16,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     zero_l2_updater   = gen_adagrad_setting(lr = lr, batch_size = ds.train_batch_size)
 
     g_layer_setting = {}
-    g_layer_setting['no_bias'] = True
+    g_layer_setting['no_bias'] = False
     g_layer_setting['w_filler'] = g_filler 
     g_layer_setting['u_filler'] = g_filler
     g_layer_setting['b_filler'] = zero_filler
@@ -177,7 +177,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['top_nodes'] = ['dpool_rep']
     layer['layer_name'] = 'dynamic_pooling'
     layer['layer_type'] = 43
-    layer['setting'] = {'row':10, 'col':10}
+    layer['setting'] = {'row':5, 'col':5}
 
     layer = {}
     layers.append(layer) 
@@ -205,7 +205,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['top_nodes'] = ['hidden_drop_rep']
     layer['layer_name'] = 'dropout'
     layer['layer_type'] =  13
-    ds.dp_rate = 0.
+    # ds.dp_rate = 0.
     print "ORC, dp rate:", ds.dp_rate
     setting = {'rate':ds.dp_rate}
     layer['setting'] = setting
@@ -241,19 +241,19 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['setting'] = setting
     return net
 
-run = 1
+run = 4
 l2 = 0.
 # for dataset in ['paper']:
 for dataset in ['msrp']:
-    for d_mem in [30, 50]:
+    for d_mem in [30]:
         idx = 0
-        for init in [0.3, 0.1]:
-            for lr in [1, 0.5, 0.3, 0.1, 0.05]:
+        for init in [0.5, 0.3, 0.1]:
+            for lr in [0.3, 0.1, 0.05, 0.03, 0.01]:
                 for lstm_norm2 in [10000]:
                     net = gen_match_lstm(d_mem = d_mem, init = init, lr =lr, dataset=dataset, l2=l2, lstm_norm2=lstm_norm2)
-                    net['log'] = 'log.match.bilstm_sim_dpool.{0}.d{1}.nodrop.run{2}.{3}'.format\
+                    net['log'] = 'log.match.bilstm_sim_dpool.{0}.d{1}.run{2}.{3}'.format\
                                  (dataset, str(d_mem), str(run), str(idx))
                     gen_conf_file(net, '/home/wsx/exp/match/{0}/bilstm_sim_dpool/run.{1}/'.format(dataset,str(run)) + \
-                                       'model.match.bilstm_sim_dpool.{0}.d{1}.nodrop.run{2}.{3}'.format\
+                                       'model.match.bilstm_sim_dpool.{0}.d{1}.run{2}.{3}'.format\
                                        (dataset, str(d_mem), str(run), str(idx)))
                     idx += 1

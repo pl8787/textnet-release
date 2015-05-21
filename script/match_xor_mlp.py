@@ -108,7 +108,7 @@ def gen_match_xor_mlp(d_mem, init, lr, dataset, l2):
     layer['top_nodes'] = ['dpool_rep']
     layer['layer_name'] = 'dynamic_pooling'
     layer['layer_type'] = 43
-    layer['setting'] = {'row':10, 'col':10}
+    layer['setting'] = {'row':5, 'col':5}
 
     layer = {}
     layers.append(layer) 
@@ -136,7 +136,7 @@ def gen_match_xor_mlp(d_mem, init, lr, dataset, l2):
     layer['top_nodes'] = ['hidden_drop_rep']
     layer['layer_name'] = 'dropout'
     layer['layer_type'] =  13
-    ds.dp_rate = 0.
+    # ds.dp_rate = 0.
     print "ORC, dp rate:", ds.dp_rate
     setting = {'rate':ds.dp_rate}
     layer['setting'] = setting
@@ -172,14 +172,14 @@ def gen_match_xor_mlp(d_mem, init, lr, dataset, l2):
     layer['setting'] = setting
     return net
 
-run = 4
+run = 8
 l2 = 0.
 # for dataset in ['paper']:
 for dataset in ['msrp']:
     for d_mem in [50]:
         idx = 0
         for init in [0.1]:
-            for lr in [1, 0.5, 0.3, 0.1, 0.05, 0.03, 0.01, 0.003]:
+            for lr in [0.3, 0.1, 0.05, 0.03, 0.01, 0.003]:
                 for lstm_norm2 in [10000]:
                     net = gen_match_xor_mlp(d_mem=d_mem, init=init, lr=lr, dataset=dataset, l2=l2)
                     net['log'] = 'log.match.xor_mlp.{0}.d{1}.run{2}.{3}'.format\

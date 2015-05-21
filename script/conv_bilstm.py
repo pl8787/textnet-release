@@ -149,7 +149,7 @@ def gen_conv_bilstm(d_mem, init, l2, lr, dataset, batch_size, lstm_norm2):
     layer['layer_type'] = 14
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
-    setting['channel_out'] = d_mem*4
+    setting['channel_out'] = d_mem*2
     setting['kernel_y'] = 1
     setting['pad_y'] = setting['kernel_y'] - 1
     setting['kernel_x'] = d_mem 
@@ -188,7 +188,7 @@ def gen_conv_bilstm(d_mem, init, l2, lr, dataset, batch_size, lstm_norm2):
     layer['top_nodes'] = ['drop_rep']
     layer['layer_name'] = 'dropout'
     layer['layer_type'] =  13
-    # ds.dp_rate = 0.
+    ds.dp_rate = 0.
     print "ORC, dp_rate:", ds.dp_rate
     setting = {'rate':ds.dp_rate}
     layer['setting'] = setting
@@ -224,19 +224,19 @@ def gen_conv_bilstm(d_mem, init, l2, lr, dataset, batch_size, lstm_norm2):
 
     return net
 
-run = 8 
+run = 9 
 lr = 0.
 for dataset in ['mr']:
-    for d_mem in [50]:
+    for d_mem in [100]:
         idx = 0
         for init in [0.5, 0.3]:
             for l2 in [0.000003, 0.00001]:# , 0.00001, 0.0001, 0.001]:
                 for lstm_norm2 in [2, 1, 0.5]:
-                    for batch_size in [5, 10]:
+                    for batch_size in [8]:
                         net = gen_conv_bilstm(d_mem=d_mem, init=init, lr=lr, dataset=dataset, \
                                               l2=l2, batch_size=batch_size, lstm_norm2=lstm_norm2)
                         net['log'] = 'log.conv_bilstm.max.{0}.d{1}.run{2}.{3}'.\
                                       format(dataset, str(d_mem), str(run),str(idx))
-                        gen_conf_file(net, '/home/wsx/exp/ccir2015/{0}/conv_bilstm/run.8/model.conv_bilstm.max.{1}.d{2}.run{3}.{4}'.\
+                        gen_conf_file(net, '/home/wsx/exp/ccir2015/{0}/conv_bilstm/run.9/model.conv_bilstm.max.{1}.d{2}.run{3}.{4}'.\
                                       format(dataset, dataset, str(d_mem), str(run), str(idx)))
                         idx += 1

@@ -113,10 +113,17 @@ def parse_tvt(inFile):
 # parse_tvt(dir + 'log.gate_mul_cnn.tb_binary.kim.'+str(0))
 # parse_cv_final_acc(dir + 'log.gate_mul_cnn.mr.kim.'+str(0))
 # exit(0)
-dir = '/home/wsx/exp/ccir2015/mr/conv_bilstm/run.7/'
-# dir = '/home/wsx/exp/match/msrp/bilstm_mlp/run.1/'
-for i in range(0, 24):
-    parse_cv_final_acc(dir+'log.conv_bilstm.max.mr.d75.run7.'+str(i))
+# dir = '/home/wsx/exp/ccir2015/mr/conv_birnn/run.1/'
+dir = '/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.4/'
+# dir = '/home/wsx/exp/match/msrp/xor_diag_rnn/run.8/'
+for i in range(0, 16):
+    try:
+        parse_tvt(dir+'log.match.bilstm_sim_dpool.msrp.d30.run4.'+str(i))
+    except:
+        continue
+    # parse_cv_final_acc(dir+'log.conv_birnn.max.mr.d50.run1.'+str(i))
+    # parse_tvt(dir + 'log.match.xor_diag_rnn.msrp.d50.run8.'+str(i))
+    
 exit(0)
 for i in range(40):
     # parse_cv_final_acc(dir + 'log.conv_bilstm.max.dropbeforepool.mr.d50.'+str(i))
