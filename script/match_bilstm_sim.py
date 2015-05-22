@@ -4,7 +4,7 @@ import copy, os
 from gen_conf_file import *
 from dataset_cfg import *
 
-def gen_match_bilstm_cos(d_mem, init, lr, dataset, l2, lstm_norm2):
+def gen_match_bilstm_sim(d_mem, init, lr, dataset, l2, lstm_norm2):
     # print "ORC: left & right lstm share parameters"
     is_share = False
     net = {}
@@ -201,20 +201,23 @@ def gen_match_bilstm_cos(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer = {}
     layers.append(layer) 
     layer['bottom_nodes'] = ['l_sentence', 'r_sentence']
-    layer['top_nodes'] = ['cos_similarity']
-    layer['layer_name'] = 'cross'
+    layer['top_nodes'] = ['sim']
+    layer['layer_name'] = 'match'
     layer['layer_type'] = 23 
     layer['setting'] = {'op':'cos'}
+    layer['setting'] = {'is_var_len':False}
 
     layer = {}
     layers.append(layer) 
-    layer['bottom_nodes'] = ['cos_similarity']
+    layer['bottom_nodes'] = ['sim']
     layer['top_nodes'] = ['softmax_prob']
-    layer['layer_name'] = 'lr2softmax'
-    layer['layer_type'] = 41 
+    layer['layer_name'] = 'softmax_fullconnect'
+    layer['layer_type'] = 11 
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
-    setting['score_class'] = 1
+    setting['num_hidden'] = ds.num_class
+    # setting['no_bias'] = False
+    setting['w_filler'] = zero_filler
 
     layer = {}
     layers.append(layer) 
@@ -235,14 +238,19 @@ def gen_match_bilstm_cos(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['setting'] = setting
     return net
 
-for dataset in ['relation']:
-    for d_mem in [50]:
+run = 1
+l2 = 0.
+# for dataset in ['paper']:
+for dataset in ['msrp']:
+    for d_mem in [30]:
         idx = 0
-        for init in [0.1, 0.03]:
-            for lr in [0.3, 0.1, 0.03]:
-                net = gen_match_lstm(d_mem = d_mem, init = init, lr =lr, dataset=dataset)
-                net['log'] = 'log.match.bilstm_cos.last.{0}.d{1}.{2}'.format(dataset, str(d_mem), str(idx))
-                # gen_conf_file(net, '/home/wsx/exp/tb/log/run.3/bilstm.max.tb_fine.model.' + str(idx))
-                gen_conf_file(net, '/home/wsx/exp/match/bilstm_cos/run.3/model.match.bilstm_cos.last.{0}.d{1}.{2}'.format(dataset, str(d_mem), str(idx)))
-                idx += 1
-                # os.system("../bin/textnet ../bin/conv_lstm_simulation.model > ../bin/simulation/neg.gen.train.{0}".format(d_mem))
+        for init in [0.5, 0.3, 0.1]:
+            for lr in [0.3, 0.1, 0.05, 0.03, 0.01]:
+                for lstm_norm2 in [10000]:
+                    net = gen_match_bilstm_sim(d_mem=d_mem, init=init, lr=lr, dataset=dataset, l2=l2, lstm_norm2=lstm_norm2)
+                    net['log'] = 'log.match.bilstm_sim.{0}.d{1}.run{2}.{3}'.format\
+                                 (dataset, str(d_mem), str(run), str(idx))
+                    gen_conf_file(net, '/home/wsx/exp/match/{0}/bilstm_sim/run.{1}/'.format(dataset,str(run)) + \
+                                       'model.match.bilstm_sim.{0}.d{1}.run{2}.{3}'.format\
+                                       (dataset, str(d_mem), str(run), str(idx)))
+                    idx += 1

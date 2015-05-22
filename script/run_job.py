@@ -167,7 +167,7 @@ class SshWorker(Thread):
         scp2local(self.node, job.remote_log_file(), job.local_log_file())
 
 def get_nodes():
-    node_169 = Node('10.60.1.169', 'wsx', 10)
+    node_169 = Node('10.60.1.169', 'wsx', 16)
     node_168 = Node('10.60.1.168', 'wsx', 8)
     return [node_169]
 
@@ -185,7 +185,7 @@ def main():
     # local_dir = '/home/wsx/exp/topk_simulation/run.4/'
     # local_dir = '/home/wsx/exp/gate/lstm/run.9/'
     # local_dir  = '/home/wsx/exp/match/birnn_mlp/run.1/'
-    local_dir = '/home/wsx/exp/match/msrp/birnn_sim_dpool/run.1/'
+    local_dir = '/home/wsx/exp/match/msrp/bilstm_sim/run.1/'
     # local_dir = '/home/wsx/exp/ccir2015/mr/conv_birnn/run.1/'
     # local_dir = '/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.2/'
     # local_dir = '/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.2/'

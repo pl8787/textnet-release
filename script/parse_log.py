@@ -114,11 +114,11 @@ def parse_tvt(inFile):
 # parse_cv_final_acc(dir + 'log.gate_mul_cnn.mr.kim.'+str(0))
 # exit(0)
 # dir = '/home/wsx/exp/ccir2015/mr/conv_birnn/run.1/'
-dir = '/home/wsx/exp/match/msrp/birnn_sim_dpool/run.1/'
+dir = '/home/wsx/exp/match/msrp/diag_birnn/run.4/'
 # dir = '/home/wsx/exp/match/msrp/xor_diag_rnn/run.8/'
-for i in range(0, 20):
+for i in range(0, 6):
     try:
-        parse_tvt(dir+'log.match.birnn_sim_dpool.msrp.d30.run1.'+str(i))
+        parse_tvt(dir+'log.match.elem_diag_rnn.msrp.d50.run4.'+str(i))
     except:
         continue
     # parse_cv_final_acc(dir+'log.conv_birnn.max.mr.d50.run1.'+str(i))
