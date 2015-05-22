@@ -185,7 +185,7 @@ def main():
     # local_dir = '/home/wsx/exp/topk_simulation/run.4/'
     # local_dir = '/home/wsx/exp/gate/lstm/run.9/'
     # local_dir  = '/home/wsx/exp/match/birnn_mlp/run.1/'
-    local_dir = '/home/wsx/exp/match/msrp/bilstm_sim/run.1/'
+    local_dir = '/home/wsx/exp/match/msrp/bilstm_sim/run.3/'
     # local_dir = '/home/wsx/exp/ccir2015/mr/conv_birnn/run.1/'
     # local_dir = '/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.2/'
     # local_dir = '/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.2/'

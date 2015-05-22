@@ -16,7 +16,7 @@ def gen_match_bilstm_sim(d_mem, init, lr, dataset, l2, lstm_norm2):
     zero_l2_updater   = gen_adagrad_setting(lr = lr, batch_size = ds.train_batch_size)
 
     g_layer_setting = {}
-    g_layer_setting['no_bias'] = True
+    g_layer_setting['no_bias'] = False
     g_layer_setting['w_filler'] = g_filler 
     g_layer_setting['u_filler'] = g_filler
     g_layer_setting['b_filler'] = zero_filler
@@ -121,7 +121,7 @@ def gen_match_bilstm_sim(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['top_nodes'] = ['l_pool_rep']
     layer['layer_name'] = 'l_wholePooling'
     layer['layer_type'] =  25 
-    setting = {"pool_type":"last"}
+    setting = {"pool_type":"max"}
     layer['setting'] = setting
 
     # layer = {}
@@ -166,7 +166,7 @@ def gen_match_bilstm_sim(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['top_nodes'] = ['r_pool_rep']
     layer['layer_name'] = 'r_wholePooling'
     layer['layer_type'] =  25 
-    setting = {"pool_type":"first"}
+    setting = {"pool_type":"max"}
     layer['setting'] = setting
 
     layer = {}
@@ -204,8 +204,7 @@ def gen_match_bilstm_sim(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['top_nodes'] = ['sim']
     layer['layer_name'] = 'match'
     layer['layer_type'] = 23 
-    layer['setting'] = {'op':'cos'}
-    layer['setting'] = {'is_var_len':False}
+    layer['setting'] = {'op':'cos', 'is_var_len':False}
 
     layer = {}
     layers.append(layer) 
@@ -238,7 +237,7 @@ def gen_match_bilstm_sim(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['setting'] = setting
     return net
 
-run = 1
+run = 3
 l2 = 0.
 # for dataset in ['paper']:
 for dataset in ['msrp']:
