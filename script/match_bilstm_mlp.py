@@ -16,7 +16,7 @@ def gen_match_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
     zero_l2_updater   = gen_adagrad_setting(lr = lr, batch_size = ds.train_batch_size)
 
     g_layer_setting = {}
-    g_layer_setting['no_bias'] = True
+    g_layer_setting['no_bias'] = False
     g_layer_setting['w_filler'] = g_filler 
     g_layer_setting['u_filler'] = g_filler
     g_layer_setting['b_filler'] = zero_filler
@@ -207,7 +207,7 @@ def gen_match_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['top_nodes'] = ['hidden_drop_rep']
     layer['layer_name'] = 'dropout'
     layer['layer_type'] =  13
-    # ds.dp_rate = 0.
+    ds.dp_rate = 0.
     print "DROPOUT:", ds.dp_rate
     setting = {'rate':ds.dp_rate}
     layer['setting'] = setting
@@ -243,13 +243,13 @@ def gen_match_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['setting'] = setting
     return net
 
-run = 1
+run = 2
 l2 = 0.
-for dataset in ['paper']:
-    for d_mem in [50]:
+for dataset in ['msrp']:
+    for d_mem in [30]:
         idx = 0
-        for init in [0.1]:
-            for lr in [0.5, 0.3, 0.1]:
+        for init in [0.5, 0.3, 0.1]:
+            for lr in [0.5, 0.3, 0.1, 0.03]:
                 for lstm_norm2 in [10000]:
                     net = gen_match_bilstm_mlp(d_mem=d_mem, init=init, lr=lr, dataset=dataset, l2=l2, lstm_norm2=lstm_norm2)
                     net['log'] = 'log.match.bilstm_mlp.max.{0}.d{1}.run{2}.{3}'.format \

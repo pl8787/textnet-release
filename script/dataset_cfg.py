@@ -243,6 +243,31 @@ class DatasetCfg:
             self.n_train = 3000
             self.n_valid = 3000
             self.n_test = 2000
+        elif dataset == 'test_lm':
+            self.train_data_file = '/home/wsx/data/test/test_lm/train.txt'
+            self.valid_data_file = '/home/wsx/data/test/test_lm/train.txt'
+            self.test_data_file = '/home/wsx/data/test/test_lm/train.txt'
+            self.embedding_file = ''
+            self.max_doc_len =8 
+            self.vocab_size = 10
+            self.negative_num = 2
+            self.position_num = 1
+
+            self.d_word_rep = 30
+            self.batch_size = 1
+            self.train_batch_size = 1
+            self.valid_batch_size = 1
+            self.test_batch_size = 1
+            self.n_train = 4
+            self.n_valid = 4
+            self.n_test = 4
+            self.train_display_interval = 1 
+            self.valid_display_interval = 1 
+            self.test_display_interval = 1 
+            self.train_max_iters = 20000
+            self.valid_max_iters = self.n_valid/ self.valid_batch_size
+            self.test_max_iters  = self.n_test / self.test_batch_size
+
         else:
             assert False
 

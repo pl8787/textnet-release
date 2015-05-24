@@ -204,7 +204,7 @@ def gen_match_bilstm_sim(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['top_nodes'] = ['sim']
     layer['layer_name'] = 'match'
     layer['layer_type'] = 23 
-    layer['setting'] = {'op':'cos', 'is_var_len':False}
+    layer['setting'] = {'op':'mul', 'is_var_len':False}
 
     layer = {}
     layers.append(layer) 
@@ -237,7 +237,7 @@ def gen_match_bilstm_sim(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['setting'] = setting
     return net
 
-run = 3
+run = 6
 l2 = 0.
 # for dataset in ['paper']:
 for dataset in ['msrp']:

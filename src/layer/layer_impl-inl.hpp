@@ -45,7 +45,7 @@
 #include "./loss/pairhingeloss_layer-inl.hpp"
 #include "./loss/softmax_layer-inl.hpp"
 #include "./loss/accuracy_layer-inl.hpp"
-#include "./loss/negative_sample_layer-inl.hpp"
+#include "./loss/negative_sample_loss_layer-inl.hpp"
 
 namespace textnet {
 namespace layer {

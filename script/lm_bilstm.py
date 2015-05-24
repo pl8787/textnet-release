@@ -6,7 +6,6 @@ from dataset_cfg import *
 
 def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
     # print "ORC: left & right lstm share parameters"
-    is_share = False
     net = {}
 
     ds = DatasetCfg(dataset)
@@ -61,6 +60,38 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
 
     layer = {}
     layers.append(layer) 
+    layer['bottom_nodes'] = []
+    layer['top_nodes'] = ['x', 'position', 'sample', 'y']
+    layer['layer_name'] = 'train_data'
+    layer['layer_type'] = 74
+    layer['tag'] = ['Valid']
+    setting = {}
+    layer['setting'] = setting
+    setting['batch_size'] = ds.valid_batch_size
+    setting['data_file'] = ds.valid_data_file
+    setting['max_doc_len'] = ds.max_doc_len
+    setting['negative_num'] = 2
+    setting['position_num'] = 1
+    setting['vocab_size'] = ds.vocab_size
+
+    layer = {}
+    layers.append(layer) 
+    layer['bottom_nodes'] = []
+    layer['top_nodes'] = ['x', 'position', 'sample', 'y']
+    layer['layer_name'] = 'train_data'
+    layer['layer_type'] = 74
+    layer['tag'] = ['Test']
+    setting = {}
+    layer['setting'] = setting
+    setting['batch_size'] = ds.test_batch_size
+    setting['data_file'] = ds.test_data_file
+    setting['max_doc_len'] = ds.max_doc_len
+    setting['negative_num'] = 2
+    setting['position_num'] = 1
+    setting['vocab_size'] = ds.vocab_size
+
+    layer = {}
+    layers.append(layer) 
     layer['bottom_nodes'] = ['x']
     layer['top_nodes'] = ['word_rep_seq']
     layer['layer_name'] = 'embedding'
@@ -69,13 +100,14 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['setting'] = setting
     setting['embedding_file'] = ds.embedding_file
     # print "ORC: update all words"
-    setting['update_indication_file'] = ds.update_indication_file
+    # setting['update_indication_file'] = ds.update_indication_file
     setting['feat_size'] = ds.d_word_rep
     setting['word_count'] = ds.vocab_size
     print "ORC: not use l2 for embedding"
     setting['w_updater'] = zero_l2_updater
     setting['w_filler'] = {}
-    setting['w_filler']['init_type'] = 6
+    setting['w_filler']['init_type'] = 2
+    setting['w_filler']['range'] = 0.14
 
     layer = {}
     layers.append(layer) 
@@ -88,12 +120,13 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
     # setting['embedding_file'] = ds.embedding_file
     # print "ORC: update all words"
     # setting['update_indication_file'] = ds.update_indication_file
-    setting['feat_size'] = ds.d_mem * 2 # this layer is the softmax parameter, not word representation
+    setting['feat_size'] = d_mem * 2 + 1 # this layer is the softmax parameter, not word representation
     setting['word_count'] = ds.vocab_size
     print "ORC: not use l2 for embedding"
     setting['w_updater'] = zero_l2_updater
     setting['w_filler'] = {}
-    setting['w_filler']['init_type'] = 6
+    setting['w_filler']['init_type'] = 2
+    setting['w_filler']['range'] = 0.14
 
     layer = {}
     layers.append(layer) 
@@ -130,7 +163,7 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer = {}
     layers.append(layer) 
     layer['bottom_nodes'] = ['pos_pred_rep', 'sample_rep', 'y']
-    layer['top_nodes'] = ['loss']
+    layer['top_nodes'] = ['softmax_prob', 'loss']
     layer['layer_name'] = 'negative_sample_loss'
     layer['layer_type'] = 58
     layer['setting'] = {}
@@ -139,16 +172,16 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
 
 run = 1
 l2 = 0.
-for dataset in ['paper']:
+for dataset in ['test_lm']:
     for d_mem in [50]:
         idx = 0
         for init in [0.1]:
-            for lr in [0.5, 0.3, 0.1]:
+            for lr in [0.1]:
                 for lstm_norm2 in [10000]:
-                    net = gen_match_bilstm_mlp(d_mem=d_mem, init=init, lr=lr, dataset=dataset, l2=l2, lstm_norm2=lstm_norm2)
-                    net['log'] = 'log.match.bilstm_mlp.max.{0}.d{1}.run{2}.{3}'.format \
-                                 (dataset, str(d_mem), str(run), str(idx))
-                    gen_conf_file(net, '/home/wsx/exp/match/{0}/bilstm_mlp/run.{1}/'.format(dataset, str(run)) + \
-                                       'model.match.bilstm_mlp.max.{0}.d{1}.run{2}.{3}'.format \
+                    net = gen_lm_bilstm_mlp(d_mem=d_mem, init=init, lr=lr, dataset=dataset, l2=l2, lstm_norm2=lstm_norm2)
+                    # net['log'] = 'log.lm_bilstm.{0}.d{1}.run{2}.{3}'.format \
+                    #              (dataset, str(d_mem), str(run), str(idx))
+                    gen_conf_file(net, '/home/wsx/exp/match/{0}/run.{1}/'.format(dataset, str(run)) + \
+                                       'model.lm_bilstm.max.{0}.d{1}.run{2}.{3}'.format \
                                        (dataset, str(d_mem), str(run), str(idx)))
                     idx += 1

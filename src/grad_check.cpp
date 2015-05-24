@@ -792,6 +792,165 @@ void TestSoftmaxFuncLayer(mshadow::Random<cpu>* prnd) {
   cout << "Done." << endl;
 }
 
+void TestPosPredRepLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check PosPredRepLayer." << endl;
+  Node<cpu> bottom0, bottom1, bottom2;
+  Node<cpu> top0;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom0);
+  bottoms.push_back(&bottom1);
+  bottoms.push_back(&bottom2);
+  tops.push_back(&top0);
+  
+  bottom0.Resize(Shape4(2,1,4,5), true);
+  bottom1.Resize(Shape4(2,1,4,5), true);
+  bottom0.length = 3;
+  bottom1.length = 3;
+
+  bottom2.Resize(Shape4(2,2,1,1), true);
+  bottom2.data = 0;
+  bottom2.data[0][0][0][0] = 0;
+  bottom2.data[0][1][0][0] = 2;
+  bottom2.data[1][0][0][0] = 1;
+  bottom2.data[1][1][0][0] = 2;
+  prnd->SampleUniform(&bottom0.data, -1, 1);
+  prnd->SampleUniform(&bottom1.data, -1, 1);
+  
+  map<string, SettingV> setting;
+  Layer<cpu> *layer = CreateLayer<cpu>(kPosPredRep);
+  layer->PropAll();
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+  // layer->Forward(bottoms, tops);
+  // layer->Backprop(bottoms, tops);
+  // // top0.diff = top0.data;
+  // PrintTensor("bottom0", bottom0.data);
+  // PrintTensor("bottom1", bottom1.data);
+  // PrintTensor("bottom2", bottom2.data);
+  // PrintTensor("top0", top0.data);
+  // PrintTensor("bottom0_diff", bottom0.diff);
+  // PrintTensor("bottom1_diff", bottom1.diff);
+  // PrintTensor("bottom2_diff", bottom2.diff);
+  // PrintTensor("top0_diff", top0.diff);
+  // exit(0);
+  // PrintTensor("top_diff", top.diff);
+  // PrintTensor("param_diff", layer->GetParams()[0].diff);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer, bottoms, tops);
+  // // PrintTensor("bottom0_diff", bottom0.diff);
+  // // PrintTensor("bottom1_diff", bottom1.diff);
+
+  // cout << "Check Grad." << endl;
+  // cker->CheckGrad(layer, bottoms, tops);
+
+  // layer->Forward(bottoms, tops);
+  // PrintTensor("t_diff",  tops[0]->diff);
+  // layer->Backprop(bottoms, tops);
+  // PrintTensor("b0_data", bottoms[0]->data);
+  // PrintTensor("t_data",  tops[0]->data);
+  // PrintTensor("t_diff",  tops[0]->diff);
+  // PrintTensor("b0_diff", bottoms[0]->diff);
+  // PrintTensor("w_data", bottoms[0]->diff);
+  // PrintTensor("b0_length", bottoms[0]->length);
+  // PrintTensor("t_length", tops[0]->length);
+  // PrintTensor("b0_diff", bottoms[0]->diff);
+  // PrintTensor("t_diff", tops[0]->diff);
+  cout << "Done." << endl;
+}
+
+
+
+void TestNegativeSampleLossLayer(mshadow::Random<cpu>* prnd) {
+  cout << "This layer can not be checked." << endl;
+  cout << "G Check Negative Sample Loss Layer." << endl;
+  Node<cpu> bottom0, bottom1, bottom2;
+  Node<cpu> top0, top1;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom0);
+  bottoms.push_back(&bottom1);
+  bottoms.push_back(&bottom2);
+  tops.push_back(&top0);
+  tops.push_back(&top1);
+  
+  bottom0.Resize(Shape4(2,3,1,5), true);
+  bottom1.Resize(Shape4(2,3,4,6), true);
+  bottom2.Resize(Shape4(2,3,4,1), true);
+  bottom2.data = 0;
+  bottom2.data[0][0][0][0] = 1;
+  bottom2.data[0][1][0][0] = 1;
+  bottom2.data[0][2][0][0] = 1;
+  bottom2.data[1][0][0][0] = 1;
+  bottom2.data[1][1][0][0] = 1;
+  bottom2.data[1][2][0][0] = 1;
+  prnd->SampleUniform(&bottom0.data, -1, 1);
+  prnd->SampleUniform(&bottom1.data, -1, 1);
+  
+  map<string, SettingV> setting;
+  Layer<cpu> *layer = CreateLayer<cpu>(kNegativeSampleLoss);
+  layer->PropAll();
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+  // layer->Forward(bottoms, tops);
+  // layer->Backprop(bottoms, tops);
+  // // top0.diff = top0.data;
+  // PrintTensor("bottom0", bottom0.data);
+  // PrintTensor("bottom1", bottom1.data);
+  // PrintTensor("bottom2", bottom2.data);
+  // PrintTensor("top0", top0.data);
+  // PrintTensor("top1", top1.data);
+  // PrintTensor("bottom0_diff", bottom0.diff);
+  // PrintTensor("bottom1_diff", bottom1.diff);
+  // PrintTensor("bottom2_diff", bottom2.diff);
+  // PrintTensor("top0_diff", top0.diff);
+  // PrintTensor("top1_diff", top1.diff);
+  // exit(0);
+  // PrintTensor("top_diff", top.diff);
+  // PrintTensor("param_diff", layer->GetParams()[0].diff);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer, bottoms, tops);
+  // // PrintTensor("bottom0_diff", bottom0.diff);
+  // // PrintTensor("bottom1_diff", bottom1.diff);
+
+  // cout << "Check Grad." << endl;
+  // cker->CheckGrad(layer, bottoms, tops);
+
+  // layer->Forward(bottoms, tops);
+  // PrintTensor("t_diff",  tops[0]->diff);
+  // layer->Backprop(bottoms, tops);
+  // PrintTensor("b0_data", bottoms[0]->data);
+  // PrintTensor("t_data",  tops[0]->data);
+  // PrintTensor("t_diff",  tops[0]->diff);
+  // PrintTensor("b0_diff", bottoms[0]->diff);
+  // PrintTensor("w_data", bottoms[0]->diff);
+  // PrintTensor("b0_length", bottoms[0]->length);
+  // PrintTensor("t_length", tops[0]->length);
+  // PrintTensor("b0_diff", bottoms[0]->diff);
+  // PrintTensor("t_diff", tops[0]->diff);
+  cout << "Done." << endl;
+}
+
+
+
 void TestDiagRecurrentLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Diag Recurrent Layer." << endl;
   Node<cpu> bottom0, bottom1, bottom2;
@@ -1893,7 +2052,9 @@ int main(int argc, char *argv[]) {
   // TestMatchLayer(&rnd);
 
   // TestGateLayer(&rnd);
-  TestDiagRecurrentLayer(&rnd);
+  // TestDiagRecurrentLayer(&rnd);
+  // TestNegativeSampleLossLayer(&rnd);
+  TestPosPredRepLayer(&rnd);
   // TestSwapAxisLayer(mshadow::Random<cpu>* prnd);
   // TestFlattenLayer(mshadow::Random<cpu>* prnd);
   // TestSoftmaxFuncLayer(&rnd);

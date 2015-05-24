@@ -13,10 +13,10 @@ namespace textnet {
 namespace layer {
 
 template<typename xpu>
-class NegativeSample : public Layer<xpu>{
+class NegativeSampleLayer : public Layer<xpu>{
  public:
-  NegativeSample(LayerType type) { this->layer_type = type; }
-  virtual ~NegativeSample(void) {}
+  NegativeSampleLayer(LayerType type) { this->layer_type = type; }
+  virtual ~NegativeSampleLayer(void) {}
   
   virtual int BottomNodeNum() { return 0; }
   virtual int TopNodeNum() { return 4; } // x, pos, sample, y
@@ -44,9 +44,9 @@ class NegativeSample : public Layer<xpu>{
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
     
     utils::Check(bottom.size() == BottomNodeNum(),
-                  "NegativeSample:bottom size problem."); 
+                  "NegativeSampleLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
-                  "NegativeSample:top size problem.");
+                  "NegativeSampleLayer:top size problem.");
                   
     data_file = setting["data_file"].s_val;
     batch_size = setting["batch_size"].i_val;
@@ -66,8 +66,8 @@ class NegativeSample : public Layer<xpu>{
     negative_sample.clear();
     for (int i = 0; i < negative_num; ++i) {
       int sample = this->sampler.NextUInt32(vocab_size);
-      utils::Assert(sample >= 0 && sample < vocab_size, "NegativeSample: sampler error");
-      negative_sample.push_back(sample)
+      utils::Assert(sample >= 0 && sample < vocab_size, "NegativeSampleLayer: sampler error");
+      negative_sample.push_back(sample);
     }
   }
   // return a list of prediction positions
@@ -81,10 +81,10 @@ class NegativeSample : public Layer<xpu>{
 
     int end = length < position_num ? length : position_num;
     position_sample = vector<int>(shuffle_pos.begin(), shuffle_pos.begin() + end);
-    for (int i = length; i < position_sample; ++i) {
+    for (int i = length; i < position_num; ++i) {
       position_sample.push_back(-1);
     }
-    utils::Check(position_sample.size() == position_num, "NegativeSample: sampler error.");
+    utils::Check(position_sample.size() == position_num, "NegativeSampleLayer: sampler error.");
   }
   
   void ReadSequenceData() {
@@ -116,7 +116,7 @@ class NegativeSample : public Layer<xpu>{
         iss >> data_set[i][0][0][j++];
       }
       length[i] = j;
-      utils::Check(j <= max_doc_len, "NegativeSample: doc length error.");
+      utils::Check(j <= max_doc_len, "NegativeSampleLayer: doc length error.");
     }
 
     // gen example ids
@@ -128,13 +128,13 @@ class NegativeSample : public Layer<xpu>{
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     utils::Check(bottom.size() == BottomNodeNum(),
-                  "NegativeSample:bottom size problem."); 
+                  "NegativeSampleLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
-                  "NegativeSample:top size problem.");
-    top[0]->Resize(batch_size, 1, 1, max_doc_len, true);              // x
-    top[1]->Resize(batch_size, position_num, 1, 1, true);             // pos
-    top[2]->Resize(batch_size, position_num, sample_num+1, 1, true);  // sample
-    top[3]->Resize(batch_size, position_num, sample_num+1, 1, true);  // y
+                  "NegativeSampleLayer:top size problem.");
+    top[0]->Resize(batch_size, 1, 1, max_doc_len, true);                // x
+    top[1]->Resize(batch_size, position_num, 1, 1, true);               // pos
+    top[2]->Resize(batch_size, position_num, 1, negative_num+1, true);  // sample
+    top[3]->Resize(batch_size, position_num, negative_num+1, 1, true);  // y
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
@@ -147,10 +147,10 @@ class NegativeSample : public Layer<xpu>{
     mshadow::Tensor<xpu, 2> x_length = top[0]->length;
     mshadow::Tensor<xpu, 2> sample_length = top[2]->length;
 
-    sample_length = negative_num + 1;
+    // sample_length = negative_num + 1;
 
     utils::Check(x.size(0) == batch_size, "ORC: error, need reshape.");
-    x = 0.f, pos = 0.f, sample = 0.f, y = 0.f, x_length = -1.f;
+    x = -1.f, pos = -1.f, sample = -1.f, y = -1.f, x_length = -1, sample_length = -1;
     
     vector<int> position_sample, negative_sample;
     for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
@@ -161,18 +161,20 @@ class NegativeSample : public Layer<xpu>{
       x[batch_idx] = F<op::identity>(data_set[example_id]);
       x_length[batch_idx][0] = length[example_id];
       
-      position_sampler(length, position_sample);
+      position_sampler(length[example_id], position_sample);
       for (int pos_idx = 0; pos_idx < position_num; ++pos_idx) {
         pos[batch_idx][pos_idx][0][0] = position_sample[pos_idx];
         if (position_sample[pos_idx] == -1) {
+          utils::Check(false, "NegativeSampleLayer: position must >= 0");
           continue;
         }
         int word_idx = x[batch_idx][0][0][position_sample[pos_idx]];
         sample[batch_idx][pos_idx][0][0] = word_idx;
         y[batch_idx][pos_idx][0][0] = 1;
+        sample_length[batch_idx][pos_idx] = negative_num + 1;
         negative_sampler(negative_sample);
-        for (int sample_idx = 0; sample_idx < sample_num; ++sample_idx) {
-          sample[batch_idx][pos_idx][sample_idx+1][0] = negative_sample[sample_idx];
+        for (int sample_idx = 0; sample_idx < negative_num; ++sample_idx) {
+          sample[batch_idx][pos_idx][0][sample_idx+1] = negative_sample[sample_idx];
           y[batch_idx][pos_idx][sample_idx+1][0] = 0;
         }
       }
