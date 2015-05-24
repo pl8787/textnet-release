@@ -145,6 +145,9 @@ class NegativeSample : public Layer<xpu>{
     mshadow::Tensor<xpu, 4> sample   = top[2]->data;
     mshadow::Tensor<xpu, 4> y        = top[3]->data;
     mshadow::Tensor<xpu, 2> x_length = top[0]->length;
+    mshadow::Tensor<xpu, 2> sample_length = top[2]->length;
+
+    sample_length = negative_num + 1;
 
     utils::Check(x.size(0) == batch_size, "ORC: error, need reshape.");
     x = 0.f, pos = 0.f, sample = 0.f, y = 0.f, x_length = -1.f;

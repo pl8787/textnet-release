@@ -41,9 +41,9 @@ class NegativeSampleLossLayer : public Layer<xpu>{
     utils::Check(bottom.size() == BottomNodeNum(), "Layer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "NegativeSampleLossLayer:top size problem.");
 
-    // bottom[0], pred_rep, (batch_size, 1, 1, feat_size)
-    // bottom[1], word_rep, (batch_size, 1, k, feat_size)
-    // bottom[2], label,    (batch_size, 1, k, 1)
+    // bottom[0], pred_rep, (batch_size, position_num, 1, feat_size)
+    // bottom[1], word_rep, (batch_size, position_num, sample_num, feat_size)
+    // bottom[2], label,    (batch_size, position_num, sample_num, 1)
     utils::Check(bottom[0]->data.size(0) == bottom[1]->data.size(0), "NegativeSampleLossLayer: input error.");
     utils::Check(bottom[0]->data.size(0) == bottom[2]->data.size(0), "NegativeSampleLossLayer: input error.");
     utils::Check(bottom[0]->data.size(3) == bottom[1]->data.size(3), "NegativeSampleLossLayer: input error.");
@@ -58,8 +58,8 @@ class NegativeSampleLossLayer : public Layer<xpu>{
                   "NegativeSampleLossLayer:top size problem.");
     // nbatch = bottom[0]->data.size(0);  
     int batch_size = bottom[0]->data.size(0);
-    int k = bottom[1]->data.size(2);
-    top[0]->Resize(batch_size, 1, k, 2, true);
+    int sample_num = bottom[1]->data.size(2);
+    top[0]->Resize(batch_size, 1, sample_num, 2, true);
     top[1]->Resize(1, 1, 1, 1, true);
   }
   void checkNan(float *p, int l) {
@@ -81,9 +81,11 @@ class NegativeSampleLossLayer : public Layer<xpu>{
     top1_data = 0.f;
 
     for (int i = 0; i < bottom1_data.size(0); ++i) {     // example
-      for (int k = 0; k < bottom1_data.size(2); ++k) {   // sample
-        for (int f = 0; f < bottom1_data.size(3); ++f) { // feature
-          top0_data[i][0][k][1] += bottom0_data[i][0][0][f] * bottom1_data[i][0][k][f];
+      for (int j = 0; j < bottom1_data.size(1); ++j) {     // position
+        for (int k = 0; k < bottom1_data.size(2); ++k) {   // sample
+          for (int f = 0; f < bottom1_data.size(3); ++f) { // feature
+            top0_data[i][j][k][1] += bottom0_data[i][j][0][f] * bottom1_data[i][j][k][f];
+          }
         }
       }
     }
@@ -92,14 +94,16 @@ class NegativeSampleLossLayer : public Layer<xpu>{
 	
     int sample_cnt = 0;
     for (int i = 0; i < bottom1_data.size(0); ++i) {
-      for (int k = 0; k < bottom1_data.size(2); ++k) {
-        sample_cnt += 0;
-        int c = static_cast<int>(bottom2_data[i][0][k][0]);
-        utils::Check(c == 0 || c == 1, "NegativeSampleLossLayer: label error");
-        if (top0_data[i][0][k][c] == 0.) {
-          top1_data[0] += 88; // by min float number
-        } else { 
-          top1_data[0] += -log(top0_data[i][0][k][c]);
+      for (int j = 0; j < bottom1_data.size(1); ++j) {
+        for (int k = 0; k < bottom1_data.size(2); ++k) {
+          sample_cnt += 0;
+          int c = static_cast<int>(bottom2_data[i][j][k][0]);
+          utils::Check(c == 0 || c == 1, "NegativeSampleLossLayer: label error");
+          if (top0_data[i][j][k][c] == 0.) {
+            top1_data[0] += 88; // by min float number
+          } else { 
+            top1_data[0] += -log(top0_data[i][j][k][c]);
+          }
         }
       }
     }
@@ -121,17 +125,20 @@ class NegativeSampleLossLayer : public Layer<xpu>{
     if (this->prop_error[0]) {
       // bp loss and softmax
       for (int i = 0; i < top0_data.size(0); ++i) {
-        for (int k = 0; k < top0_data.size(2); ++k) {
-          int c = static_cast<int>(bottom2_data[i][0][k][0]);
-          top0_diff[i][0][k][c] -= 1.0f; 
+        for (int j = 0; j < top0_data.size(1); ++j) {
+          for (int k = 0; k < top0_data.size(2); ++k) {
+            int c = static_cast<int>(bottom2_data[i][j][k][0]);
+            top0_diff[i][j][k][c] -= 1.0f; 
+          }
         }
       }
       // bp to score
       for (int i = 0; i < bottom1_data.size(0); ++i) {
+        for (int j = 0; j < bottom1_data.size(1); ++j) {
         for (int k = 0; k < bottom1_data.size(2); ++k) {
           for (int f = 0; f < bottom1_data.size(3); ++f) {
-            bottom0_diff[i][0][0][f] += top0_diff[i][0][k][1] * bottom1_data[i][0][k][f];
-            bottom1_diff[i][0][k][f] += top0_diff[i][0][k][1] * bottom0_data[i][0][0][f];
+            bottom0_diff[i][j][0][f] += top0_diff[i][j][k][1] * bottom1_data[i][j][k][f];
+            bottom1_diff[i][j][k][f] += top0_diff[i][j][k][1] * bottom0_data[i][j][0][f];
           }
         }
       }

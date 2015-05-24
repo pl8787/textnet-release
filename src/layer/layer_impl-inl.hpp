@@ -35,14 +35,17 @@
 #include "./common/swap_axis_layer-inl.hpp"
 #include "./common/flatten_layer-inl.hpp"
 #include "./common/lr2softmax_layer-inl.hpp"
+#include "./common/pos_pred_rep_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
 #include "./input/sequence_classification_data_layer-inl.hpp"
+#include "./input/negative_sample_layer-inl.hpp"
 #include "./loss/hingeloss_layer-inl.hpp"
 #include "./loss/cross_entropy_loss_layer-inl.hpp"
 #include "./loss/pairhingeloss_layer-inl.hpp"
 #include "./loss/softmax_layer-inl.hpp"
 #include "./loss/accuracy_layer-inl.hpp"
+#include "./loss/negative_sample_layer-inl.hpp"
 
 namespace textnet {
 namespace layer {
@@ -59,6 +62,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kAvgPooling: return new PoolingLayer<mshadow::red::sum, xpu>(type);
     case kWholePooling: return new WholePoolingLayer<xpu>(type);
     case kTopkPooling: return new TopkPoolingLayer<xpu>(type);
+    case kPosPredRep: return new PosPredRepLayer<xpu>(type);
     case kConcat: return new ConcatLayer<xpu>(type);
     case kEmbedding: return new EmbeddingLayer<xpu>(type);
     case kCross: return new CrossLayer<xpu>(type);
@@ -85,9 +89,11 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kTextData: return new TextDataLayer<xpu>(type);
     case kNextBasketData: return new NextBasketDataLayer<xpu>(type);
     case kSequenceClassificationData: return new SequenceClassificationDataLayer<xpu>(type);
+    case kNegativeSample: return new NegativeSampleLayer<xpu>(type);
     case kSoftmax: return new SoftmaxLayer<xpu>(type);
     case kSoftmaxFunc: return new SoftmaxFuncLayer<xpu>(type);
     case kSoftmaxFuncVarLen: return new SoftmaxFuncVarLenLayer<xpu>(type);
+    case kNegativeSampleLoss: return new NegativeSampleLossLayer<xpu>(type);
     case kSumByAxis: return new SumLayer<xpu>(type);
     case kAccuracy: return new AccuracyLayer<xpu>(type);
     case kMatch: return new MatchLayer<xpu>(type);
