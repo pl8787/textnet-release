@@ -124,7 +124,6 @@ class NegativeSampleLossLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 4> bottom0_diff = bottom[0]->diff;
     mshadow::Tensor<xpu, 4> bottom1_diff = bottom[1]->diff;
     mshadow::Tensor<xpu, 4> top0_data    = top[0]->data;
-    mshadow::Tensor<xpu, 4> top1_data    = top[1]->data;
     mshadow::Tensor<xpu, 4> top0_diff    = top[0]->diff;
 
     top0_diff = F<op::identity>(top0_data);

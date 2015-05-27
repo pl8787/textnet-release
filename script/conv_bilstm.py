@@ -224,19 +224,19 @@ def gen_conv_bilstm(d_mem, init, l2, lr, dataset, batch_size, lstm_norm2):
 
     return net
 
-run = 9 
+run = 2 
 lr = 0.
-for dataset in ['mr']:
-    for d_mem in [100]:
+for dataset in ['trec']:
+    for d_mem in [50]:
         idx = 0
         for init in [0.5, 0.3]:
-            for l2 in [0.000003, 0.00001]:# , 0.00001, 0.0001, 0.001]:
+            for l2 in [0, 0.000001, 0.000003, 0.00001]:# , 0.00001, 0.0001, 0.001]:
                 for lstm_norm2 in [2, 1, 0.5]:
-                    for batch_size in [8]:
+                    for batch_size in [10, 30, 50]:
                         net = gen_conv_bilstm(d_mem=d_mem, init=init, lr=lr, dataset=dataset, \
                                               l2=l2, batch_size=batch_size, lstm_norm2=lstm_norm2)
                         net['log'] = 'log.conv_bilstm.max.{0}.d{1}.run{2}.{3}'.\
                                       format(dataset, str(d_mem), str(run),str(idx))
-                        gen_conf_file(net, '/home/wsx/exp/ccir2015/{0}/conv_bilstm/run.9/model.conv_bilstm.max.{1}.d{2}.run{3}.{4}'.\
+                        gen_conf_file(net, '/home/wsx/exp/ccir2015/{0}/conv_bilstm/run.2/model.conv_bilstm.max.{1}.d{2}.run{3}.{4}'.\
                                       format(dataset, dataset, str(d_mem), str(run), str(idx)))
                         idx += 1

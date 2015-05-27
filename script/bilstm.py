@@ -4,19 +4,26 @@ import copy, os
 from gen_conf_file import *
 from dataset_cfg import *
 
-def gen_bilstm(d_mem, init, lr, dataset, l2, batch_size):
-    # print "ORC: left & right lstm share parameters"
-    is_share = False
+def gen_bilstm(d_mem, init, lr, dataset, l2, batch_size, lstm_norm2):
     net = {}
     if dataset == 'mr':
         net['cross_validation'] = 10
+
     ds = DatasetCfg(dataset)
+    # ds.batch_size = batch_size
+    # ds.train_batch_size = 40
+    ds.train_batch_size = batch_size
+    print "ds.train_batch_size:", ds.train_batch_size
     g_filler = gen_uniform_filter_setting(init)
     zero_filler = gen_zero_filter_setting()
-    # g_updater = gen_adadelta_setting()
-    print "Batch size, only rescale gradient"
-    g_updater = gen_adagrad_setting(lr = lr, l2 = 0., batch_size = batch_size)
-    zero_l2_updater = gen_adadelta_setting(l2 = 0., batch_size = batch_size)
+    print "Batch size, not use batch_size in ADA_DELTA"
+    g_updater = gen_adadelta_setting(l2 = l2)
+    zero_l2_updater = gen_adadelta_setting(l2 = 0.)
+    # g_updater = gen_adadelta_setting(l2 = l2, batch_size = batch_size)
+    # zero_l2_updater = gen_adadelta_setting(l2 = 0., batch_size = batch_size)
+    # g_updater = gen_adagrad_setting(lr = lr, l2 = 0., batch_size = ds.train_batch_size)
+
+
 
     g_layer_setting = {}
     g_layer_setting['no_bias'] = True
@@ -32,7 +39,7 @@ def gen_bilstm(d_mem, init, lr, dataset, l2, batch_size):
     net_cfg_train, net_cfg_valid, net_cfg_test = {}, {}, {}
     net['net_config'] = [net_cfg_train, net_cfg_valid, net_cfg_test]
     net_cfg_train["tag"] = "Train"
-    net_cfg_train["max_iters"] = (ds.n_train * 15)/ ds.train_batch_size 
+    net_cfg_train["max_iters"] = (ds.n_train * 10)/ ds.train_batch_size 
     net_cfg_train["display_interval"] = (ds.n_train/ds.train_batch_size)/300
     net_cfg_train["out_nodes"] = ['acc']
     net_cfg_valid["tag"] = "Valid"
@@ -109,6 +116,7 @@ def gen_bilstm(d_mem, init, lr, dataset, l2, batch_size):
     layer['setting'] = setting
     setting['d_mem'] = d_mem
     setting['reverse'] = False
+    setting['grad_norm2'] = lstm_norm2
 
     layer = {}
     layers.append(layer) 
@@ -129,23 +137,7 @@ def gen_bilstm(d_mem, init, lr, dataset, l2, batch_size):
     layer['setting'] = setting
     setting['d_mem'] = d_mem
     setting['reverse'] = True 
-    if is_share:
-        print "ORC: share parameters."
-        share_setting_w = {}
-        share_setting_w['param_id'] = 0
-        share_setting_w['source_layer_name'] = 'l_lstm'
-        share_setting_w['source_param_id'] = 0
-        share_setting_u = {}
-        share_setting_u['param_id'] = 1
-        share_setting_u['source_layer_name'] = 'l_lstm'
-        share_setting_u['source_param_id'] = 1
-        share_setting_b = {}
-        share_setting_b['param_id'] = 2
-        share_setting_b['source_layer_name'] = 'l_lstm'
-        share_setting_b['source_param_id'] = 2
-        setting['share'] = [share_setting_w, share_setting_u, share_setting_b]
-
-
+    setting['grad_norm2'] = lstm_norm2
 
     layer = {}
     layers.append(layer) 
@@ -173,6 +165,7 @@ def gen_bilstm(d_mem, init, lr, dataset, l2, batch_size):
     layer['top_nodes'] = ['drop_rep']
     layer['layer_name'] = 'dropout'
     layer['layer_type'] =  13
+    ds.dp_rate = 0.
     print "ORC, dp_rate:", ds.dp_rate
     setting = {'rate':ds.dp_rate}
     layer['setting'] = setting
@@ -208,16 +201,19 @@ def gen_bilstm(d_mem, init, lr, dataset, l2, batch_size):
 
     return net
 
-run = 1
-for dataset in ['mr']:
+run = 2
+lr = 0.
+for dataset in ['trec']:
     for d_mem in [50]:
         idx = 0
-        for init in [0.3, 0.1, 0.03]:
-            for l2 in [0.0]:
-                for batch_size in [1, 2, 5, 10]:
-                    net = gen_bilstm(d_mem = d_mem, init = init, lr =lr, dataset=dataset, l2=l2, batch_size=batch_size)
-                    net['log'] = 'log.bilstm.{0}.d{1}.run{2}.{3}'.format(dataset, str(d_mem), str(run), str(idx))
-                    # gen_conf_file(net, '/home/wsx/exp/tb/log/run.3/bilstm.max.tb_fine.model.' + str(idx))
-                    gen_conf_file(net, '/home/wsx/exp/gate/lstm/run.4/model.bilstm.{0}.d{1}.{2}'.format(dataset, str(d_mem), str(idx)))
-                    idx += 1
-                    # os.system("../bin/textnet ../bin/conv_lstm_simulation.model > ../bin/simulation/neg.gen.train.{0}".format(d_mem))
+        for init in [0.5, 0.3]:
+            for l2 in [0.000003, 0.00001]:# , 0.00001, 0.0001, 0.001]:
+                for lstm_norm2 in [2, 1, 0.5]:
+                    for batch_size in [5, 15, 50]:
+                        net = gen_bilstm(d_mem=d_mem, init=init, lr=lr, dataset=dataset, \
+                                              l2=l2, batch_size=batch_size, lstm_norm2=lstm_norm2)
+                        net['log'] = 'log.bilstm.max.{0}.d{1}.run{2}.{3}'.\
+                                      format(dataset, str(d_mem), str(run),str(idx))
+                        gen_conf_file(net, '/home/wsx/exp/ccir2015/{0}/bilstm/run.2/model.conv_bilstm.max.{1}.d{2}.run{3}.{4}'.\
+                                      format(dataset, dataset, str(d_mem), str(run), str(idx)))
+                        idx += 1

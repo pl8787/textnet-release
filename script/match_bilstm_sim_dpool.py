@@ -115,6 +115,10 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     setting['d_mem'] = d_mem
     setting['grad_norm2'] = lstm_norm2
     setting['reverse'] = False
+    # setting['param_file'] = ""
+    setting['param_file'] = "/home/wsx/exp/match/wiki_lm/run.1/model/l_lstm.params.100000"
+    print setting['param_file']
+    # setting['param_file'] = "/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.5/l_lstm.params.0"
 
     layer = {}
     layers.append(layer) 
@@ -127,6 +131,9 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     setting['d_mem'] = d_mem
     setting['grad_norm2'] = lstm_norm2
     setting['reverse'] = True 
+    setting['param_file'] = "/home/wsx/exp/match/wiki_lm/run.1/model/r_lstm.params.100000"
+    print setting['param_file']
+    # setting['param_file'] = "/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.5/r_lstm.params.0"
     if is_share:
         print "ORC: share parameters."
         share_setting_w = {}
@@ -205,7 +212,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['top_nodes'] = ['hidden_drop_rep']
     layer['layer_name'] = 'dropout'
     layer['layer_type'] =  13
-    # ds.dp_rate = 0.
+    ds.dp_rate = 0.
     print "ORC, dp rate:", ds.dp_rate
     setting = {'rate':ds.dp_rate}
     layer['setting'] = setting
@@ -241,13 +248,13 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['setting'] = setting
     return net
 
-run = 4
+run = 10 
 l2 = 0.
 # for dataset in ['paper']:
 for dataset in ['msrp']:
     for d_mem in [30]:
         idx = 0
-        for init in [0.5, 0.3, 0.1]:
+        for init in [0.3]:
             for lr in [0.3, 0.1, 0.05, 0.03, 0.01]:
                 for lstm_norm2 in [10000]:
                     net = gen_match_lstm(d_mem = d_mem, init = init, lr =lr, dataset=dataset, l2=l2, lstm_norm2=lstm_norm2)

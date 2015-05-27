@@ -99,11 +99,38 @@ class DatasetCfg:
             self.n_valid = 1000
             self.n_test = 1725 
             self.train_display_interval = 1 
-            self.valid_display_interval = 50
-            self.test_display_interval  = 50 
-            self.train_max_iters = 20000
+            self.valid_display_interval = 100
+            self.test_display_interval  = 100 
+            self.train_max_iters = 50000
             self.valid_max_iters = self.n_valid/ self.valid_batch_size
             self.test_max_iters  = self.n_test / self.test_batch_size
+        elif dataset == 'wiki':
+            self.data_dir = '/home/wsx/data/wiki/'
+            self.train_data_file = self.data_dir + 'wiki.train'
+            self.valid_data_file = self.data_dir + 'wiki.valid'
+            self.test_data_file  = self.data_dir + 'wiki.valid'
+            self.embedding_file  = self.data_dir + 'wiki.embed'
+            self.update_indication_file = self.data_dir + 'wiki.ind'
+            
+            self.max_doc_len = 50
+            self.min_doc_len = 5 
+            self.vocab_size = 125854
+
+            self.dp_rate = 0.
+            self.d_word_rep = 50
+            self.batch_size = 1 
+            self.train_batch_size = 1 
+            self.valid_batch_size = 1 
+            self.test_batch_size  = 1 
+            self.n_train = 107090
+            self.n_valid = 11899
+            self.n_test = 11899
+            self.train_display_interval = 1 
+            self.valid_display_interval = 30000 
+            self.test_display_interval  = 30000 
+            self.train_max_iters = (self.n_train/self.train_batch_size) * 2
+            self.valid_max_iters = self.n_valid/self.valid_batch_size
+            self.test_max_iters  = self.n_test /self.test_batch_size
         elif dataset == 'paper':
             self.train_data_file = '/home/wsx/data/PaperData/relation.train.wid.txt'
             self.valid_data_file = '/home/wsx/data/PaperData/relation.valid.wid.txt'

@@ -69,7 +69,7 @@ class PosPredRepLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 4> l_rep    = bottom[0]->data;
     mshadow::Tensor<xpu, 2> l_len    = bottom[0]->length;
     mshadow::Tensor<xpu, 4> r_rep    = bottom[1]->data;
-    mshadow::Tensor<xpu, 2> r_len    = bottom[1]->length;
+    // mshadow::Tensor<xpu, 2> r_len    = bottom[1]->length;
     mshadow::Tensor<xpu, 4> pos      = bottom[2]->data;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
 

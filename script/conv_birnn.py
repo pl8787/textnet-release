@@ -226,15 +226,15 @@ def gen_conv_birnn(d_mem, init, l2, lr, dataset, batch_size):
 
 run = 1
 lr = 0
-for dataset in ['mr']:
+for dataset in ['trec']:
     for d_mem in [50]:
         idx = 0
         for init in [0.3, 0.1, 0.03, 0.01]:
-            for l2 in [0.]: # , 0.000001, 0.00001, 0.0001]:
+            for l2 in [0., 0.000003, 0.00001, 0.00003]:
                 for batch_size in [5, 20, 50, 100]:
                     net = gen_conv_birnn(d_mem=d_mem, init=init, lr=lr, dataset=dataset, l2=0., batch_size=batch_size)
                     net['log'] = 'log.conv_birnn.max.{0}.d{1}.run{2}.{3}'.format(dataset, str(d_mem), str(run), str(idx))
-                    gen_conf_file(net, '/home/wsx/exp/ccir2015/mr/conv_birnn/run.1/model.conv_birnn.max.{0}.d{1}.run{2}.{3}'.format(dataset, str(d_mem), str(run), str(idx)))
+                    gen_conf_file(net, '/home/wsx/exp/ccir2015/trec/conv_birnn/run.1/model.conv_birnn.max.{0}.d{1}.run{2}.{3}'.format(dataset, str(d_mem), str(run), str(idx)))
                     idx += 1
  
 # idx = 0

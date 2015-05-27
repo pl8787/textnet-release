@@ -111,6 +111,8 @@ class NegativeSampleLayer : public Layer<xpu>{
       iss.clear();
 	  iss.seekg(0, iss.beg);
       iss.str(lines[i]);
+      int label = -1;
+      iss >> label; // not used
       int j = 0;
       while (!iss.eof()) {
         iss >> data_set[i][0][0][j++];

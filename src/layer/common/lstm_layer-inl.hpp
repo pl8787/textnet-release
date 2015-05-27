@@ -6,6 +6,7 @@
 #include <mshadow/tensor.h>
 #include "../layer.h"
 #include "../../utils/utils.h"
+#include "../../io/json/json.h"
 #include <cassert>
 
 namespace textnet {
@@ -29,6 +30,7 @@ class LstmLayer : public Layer<xpu> {
   virtual void Require() {
     // default value, just set the value you want
     this->defaults["no_bias"] = SettingV(false);
+    this->defaults["param_file"] = SettingV("");
     // this->defaults["reverse"] = SettingV(false);
     
     // require value, set to SettingV(),
@@ -61,6 +63,7 @@ class LstmLayer : public Layer<xpu> {
     no_bias = setting["no_bias"].bVal();
     reverse = setting["reverse"].bVal();
     grad_norm2 = setting["grad_norm2"].fVal();
+    param_file = setting["param_file"].sVal();
 
     begin_h.Resize(mshadow::Shape2(1, d_mem), 0.f);
     begin_c.Resize(mshadow::Shape2(1, d_mem), 0.f);
@@ -84,6 +87,10 @@ class LstmLayer : public Layer<xpu> {
     this->params[0].Init();
     this->params[1].Init();
     this->params[2].Init();
+
+    if (!param_file.empty()) {
+      LoadParam();
+    }
     
     std::map<std::string, SettingV> &w_updater = *setting["w_updater"].mVal();
     std::map<std::string, SettingV> &u_updater = *setting["u_updater"].mVal();
@@ -412,11 +419,35 @@ class LstmLayer : public Layer<xpu> {
     checkNanParams();
 #endif
   }
+  void LoadTensor(Json::Value &tensor_root, mshadow::TensorContainer<xpu, 4> &t) {
+    Json::Value data_root = tensor_root["data"];
+    int s0 = data_root["shape"][0].asInt();
+    int s1 = data_root["shape"][1].asInt();
+    int s2 = data_root["shape"][2].asInt();
+    int s3 = data_root["shape"][3].asInt();
+    utils::Check(t.size(0) == s0 && t.size(1) == s1 && t.size(2) == s2 && t.size(3) == s3, 
+                 "LstmLayer: load tensor error.");
+    int size = s0*s1*s2*s3;
+    for (int i = 0; i < size; ++i) {
+      t.dptr_[i] = data_root["value"][i].asFloat();
+    }
+  }
+  void LoadParam() {
+    utils::Printf("LstmLayer: load params...\n");
+    Json::Value param_root;
+    ifstream ifs(param_file.c_str());
+    ifs >> param_root;
+    ifs.close();
+    LoadTensor(param_root[0], this->params[0].data);
+    LoadTensor(param_root[1], this->params[1].data);
+    LoadTensor(param_root[2], this->params[2].data);
+  }
 
  protected:
   int d_mem, d_input;
   bool no_bias, reverse; 
   float grad_norm2;
+  string param_file;
   mshadow::TensorContainer<xpu, 4> c, g, c_er, g_er;
   mshadow::TensorContainer<xpu, 2> begin_h, begin_c, begin_c_er, begin_h_er;
 };

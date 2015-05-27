@@ -23,7 +23,7 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
     g_layer_setting['u_updater'] = g_updater
     g_layer_setting['b_updater'] = g_updater
 
-    net['net_name'] = 'match_bilstm_mlp'
+    net['net_name'] = 'lm_bilstm'
     net['need_reshape'] = False
     net_cfg_train, net_cfg_valid, net_cfg_test = {}, {}, {}
     net['net_config'] = [net_cfg_train, net_cfg_valid, net_cfg_test]
@@ -54,7 +54,7 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
     setting['batch_size'] = ds.train_batch_size
     setting['data_file'] = ds.train_data_file
     setting['max_doc_len'] = ds.max_doc_len
-    setting['negative_num'] = 2
+    setting['negative_num'] = 20
     setting['position_num'] = 1
     setting['vocab_size'] = ds.vocab_size
 
@@ -70,7 +70,7 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
     setting['batch_size'] = ds.valid_batch_size
     setting['data_file'] = ds.valid_data_file
     setting['max_doc_len'] = ds.max_doc_len
-    setting['negative_num'] = 2
+    setting['negative_num'] = 20
     setting['position_num'] = 1
     setting['vocab_size'] = ds.vocab_size
 
@@ -86,7 +86,7 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
     setting['batch_size'] = ds.test_batch_size
     setting['data_file'] = ds.test_data_file
     setting['max_doc_len'] = ds.max_doc_len
-    setting['negative_num'] = 2
+    setting['negative_num'] = 20
     setting['position_num'] = 1
     setting['vocab_size'] = ds.vocab_size
 
@@ -99,21 +99,21 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
     setting['embedding_file'] = ds.embedding_file
-    # print "ORC: update all words"
-    # setting['update_indication_file'] = ds.update_indication_file
+    print "ORC: only update non exist word in w2v"
+    setting['update_indication_file'] = ds.update_indication_file
     setting['feat_size'] = ds.d_word_rep
     setting['word_count'] = ds.vocab_size
     print "ORC: not use l2 for embedding"
     setting['w_updater'] = zero_l2_updater
     setting['w_filler'] = {}
     setting['w_filler']['init_type'] = 2
-    setting['w_filler']['range'] = 0.14
+    setting['w_filler']['range'] = 0.25
 
     layer = {}
     layers.append(layer) 
     layer['bottom_nodes'] = ['sample']
     layer['top_nodes'] = ['sample_rep']
-    layer['layer_name'] = 'embedding'
+    layer['layer_name'] = 'embedding_sample'
     layer['layer_type'] = 21
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
@@ -126,7 +126,7 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
     setting['w_updater'] = zero_l2_updater
     setting['w_filler'] = {}
     setting['w_filler']['init_type'] = 2
-    setting['w_filler']['range'] = 0.14
+    setting['w_filler']['range'] = 0.25
 
     layer = {}
     layers.append(layer) 
@@ -170,18 +170,19 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
 
     return net
 
-run = 1
+run = 2
 l2 = 0.
-for dataset in ['test_lm']:
-    for d_mem in [50]:
+for dataset in ['wiki']:
+    for d_mem in [30]:
         idx = 0
-        for init in [0.1]:
-            for lr in [0.1]:
+        for init in [0.5, 0.1]:
+            for lr in [0.3, 0.1, 0.03]:
                 for lstm_norm2 in [10000]:
                     net = gen_lm_bilstm_mlp(d_mem=d_mem, init=init, lr=lr, dataset=dataset, l2=l2, lstm_norm2=lstm_norm2)
                     # net['log'] = 'log.lm_bilstm.{0}.d{1}.run{2}.{3}'.format \
                     #              (dataset, str(d_mem), str(run), str(idx))
-                    gen_conf_file(net, '/home/wsx/exp/match/{0}/run.{1}/'.format(dataset, str(run)) + \
-                                       'model.lm_bilstm.max.{0}.d{1}.run{2}.{3}'.format \
+                    net["save_model"] = {"file_prefix": "./model/model."+str(idx),"save_interval": 15000}
+                    gen_conf_file(net, '/home/wsx/exp/match/{0}_lm/run.{1}/'.format(dataset, str(run)) + \
+                                       'model.lm_bilstm.{0}.d{1}.run{2}.{3}'.format \
                                        (dataset, str(d_mem), str(run), str(idx)))
                     idx += 1

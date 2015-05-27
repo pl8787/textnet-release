@@ -38,7 +38,6 @@ class CrossEntropyLossLayer : public Layer<xpu>{
     utils::Check(bottom.size() == BottomNodeNum(), "CrossEntropyLossLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "CrossEntropyLossLayer:top size problem.");
                   
-    int batch_size = bottom[0]->data.size(0);    
     top[0]->Resize(1, 1, 1, 1, true);
   }
   

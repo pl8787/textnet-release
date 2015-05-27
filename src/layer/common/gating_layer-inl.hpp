@@ -157,7 +157,6 @@ class GatingLayer : public Layer<xpu> {
     mshadow::Tensor<xpu, 2> gate_data    = this->params[0].data_d2();
 	mshadow::Tensor<xpu, 2> gate_diff    = this->params[0].diff_d2();
 	
-	int word_idx = -1;
 	gate_diff = 0;
 
 	if (this->prop_error[0] || this->prop_grad[0]) {
