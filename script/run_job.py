@@ -142,6 +142,7 @@ class SshWorker(Thread):
                 # sys.stderr.write('worker {0} fail and quit.\n'.format(self.name))
                 # break
             
+            time.sleep(10)
             while not self.is_job_done(job.gen_identity_str_set()):
                 print '{0}: is waiting job end...'.format(self.name)
                 time.sleep(30)
@@ -167,9 +168,12 @@ class SshWorker(Thread):
         scp2local(self.node, job.remote_log_file(), job.local_log_file())
 
 def get_nodes():
-    node_169 = Node('10.60.1.169', 'wsx', 24)
-    node_168 = Node('10.60.1.168', 'wsx', 8)
-    return [node_169]
+    n_thread = 12
+    node_169 = Node('10.60.1.169', 'wsx', n_thread)
+    node_58 = Node('10.60.0.58', 'wsx', n_thread)
+    node_59 = Node('10.60.0.59', 'wsx', n_thread)
+    # node_168 = Node('10.60.1.168', 'wsx', 8)
+    return [node_58, node_59, node_169]
 
 def main():
     run_nodes = get_nodes()
@@ -191,7 +195,7 @@ def main():
     # local_dir = '/home/wsx/exp/ccir2015/mr/birnn/run.2/'
     # local_dir = '/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.2/'
     # local_dir = '/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.2/'
-    local_dir = '/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.9/'
+    local_dir = '/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.26/'
     remote_dir = '/home/wsx/log.tmp/'
 
     conf_files = os.listdir(local_dir) 

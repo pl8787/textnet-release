@@ -4,8 +4,7 @@ import copy, os
 from gen_conf_file import *
 from dataset_cfg import *
 
-def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
-    # print "ORC: left & right lstm share parameters"
+def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2, negative_num):
     net = {}
 
     ds = DatasetCfg(dataset)
@@ -54,9 +53,11 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
     setting['batch_size'] = ds.train_batch_size
     setting['data_file'] = ds.train_data_file
     setting['max_doc_len'] = ds.max_doc_len
-    setting['negative_num'] = 20
-    setting['position_num'] = 1
+    setting['negative_num'] = negative_num
+    setting['position_num'] = 3
     setting['vocab_size'] = ds.vocab_size
+    setting['word_freq_file'] = ds.word_freq_file
+    setting['sample_exp_factor'] = 1. 
 
     layer = {}
     layers.append(layer) 
@@ -70,9 +71,11 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
     setting['batch_size'] = ds.valid_batch_size
     setting['data_file'] = ds.valid_data_file
     setting['max_doc_len'] = ds.max_doc_len
-    setting['negative_num'] = 20
-    setting['position_num'] = 1
+    setting['negative_num'] = negative_num
+    setting['position_num'] = 3
     setting['vocab_size'] = ds.vocab_size
+    setting['word_freq_file'] = ds.word_freq_file
+    setting['sample_exp_factor'] = 1. 
 
     layer = {}
     layers.append(layer) 
@@ -86,9 +89,11 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
     setting['batch_size'] = ds.test_batch_size
     setting['data_file'] = ds.test_data_file
     setting['max_doc_len'] = ds.max_doc_len
-    setting['negative_num'] = 20
-    setting['position_num'] = 1
+    setting['negative_num'] = negative_num
+    setting['position_num'] = 3
     setting['vocab_size'] = ds.vocab_size
+    setting['word_freq_file'] = ds.word_freq_file
+    setting['sample_exp_factor'] = 1. 
 
     layer = {}
     layers.append(layer) 
@@ -105,9 +110,6 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
     setting['word_count'] = ds.vocab_size
     print "ORC: not use l2 for embedding"
     setting['w_updater'] = zero_l2_updater
-    setting['w_filler'] = {}
-    setting['w_filler']['init_type'] = 2
-    setting['w_filler']['range'] = 0.25
 
     layer = {}
     layers.append(layer) 
@@ -117,16 +119,14 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['layer_type'] = 21
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
-    # setting['embedding_file'] = ds.embedding_file
-    # print "ORC: update all words"
-    # setting['update_indication_file'] = ds.update_indication_file
-    setting['feat_size'] = d_mem * 2 + 1 # this layer is the softmax parameter, not word representation
+    setting['feat_size'] = d_mem # this layer is the softmax parameter, not word representation
     setting['word_count'] = ds.vocab_size
-    print "ORC: not use l2 for embedding"
     setting['w_updater'] = zero_l2_updater
-    setting['w_filler'] = {}
-    setting['w_filler']['init_type'] = 2
-    setting['w_filler']['range'] = 0.25
+    # setting['w_filler'] = {}
+    # setting['w_filler']['init_type'] = 0
+    setting['embedding_file'] = ds.embedding_file
+    print "ORC: only update non exist word in w2v"
+    setting['update_indication_file'] = ds.update_indication_file
 
     layer = {}
     layers.append(layer) 
@@ -170,19 +170,26 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
 
     return net
 
-run = 2
+run = 11 
 l2 = 0.
 for dataset in ['wiki']:
-    for d_mem in [30]:
+    for d_mem in [50]:
         idx = 0
-        for init in [0.5, 0.1]:
-            for lr in [0.3, 0.1, 0.03]:
-                for lstm_norm2 in [10000]:
-                    net = gen_lm_bilstm_mlp(d_mem=d_mem, init=init, lr=lr, dataset=dataset, l2=l2, lstm_norm2=lstm_norm2)
-                    # net['log'] = 'log.lm_bilstm.{0}.d{1}.run{2}.{3}'.format \
-                    #              (dataset, str(d_mem), str(run), str(idx))
-                    net["save_model"] = {"file_prefix": "./model/model."+str(idx),"save_interval": 15000}
-                    gen_conf_file(net, '/home/wsx/exp/match/{0}_lm/run.{1}/'.format(dataset, str(run)) + \
-                                       'model.lm_bilstm.{0}.d{1}.run{2}.{3}'.format \
-                                       (dataset, str(d_mem), str(run), str(idx)))
-                    idx += 1
+        for init in [0.3]:
+            for lr in [0.03, 0.01, 0.003]:
+                for negative_num in [10]:
+                    for l2 in [0.0003, 0.001, 0.01]:
+                        lstm_norm2 = 2
+                        net = gen_lm_bilstm_mlp(d_mem=d_mem, init=init, lr=lr, dataset=dataset, l2=l2, \
+                                                lstm_norm2=lstm_norm2, negative_num=negative_num)
+                        net['log'] = 'log.lm_bilstm.{0}.d{1}.run{2}.{3}'.format \
+                                     (dataset, str(d_mem), str(run), str(idx))
+                        net["save_model"] = {"file_prefix": "./model/model."+str(idx),"save_interval": 1000}
+                        net["save_activation"] = [{"tag":"Valid","file_prefix": \
+                                                   "./model/valid."+str(idx), \
+                                                   "save_interval": 1000, \
+                                                   "save_iter_num":1}]
+                        gen_conf_file(net, '/home/wsx/exp/match/{0}_lm/run.{1}/'.format(dataset, str(run)) + \
+                                           'model.lm_bilstm.{0}.d{1}.run{2}.{3}'.format \
+                                           (dataset, str(d_mem), str(run), str(idx)))
+                        idx += 1

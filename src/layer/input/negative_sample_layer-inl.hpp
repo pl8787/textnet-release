@@ -33,6 +33,8 @@ class NegativeSampleLayer : public Layer<xpu>{
     this->defaults["negative_num"] = SettingV();
     this->defaults["position_num"] = SettingV();
     this->defaults["vocab_size"] = SettingV();
+    this->defaults["word_freq_file"] = SettingV();
+    this->defaults["sample_exp_factor"] = SettingV();
     
     Layer<xpu>::Require();
   }
@@ -54,18 +56,54 @@ class NegativeSampleLayer : public Layer<xpu>{
     negative_num = setting["negative_num"].i_val;
     position_num = setting["position_num"].i_val;
     vocab_size = setting["vocab_size"].i_val;
+    word_freq_file = setting["word_freq_file"].s_val;
+    sample_exp_factor = setting["sample_exp_factor"].f_val;
 
     ReadSequenceData();
+    construct_sample_pool();
     
     line_ptr = 0;
     sampler.Seed(shuffle_seed);
+  }
+
+  void construct_sample_pool() {
+    sample_vector.clear();
+    if (sample_exp_factor == 0.f) {
+      for (int i = 0; i < vocab_size; ++i) {
+        sample_vector.push_back(i);
+      }
+      return;
+    }
+
+    utils::Check(sample_exp_factor > 0.f && sample_exp_factor < 3, "NegativeSampleLayer: sample error 1.");
+    std::ifstream ifs(word_freq_file.c_str());
+    std::set<int> wids;
+    while (!ifs.eof()) {
+      int wid = -1, freq = -1;
+      ifs >> wid >> freq;
+      if (wid < 0) break;
+      wids.insert(wid);
+      // cout << wid << endl;
+      utils::Check(wid >= 0 && wid < vocab_size, "NegativeSampleLayer: sample error 2.");
+      utils::Check(freq >= 1, "NegativeSampleLayer: sample error 3.");
+      float num = pow(freq, sample_exp_factor);
+      if (num < 1.f) num = 1.1f;
+      int i_num = floor(num);
+      for (int i = 0; i < i_num; ++i) {
+        sample_vector.push_back(wid);
+      }
+    }
+    ifs.close();
+    utils::Check(wids.size() == vocab_size, "NegativeSampleLayer: sample error 3.");
+    utils::Printf("NegativeSampleLayer: sample_vector.size():%d\n", sample_vector.size());
   }
 
   // return a list of negative samples
   void negative_sampler(vector<int> &negative_sample) {
     negative_sample.clear();
     for (int i = 0; i < negative_num; ++i) {
-      int sample = this->sampler.NextUInt32(vocab_size);
+      int sample = this->sampler.NextUInt32(sample_vector.size());
+      sample = sample_vector[sample];
       utils::Assert(sample >= 0 && sample < vocab_size, "NegativeSampleLayer: sampler error");
       negative_sample.push_back(sample);
     }
@@ -111,8 +149,8 @@ class NegativeSampleLayer : public Layer<xpu>{
       iss.clear();
 	  iss.seekg(0, iss.beg);
       iss.str(lines[i]);
-      int label = -1;
-      iss >> label; // not used
+      // int label = -1;
+      // iss >> label; // not used
       int j = 0;
       while (!iss.eof()) {
         iss >> data_set[i][0][0][j++];
@@ -191,13 +229,15 @@ class NegativeSampleLayer : public Layer<xpu>{
   }
 
  public:
-  std::string data_file;
+  std::string data_file, word_freq_file;
   int batch_size, max_doc_len, negative_num, position_num, vocab_size;
   mshadow::TensorContainer<xpu, 4> data_set;
   mshadow::TensorContainer<xpu, 1, int> length;
   std::vector<int> example_ids;
   int line_count, line_ptr, shuffle_seed;
+  float sample_exp_factor;
   utils::RandomSampler sampler;
+  vector<int> sample_vector; 
 };
 }  // namespace layer
 }

@@ -48,7 +48,8 @@ class NegativeSampleLossLayer : public Layer<xpu>{
     utils::Check(bottom[0]->data.size(0) == bottom[2]->data.size(0), "NegativeSampleLossLayer: input error.");
     utils::Check(bottom[0]->data.size(1) == bottom[1]->data.size(1), "NegativeSampleLossLayer: input error.");
     utils::Check(bottom[0]->data.size(1) == bottom[2]->data.size(1), "NegativeSampleLossLayer: input error.");
-    utils::Check(bottom[0]->data.size(3)+1 == bottom[1]->data.size(3), "NegativeSampleLossLayer: input error.");
+    // utils::Check(bottom[0]->data.size(3)+1 == bottom[1]->data.size(3), "NegativeSampleLossLayer: input error.");
+    utils::Check(bottom[0]->data.size(3) == bottom[1]->data.size(3), "NegativeSampleLossLayer: input error.");
     utils::Check(bottom[1]->data.size(2) == bottom[2]->data.size(2), "NegativeSampleLossLayer: input error.");
   }
   
@@ -89,7 +90,7 @@ class NegativeSampleLossLayer : public Layer<xpu>{
           for (int f = 0; f < bottom0_data.size(3); ++f) { // feature and bias
             top0_data[i][j][k][1] += bottom0_data[i][j][0][f] * bottom1_data[i][j][k][f]; 
           }
-          top0_data[i][j][k][1] += bottom1_data[i][j][k][bottom1_data.size(3)-1]; // bias
+          // top0_data[i][j][k][1] += bottom1_data[i][j][k][bottom1_data.size(3)-1]; // bias
         }
       }
     }
@@ -146,7 +147,7 @@ class NegativeSampleLossLayer : public Layer<xpu>{
               bottom0_diff[i][j][0][f] += top0_diff[i][j][k][1] * bottom1_data[i][j][k][f];
               bottom1_diff[i][j][k][f] += top0_diff[i][j][k][1] * bottom0_data[i][j][0][f];
             }
-            bottom1_diff[i][j][k][bottom1_data.size(3)-1] += top0_diff[i][j][k][1];
+            // bottom1_diff[i][j][k][bottom1_data.size(3)-1] += top0_diff[i][j][k][1];
           }
         }
       }

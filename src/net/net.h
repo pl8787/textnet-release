@@ -695,6 +695,12 @@ class Net : public INet{
             layer_params_root.append(0);
             continue;
         }
+        // oracle 
+        if (layers[layer_idx]->layer_type == kEmbedding) {
+            cout << "ORC: without save embedding" << endl;
+            layer_params_root.append(0);
+            continue;
+        }
         // save the content of the matrix
         Json::Value node_root;
         layers[layer_idx]->params[param_idx].SaveNode(node_root, false);
