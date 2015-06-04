@@ -162,7 +162,17 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2, negative_num):
 
     layer = {}
     layers.append(layer) 
-    layer['bottom_nodes'] = ['pos_pred_rep', 'sample_rep', 'y']
+    layer['bottom_nodes'] = ['pos_pred_rep']
+    layer['top_nodes'] = ['pos_pred_rep_trans']
+    layer['layer_name'] = 'pred_rep_trans_layer'
+    layer['layer_type'] = 28
+    setting = copy.deepcopy(g_layer_setting)
+    layer['setting'] = setting
+    setting['num_hidden'] = d_mem
+
+    layer = {}
+    layers.append(layer) 
+    layer['bottom_nodes'] = ['pos_pred_rep_trans', 'sample_rep', 'y']
     layer['top_nodes'] = ['softmax_prob', 'loss']
     layer['layer_name'] = 'negative_sample_loss'
     layer['layer_type'] = 58
@@ -170,15 +180,15 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2, negative_num):
 
     return net
 
-run = 11 
+run = 13
 l2 = 0.
 for dataset in ['wiki']:
     for d_mem in [50]:
         idx = 0
-        for init in [0.3]:
+        for init in [0.1]:
             for lr in [0.03, 0.01, 0.003]:
                 for negative_num in [10]:
-                    for l2 in [0.0003, 0.001, 0.01]:
+                    for l2 in [0.0001, 0.001, 0.01]:
                         lstm_norm2 = 2
                         net = gen_lm_bilstm_mlp(d_mem=d_mem, init=init, lr=lr, dataset=dataset, l2=l2, \
                                                 lstm_norm2=lstm_norm2, negative_num=negative_num)

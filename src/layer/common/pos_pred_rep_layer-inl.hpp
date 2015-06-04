@@ -49,7 +49,7 @@ class PosPredRepLayer : public Layer<xpu>{
     utils::Check(shape_in_l_rep == shape_in_r_rep, "PosPredRepLayer: shape error.");
     utils::Check(shape_in_pos[2] == 1 && shape_in_pos[3] == 1, "PosPredRepLayer: shape error.");
     feat_size = shape_in_l_rep[3];
-    mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in_pos[0], shape_in_pos[1], 1, feat_size);
+    mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in_pos[0], shape_in_pos[1], 1, feat_size * 2);
     top[0]->Resize(shape_out, true);
 
     bottom[0]->PrintShape("bottom0");
@@ -83,12 +83,12 @@ class PosPredRepLayer : public Layer<xpu>{
         int p = pos[batch_idx][pos_idx][0][0];
         utils::Check(p < length, "PosPredRepLayer: position error.");
         if (p > 0) {
-          // top_data[batch_idx][pos_idx][0].Slice(0, feat_size) = F<op::identity>(l_rep[batch_idx][0][p-1]);
-          top_data[batch_idx][pos_idx][0] += F<op::identity>(l_rep[batch_idx][0][p-1]);
+          top_data[batch_idx][pos_idx][0].Slice(0, feat_size) = F<op::identity>(l_rep[batch_idx][0][p-1]);
+          // top_data[batch_idx][pos_idx][0] += F<op::identity>(l_rep[batch_idx][0][p-1]);
         }
         if (p < length-1) {
-          top_data[batch_idx][pos_idx][0] += F<op::identity>(r_rep[batch_idx][0][p+1]);
-          // top_data[batch_idx][pos_idx][0].Slice(feat_size, feat_size*2) = F<op::identity>(r_rep[batch_idx][0][p+1]);
+          // top_data[batch_idx][pos_idx][0] += F<op::identity>(r_rep[batch_idx][0][p+1]);
+          top_data[batch_idx][pos_idx][0].Slice(feat_size, feat_size*2) = F<op::identity>(r_rep[batch_idx][0][p+1]);
         }
       }
     }
@@ -108,12 +108,12 @@ class PosPredRepLayer : public Layer<xpu>{
         int length = l_len[batch_idx][0];
         int p = pos[batch_idx][pos_idx][0][0];
         if (p > 0) {
-          // l_diff[batch_idx][0][p-1] += top_diff[batch_idx][pos_idx][0].Slice(0, feat_size);
-          l_diff[batch_idx][0][p-1] += top_diff[batch_idx][pos_idx][0];
+          l_diff[batch_idx][0][p-1] += top_diff[batch_idx][pos_idx][0].Slice(0, feat_size);
+          // l_diff[batch_idx][0][p-1] += top_diff[batch_idx][pos_idx][0];
         }
         if (p < length-1) {
-          // r_diff[batch_idx][0][p+1] += top_diff[batch_idx][pos_idx][0].Slice(feat_size, feat_size*2);
-          r_diff[batch_idx][0][p+1] += top_diff[batch_idx][pos_idx][0];
+          r_diff[batch_idx][0][p+1] += top_diff[batch_idx][pos_idx][0].Slice(feat_size, feat_size*2);
+          // r_diff[batch_idx][0][p+1] += top_diff[batch_idx][pos_idx][0];
         }
       }
     }

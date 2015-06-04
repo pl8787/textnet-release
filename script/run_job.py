@@ -170,10 +170,10 @@ class SshWorker(Thread):
 def get_nodes():
     n_thread = 12
     node_169 = Node('10.60.1.169', 'wsx', n_thread)
-    node_58 = Node('10.60.0.58', 'wsx', n_thread)
+    node_52 = Node('10.60.0.52', 'wsx', n_thread)
     node_59 = Node('10.60.0.59', 'wsx', n_thread)
     # node_168 = Node('10.60.1.168', 'wsx', 8)
-    return [node_58, node_59, node_169]
+    return [node_52, node_59, node_169]
 
 def main():
     run_nodes = get_nodes()
@@ -195,7 +195,7 @@ def main():
     # local_dir = '/home/wsx/exp/ccir2015/mr/birnn/run.2/'
     # local_dir = '/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.2/'
     # local_dir = '/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.2/'
-    local_dir = '/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.26/'
+    local_dir = '/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.33/'
     remote_dir = '/home/wsx/log.tmp/'
 
     conf_files = os.listdir(local_dir) 

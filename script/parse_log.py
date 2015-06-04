@@ -114,16 +114,16 @@ def parse_tvt(inFile):
 # parse_cv_final_acc(dir + 'log.gate_mul_cnn.mr.kim.'+str(0))
 # exit(0)
 # dir = '/home/wsx/exp/ccir2015/mr/birnn/run.2/'
-dir = '/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.26/'
+dir = '/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.31/'
 # dir = '/home/wsx/log.tmp/'
 # dir = '/home/wsx/exp/match/msrp/cnn/run.1/'
 # dir = '/home/wsx/exp/match/msrp/xor_diag_rnn/run.8/'
-for i in range(30, 62):
+for i in range(0, 75):
     # try:
         # parse_tvt(dir+'log.match.elem_diag_rnn.msrp.d50.run4.'+str(i))
         # parse_tvt(dir+'log.match.elem_diag_rnn.msrp.d50.run1.'+str(i))
     try:
-        parse_tvt(dir+'log.match.bilstm_sim_dpool.msrp.d50.run26.'+str(i))
+        parse_tvt(dir+'log.match.bilstm_sim_dpool.msrp.d50.run31.'+str(i))
         # parse_cv_final_acc(dir+'log.birnn.mr.d50.run2.'+str(i))
     except:
         print "FAILDED"

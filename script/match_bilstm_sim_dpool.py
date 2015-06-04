@@ -111,8 +111,11 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     setting['d_mem'] = d_mem
     setting['grad_norm2'] = lstm_norm2
     setting['reverse'] = False
-    # setting['param_file'] = "/home/wsx/exp/match/wiki_lm/run.11/model/l_lstm.params.4.20000"
-    # print setting['param_file']
+    # setting['param_file'] = ""
+    setting['param_file'] = "/home/wsx/exp/match/wiki_lm/run.12/model/l_lstm.params.7.80000"
+    print setting['param_file']
+    # setting['param_file'] = "/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.5/l_lstm.params.0"
+    # setting['param_file'] = "/home/wsx/exp/match/wiki_lm/run.8/model/l_lstm.params.5.5100"
 
     layer = {}
     layers.append(layer) 
@@ -125,8 +128,11 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     setting['d_mem'] = d_mem
     setting['grad_norm2'] = lstm_norm2
     setting['reverse'] = True 
-    # setting['param_file'] = "/home/wsx/exp/match/wiki_lm/run.11/model/r_lstm.params.4.20000"
+    setting['param_file'] = "/home/wsx/exp/match/wiki_lm/run.12/model/r_lstm.params.7.80000"
+    # setting['param_file'] = "/home/wsx/exp/match/wiki_lm/run.11/model/r_lstm.params.8.80000"
+    # setting['param_file'] = "/home/wsx/exp/match/wiki_lm/run.8/model/r_lstm.params.5.5100"
     # print setting['param_file']
+    # setting['param_file'] = "/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.5/r_lstm.params.0"
 
     # if is_share:
     #     print "ORC: share parameters."
@@ -146,62 +152,27 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
 
     layer = {}
     layers.append(layer) 
-    layer['bottom_nodes'] = ['l_lstm_seq']
-    layer['top_nodes'] = ['l_lstm_l_sentence', 'l_lstm_r_sentence']
-    layer['layer_name'] = 'sentence_split_l_lstm'
-    layer['layer_type'] = 20 
-    layer['setting'] = {}
-
-    layer = {}
-    layers.append(layer) 
-    layer['bottom_nodes'] = ['r_lstm_seq']
-    layer['top_nodes'] = ['r_lstm_l_sentence', 'r_lstm_r_sentence']
-    layer['layer_name'] = 'sentence_split_r_lstm'
-    layer['layer_type'] = 20 
-    setting = {}
-    layer['setting'] = setting
-    
-    layer = {}
-    layers.append(layer) 
-    layer['bottom_nodes'] = ['l_lstm_l_sentence', 'r_lstm_l_sentence']
-    layer['top_nodes'] = ['bi_lstm_l_sentence']
-    layer['layer_name'] = 'concat_l_sentence'
+    layer['bottom_nodes'] = ['l_lstm_seq', 'r_lstm_seq']
+    layer['top_nodes'] = ['bi_lstm_seq']
+    layer['layer_name'] = 'concat'
     layer['layer_type'] = 18
-    setting = {}
+    setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
     setting['bottom_node_num'] = 2
-    setting['concat_dim_index'] = 1
+    setting['concat_dim_index'] = 3
 
     layer = {}
     layers.append(layer) 
-    layer['bottom_nodes'] = ['l_lstm_r_sentence', 'r_lstm_r_sentence']
-    layer['top_nodes'] = ['bi_lstm_r_sentence']
-    layer['layer_name'] = 'concat_r_sentence'
-    layer['layer_type'] = 18
+    layer['bottom_nodes'] = ['bi_lstm_seq']
+    layer['top_nodes'] = ['l_sentence', 'r_sentence']
+    layer['layer_name'] = 'sentence_split'
+    layer['layer_type'] = 20 
     setting = {}
     layer['setting'] = setting
-    setting['bottom_node_num'] = 2
-    setting['concat_dim_index'] = 1
 
     layer = {}
     layers.append(layer) 
-    layer['bottom_nodes'] = ['bi_lstm_l_sentence']
-    layer['top_nodes'] = ['lstm_sum_l_sentence']
-    layer['layer_name'] = 'sum_l_sentence'
-    layer['layer_type'] = 39
-    layer['setting'] = {'axis':1}
-
-    layer = {}
-    layers.append(layer) 
-    layer['bottom_nodes'] = ['bi_lstm_r_sentence']
-    layer['top_nodes'] = ['lstm_sum_r_sentence']
-    layer['layer_name'] = 'sum_r_sentence'
-    layer['layer_type'] = 39
-    layer['setting'] = {'axis':1}
-
-    layer = {}
-    layers.append(layer) 
-    layer['bottom_nodes'] = ['lstm_sum_l_sentence', 'lstm_sum_r_sentence']
+    layer['bottom_nodes'] = ['l_sentence', 'r_sentence']
     layer['top_nodes'] = ['dot_similarity']
     layer['layer_name'] = 'match'
     layer['layer_type'] = 23 
@@ -210,7 +181,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
 
     layer = {}
     layers.append(layer) 
-    layer['bottom_nodes'] = ['dot_similarity', 'l_lstm_l_sentence', 'l_lstm_r_sentence']
+    layer['bottom_nodes'] = ['dot_similarity', 'l_sentence', 'r_sentence']
     layer['top_nodes'] = ['dpool_rep']
     layer['layer_name'] = 'dynamic_pooling'
     layer['layer_type'] = 43
@@ -224,12 +195,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['layer_type'] = 11 
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
-    setting['num_hidden'] = d_mem
-    # setting['w_filler'] = {}
-    # setting['w_filler']['init_type'] = 7
-    # setting['w_filler']['upper'] = init
-    # setting['w_filler']['lower'] = 0
-    # setting['no_bias'] = False
+    setting['num_hidden'] = d_mem * 4
 
     layer = {}
     layers.append(layer) 
@@ -283,18 +249,15 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['setting'] = setting
     return net
 
-run = 26
+run = 33
 l2 = 0.
-# for dataset in ['paper']:
 for dataset in ['msrp']:
     for d_mem in [50]:
-        idx = 30
-        for init in [0.5, 0.3]:
-            for lr in [0.5, 0.3, 0.1, 0.03]:
-                for lstm_norm2 in [10, 3, 1, 0.3]:
-                # for l2 in [0.]:
-                    l2 = 0.0
-                    # lstm_norm2 = 10000
+        idx = 60
+        for init in [0.3, 0.1, 0.03]:
+            for lr in [0.3, 0.1, 0.03, 0.01]:
+                for lstm_norm2 in [3]:
+                    l2 = 0.000001
                     net = gen_match_lstm(d_mem = d_mem, init = init, lr =lr, dataset=dataset, l2=l2, lstm_norm2=lstm_norm2)
                     net['log'] = 'log.match.bilstm_sim_dpool.{0}.d{1}.run{2}.{3}'.format\
                                  (dataset, str(d_mem), str(run), str(idx))

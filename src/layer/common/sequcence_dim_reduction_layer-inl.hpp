@@ -63,9 +63,9 @@ class SequenceDimReductionLayer : public Layer<xpu> {
     utils::Check(top.size() == TopNodeNum(), "SequenceDimReductionLayer:top size problem.");
     
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
-    utils::Check(bottom_data.size(1) == 1, "SequenceDimReductionLayer:bottom size problem.");
+    // utils::Check(bottom_data.size(1) == 1, "SequenceDimReductionLayer:bottom size problem.");
     
-    top[0]->Resize(bottom_data.size(0), 1, bottom_data.size(2), num_hidden, true);
+    top[0]->Resize(bottom_data.size(0), bottom_data.size(1), bottom_data.size(2), num_hidden, true);
 
 	bottom[0]->PrintShape("bottom0");
 	top[0]->PrintShape("top0");
