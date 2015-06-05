@@ -806,11 +806,11 @@ void TestWordClassSoftmaxLayer(mshadow::Random<cpu>* prnd) {
   tops.push_back(&top2);
   tops.push_back(&top3);
   
-  bottom0.Resize(Shape4(2,1,1,4), true);
-  bottom1.Resize(Shape4(2,1,1,1), true);
+  bottom0.Resize(Shape4(1,1,1,4), true);
+  bottom1.Resize(Shape4(1,1,1,1), true);
   prnd->SampleUniform(&bottom0.data, -1, 1);
   bottom1.data[0][0][0][0] = 1;
-  bottom1.data[1][0][0][0] = 3;
+  // bottom1.data[1][0][0][0] = 3;
   
   map<string, SettingV> setting;
   {

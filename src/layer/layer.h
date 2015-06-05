@@ -86,6 +86,7 @@ const int kTextData = 71;
 const int kSequenceClassificationData = 72;
 const int kNextBasketData = 73;
 const int kNegativeSample = 74;
+const int kWordClassInput = 75;
 
 
 /*! \brief these are enumeration */

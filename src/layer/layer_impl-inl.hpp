@@ -40,6 +40,7 @@
 #include "./input/next_basket_data_layer-inl.hpp"
 #include "./input/sequence_classification_data_layer-inl.hpp"
 #include "./input/negative_sample_layer-inl.hpp"
+#include "./input/word_class_input_layer-inl.hpp"
 #include "./loss/hingeloss_layer-inl.hpp"
 #include "./loss/cross_entropy_loss_layer-inl.hpp"
 #include "./loss/pairhingeloss_layer-inl.hpp"
@@ -96,6 +97,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kSoftmaxFuncVarLen: return new SoftmaxFuncVarLenLayer<xpu>(type);
     case kNegativeSampleLoss: return new NegativeSampleLossLayer<xpu>(type);
     case kWordClassSoftmaxLoss: return new WordClassSoftmaxLossLayer<xpu>(type);
+    case kWordClassInput: return new WordClassInputLayer<xpu>(type);
     case kSumByAxis: return new SumLayer<xpu>(type);
     case kAccuracy: return new AccuracyLayer<xpu>(type);
     case kMatch: return new MatchLayer<xpu>(type);
