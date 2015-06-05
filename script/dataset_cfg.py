@@ -129,7 +129,7 @@ class DatasetCfg:
             self.train_display_interval = 10 
             self.valid_display_interval = 1000 
             self.test_display_interval  = 1000 
-            self.train_max_iters = (self.n_train/self.train_batch_size) * 3
+            self.train_max_iters = (self.n_train/self.train_batch_size) * 10
             self.valid_max_iters = (self.n_valid/5)/self.valid_batch_size
             self.test_max_iters  = self.n_test /self.test_batch_size
         elif dataset == 'paper':

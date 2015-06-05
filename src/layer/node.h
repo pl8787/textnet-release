@@ -321,6 +321,14 @@ struct Node {
     return mshadow::Tensor<xpu, 1>(diff.dptr_, mshadow::Shape1(diff.shape_.Size()));
   }
 
+  inline mshadow::Tensor<xpu, 1> data_d1_reverse() {
+    return mshadow::Tensor<xpu, 1>(data.dptr_, mshadow::Shape1(data.shape_.Size()));
+  }
+
+  inline mshadow::Tensor<xpu, 1> diff_d1_reverse() {
+    return mshadow::Tensor<xpu, 1>(diff.dptr_, mshadow::Shape1(diff.shape_.Size()));
+  }
+
   inline mshadow::Tensor<xpu, 1> idx_d1() {
     return mshadow::Tensor<xpu, 1>(idx.dptr_, mshadow::Shape1(idx.shape_.Size()));
   }

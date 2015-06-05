@@ -180,7 +180,7 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2, negative_num):
 
     return net
 
-run = 13
+run = 14
 l2 = 0.
 for dataset in ['wiki']:
     for d_mem in [50]:
@@ -194,10 +194,10 @@ for dataset in ['wiki']:
                                                 lstm_norm2=lstm_norm2, negative_num=negative_num)
                         net['log'] = 'log.lm_bilstm.{0}.d{1}.run{2}.{3}'.format \
                                      (dataset, str(d_mem), str(run), str(idx))
-                        net["save_model"] = {"file_prefix": "./model/model."+str(idx),"save_interval": 1000}
+                        net["save_model"] = {"file_prefix": "./model/model."+str(idx),"save_interval": 2000}
                         net["save_activation"] = [{"tag":"Valid","file_prefix": \
                                                    "./model/valid."+str(idx), \
-                                                   "save_interval": 1000, \
+                                                   "save_interval": 2000, \
                                                    "save_iter_num":1}]
                         gen_conf_file(net, '/home/wsx/exp/match/{0}_lm/run.{1}/'.format(dataset, str(run)) + \
                                            'model.lm_bilstm.{0}.d{1}.run{2}.{3}'.format \

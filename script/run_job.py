@@ -195,7 +195,7 @@ def main():
     # local_dir = '/home/wsx/exp/ccir2015/mr/birnn/run.2/'
     # local_dir = '/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.2/'
     # local_dir = '/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.2/'
-    local_dir = '/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.33/'
+    local_dir = '/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.35/'
     remote_dir = '/home/wsx/log.tmp/'
 
     conf_files = os.listdir(local_dir) 

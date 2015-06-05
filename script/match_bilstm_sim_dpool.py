@@ -4,7 +4,7 @@ import copy, os
 from gen_conf_file import *
 from dataset_cfg import *
 
-def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
+def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretrain_run_no, model_no, epoch_no):
     # print "ORC: left & right lstm share parameters"
     net = {}
 
@@ -112,8 +112,9 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     setting['grad_norm2'] = lstm_norm2
     setting['reverse'] = False
     # setting['param_file'] = ""
-    setting['param_file'] = "/home/wsx/exp/match/wiki_lm/run.12/model/l_lstm.params.7.80000"
-    print setting['param_file']
+    if is_pretrain:
+        setting['param_file'] = "/home/wsx/exp/match/wiki_lm/run.{0}/model/l_lstm.params.{1}.{2}".format(str(pretrain_run_no), str(model_no), str(epoch_no))
+        print setting['param_file']
     # setting['param_file'] = "/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.5/l_lstm.params.0"
     # setting['param_file'] = "/home/wsx/exp/match/wiki_lm/run.8/model/l_lstm.params.5.5100"
 
@@ -128,7 +129,9 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     setting['d_mem'] = d_mem
     setting['grad_norm2'] = lstm_norm2
     setting['reverse'] = True 
-    setting['param_file'] = "/home/wsx/exp/match/wiki_lm/run.12/model/r_lstm.params.7.80000"
+    if is_pretrain:
+        setting['param_file'] = "/home/wsx/exp/match/wiki_lm/run.{0}/model/r_lstm.params.{1}.{2}".format(str(pretrain_run_no), str(model_no), str(epoch_no))
+        print setting['param_file']
     # setting['param_file'] = "/home/wsx/exp/match/wiki_lm/run.11/model/r_lstm.params.8.80000"
     # setting['param_file'] = "/home/wsx/exp/match/wiki_lm/run.8/model/r_lstm.params.5.5100"
     # print setting['param_file']
@@ -249,19 +252,23 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['setting'] = setting
     return net
 
-run = 33
+run = 35
 l2 = 0.
 for dataset in ['msrp']:
     for d_mem in [50]:
-        idx = 60
-        for init in [0.3, 0.1, 0.03]:
-            for lr in [0.3, 0.1, 0.03, 0.01]:
-                for lstm_norm2 in [3]:
-                    l2 = 0.000001
-                    net = gen_match_lstm(d_mem = d_mem, init = init, lr =lr, dataset=dataset, l2=l2, lstm_norm2=lstm_norm2)
-                    net['log'] = 'log.match.bilstm_sim_dpool.{0}.d{1}.run{2}.{3}'.format\
-                                 (dataset, str(d_mem), str(run), str(idx))
-                    gen_conf_file(net, '/home/wsx/exp/match/{0}/bilstm_sim_dpool/run.{1}/'.format(dataset,str(run)) + \
-                                       'model.match.bilstm_sim_dpool.{0}.d{1}.run{2}.{3}'.format\
-                                       (dataset, str(d_mem), str(run), str(idx)))
-                    idx += 1
+        idx = 0
+        for model_no in [0,1,2,3,4,5,6,7,8]:
+            for epoch_no in [20000, 40000, 80000]:
+                for init in [0.1, 0.03, 0.01]:
+                    for lr in [0.2, 0.1, 0.03, 0.01]:
+                        pretrain_run_no = 13
+                        lstm_norm2 = 3
+                        l2 = 0.000001
+                        net = gen_match_lstm(d_mem = d_mem, init = init, lr =lr, dataset=dataset, l2=l2, lstm_norm2=lstm_norm2,  \
+                                             is_pretrain = True, pretrain_run_no = pretrain_run_no, model_no = model_no, epoch_no = epoch_no)
+                        net['log'] = 'log.match.bilstm_sim_dpool.{0}.d{1}.run{2}.{3}'.format\
+                                     (dataset, str(d_mem), str(run), str(idx))
+                        gen_conf_file(net, '/home/wsx/exp/match/{0}/bilstm_sim_dpool/run.{1}/'.format(dataset,str(run)) + \
+                                           'model.match.bilstm_sim_dpool.{0}.d{1}.run{2}.{3}'.format\
+                                           (dataset, str(d_mem), str(run), str(idx)))
+                        idx += 1

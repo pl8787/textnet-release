@@ -46,6 +46,7 @@
 #include "./loss/softmax_layer-inl.hpp"
 #include "./loss/accuracy_layer-inl.hpp"
 #include "./loss/negative_sample_loss_layer-inl.hpp"
+#include "./loss/word_class_softmax_loss_layer-inl.hpp"
 
 namespace textnet {
 namespace layer {
@@ -94,6 +95,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kSoftmaxFunc: return new SoftmaxFuncLayer<xpu>(type);
     case kSoftmaxFuncVarLen: return new SoftmaxFuncVarLenLayer<xpu>(type);
     case kNegativeSampleLoss: return new NegativeSampleLossLayer<xpu>(type);
+    case kWordClassSoftmaxLoss: return new WordClassSoftmaxLossLayer<xpu>(type);
     case kSumByAxis: return new SumLayer<xpu>(type);
     case kAccuracy: return new AccuracyLayer<xpu>(type);
     case kMatch: return new MatchLayer<xpu>(type);

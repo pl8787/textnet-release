@@ -439,7 +439,7 @@ void TestSequenceDimReductionLayer(mshadow::Random<cpu>* prnd) {
       w_updater["updater_type"] = SettingV(updater::kAdagrad);
       w_updater["eps"] = SettingV(0.01f);
       w_updater["batch_size"] = SettingV(1);
-      w_updater["mat_iter"] = SettingV(10000);
+      w_updater["max_iter"] = SettingV(10000);
       w_updater["lr"] = SettingV(0.1f);
     setting["w_updater"] = SettingV(&w_updater);
   }
@@ -496,7 +496,7 @@ void TestTensorLayer(mshadow::Random<cpu>* prnd) {
       w_updater["updater_type"] = SettingV(updater::kAdagrad);
       w_updater["eps"] = SettingV(0.01f);
       w_updater["batch_size"] = SettingV(1);
-      w_updater["mat_iter"] = SettingV(10000);
+      w_updater["max_iter"] = SettingV(10000);
       w_updater["lr"] = SettingV(0.1f);
     setting["t_updater"] = SettingV(&w_updater);
     setting["w_updater"] = SettingV(&w_updater);
@@ -557,7 +557,7 @@ void TestMaxRnnLayer(mshadow::Random<cpu>* prnd) {
       w_updater["updater_type"] = SettingV(updater::kAdagrad);
       w_updater["eps"] = SettingV(0.01f);
       w_updater["batch_size"] = SettingV(1);
-      w_updater["mat_iter"] = SettingV(10000);
+      w_updater["max_iter"] = SettingV(10000);
       w_updater["lr"] = SettingV(0.1f);
     setting["w_updater"] = SettingV(&w_updater);
     setting["u_updater"] = SettingV(&w_updater);
@@ -792,6 +792,88 @@ void TestSoftmaxFuncLayer(mshadow::Random<cpu>* prnd) {
   cout << "Done." << endl;
 }
 
+void TestWordClassSoftmaxLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Test Word Class Softmax Layer." << endl;
+  Node<cpu> bottom0, bottom1;
+  Node<cpu> top0, top1, top2, top3;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom0);
+  bottoms.push_back(&bottom1);
+  tops.push_back(&top0);
+  tops.push_back(&top1);
+  tops.push_back(&top2);
+  tops.push_back(&top3);
+  
+  bottom0.Resize(Shape4(2,1,1,4), true);
+  bottom1.Resize(Shape4(2,1,1,1), true);
+  prnd->SampleUniform(&bottom0.data, -1, 1);
+  bottom1.data[0][0][0][0] = 1;
+  bottom1.data[1][0][0][0] = 3;
+  
+  map<string, SettingV> setting;
+  {
+    setting["word_class_file"] = "./tmp.wordclass";
+    setting["feat_size"]  = 4;
+    setting["vocab_size"] = 5;
+    setting["class_num"]  = 2;
+
+    map<string, SettingV> &w_filler = *(new map<string, SettingV>());
+      w_filler["init_type"] = SettingV(initializer::kUniform);
+      w_filler["range"] = SettingV(0.1f);
+    setting["w_class_filler"] = SettingV(&w_filler);
+    setting["b_class_filler"] = SettingV(&w_filler);
+    setting["w_word_filler"]  = SettingV(&w_filler);
+    setting["b_word_filler"]  = SettingV(&w_filler);
+    map<string, SettingV> &w_updater = *(new map<string, SettingV>());
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["eps"] = SettingV(0.01f);
+      w_updater["batch_size"] = SettingV(1);
+      w_updater["max_iter"] = SettingV(10000);
+      w_updater["lr"] = SettingV(0.1f);
+    setting["w_class_updater"] = SettingV(&w_updater);
+    setting["b_class_updater"] = SettingV(&w_updater);
+    setting["w_word_updater"] = SettingV(&w_updater);
+    setting["b_word_updater"] = SettingV(&w_updater);
+  }
+  Layer<cpu> *layer = CreateLayer<cpu>(kWordClassSoftmaxLoss);
+  layer->PropAll();
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+
+  float eps = 0.001;
+
+  layer->ClearDiff(bottoms, tops);
+  layer->Forward(bottoms, tops);
+  PrintTensor("top0.data", top0.data);
+  PrintTensor("top1.data", top1.data);
+  PrintTensor("top2.data", top2.data);
+  PrintTensor("top3.data", top3.data);
+  layer->Backprop(bottoms, tops);
+  PrintTensor("bottom0.diff", bottom0.diff);
+  PrintTensor("w_class.diff", layer->params[0].diff);
+  PrintTensor("b_class.diff", layer->params[1].diff);
+  PrintTensor("w_embed.diff", layer->params[2].diff);
+  PrintTensor("b_embed.diff", layer->params[3].diff);
+
+  float *p = &layer->params[3].data[0][0][0][1];
+  layer->ClearDiff(bottoms, tops);
+  *p += eps;
+  layer->Forward(bottoms, tops);
+  float loss1 = top3.data[0][0][0][0] * 2; // batch_size
+  *p -= 2 * eps;
+  layer->Forward(bottoms, tops);
+  float loss2 = top3.data[0][0][0][0] * 2; // batch_size
+
+  cout << "loss 1:" << loss1 << endl;
+  cout << "loss 2:" << loss2 << endl;
+  float gradient = (loss1-loss2)/(2*eps);
+  cout << "gradient by eps:" << gradient << endl;
+
+  cout << "Done." << endl;
+}
+
 void TestPosPredRepLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check PosPredRepLayer." << endl;
   Node<cpu> bottom0, bottom1, bottom2;
@@ -988,7 +1070,7 @@ void TestDiagRecurrentLayer(mshadow::Random<cpu>* prnd) {
       w_updater["updater_type"] = SettingV(updater::kAdagrad);
       w_updater["eps"] = SettingV(0.01f);
       w_updater["batch_size"] = SettingV(1);
-      w_updater["mat_iter"] = SettingV(10000);
+      w_updater["max_iter"] = SettingV(10000);
       w_updater["lr"] = SettingV(0.1f);
     setting["w_updater"] = SettingV(&w_updater);
     setting["u_updater"] = SettingV(&w_updater);
@@ -1218,7 +1300,7 @@ void TestGateLayer(mshadow::Random<cpu>* prnd) {
       w_updater["updater_type"] = SettingV(updater::kAdagrad);
       w_updater["eps"] = SettingV(0.01f);
       w_updater["batch_size"] = SettingV(1);
-      w_updater["mat_iter"] = SettingV(10000);
+      w_updater["max_iter"] = SettingV(10000);
       w_updater["lr"] = SettingV(0.1f);
     setting["w_updater"] = SettingV(&w_updater);
     setting["b_updater"] = SettingV(&w_updater);
@@ -1338,7 +1420,7 @@ void TestGatingLayer(mshadow::Random<cpu>* prnd) {
       w_updater["updater_type"] = SettingV(updater::kAdagrad);
       w_updater["eps"] = SettingV(0.01f);
       w_updater["batch_size"] = SettingV(1);
-      w_updater["mat_iter"] = SettingV(10000);
+      w_updater["max_iter"] = SettingV(10000);
       w_updater["lr"] = SettingV(0.1f);
     setting["w_updater"] = SettingV(&w_updater);
   }
@@ -1417,7 +1499,7 @@ void TestConvolutionLayer(mshadow::Random<cpu>* prnd) {
       w_updater["updater_type"] = SettingV(updater::kAdagrad);
       w_updater["eps"] = SettingV(0.01f);
       w_updater["batch_size"] = SettingV(1);
-      w_updater["mat_iter"] = SettingV(10000);
+      w_updater["max_iter"] = SettingV(10000);
       w_updater["lr"] = SettingV(0.1f);
     setting["w_updater"] = SettingV(&w_updater);
     setting["b_updater"] = SettingV(&w_updater);
@@ -1534,7 +1616,7 @@ void TestRnnLayer(mshadow::Random<cpu>* prnd) {
       w_updater["updater_type"] = SettingV(updater::kAdagrad);
       w_updater["eps"] = SettingV(0.01f);
       w_updater["batch_size"] = SettingV(1);
-      w_updater["mat_iter"] = SettingV(10000);
+      w_updater["max_iter"] = SettingV(10000);
       w_updater["lr"] = SettingV(0.1f);
     setting["w_updater"] = SettingV(&w_updater);
     setting["u_updater"] = SettingV(&w_updater);
@@ -1595,7 +1677,7 @@ void TestLstmLayer(mshadow::Random<cpu>* prnd) {
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
       w_updater["updater_type"] = SettingV(updater::kAdagrad);
       w_updater["eps"] = SettingV(0.01f);
-      w_updater["mat_iter"] = SettingV(10000);
+      w_updater["max_iter"] = SettingV(10000);
       w_updater["lr"] = SettingV(0.1f);
     setting["w_updater"] = SettingV(&w_updater);
     setting["u_updater"] = SettingV(&w_updater);
@@ -1675,14 +1757,14 @@ void TestConvolutionalLstmLayer(mshadow::Random<cpu>* prnd) {
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
       w_updater["updater_type"] = SettingV(updater::kAdagrad);
       w_updater["eps"] = SettingV(0.01f);
-      w_updater["mat_iter"] = SettingV(10000);
+      w_updater["max_iter"] = SettingV(10000);
       w_updater["lr"] = SettingV(0.1f);
       w_updater["batch_size"] = SettingV(2);
     setting["w_updater"] = SettingV(&w_updater);
     map<string, SettingV> &b_updater = *(new map<string, SettingV>());
       b_updater["updater_type"] = SettingV(updater::kAdagrad);
       b_updater["eps"] = SettingV(0.01f);
-      b_updater["mat_iter"] = SettingV(10000);
+      b_updater["max_iter"] = SettingV(10000);
       b_updater["lr"] = SettingV(0.1f);
       b_updater["batch_size"] = SettingV(2);
     setting["b_updater"] = SettingV(&b_updater);
@@ -2054,10 +2136,11 @@ int main(int argc, char *argv[]) {
   // TestGateLayer(&rnd);
   // TestDiagRecurrentLayer(&rnd);
   // TestNegativeSampleLossLayer(&rnd);
-  TestPosPredRepLayer(&rnd);
+  // TestPosPredRepLayer(&rnd);
   // TestSwapAxisLayer(mshadow::Random<cpu>* prnd);
   // TestFlattenLayer(mshadow::Random<cpu>* prnd);
   // TestSoftmaxFuncLayer(&rnd);
+  TestWordClassSoftmaxLayer(&rnd);
   // TestGatingLayer(&rnd);
   // TestSoftmaxVarLenFuncLayer(&rnd);
   // TestSumLayer(&rnd);

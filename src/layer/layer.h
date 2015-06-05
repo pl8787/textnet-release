@@ -79,6 +79,7 @@ const int kPairHingeLoss = 55;
 const int kAccuracy = 56;
 const int kCrossEntropyLoss = 57;
 const int kNegativeSampleLoss = 58;
+const int kWordClassSoftmaxLoss = 59;
 
 // Input Layer 71-
 const int kTextData = 71;
