@@ -696,7 +696,8 @@ class Net : public INet{
             continue;
         }
         // oracle 
-        if (layers[layer_idx]->layer_type == kEmbedding) {
+        if (layers[layer_idx]->layer_type == kEmbedding || \
+            layers[layer_idx]->layer_type == kWordClassSoftmaxLoss) {
             cout << "ORC: without save embedding" << endl;
             layer_params_root.append(0);
             continue;

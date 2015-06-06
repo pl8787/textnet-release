@@ -118,7 +118,7 @@ dir = '/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.35/'
 # dir = '/home/wsx/log.tmp/'
 # dir = '/home/wsx/exp/match/msrp/cnn/run.1/'
 # dir = '/home/wsx/exp/match/msrp/xor_diag_rnn/run.8/'
-for i in range(0, 300):
+for i in range(0, 350):
     # try:
         # parse_tvt(dir+'log.match.elem_diag_rnn.msrp.d50.run4.'+str(i))
         # parse_tvt(dir+'log.match.elem_diag_rnn.msrp.d50.run1.'+str(i))

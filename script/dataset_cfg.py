@@ -111,11 +111,12 @@ class DatasetCfg:
             self.test_data_file  = self.data_dir + 'msrp.sentence.valid'
             self.embedding_file  = self.data_dir + 'wiki.embed'
             self.update_indication_file = self.data_dir + 'wiki.ind'
-            self.word_freq_file = self.data_dir + 'word_freq'
+            self.word_class_file = self.data_dir + 'id2class'
+            # self.word_freq_file = self.data_dir + 'word_freq'
             
             self.max_doc_len = 70
             self.min_doc_len = 10 
-            self.vocab_size = 177860
+            self.vocab_size = 177859 # without orc_unknown
 
             self.dp_rate = 0.
             self.d_word_rep = 50
@@ -123,13 +124,13 @@ class DatasetCfg:
             self.train_batch_size = 32
             self.valid_batch_size = 32
             self.test_batch_size  = 32
-            self.n_train = 924900 
-            self.n_valid = 101972
+            self.n_train = 933532
+            self.n_valid = 95780
             self.n_test = 1000
             self.train_display_interval = 10 
             self.valid_display_interval = 1000 
             self.test_display_interval  = 1000 
-            self.train_max_iters = (self.n_train/self.train_batch_size) * 10
+            self.train_max_iters = (self.n_train/self.train_batch_size) * 5
             self.valid_max_iters = (self.n_valid/5)/self.valid_batch_size
             self.test_max_iters  = self.n_test /self.test_batch_size
         elif dataset == 'paper':

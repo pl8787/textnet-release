@@ -125,7 +125,7 @@ class WordClassInputLayer : public Layer<xpu>{
                   "WordClassInputLayer:top size problem.");
     top[0]->Resize(batch_size, 1, 1, max_doc_len, true);                // x
     top[1]->Resize(batch_size, position_num, 1, 1, true);               // pos
-    top[3]->Resize(batch_size, position_num, 1, 1, true);               // y
+    top[2]->Resize(batch_size, position_num, 1, 1, true);               // y
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
@@ -133,7 +133,7 @@ class WordClassInputLayer : public Layer<xpu>{
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 4> x        = top[0]->data;
     mshadow::Tensor<xpu, 4> pos      = top[1]->data;
-    mshadow::Tensor<xpu, 4> y        = top[3]->data;
+    mshadow::Tensor<xpu, 4> y        = top[2]->data;
     mshadow::Tensor<xpu, 2> x_length = top[0]->length;
 
     utils::Check(x.size(0) == batch_size, "ORC: error, need reshape.");
