@@ -23,7 +23,7 @@ class WordClassSoftmaxLossLayer : public Layer<xpu>{
   
   virtual int BottomNodeNum() { return 2; } // pred_rep, label
   virtual int TopNodeNum() { return 4; }    // class_prob, word_prob, final_prob, loss
-  virtual int ParamNodeNum() { return 0; }
+  virtual int ParamNodeNum() { return 4; }
   
   virtual void Require() {
     // default value, just set the value you want

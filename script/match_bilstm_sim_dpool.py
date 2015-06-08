@@ -111,7 +111,8 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     setting['d_mem'] = d_mem
     setting['grad_norm2'] = lstm_norm2
     setting['reverse'] = False
-    # setting['param_file'] = ""
+    setting['f_gate_bias_init'] = 2.
+    setting['o_gate_bias_init'] = 2.
     if is_pretrain:
         setting['param_file'] = "/home/wsx/exp/match/wiki_lm/run.{0}/model/l_lstm.params.{1}.{2}".format(str(pretrain_run_no), str(model_no), str(epoch_no))
         print setting['param_file']
@@ -129,6 +130,8 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     setting['d_mem'] = d_mem
     setting['grad_norm2'] = lstm_norm2
     setting['reverse'] = True 
+    setting['f_gate_bias_init'] = 2.
+    setting['o_gate_bias_init'] = 2.
     if is_pretrain:
         setting['param_file'] = "/home/wsx/exp/match/wiki_lm/run.{0}/model/r_lstm.params.{1}.{2}".format(str(pretrain_run_no), str(model_no), str(epoch_no))
         print setting['param_file']
@@ -179,8 +182,8 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     layer['top_nodes'] = ['dot_similarity']
     layer['layer_name'] = 'match'
     layer['layer_type'] = 23 
-    print "ORC: use COS operation for similarity"
-    layer['setting'] = {'op':'cos'}
+    print "ORC: use MUL operation for similarity"
+    layer['setting'] = {'op':'mul'}
 
     layer = {}
     layers.append(layer) 
@@ -252,20 +255,22 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     layer['setting'] = setting
     return net
 
-run = 35
+run = 38
 l2 = 0.
 for dataset in ['msrp']:
     for d_mem in [50]:
         idx = 0
-        for model_no in [0,1,2,3,4,5,6,7,8]:
-            for epoch_no in [20000, 40000, 80000]:
-                for init in [0.1, 0.03]:
+        # for model_no in [0,1,2,3,4,5,6,7,8]:
+        #     for epoch_no in [20000, 40000, 80000]:
+        for model_no in [0]:
+            for epoch_no in [20000]:
+                for init in [0.3, 0.1, 0.03]:
                     for lr in [0.2, 0.1, 0.03, 0.01]:
                         pretrain_run_no = 13
-                        lstm_norm2 = 3
+                        lstm_norm2 = 10000 
                         l2 = 0.000001
                         net = gen_match_lstm(d_mem = d_mem, init = init, lr =lr, dataset=dataset, l2=l2, lstm_norm2=lstm_norm2,  \
-                                             is_pretrain = True, pretrain_run_no = pretrain_run_no, model_no = model_no, epoch_no = epoch_no)
+                                             is_pretrain = False, pretrain_run_no = pretrain_run_no, model_no = model_no, epoch_no = epoch_no)
                         net['log'] = 'log.match.bilstm_sim_dpool.{0}.d{1}.run{2}.{3}'.format\
                                      (dataset, str(d_mem), str(run), str(idx))
                         gen_conf_file(net, '/home/wsx/exp/match/{0}/bilstm_sim_dpool/run.{1}/'.format(dataset,str(run)) + \

@@ -26,6 +26,7 @@ class MatchLayer : public Layer<xpu>{
   virtual void Require() {
     // default value, just set the value you want
     this->defaults["op"] = SettingV("xor"); 
+    this->defaults["interval"] = SettingV(1); 
     this->defaults["is_var_len"] = SettingV(true); 
 	// xor: can not bp
 	// mul: can bp
@@ -50,6 +51,10 @@ class MatchLayer : public Layer<xpu>{
                   "MatchLayer:top size problem.");
     op = setting["op"].sVal();
     is_var_len = setting["is_var_len"].bVal();
+    interval = setting["interval"].iVal();
+    if (interval != 1) {
+      utils::Check(op != "cos", "MatchLayer: does not support cos when interval is set");
+    }
 
 	utils::Check(op=="xor" || op=="mul" || op=="plus" || op=="cos" || op=="elemwise_product", 
 			"MatchLayer: one of xor, mul, plus or cos.");
@@ -111,6 +116,7 @@ class MatchLayer : public Layer<xpu>{
           len_1 = doc_len;
         }
         utils::Check(len_0 > 0 && len_1 > 0, "MatchLayer: length error.");
+        utils::Check(len_0 <= doc_len && len_1 <= doc_len, "MatchLayer: length error.");
 		for (int j = 0; j < len_0; j++) {
 		  for (int m = 0; m < feat_size; ++m) {
             m_norm[i][0][j] += bottom0_data4[i][0][j][m] * bottom0_data4[i][0][j][m];
@@ -135,9 +141,12 @@ class MatchLayer : public Layer<xpu>{
         len_1 = doc_len;
       }
       utils::Check(len_0 > 0 && len_1 > 0, "MatchLayer: length error.");
+      utils::Check(len_0 <= doc_len && len_1 <= doc_len, "MatchLayer: length error.");
 
-      for (int j = 0; j < len_0; j++) {
-        for (int k = 0; k < len_1; k++) {
+      // for (int j = 0; j < len_0; j++) {
+      //   for (int k = 0; k < len_1; k++) {
+      for (int j = 0; j < len_0; j+=interval) {
+        for (int k = 0; k < len_1; k+=interval) {
 		  if (op == "xor") {
 			utils::Check(bottom0_data2[i][j]!=-1 && bottom1_data2[i][k]!=-1, 
 			  "In Match Layer: please check length setting. (%d, %d, %d)", i, j, k);
@@ -196,9 +205,12 @@ class MatchLayer : public Layer<xpu>{
         len_1 = doc_len;
       }
       utils::Check(len_0 > 0 && len_1 > 0, "MatchLayer: length error.");
+      utils::Check(len_0 <= doc_len && len_1 <= doc_len, "MatchLayer: length error.");
 
-      for (int j = 0; j < len_0; ++j) {
-	    for (int k = 0; k < len_1; ++k) {
+      // for (int j = 0; j < len_0; ++j) {
+	  //   for (int k = 0; k < len_1; ++k) {
+      for (int j = 0; j < len_0; j+=interval) {
+	    for (int k = 0; k < len_1; k+=interval) {
 	      for (int m = 0; m < feat_size; ++m) {
             if (op == "mul") {  
 			  if (this->prop_error[0])
@@ -235,6 +247,7 @@ class MatchLayer : public Layer<xpu>{
   int doc_len;
   int feat_size;
   int nbatch;
+  int interval;
   bool is_var_len;
   std::string op;
   mshadow::TensorContainer<xpu, 3> m_norm;

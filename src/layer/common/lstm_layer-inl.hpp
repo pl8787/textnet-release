@@ -31,6 +31,8 @@ class LstmLayer : public Layer<xpu> {
     // default value, just set the value you want
     this->defaults["no_bias"] = SettingV(false);
     this->defaults["param_file"] = SettingV("");
+    this->defaults["o_gate_bias_init"] = SettingV(0.f);
+    this->defaults["f_gate_bias_init"] = SettingV(0.f);
     // this->defaults["reverse"] = SettingV(false);
     
     // require value, set to SettingV(),
@@ -64,6 +66,8 @@ class LstmLayer : public Layer<xpu> {
     reverse = setting["reverse"].bVal();
     grad_norm2 = setting["grad_norm2"].fVal();
     param_file = setting["param_file"].sVal();
+    o_gate_bias_init = setting["o_gate_bias_init"].fVal();
+    f_gate_bias_init = setting["f_gate_bias_init"].fVal();
 
     begin_h.Resize(mshadow::Shape2(1, d_mem), 0.f);
     begin_c.Resize(mshadow::Shape2(1, d_mem), 0.f);
@@ -87,6 +91,12 @@ class LstmLayer : public Layer<xpu> {
     this->params[0].Init();
     this->params[1].Init();
     this->params[2].Init();
+    if (f_gate_bias_init != 0.f) {
+        init_f_gate_bias(); // this must be after init()
+    }
+    if (o_gate_bias_init != 0.f) {
+        init_o_gate_bias(); // this must be after init()
+    }
 
     if (!param_file.empty()) {
       LoadParam();
@@ -102,6 +112,19 @@ class LstmLayer : public Layer<xpu> {
         updater::CreateUpdater<xpu, 4>(u_updater["updater_type"].iVal(), u_updater, this->prnd_);
     this->params[2].updater_ = 
         updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].iVal(), b_updater, this->prnd_);
+  }
+
+  // if want to capture long term dependency, should init as a positive value
+  void init_f_gate_bias() {
+    Tensor1D bias_data = this->params[2].data_d1();
+    Tensor1D f_bias = Tensor1D(bias_data.dptr_ + 1*d_mem, mshadow::Shape1(d_mem));
+    f_bias = f_gate_bias_init;
+  }
+
+  void init_o_gate_bias() {
+    Tensor1D bias_data = this->params[2].data_d1();
+    Tensor1D o_bias = Tensor1D(bias_data.dptr_ + 2*d_mem, mshadow::Shape1(d_mem));
+    o_bias = o_gate_bias_init;
   }
   
   // bottom should be padded with only one zero on both sides
@@ -447,6 +470,8 @@ class LstmLayer : public Layer<xpu> {
   int d_mem, d_input;
   bool no_bias, reverse; 
   float grad_norm2;
+  float o_gate_bias_init;
+  float f_gate_bias_init;
   string param_file;
   mshadow::TensorContainer<xpu, 4> c, g, c_er, g_er;
   mshadow::TensorContainer<xpu, 2> begin_h, begin_c, begin_c_er, begin_h_er;
