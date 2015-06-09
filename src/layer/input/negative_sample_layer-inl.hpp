@@ -178,7 +178,7 @@ class NegativeSampleLayer : public Layer<xpu>{
     top[0]->Resize(batch_size, 1, 1, max_doc_len, true);                // x
     top[1]->Resize(batch_size, position_num, 1, 1, true);               // pos
     top[2]->Resize(batch_size, position_num, 1, negative_num+1, true);  // sample
-    top[3]->Resize(batch_size, position_num, 1, negative_num+1, true);  // y
+    top[3]->Resize(batch_size, position_num, negative_num+1, 1, true);  // y
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
