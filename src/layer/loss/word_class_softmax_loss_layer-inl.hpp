@@ -92,6 +92,18 @@ class WordClassSoftmaxLossLayer : public Layer<xpu>{
     this->params[2].Init();
     this->params[3].Init();
 
+    std::map<std::string, SettingV> &w_class_updater = *setting["w_class_updater"].mVal();
+    std::map<std::string, SettingV> &b_class_updater = *setting["b_class_updater"].mVal();
+    std::map<std::string, SettingV> &w_word_updater = *setting["w_word_updater"].mVal();
+    std::map<std::string, SettingV> &b_word_updater = *setting["b_word_updater"].mVal();
+    this->params[0].updater_ = updater::CreateUpdater<xpu, 4>(w_class_updater["updater_type"].iVal(),
+                                                              w_class_updater, this->prnd_);
+    this->params[1].updater_ = updater::CreateUpdater<xpu, 4>(b_class_updater["updater_type"].iVal(),
+                                                              b_class_updater, this->prnd_);
+    this->params[2].updater_ = updater::CreateUpdater<xpu, 4>(w_word_updater["updater_type"].iVal(),
+                                                              w_word_updater, this->prnd_);
+    this->params[3].updater_ = updater::CreateUpdater<xpu, 4>(b_word_updater["updater_type"].iVal(),
+                                                              b_word_updater, this->prnd_);
     Prepare();
   }
 
@@ -312,7 +324,9 @@ class WordClassSoftmaxLossLayer : public Layer<xpu>{
   void Prepare(void) {
     LoadWordClassFile();
     ReorganizeWordByClass();
-    ReorganizeWordEmbed();
+    if (!word_embed_file.empty()) {
+      ReorganizeWordEmbed();
+    }
   }
   
 protected:

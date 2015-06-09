@@ -68,14 +68,14 @@ class NegativeSampleLayer : public Layer<xpu>{
 
   void construct_sample_pool() {
     sample_vector.clear();
-    if (sample_exp_factor == 0.f) {
+    if (sample_exp_factor == 0.f) { // uniform sample
       for (int i = 0; i < vocab_size; ++i) {
         sample_vector.push_back(i);
       }
       return;
     }
 
-    utils::Check(sample_exp_factor > 0.f && sample_exp_factor < 3, "NegativeSampleLayer: sample error 1.");
+    utils::Check(sample_exp_factor > 0.f && sample_exp_factor < 3, "NegativeSampleLayer: sample error.");
     std::ifstream ifs(word_freq_file.c_str());
     std::set<int> wids;
     while (!ifs.eof()) {
@@ -84,8 +84,8 @@ class NegativeSampleLayer : public Layer<xpu>{
       if (wid < 0) break;
       wids.insert(wid);
       // cout << wid << endl;
-      utils::Check(wid >= 0 && wid < vocab_size, "NegativeSampleLayer: sample error 2.");
-      utils::Check(freq >= 1, "NegativeSampleLayer: sample error 3.");
+      utils::Check(wid >= 0 && wid < vocab_size, "NegativeSampleLayer: sample error.");
+      utils::Check(freq >= 1, "NegativeSampleLayer: sample error.");
       float num = pow(freq, sample_exp_factor);
       if (num < 1.f) num = 1.1f;
       int i_num = floor(num);
@@ -94,7 +94,8 @@ class NegativeSampleLayer : public Layer<xpu>{
       }
     }
     ifs.close();
-    utils::Check(wids.size() == vocab_size, "NegativeSampleLayer: sample error 3.");
+    utils::Check(sample_vector.size() < 2^30, "NegativeSampleLayer: sample error.");
+    utils::Check(wids.size() == vocab_size, "NegativeSampleLayer: sample error.");
     utils::Printf("NegativeSampleLayer: sample_vector.size():%d\n", sample_vector.size());
   }
 
@@ -119,7 +120,10 @@ class NegativeSampleLayer : public Layer<xpu>{
 
     int end = length < position_num ? length : position_num;
     position_sample = vector<int>(shuffle_pos.begin(), shuffle_pos.begin() + end);
-    for (int i = length; i < position_num; ++i) {
+    sort(position_sample.begin(), position_sample.end());
+    utils::Check(position_sample.size() == position_num, "NegativeSampleLayer: sampler error.");
+    return;
+    for (int i = length; i < position_num; ++i) { // this code has not been used
       position_sample.push_back(-1);
     }
     utils::Check(position_sample.size() == position_num, "NegativeSampleLayer: sampler error.");
@@ -174,7 +178,7 @@ class NegativeSampleLayer : public Layer<xpu>{
     top[0]->Resize(batch_size, 1, 1, max_doc_len, true);                // x
     top[1]->Resize(batch_size, position_num, 1, 1, true);               // pos
     top[2]->Resize(batch_size, position_num, 1, negative_num+1, true);  // sample
-    top[3]->Resize(batch_size, position_num, negative_num+1, 1, true);  // y
+    top[3]->Resize(batch_size, position_num, 1, negative_num+1, true);  // y
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

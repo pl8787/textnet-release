@@ -182,8 +182,8 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     layer['top_nodes'] = ['dot_similarity']
     layer['layer_name'] = 'match'
     layer['layer_type'] = 23 
-    print "ORC: use MUL operation for similarity"
-    layer['setting'] = {'op':'mul'}
+    print "ORC: use COS operation for similarity"
+    layer['setting'] = {'op':'cos'}
 
     layer = {}
     layers.append(layer) 
@@ -255,25 +255,25 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     layer['setting'] = setting
     return net
 
-run = 38
+run = 41
 l2 = 0.
 for dataset in ['msrp']:
     for d_mem in [50]:
         idx = 0
         # for model_no in [0,1,2,3,4,5,6,7,8]:
         #     for epoch_no in [20000, 40000, 80000]:
-        for model_no in [0]:
-            for epoch_no in [20000]:
-                for init in [0.3, 0.1, 0.03]:
+        for model_no in [2]:
+            for epoch_no in [0, 10000, 25000]:
+                for init in [0.1, 0.03]:
                     for lr in [0.2, 0.1, 0.03, 0.01]:
-                        pretrain_run_no = 13
-                        lstm_norm2 = 10000 
-                        l2 = 0.000001
-                        net = gen_match_lstm(d_mem = d_mem, init = init, lr =lr, dataset=dataset, l2=l2, lstm_norm2=lstm_norm2,  \
-                                             is_pretrain = False, pretrain_run_no = pretrain_run_no, model_no = model_no, epoch_no = epoch_no)
-                        net['log'] = 'log.match.bilstm_sim_dpool.{0}.d{1}.run{2}.{3}'.format\
-                                     (dataset, str(d_mem), str(run), str(idx))
-                        gen_conf_file(net, '/home/wsx/exp/match/{0}/bilstm_sim_dpool/run.{1}/'.format(dataset,str(run)) + \
-                                           'model.match.bilstm_sim_dpool.{0}.d{1}.run{2}.{3}'.format\
-                                           (dataset, str(d_mem), str(run), str(idx)))
-                        idx += 1
+                        for l2 in [0.00001, 0.0001]:
+                            pretrain_run_no = 18
+                            lstm_norm2 = 10000 
+                            net = gen_match_lstm(d_mem=d_mem,init=init,lr=lr,dataset=dataset,l2=l2,lstm_norm2=lstm_norm2,  \
+                                                 is_pretrain=True,pretrain_run_no=pretrain_run_no,model_no=model_no,epoch_no=epoch_no)
+                            net['log'] = 'log.match.bilstm_sim_dpool.{0}.d{1}.run{2}.{3}'.format\
+                                         (dataset, str(d_mem), str(run), str(idx))
+                            gen_conf_file(net, '/home/wsx/exp/match/{0}/bilstm_sim_dpool/run.{1}/'.format(dataset,str(run)) + \
+                                               'model.match.bilstm_sim_dpool.{0}.d{1}.run{2}.{3}'.format\
+                                               (dataset, str(d_mem), str(run), str(idx)))
+                            idx += 1
