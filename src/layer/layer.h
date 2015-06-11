@@ -87,7 +87,7 @@ const int kSequenceClassificationData = 72;
 const int kNextBasketData = 73;
 const int kNegativeSample = 74;
 const int kWordClassInput = 75;
-
+const int kLabelFeatValue = 76;
 
 /*! \brief these are enumeration */
 const int kInit = -1;

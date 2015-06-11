@@ -137,7 +137,7 @@ class DatasetCfg:
             self.embedding_file  = self.data_dir + 'wiki.embed'
             self.update_indication_file = self.data_dir + 'wiki.ind'
             self.word_class_file = self.data_dir + 'id2class'
-            # self.word_freq_file = self.data_dir + 'word_freq'
+            self.word_freq_file = self.data_dir + 'word_freq'
             
             self.max_doc_len = 10
             self.min_doc_len = 10 
@@ -322,7 +322,28 @@ class DatasetCfg:
             self.train_max_iters = 100
             self.valid_max_iters = self.n_valid/ self.valid_batch_size
             self.test_max_iters  = self.n_test / self.test_batch_size
+        elif dataset == 'msrp_dpool':
+            self.train_data_file = '/home/wsx/data/msrp_dpool/train'
+            self.valid_data_file = '/home/wsx/data/msrp_dpool/valid'
+            self.test_data_file  = '/home/wsx/data/msrp_dpool/test'
+            
+            self.feat_size = 25
 
+            self.dp_rate = 0.5
+            self.num_class = 2
+            self.batch_size = 50
+            self.train_batch_size = 50
+            self.valid_batch_size = 50
+            self.test_batch_size  = 50 
+            self.n_train = 7152
+            self.n_valid = 500
+            self.n_test = 1725
+            self.train_display_interval = 1
+            self.valid_display_interval = 100
+            self.test_display_interval  = 100
+            self.train_max_iters = 5000
+            self.valid_max_iters = self.n_valid/ self.valid_batch_size
+            self.test_max_iters  = self.n_test / self.test_batch_size
         else:
             assert False
 

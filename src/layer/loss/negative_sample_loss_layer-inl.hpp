@@ -44,6 +44,7 @@ class NegativeSampleLossLayer : public Layer<xpu>{
 
     is_pos_same_pred = setting["is_pos_same_pred"].bVal();
     // bottom[0], pred_rep, (batch_size, position_num, 1, feat_size)
+    // bottom[0], pred_rep, (batch_size, 1, 1, feat_size)
     // bottom[1], word_rep, (batch_size, position_num, sample_num, feat_size+1)
     // bottom[2], label,    (batch_size, position_num, sample_num, 1)
     utils::Check(bottom[0]->data.size(0) == bottom[1]->data.size(0), "NegativeSampleLossLayer: input error.");
@@ -53,7 +54,7 @@ class NegativeSampleLossLayer : public Layer<xpu>{
     } else {
       utils::Check(bottom[0]->data.size(1) == 1, "NegativeSampleLossLayer: input error.");
     }
-    utils::Check(bottom[0]->data.size(1) == bottom[2]->data.size(1), "NegativeSampleLossLayer: input error.");
+    utils::Check(bottom[1]->data.size(1) == bottom[2]->data.size(1), "NegativeSampleLossLayer: input error.");
     // utils::Check(bottom[0]->data.size(3)+1 == bottom[1]->data.size(3), "NegativeSampleLossLayer: input error.");
     utils::Check(bottom[0]->data.size(3) == bottom[1]->data.size(3), "NegativeSampleLossLayer: input error.");
     utils::Check(bottom[1]->data.size(2) == bottom[2]->data.size(2), "NegativeSampleLossLayer: input error.");
@@ -104,8 +105,8 @@ class NegativeSampleLossLayer : public Layer<xpu>{
       }
     }
     // check with ofey 
-    utils::Check(false, "CHECH WITH OFEY");
-    mshadow::Softmax(top0_data_d2, top0_data_d2);
+    // utils::Check(false, "CHECH WITH OFEY");
+    mshadow::Softmax(top0_data_d2, top0_data_d2); // no problem
 	
     // loss
     int sample_cnt = 0;
