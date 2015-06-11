@@ -76,6 +76,9 @@ class AdaDeltaUpdater : public Updater<xpu, dim>{
     if (batch_size > 1) {
         diff /= float(batch_size);
     }
+    if (wd > 0.f) {
+      diff += wd * data;
+    }
 
     if (iter++ == 0) {
         sumGradSquare.Resize(data.shape_, 0.);
@@ -87,9 +90,9 @@ class AdaDeltaUpdater : public Updater<xpu, dim>{
     sumDeltaSquare = rho * sumDeltaSquare + (1-rho) * (delta * delta);
 
     data -= delta;
-    if (wd > 0.f) {
-      data -= (wd) * data;
-    }
+    // if (wd > 0.f) {
+    //   data -= (wd) * data;
+    // }
     if (norm2 > 0.f) {
       float sqrt_norm2 = sqrt(norm2);
       mshadow::Shape<1> shape = mshadow::Shape1(data.size(0));
@@ -133,14 +136,17 @@ class AdaDeltaUpdater : public Updater<xpu, dim>{
       mshadow::Tensor<xpu, dim> sumGradSquareRow = sumGradSquare.Slice(w_idx, w_idx+1);
       mshadow::Tensor<xpu, dim> sumDeltaSquareRow = sumDeltaSquare.Slice(w_idx, w_idx+1);
 
+      if (wd > 0.f) {
+        diffRow += wd * dataRow;
+      }
       sumGradSquareRow = rho * sumGradSquareRow + (1-rho) * (diffRow * diffRow);
       deltaRow = diffRow * (1.f/(F<square_root>(sumGradSquareRow + eps))) * (F<square_root>(sumDeltaSquareRow + eps));
       sumDeltaSquareRow = rho * sumDeltaSquareRow + (1-rho) * (deltaRow * deltaRow);
 
       dataRow -= deltaRow;
-      if (wd > 0.) {
-        dataRow -= wd * dataRow;
-      }
+      // if (wd > 0.) {
+      //   dataRow -= wd * dataRow;
+      // }
     }
   }
  protected: 

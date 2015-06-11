@@ -133,14 +133,14 @@ class DatasetCfg:
             self.data_dir = '/home/wsx/data/wiki/'
             self.train_data_file = self.data_dir + 'wiki.train.with_msrp'
             self.valid_data_file = self.data_dir + 'wiki.valid'
-            self.test_data_file  = self.data_dir + 'msrp.sentence.valid.10'
+            self.test_data_file  = self.data_dir + 'msrp.sentence.valid'
             self.embedding_file  = self.data_dir + 'wiki.embed'
             self.update_indication_file = self.data_dir + 'wiki.ind'
             self.word_class_file = self.data_dir + 'id2class'
             self.word_freq_file = self.data_dir + 'word_freq'
             
-            self.max_doc_len = 10
-            self.min_doc_len = 10 
+            self.max_doc_len = 50
+            self.min_doc_len = 5
             self.vocab_size = 177859 # without orc_unknown
 
             self.dp_rate = 0.
@@ -149,9 +149,9 @@ class DatasetCfg:
             self.train_batch_size = 32
             self.valid_batch_size = 32
             self.test_batch_size  = 32
-            self.n_train = 932012
-            self.n_valid = 95780
-            self.n_test = 965
+            self.n_train = 924735
+            self.n_valid = 94802
+            self.n_test = 1000
             self.train_display_interval = 10 
             self.valid_display_interval = 1000 
             self.test_display_interval  = 1000 

@@ -32,6 +32,8 @@ class MatchLayer : public Layer<xpu>{
 	// mul: can bp
 	// plus: can bp
 	// cos: can bp
+	// euc: can bp
+    // euc_exp: can bp, see wenpeng's paper
     
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -56,8 +58,9 @@ class MatchLayer : public Layer<xpu>{
       utils::Check(op != "cos", "MatchLayer: does not support cos when interval is set");
     }
 
-	utils::Check(op=="xor" || op=="mul" || op=="plus" || op=="cos" || op=="elemwise_product", 
-			"MatchLayer: one of xor, mul, plus or cos.");
+	utils::Check(op=="xor" || op=="mul" || op=="plus" || op=="cos" || \
+                 op=="elemwise_product" || op=="euc" || op=="euc_exp",
+			     "MatchLayer: one of xor, mul, plus, cos, elemwise_product, euc or euc_exp.");
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -168,19 +171,33 @@ class MatchLayer : public Layer<xpu>{
             for (int m = 0; m < feat_size; ++m) {
               top_data[i][m][j][k] = bottom0_data4[i][0][j][m] + bottom1_data4[i][0][k][m];
 			}
+		  } else if (op =="euc") {
+            float sum_elem_square = 0.f;
+            for (int m = 0; m < feat_size; ++m) {
+              float sub_elem = bottom0_data4[i][0][j][m] - bottom1_data4[i][0][k][m];
+              sum_elem_square += sub_elem * sub_elem;
+            }
+            top_data[i][0][j][k] = pow(sum_elem_square, 0.5);
+		  } else if (op =="euc_exp") { // by wengpeng ying, no sqrt
+            float sum_elem_square = 0.f;
+            for (int m = 0; m < feat_size; ++m) {
+              float sub_elem = bottom0_data4[i][0][j][m] - bottom1_data4[i][0][k][m];
+              sum_elem_square += sub_elem * sub_elem;
+            }
+            top_data[i][0][j][k] = exp(-(sum_elem_square)/(2*2.f)); // beta is set to 2.f
 		  }  else {
 			utils::Error("In Match Layer: no op named %s.\n", op.c_str());
 		  }
         }
       }
     }
-
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
                         const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 4> top_diff = top[0]->diff;
+    mshadow::Tensor<xpu, 4> top_data = top[0]->data;
 	mshadow::Tensor<xpu, 4> bottom0_data = bottom[0]->data;
 	mshadow::Tensor<xpu, 4> bottom1_data = bottom[1]->data;
 	mshadow::Tensor<xpu, 4> bottom0_diff = bottom[0]->diff;
@@ -236,6 +253,24 @@ class MatchLayer : public Layer<xpu>{
                 bottom0_diff[i][0][j][m] += bottom1_data[i][0][k][m] * top_diff[i][m][j][k];
 			  if (this->prop_error[1])
 				bottom1_diff[i][0][k][m] += bottom0_data[i][0][j][m] * top_diff[i][m][j][k];
+		    } else if (op == "euc") {
+              float distance = top_data[i][0][j][k];
+              float sub_elem = bottom0_data[i][0][j][m] - bottom1_data[i][0][k][m];
+			  if (this->prop_error[0]) {
+                bottom0_diff[i][0][j][m] += top_diff[i][0][j][k] * (1/(2*distance)) * 2*(sub_elem);
+              }
+			  if (this->prop_error[1]) {
+				bottom1_diff[i][0][k][m] += top_diff[i][0][j][k] * (1/(2*distance)) * 2*(-sub_elem);
+              }
+		    } else if (op == "euc_exp") {
+              float distance = top_data[i][0][j][k];
+              float sub_elem = bottom0_data[i][0][j][m] - bottom1_data[i][0][k][m];
+			  if (this->prop_error[0]) {
+                bottom0_diff[i][0][j][m] += top_diff[i][0][j][k] * distance * (-1/(2*2.f)) * 2*(sub_elem);
+              }
+			  if (this->prop_error[1]) {
+				bottom1_diff[i][0][k][m] += top_diff[i][0][j][k] * distance * (-1/(2*2.f)) * 2*(-sub_elem);
+              }
             }
 		  }
 		}

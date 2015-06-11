@@ -70,12 +70,15 @@ class AdagradUpdater : public Updater<xpu, dim>{
     if (batch_size > 1) {
         diff /= float(batch_size);
     }
+    if (wd > 0.) {
+        diff += wd * data;
+    }
                         
     sumGradSquare += diff * diff;
     data -= lr * (diff / (mshadow::expr::F<square_root>(sumGradSquare) + eps));
-    if (wd > 0.) {
-      data -= (wd*lr) * data;
-    }
+    // if (wd > 0.) {
+    //   data -= (wd*lr) * data;
+    // }
   }
   
   virtual void UpdateSparse(mshadow::Tensor<xpu, dim> data, 
@@ -104,11 +107,14 @@ class AdagradUpdater : public Updater<xpu, dim>{
       mshadow::Tensor<xpu, dim> diffRow = diff.Slice(i, i+1);
       mshadow::Tensor<xpu, dim> dataRow = data.Slice(w_idx, w_idx+1);
 
+      if (wd > 0.) {
+        diffRow += wd * dataRow;
+      }
       sumGradSquareRow += diffRow * diffRow;
       dataRow -= (lr * (diffRow / ((mshadow::expr::F<square_root>(sumGradSquareRow)) + eps)));
-      if (wd > 0.) {
-        dataRow -= (wd*lr) * dataRow;
-      }
+      // if (wd > 0.) {
+      //   dataRow -= (wd*lr) * dataRow;
+      // }
     }
   }
  protected: 
