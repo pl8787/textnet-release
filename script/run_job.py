@@ -181,6 +181,7 @@ def main():
     run_nodes = get_nodes()
     # kill_job(run_nodes[0] , ['textnet'])
     # kill_job(run_nodes[1] , ['textnet'])
+    # kill_job(run_nodes[2] , ['textnet'])
     # exit(0)
 
     # max_proc_num = sys.args[1]
@@ -197,7 +198,7 @@ def main():
     # local_dir = '/home/wsx/exp/ccir2015/mr/birnn/run.2/'
     # local_dir = '/home/wsx/exp/match/msrp_char/bilstm_sim_dpool/run.3/'
     # local_dir = '/home/wsx/exp/match/msrp_dpool/run.1/'
-    local_dir = '/home/wsx/exp/match/msrp/lstm_sim_dpool/run.12/'
+    local_dir = '/home/wsx/exp/match/msrp/lstm_sim_dpool/run.14/'
     remote_dir = '/home/wsx/log.tmp/'
 
     conf_files = os.listdir(local_dir) 

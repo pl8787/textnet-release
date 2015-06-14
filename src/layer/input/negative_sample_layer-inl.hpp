@@ -136,13 +136,15 @@ class NegativeSampleLayer : public Layer<xpu>{
   void position_sampler_4_doc2vec_random_length(int length, int &sub_length, vector<int> &pred_position) {
     vector<int> shuffle_pos;
     int min_sub_length = 3; // 这个是规定的最小长度
-    int window_size = 8; // 也就是说某个位置之前的若干个单词中随机选择
+    int window_size = 5; // 也就是说某个位置之前的若干个单词中随机选择
     utils::Check(length >= min_sub_length, "NegativeSampleLayer: length error.");
     for (int i = min_sub_length; i <= length; ++i) {
       shuffle_pos.push_back(i);
     } 
     this->sampler.Shuffle(shuffle_pos);
     sub_length = shuffle_pos[0]; // random a sub length
+    // ATTENTION!!!
+    sub_length = length;
 
     pred_position.clear();
     utils::Check(position_num <= min_sub_length, "NegativeSampleLayer: position_num error.");

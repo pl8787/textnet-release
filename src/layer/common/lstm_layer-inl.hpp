@@ -46,6 +46,7 @@ class LstmLayer : public Layer<xpu> {
     this->defaults["u_updater"] = SettingV();
     this->defaults["b_updater"] = SettingV();
     this->defaults["reverse"] = SettingV();
+    this->defaults["grad_cut_off"] = SettingV();
     
     Layer<xpu>::Require();
   }
@@ -68,6 +69,7 @@ class LstmLayer : public Layer<xpu> {
     param_file = setting["param_file"].sVal();
     o_gate_bias_init = setting["o_gate_bias_init"].fVal();
     f_gate_bias_init = setting["f_gate_bias_init"].fVal();
+    grad_cut_off = setting["grad_cut_off"].fVal();
 
     begin_h.Resize(mshadow::Shape2(1, d_mem), 0.f);
     begin_c.Resize(mshadow::Shape2(1, d_mem), 0.f);
@@ -438,6 +440,13 @@ class LstmLayer : public Layer<xpu> {
         }
       }
     }
+    this->params[0].CutOffGradient(grad_cut_off);
+    this->params[1].CutOffGradient(grad_cut_off);
+    this->params[2].CutOffGradient(grad_cut_off);
+
+    this->params[0].PrintStatistic("LSTM W");
+    this->params[1].PrintStatistic("LSTM U");
+    this->params[2].PrintStatistic("LSTM b");
 #if DEBUG
     checkNanParams();
 #endif
@@ -472,6 +481,7 @@ class LstmLayer : public Layer<xpu> {
   float grad_norm2;
   float o_gate_bias_init;
   float f_gate_bias_init;
+  float grad_cut_off;
   string param_file;
   mshadow::TensorContainer<xpu, 4> c, g, c_er, g_er;
   mshadow::TensorContainer<xpu, 2> begin_h, begin_c, begin_c_er, begin_h_er;

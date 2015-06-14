@@ -145,17 +145,17 @@ class DatasetCfg:
 
             self.dp_rate = 0.
             self.d_word_rep = 50
-            self.batch_size = 32
-            self.train_batch_size = 32
-            self.valid_batch_size = 32
-            self.test_batch_size  = 32
+            self.batch_size = 128
+            self.train_batch_size = 128
+            self.valid_batch_size = 128
+            self.test_batch_size  = 128
             self.n_train = 924735
             self.n_valid = 94802
             self.n_test = 1000
             self.train_display_interval = 10 
             self.valid_display_interval = 1000 
             self.test_display_interval  = 1000 
-            self.train_max_iters = (self.n_train/self.train_batch_size) * 10
+            self.train_max_iters = (self.n_train/self.train_batch_size) * 5
             self.valid_max_iters = (self.n_valid/5)/self.valid_batch_size
             self.test_max_iters  = self.n_test /self.test_batch_size
         elif dataset == 'paper':

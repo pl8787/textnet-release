@@ -235,6 +235,40 @@ struct Node {
     }
   }
 
+  float AbsMean(float *p, size_t size) {
+    utils::Check(size > 0, "Node: mean size error.");
+    float sum = 0;
+    for (size_t i = 0; i < size; ++i) {
+      if (p[i] > 0) {
+        sum += p[i];
+      } else {
+        sum -= p[i];
+      }
+    }
+    return sum/size;
+  }
+
+  float AbsMax(float *p, size_t size) {
+    utils::Check(size > 0, "Node: max size error.");
+    float max = -10000.f;
+    for (size_t i = 0; i < size; ++i) {
+      float v = p[i]>0?p[i]:-p[i];
+      if (max < v) 
+        max = v;
+    }
+    return max;
+  }
+
+  void PrintStatistic(string prefix) {
+    float data_mean = 0.f, data_max = 0.f, diff_mean = 0.f, diff_max = 0.f;
+    data_mean = AbsMean(data.dptr_, data.shape_.Size());
+    data_max  = AbsMax(data.dptr_, data.shape_.Size());
+    diff_mean = AbsMean(diff.dptr_, diff.shape_.Size());
+    diff_max  = AbsMax(diff.dptr_,  diff.shape_.Size());
+    cout << "Stat of " << prefix << ":" << data_mean << ":" \
+         << diff_mean << ":" << data_max << ":" << diff_max << endl;
+  }
+
   Json::Value data_statistic(Json::Value &req_root) {
 	using namespace mshadow::expr;
     Json::Value rtn_root;
@@ -426,6 +460,21 @@ struct Node {
     }
     for (int i = 0; i < r_data.size(0); ++i) {
       merge_data[idx_map[r_idx[i]]] += r_data[i];
+    }
+  }
+
+  void CutOffGradient(float maxVal) {
+    utils::Check(maxVal >= 0.f, "Node: cut off gradient error.");
+    utils::Check(!is_share, "Node: cut off gradient error.");
+    utils::Check(!is_sparse, "Node: cut off gradient error.");
+    size_t size = diff.shape_.Size();
+    for (size_t i = 0; i < size; ++i) {
+      float *p = diff.dptr_ + i;
+      if (*p > maxVal) {
+        *p = maxVal;
+      } else if (*p < -maxVal) {
+        *p = -maxVal;
+      }
     }
   }
 
