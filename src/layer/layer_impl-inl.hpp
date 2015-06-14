@@ -15,6 +15,7 @@
 #include "./common/dropout_layer-inl.hpp"
 #include "./common/match_layer-inl.hpp"
 #include "./common/lstm_layer-inl.hpp"
+#include "./common/lstm_autoencoder_layer-inl.hpp"
 #include "./common/product_layer-inl.hpp"
 #include "./common/sum_layer-inl.hpp"
 #include "./common/recurrent_layer-inl.hpp"
@@ -76,6 +77,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kDropout: return new DropoutLayer<xpu>(type);
     case kDynamicPooling: return new DynamicPoolingLayer<xpu>(type);
     case kLstm: return new LstmLayer<xpu>(type);
+    case kLstmAutoencoder: return new LstmAutoencoderLayer<xpu>(type);
     case kProduct: return new ProductLayer<xpu>(type);
     case kRecurrent: return new RecurrentLayer<xpu>(type);
     case kMaxRecurrent: return new MaxRecurrentLayer<xpu>(type);

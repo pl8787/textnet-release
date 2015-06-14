@@ -69,6 +69,7 @@ const int kDynamicPooling = 43;
 const int kDiagRecurrent = 44;
 const int kDup4lstm = 45;
 const int kPosPredRep = 46;
+const int kLstmAutoencoder = 47;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;
