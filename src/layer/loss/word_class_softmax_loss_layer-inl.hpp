@@ -151,19 +151,22 @@ class WordClassSoftmaxLossLayer : public Layer<xpu>{
     // **** compute word prob, for that label words belong to different classes, need to process one by one
     int batch_size = label.size(0);
     int position_num = label.size(1);
+    int cnt = 0;
     for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
       for (int pos_idx = 0; pos_idx < position_num; ++pos_idx) {
         int y = static_cast<int>(label[batch_idx][pos_idx][0][0]); // origin word idx
+        if (y == -1) continue;
+        cnt += 1;
         utils::Check(y >= 0 && y < vocab_size, "WordClassSoftmaxLossLayer: label error.");
         int c = word_2_class[y];
         utils::Check(c >= 0 && c < class_num, "WordClassSoftmaxLossLayer: label error.");
 
         int class_beg = class_begins[c];
-        int class_end   = class_ends[c];
+        int class_end = class_ends[c];
         mshadow::Tensor<xpu, 2> w_word_one_class    = this->params[2].data_d2_reverse().Slice(class_beg, class_end);
         mshadow::Tensor<xpu, 1> b_word_one_class    = this->params[3].data_d1_reverse().Slice(class_beg, class_end);
         mshadow::Tensor<xpu, 2> pred_rep            = bottom[0]->data[batch_idx][pos_idx];
-        mshadow::Tensor<xpu, 2> word_prob_all       = top[1]->data[batch_idx][pos_idx];
+        mshadow::Tensor<xpu, 2> word_prob_all       = word_prob[batch_idx][pos_idx];
         mshadow::Tensor<xpu, 2> word_prob_one_class(word_prob_all.dptr_+class_beg, mshadow::Shape2(1, class_end-class_beg));
         if (!no_bias) {
           word_prob_one_class += repmat(b_word_one_class, 1);
@@ -188,7 +191,7 @@ class WordClassSoftmaxLossLayer : public Layer<xpu>{
         }
       }
     }
-    loss[0] /= (batch_size * position_num);
+    loss[0] /= cnt;
     // ====
   }
   
@@ -211,6 +214,11 @@ class WordClassSoftmaxLossLayer : public Layer<xpu>{
     for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
       for (int pos_idx = 0; pos_idx < position_num; ++pos_idx) {
         int y = static_cast<int>(label[batch_idx][pos_idx][0][0]); // origin word idx
+        if (y == -1) {
+            class_prob_diff[batch_idx][pos_idx] = 0.f;
+            word_prob_diff[batch_idx][pos_idx] = 0.f;
+            continue;
+        }
         int c = word_2_class[y];
         int new_word_idx_by_class = word_2_new_idx[y]; // new idx
         
@@ -239,6 +247,7 @@ class WordClassSoftmaxLossLayer : public Layer<xpu>{
     for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
       for (int pos_idx = 0; pos_idx < position_num; ++pos_idx) {
         int y = static_cast<int>(label[batch_idx][pos_idx][0][0]);
+        if (y == -1) continue;
         int c = word_2_class[y];
         int class_beg = class_begins[c];
         int class_end   = class_ends[c];
@@ -247,10 +256,9 @@ class WordClassSoftmaxLossLayer : public Layer<xpu>{
         mshadow::Tensor<xpu, 2> w_word_one_class_diff = this->params[2].diff_d2_reverse().Slice(class_beg, class_end);
         mshadow::Tensor<xpu, 1> b_word_one_class_diff = this->params[3].diff_d1_reverse().Slice(class_beg, class_end);
 
-        mshadow::Tensor<xpu, 2> pred_rep_data            = bottom[0]->data[batch_idx][pos_idx];
-        mshadow::Tensor<xpu, 2> pred_rep_diff            = bottom[0]->diff[batch_idx][pos_idx];
-        // mshadow::Tensor<xpu, 2> word_prob_one_class_diff = top[1]->diff[batch_idx][pos_idx].T().Slice(class_beg, class_end).T();
-        mshadow::Tensor<xpu, 2> word_prob_all_diff       = top[1]->diff[batch_idx][pos_idx];
+        mshadow::Tensor<xpu, 2> pred_rep_data      = bottom[0]->data[batch_idx][pos_idx];
+        mshadow::Tensor<xpu, 2> pred_rep_diff      = bottom[0]->diff[batch_idx][pos_idx];
+        mshadow::Tensor<xpu, 2> word_prob_all_diff = top[1]->diff[batch_idx][pos_idx];
         mshadow::Tensor<xpu, 2> word_prob_one_class_diff(word_prob_all_diff.dptr_+class_beg, \
                                                          mshadow::Shape2(1, class_end-class_beg));
 
