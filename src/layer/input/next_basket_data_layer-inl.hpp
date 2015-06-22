@@ -16,7 +16,7 @@ namespace layer {
 template<typename xpu>
 class NextBasketDataLayer : public Layer<xpu>{
  public:
-  NextBasketDataLayer(LayerType type) { this->layer_type = type; mul = 1000;}
+  NextBasketDataLayer(LayerType type) { this->layer_type = type;}
   virtual ~NextBasketDataLayer(void) {}
   
   virtual int BottomNodeNum() { return 0; }
@@ -25,13 +25,13 @@ class NextBasketDataLayer : public Layer<xpu>{
 
   virtual void Require() {
     // default value, just set the value you want
-    this->defaults["context_window"] = SettingV(1);
     this->defaults["shuffle_seed"] = SettingV(123);
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["data_file"] = SettingV();
     this->defaults["batch_size"] = SettingV();
     this->defaults["max_session_len"] = SettingV();
+    this->defaults["max_context_len"] = SettingV();
     
     Layer<xpu>::Require();
   }
@@ -43,7 +43,7 @@ class NextBasketDataLayer : public Layer<xpu>{
                           mshadow::Random<xpu> *prnd) {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
 
-    context_window = setting["context_window"].i_val;
+    max_context_len = setting["max_context_len"].i_val;
     max_session_len = setting["max_session_len"].i_val;
     data_file = setting["data_file"].s_val;
     batch_size = setting["batch_size"].i_val;
@@ -53,9 +53,9 @@ class NextBasketDataLayer : public Layer<xpu>{
                   
     ReadNextBasketData();
     example_ptr = 0;
-    test_example_ptr = 0;
     sampler.Seed(shuffle_seed);
   }
+
   void splitByChar(const std::string &s, char c, std::vector<std::string> &vsResult)
   {
       using std::string;
@@ -105,7 +105,7 @@ class NextBasketDataLayer : public Layer<xpu>{
         for (int j = 0; j < vsComma.size(); ++j) {
             e.next_items.push_back(atoi(vsComma[j].c_str()));
         }
-        utils::Check(vsTab.size() == context_window + 2, "NextBasketDataLayer: input data error.");
+        utils::Check(vsTab.size() <= max_context_len + 2, "NextBasketDataLayer: input data error.");
         for (int k = 2; k < vsTab.size(); ++k) {
             std::vector<int> basket;
             splitByChar(vsTab[k], ',', vsComma); 
@@ -119,9 +119,7 @@ class NextBasketDataLayer : public Layer<xpu>{
 	utils::Printf("Example count in file: %d\n", dataset.size());
     // gen example ids
     for (int i = 0; i < dataset.size(); ++i) {
-      for (int j = 0; j < dataset[i].next_items.size(); ++j) {
-        example_ids.push_back(i * mul + j);
-      }
+      example_ids.push_back(i);
     }
   }
   
@@ -130,10 +128,10 @@ class NextBasketDataLayer : public Layer<xpu>{
     utils::Check(bottom.size() == BottomNodeNum(), "NextBasketDataLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "NextBasketDataLayer:top size problem.");
 
-    top[0]->Resize(batch_size, 1, 1, 1, true);
-    top[1]->Resize(batch_size, 1, 1, max_session_len, true);
-    top[2]->Resize(batch_size, 1, 1, 1, true);
-    top[3]->Resize(batch_size, context_window, 1, max_session_len, true);
+    top[0]->Resize(batch_size, 1, 1, 1, true); // user 
+    top[1]->Resize(batch_size, context_window, 1, max_session_len, true); // context
+    top[2]->Resize(batch_size, 1, 1, 1, true); // y for train
+    top[3]->Resize(batch_size, 1, 1, max_session_len, true); // for eval
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
@@ -179,19 +177,16 @@ class NextBasketDataLayer : public Layer<xpu>{
 
   struct Example {
       int user;
-      std::vector<int> next_items;
+      vector<int> next_items;
       std::vector<std::vector<int> > context;
   };
 
 
  protected:
   std::string data_file;
-  int batch_size, context_window;
-  int max_session_len;
-  int example_ptr, test_example_ptr;
+  int batch_size, max_session_len, max_context_len;
+  int example_ptr;
   
-  int mul;
-
   std::vector<Example> dataset;
   
   std::vector<int> example_ids;

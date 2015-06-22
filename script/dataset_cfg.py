@@ -134,29 +134,29 @@ class DatasetCfg:
             self.train_data_file = self.data_dir + 'wiki.train.with_msrp'
             self.valid_data_file = self.data_dir + 'wiki.valid'
             self.test_data_file  = self.data_dir + 'msrp.sentence.valid'
-            self.embedding_file  = self.data_dir + 'wiki.embed'
-            self.update_indication_file = self.data_dir + 'wiki.ind'
+            # self.embedding_file  = self.data_dir + 'wiki.embed'
+            # self.update_indication_file = self.data_dir + 'wiki.ind'
             self.word_class_file = self.data_dir + 'id2class'
-            self.word_freq_file = self.data_dir + 'word_freq'
+            # self.word_freq_file = self.data_dir + 'word_freq'
             
             self.max_doc_len = 50
             self.min_doc_len = 5
             self.vocab_size = 177859 # without orc_unknown
 
             self.dp_rate = 0.
-            self.d_word_rep = 50
-            self.batch_size = 128
-            self.train_batch_size = 128
-            self.valid_batch_size = 128
-            self.test_batch_size  = 128
+            self.d_word_rep = 2
+            self.batch_size = 10
+            self.train_batch_size = 10
+            self.valid_batch_size = 10
+            self.test_batch_size  = 10
             self.n_train = 924735
             self.n_valid = 94802
             self.n_test = 1000
-            self.train_display_interval = 10 
+            self.train_display_interval = 1
             self.valid_display_interval = 1000 
             self.test_display_interval  = 1000 
             self.train_max_iters = (self.n_train/self.train_batch_size) * 5
-            self.valid_max_iters = (self.n_valid/5)/self.valid_batch_size
+            self.valid_max_iters = (self.n_valid/50)/self.valid_batch_size
             self.test_max_iters  = self.n_test /self.test_batch_size
         elif dataset == 'paper':
             self.train_data_file = '/home/wsx/data/PaperData/relation.train.wid.txt'
@@ -298,30 +298,32 @@ class DatasetCfg:
             self.n_valid = 3000
             self.n_test = 2000
         elif dataset == 'test_lm':
-            self.train_data_file = '/home/wsx/data/test/test_lm/train.txt'
-            self.valid_data_file = '/home/wsx/data/test/test_lm/train.txt'
-            self.test_data_file = '/home/wsx/data/test/test_lm/train.txt'
-            self.embedding_file = ''
-            self.update_indication_file = ''
-            self.max_doc_len = 5
-            self.vocab_size = 8  
-            # self.negative_num = 1
-            # self.position_num = 1
+            self.data_dir = '/home/wsx/data/test/test_lm/'
+            self.train_data_file = self.data_dir + 'train.txt'
+            self.valid_data_file = self.data_dir + 'train.txt'
+            self.test_data_file  = self.data_dir + 'train.txt'
+            self.word_class_file = self.data_dir + 'id2class'
+            self.word_freq_file = self.data_dir + 'word_freq'
+            
+            self.max_doc_len = 6
+            self.min_doc_len = 0
+            self.vocab_size = 8 # without orc_unknown
 
+            self.dp_rate = 0.
             self.d_word_rep = 5
-            self.batch_size = 1
-            self.train_batch_size = 1
-            self.valid_batch_size = 1
-            self.test_batch_size = 1
+            self.batch_size = 2
+            self.train_batch_size = 2
+            self.valid_batch_size = 2
+            self.test_batch_size  = 2
             self.n_train = 4
             self.n_valid = 4
-            self.n_test = 4
-            self.train_display_interval = 1 
+            self.n_test = 4 
+            self.train_display_interval = 1
             self.valid_display_interval = 1 
-            self.test_display_interval = 1 
-            self.train_max_iters = 100
-            self.valid_max_iters = self.n_valid/ self.valid_batch_size
-            self.test_max_iters  = self.n_test / self.test_batch_size
+            self.test_display_interval  = 1 
+            self.train_max_iters = (self.n_train/self.train_batch_size) * 5
+            self.valid_max_iters = (self.n_valid/5)/self.valid_batch_size
+            self.test_max_iters  = self.n_test /self.test_batch_size
         elif dataset == 'msrp_dpool':
             self.train_data_file = '/home/wsx/data/msrp_dpool/train'
             self.valid_data_file = '/home/wsx/data/msrp_dpool/valid'

@@ -59,11 +59,11 @@ class WordClassSoftmaxLossLayer : public Layer<xpu>{
     // bottom[0], pred_rep, (batch_size, position_num, 1, feat_size)
     // bottom[1], label,    (batch_size, position_num, 1, 1)
     utils::Check(bottom[0]->data.size(0) == bottom[1]->data.size(0), "WordClassSoftmaxLossLayer: input error.");
-    utils::Check(bottom[0]->data.size(1) == bottom[1]->data.size(1), "WordClassSoftmaxLossLayer: input error.");
-    utils::Check(bottom[0]->data.size(3) == feat_size, "WordClassSoftmaxLossLayer: input error.");
-    utils::Check(bottom[0]->data.size(2) == 1, "WordClassSoftmaxLossLayer: input error.");
-    utils::Check(bottom[1]->data.size(2) == 1, "WordClassSoftmaxLossLayer: input error.");
-    utils::Check(bottom[1]->data.size(3) == 1, "WordClassSoftmaxLossLayer: input error.");
+    utils::Check(bottom[0]->data.size(1) == bottom[1]->data.size(1), "WordClassSoftmaxLossLayer: input error 1.");
+    utils::Check(bottom[0]->data.size(3) == feat_size, "WordClassSoftmaxLossLayer: input error 2.");
+    utils::Check(bottom[0]->data.size(2) == 1, "WordClassSoftmaxLossLayer: input error 3.");
+    utils::Check(bottom[1]->data.size(2) == 1, "WordClassSoftmaxLossLayer: input error 4.");
+    utils::Check(bottom[1]->data.size(3) == 1, "WordClassSoftmaxLossLayer: input error 5.");
 
     this->params.resize(4); // two embed and bias matrix
     this->params[0].Resize(1, 1, class_num,  feat_size, true); // class embed

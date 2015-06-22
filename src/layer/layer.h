@@ -89,6 +89,7 @@ const int kNextBasketData = 73;
 const int kNegativeSample = 74;
 const int kWordClassInput = 75;
 const int kLabelFeatValue = 76;
+const int kLstmAutoencoderInput = 77;
 
 /*! \brief these are enumeration */
 const int kInit = -1;
