@@ -16,11 +16,11 @@ namespace layer {
 template<typename xpu>
 class NextBasketDataLayer : public Layer<xpu>{
  public:
-  NextBasketDataLayer(LayerType type) { this->layer_type = type;}
+  NextBasketDataLayer(LayerType type) { this->layer_type = type; mul = 1000;}
   virtual ~NextBasketDataLayer(void) {}
   
   virtual int BottomNodeNum() { return 0; }
-  virtual int TopNodeNum() { return 4; }
+  virtual int TopNodeNum() { return 5; }
   virtual int ParamNodeNum() { return 0; }
 
   virtual void Require() {
@@ -32,6 +32,7 @@ class NextBasketDataLayer : public Layer<xpu>{
     this->defaults["batch_size"] = SettingV();
     this->defaults["max_session_len"] = SettingV();
     this->defaults["max_context_len"] = SettingV();
+    this->defaults["train_or_pred"] = SettingV();
     
     Layer<xpu>::Require();
   }
@@ -45,14 +46,16 @@ class NextBasketDataLayer : public Layer<xpu>{
 
     max_context_len = setting["max_context_len"].i_val;
     max_session_len = setting["max_session_len"].i_val;
-    data_file = setting["data_file"].s_val;
-    batch_size = setting["batch_size"].i_val;
+    data_file       = setting["data_file"].s_val;
+    batch_size      = setting["batch_size"].i_val;
+    train_or_pred   = setting["train_or_pred"].s_val;
     
     utils::Check(bottom.size() == BottomNodeNum(), "NextBasketDataLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "NextBasketDataLayer:top size problem.");
                   
     ReadNextBasketData();
     example_ptr = 0;
+    test_example_ptr = 0;
     sampler.Seed(shuffle_seed);
   }
 
@@ -117,9 +120,12 @@ class NextBasketDataLayer : public Layer<xpu>{
         dataset.push_back(e);
     }
 	utils::Printf("Example count in file: %d\n", dataset.size());
+
     // gen example ids
     for (int i = 0; i < dataset.size(); ++i) {
-      example_ids.push_back(i);
+      for (int j = 0; j < dataset[i].next_items.size(); ++j) {
+        example_ids.push_back(i * mul + j);
+      }
     }
   }
   
@@ -128,44 +134,48 @@ class NextBasketDataLayer : public Layer<xpu>{
     utils::Check(bottom.size() == BottomNodeNum(), "NextBasketDataLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "NextBasketDataLayer:top size problem.");
 
-    top[0]->Resize(batch_size, 1, 1, 1, true); // user 
-    top[1]->Resize(batch_size, context_window, 1, max_session_len, true); // context
-    top[2]->Resize(batch_size, 1, 1, 1, true); // y for train
-    top[3]->Resize(batch_size, 1, 1, max_session_len, true); // for eval
+    top[0]->Resize(batch_size, 1, 1, 1, true); // user id 
+    top[1]->Resize(batch_size, max_context_len, 1, max_session_len, true); // context 
+    top[2]->Resize(batch_size, 1, 1, 1, true); // context length
+    top[3]->Resize(batch_size, 1, 1, 1, true); // y for train
+    top[4]->Resize(batch_size, 1, 1, max_session_len, true); // ys for eval
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     for (int node_idx = 0; node_idx < top.size(); ++node_idx) {
       top[node_idx]->data = 0;
+      top[node_idx]->length = 0;
     }
 
     for (int i = 0; i < batch_size; ++i) {
       int exampleIdx = 0, labelIdx = 0;
-      if (this->phrase_type == kTrain) {
-          if (example_ptr == 0) {
-              this->sampler.Shuffle(example_ids);
-          }
-          exampleIdx = example_ids[example_ptr] / mul;
-          labelIdx = example_ids[example_ptr] % mul;
-          example_ptr = (example_ptr + 1) % example_ids.size();
-      } else {
-          exampleIdx = test_example_ptr;
-          test_example_ptr = (test_example_ptr+1) % dataset.size();
-      }
-          
-      top[0]->data[i][0][0][0] = dataset[exampleIdx].next_items[labelIdx]; // label
-      for (int k = 0; k < dataset[exampleIdx].next_items.size(); ++k) {
-        top[1]->data[i][0][0][k] = dataset[exampleIdx].next_items[k]; // label set
-      }
-      top[1]->length[i][0] = dataset[exampleIdx].next_items.size();
-      top[2]->data[i][0][0][0] = dataset[exampleIdx].user;
-      top[2]->length[i][0] = 1;
-      for (int w = 0; w < context_window; ++w) {
-        for (int k = 0; k < dataset[exampleIdx].context[w].size(); ++k) {
-          top[3]->data[i][w][0][k] = dataset[exampleIdx].context[w][k];
+      if (train_or_pred=="train") {
+        if (example_ptr == 0) {
+          this->sampler.Shuffle(example_ids);
         }
-        top[3]->length[i][w] = dataset[exampleIdx].context[w].size();
+        exampleIdx = example_ids[example_ptr] / mul;
+        labelIdx   = example_ids[example_ptr] % mul;
+        example_ptr = (example_ptr + 1) % example_ids.size();
+      } else {
+        exampleIdx = test_example_ptr;
+        labelIdx   = 0;
+        test_example_ptr = (test_example_ptr + 1) % dataset.size();
+      }
+         
+      top[3]->data[i][0][0][0] = dataset[exampleIdx].next_items[labelIdx]; // y
+      for (int k = 0; k < dataset[exampleIdx].next_items.size(); ++k) {
+        top[4]->data[i][0][0][k] = dataset[exampleIdx].next_items[k]; // ys 
+      }
+      top[4]->length[i][0] = dataset[exampleIdx].next_items.size();
+      top[0]->data[i][0][0][0] = dataset[exampleIdx].user; // user
+      top[0]->length[i][0] = 1; // embed is a var len layer
+      for (int w = 0; w < dataset[exampleIdx].context.size(); ++w) {
+        top[2]->data[i][0][0][0] = dataset[exampleIdx].context.size();
+        for (int k = 0; k < dataset[exampleIdx].context[w].size(); ++k) {
+          top[1]->data[i][w][0][k] = dataset[exampleIdx].context[w][k];
+        }
+        top[1]->length[i][w] = dataset[exampleIdx].context[w].size();
       }
     }
   }
@@ -177,16 +187,15 @@ class NextBasketDataLayer : public Layer<xpu>{
 
   struct Example {
       int user;
-      vector<int> next_items;
+      std::vector<int> next_items;
       std::vector<std::vector<int> > context;
   };
 
 
  protected:
-  std::string data_file;
-  int batch_size, max_session_len, max_context_len;
-  int example_ptr;
-  
+  std::string data_file, train_or_pred;
+  int batch_size, max_context_len, max_session_len, example_ptr, mul, test_example_ptr;
+
   std::vector<Example> dataset;
   
   std::vector<int> example_ids;

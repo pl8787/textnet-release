@@ -38,6 +38,7 @@
 #include "./common/flatten_layer-inl.hpp"
 #include "./common/lr2softmax_layer-inl.hpp"
 #include "./common/pos_pred_rep_layer-inl.hpp"
+#include "./common/nbp_gen_lstm_input_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
 #include "./input/sequence_classification_data_layer-inl.hpp"
@@ -51,6 +52,7 @@
 #include "./loss/accuracy_layer-inl.hpp"
 #include "./loss/negative_sample_loss_layer-inl.hpp"
 #include "./loss/word_class_softmax_loss_layer-inl.hpp"
+#include "./loss/lstm_autoencoder_softmax_loss_layer-inl.hpp"
 
 namespace textnet {
 namespace layer {
@@ -80,6 +82,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kLstm: return new LstmLayer<xpu>(type);
     case kLstmAutoencoder: return new LstmAutoencoderLayer<xpu>(type);
     case kLstmAutoencoderInput: return new LstmAutoencoderInputLayer<xpu>(type);
+    case kNbpGenLstmInput: return new NbpGenLstmInputLayer<xpu>(type);
     case kProduct: return new ProductLayer<xpu>(type);
     case kRecurrent: return new RecurrentLayer<xpu>(type);
     case kMaxRecurrent: return new MaxRecurrentLayer<xpu>(type);
@@ -102,6 +105,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kSoftmaxFuncVarLen: return new SoftmaxFuncVarLenLayer<xpu>(type);
     case kNegativeSampleLoss: return new NegativeSampleLossLayer<xpu>(type);
     case kWordClassSoftmaxLoss: return new WordClassSoftmaxLossLayer<xpu>(type);
+    case kLstmAutoencoderSoftmaxLoss: return new LstmAutoencoderSoftmaxLossLayer<xpu>(type);
     case kWordClassInput: return new WordClassInputLayer<xpu>(type);
     case kLabelFeatValue: return new LabelFeatValueLayer<xpu>(type);
     case kSumByAxis: return new SumLayer<xpu>(type);

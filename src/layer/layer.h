@@ -70,6 +70,7 @@ const int kDiagRecurrent = 44;
 const int kDup4lstm = 45;
 const int kPosPredRep = 46;
 const int kLstmAutoencoder = 47;
+const int kNbpGenLstmInput = 48;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;
@@ -81,6 +82,7 @@ const int kAccuracy = 56;
 const int kCrossEntropyLoss = 57;
 const int kNegativeSampleLoss = 58;
 const int kWordClassSoftmaxLoss = 59;
+const int kLstmAutoencoderSoftmaxLoss = 60;
 
 // Input Layer 71-
 const int kTextData = 71;

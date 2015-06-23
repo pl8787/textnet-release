@@ -137,30 +137,52 @@ def gen_lm_lstm_autoencoder(d_mem, init, lr, dataset, l2, lstm_norm2, negative_n
 
     layer = {}
     layers.append(layer) 
-    layer['bottom_nodes'] = ['lstm_seq_swap', 'y']
-    layer['top_nodes'] = ['class_prob', 'word_prob', 'final_prob', 'loss']
-    layer['layer_name'] = 'word_class_loss'
-    layer['layer_type'] = 59
+    layer['bottom_nodes'] = ['drop_rep']
+    layer['top_nodes'] = ['softmax_ret']
+    layer['layer_name'] = 'softmax_fullconnect'
+    layer['layer_type'] = 11 
+    setting = copy.deepcopy(g_layer_setting)
+    layer['setting'] = setting
+    setting['num_hidden'] = ds.num_class
+    setting['w_filler'] = zero_filler
+
+    layer = {}
+    layers.append(layer) 
+    layer['bottom_nodes'] = ['softmax_ret', 'y']
+    layer['top_nodes'] = ['loss']
+    layer['layer_name'] = 'softmax_activation'
+    layer['layer_type'] = 51 
     setting = {}
     layer['setting'] = setting
-    setting['w_class_filler'] = zero_filler
-    setting['b_class_filler'] = zero_filler
-    setting['w_word_filler']  = zero_filler
-    setting['b_word_filler']  = zero_filler
-    setting['w_class_updater'] = g_updater
-    setting['b_class_updater'] = zero_l2_updater
-    setting['w_word_updater']  = g_updater
-    setting['b_word_updater']  = zero_l2_updater
-    setting['feat_size'] = d_mem
-    setting['class_num'] = 1000
-    setting['vocab_size'] = ds.vocab_size
-    setting['word_class_file'] = ds.word_class_file 
+
+
+
+    # layer = {}
+    # layers.append(layer) 
+    # layer['bottom_nodes'] = ['lstm_seq_swap', 'y']
+    # layer['top_nodes'] = ['class_prob', 'word_prob', 'final_prob', 'loss']
+    # layer['layer_name'] = 'word_class_loss'
+    # layer['layer_type'] = 59
+    # setting = {}
+    # layer['setting'] = setting
+    # setting['w_class_filler'] = zero_filler
+    # setting['b_class_filler'] = zero_filler
+    # setting['w_word_filler']  = zero_filler
+    # setting['b_word_filler']  = zero_filler
+    # setting['w_class_updater'] = g_updater
+    # setting['b_class_updater'] = zero_l2_updater
+    # setting['w_word_updater']  = g_updater
+    # setting['b_word_updater']  = zero_l2_updater
+    # setting['feat_size'] = d_mem
+    # setting['class_num'] = 1000
+    # setting['vocab_size'] = ds.vocab_size
+    # setting['word_class_file'] = ds.word_class_file 
 
     return net
 
-run = 31
+run = 1
 # l2 = 0.
-for dataset in ['wiki']:
+for dataset in ['nyt']:
     for d_mem in [2]:
         idx = 0
         for init in [0.01]:
@@ -179,7 +201,7 @@ for dataset in ['wiki']:
                                                    "save_nodes":["x","y","lstm_seq","word_rep_seq"], \
                                                    "save_iter_num":1}]
 
-                        gen_conf_file(net, '/home/wsx/exp/match/{0}_lm/run.{1}/'.format(dataset, str(run)) + \
+                        gen_conf_file(net, '/home/wsx/exp/match/{0}/run.{1}/'.format(dataset, str(run)) + \
                                            'model.lm_lstm_autoencoder.{0}.d{1}.run{2}.{3}'.format \
                                            (dataset, str(d_mem), str(run), str(idx)))
                         # gen_conf_file(net, '/home/wsx/exp/match/test/'.format(dataset, str(run)) + \
