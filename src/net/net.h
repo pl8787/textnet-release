@@ -13,6 +13,8 @@
 #include "../global.h"
 
 #include "../layer/layer.h"
+#include "../layer/common/lstm_autoencoder_layer-inl.hpp"
+#include "../layer/common/lstm_layer-inl.hpp"
 #include "../utils/utils.h"
 #include "../utils/io.h"
 #include "../io/json/json.h"
@@ -540,6 +542,55 @@ class Net : public INet{
       int layer_idx = nets[tag][i]->layer_idx;
       nets[tag][i]->Backprop(bottom_vecs[layer_idx], top_vecs[layer_idx]);
     }
+    NormLstmGradient(tag);
+  }
+
+  float Norm2Square(mshadow::Tensor<xpu, 4, float> t) {
+    float norm2_square = 0.f;
+    for (index_t i = 0; i < t.size(0); ++i) 
+      for (index_t j = 0; j < t.size(1); ++j)
+        for (index_t m = 0; m < t.size(2); ++m)
+          for (index_t n = 0; n < t.size(3); ++n)
+              norm2_square += t[i][j][m][n] * t[i][j][m][n];
+
+    return norm2_square;
+  }
+  // orc this is for lstm or rnn, if the gradients of parameters are too big, 
+  // rescale all layers' gradients
+  void NormLstmGradient(string tag) {
+    utils::Check(phrase_type == kTrain, "Only call in Train Phrase.");
+    float norm2 = 0.f;
+    float max_norm2 = 0.f;
+    for (int i = 0; i < nets[tag].size(); ++i) {
+      int layer_type = nets[tag][i]->layer_type;
+      if (layer_type != kRecurrent && layer_type != kLstm && layer_type != kLstmAutoencoder) {
+        continue;
+      } 
+      if (layer_type == kLstmAutoencoder) {
+        max_norm2 = ((LstmAutoencoderLayer<xpu> *)(nets[tag][i]))->max_norm2;
+      }
+      if (layer_type == kLstm) {
+        max_norm2 = ((LstmLayer<xpu> *)(nets[tag][i]))->max_norm2;
+      }
+      if (max_norm2 == 0.f) {
+        return;
+      }
+      for (int param_id = 0; param_id < nets[tag][i]->ParamNodeNum(); ++param_id) {
+        norm2 += Norm2Square(nets[tag][i]->params[param_id].diff);
+      }
+    }
+    if (max_norm2 == 0.f) 
+      return;
+    norm2 = sqrt(norm2);
+    if (norm2 <= max_norm2) 
+      return;
+    float scale = max_norm2/norm2;
+    utils::Printf("Rescale Gradient By %f.\n", scale);
+    for (int i = 0; i < nets[tag].size(); ++i) {
+      for (int param_id = 0; param_id < nets[tag][i]->ParamNodeNum(); ++param_id) {
+        nets[tag][i]->params[param_id].diff *= scale;
+      }
+    }
   }
   
   virtual void Update(string tag) {
@@ -696,12 +747,12 @@ class Net : public INet{
             continue;
         }
         // oracle 
-        if (layers[layer_idx]->layer_type == kEmbedding || \
-            layers[layer_idx]->layer_type == kWordClassSoftmaxLoss) {
-            cout << "ORC: without save embedding" << endl;
-            layer_params_root.append(0);
-            continue;
-        }
+        // if (layers[layer_idx]->layer_type == kEmbedding || \
+        //     layers[layer_idx]->layer_type == kWordClassSoftmaxLoss) {
+        //     cout << "ORC: without save embedding" << endl;
+        //     layer_params_root.append(0);
+        //     continue;
+        // }
         // save the content of the matrix
         Json::Value node_root;
         layers[layer_idx]->params[param_idx].SaveNode(node_root, false);

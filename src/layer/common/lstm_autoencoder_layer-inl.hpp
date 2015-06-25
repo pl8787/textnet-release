@@ -31,6 +31,7 @@ class LstmAutoencoderLayer : public Layer<xpu> {
   virtual void Require() {
     // default value, just set the value you want
     this->defaults["no_bias"] = SettingV(false);
+    this->defaults["no_out_tanh"] = SettingV(false);
     // this->defaults["param_file"] = SettingV("");
     // this->defaults["o_gate_bias_init"] = SettingV(0.f);
     // this->defaults["f_gate_bias_init"] = SettingV(0.f);
@@ -40,6 +41,7 @@ class LstmAutoencoderLayer : public Layer<xpu> {
     // it will force custom to set in config
     // this->defaults["grad_norm2"] = SettingV();
     this->defaults["d_mem"] = SettingV();
+    this->defaults["max_norm2"] = SettingV();
     // this->defaults["total_max_len"] = SettingV(); // len(encoder)==len(decodeer)
     this->defaults["w_ec_filler"] = SettingV();
     this->defaults["u_ec_filler"] = SettingV();
@@ -68,11 +70,13 @@ class LstmAutoencoderLayer : public Layer<xpu> {
     utils::Check(bottom.size() == BottomNodeNum(), "LstmAutoencoderLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "LstmAutoencoderLayer:top size problem.");
                   
-    d_mem   = setting["d_mem"].iVal();
+    d_mem     = setting["d_mem"].iVal();
+    max_norm2 = setting["max_norm2"].fVal();
     // total_max_len = setting["total_max_len"].iVal();
     // utils::Check(total_max_len % 2 == 0, "LstmAutoencoderLayer: length error");
     d_input = bottom[0]->data.size(3);
     no_bias = setting["no_bias"].bVal();
+    no_out_tanh = setting["no_out_tanh"].bVal();
     // reverse = setting["reverse"].bVal();
     // grad_norm2 = setting["grad_norm2"].fVal();
     // param_file = setting["param_file"].sVal();
@@ -228,7 +232,11 @@ class LstmAutoencoderLayer : public Layer<xpu> {
       cc= mshadow::expr::F<op::tanh>(cc);   // tanh 
 
       cur_c = f * pre_c + i * cc;
-      cur_h = o * mshadow::expr::F<op::tanh>(cur_c); // tanh
+      if (!no_out_tanh) {
+        cur_h = o * mshadow::expr::F<op::tanh>(cur_c); // tanh
+      } else {
+        cur_h = o * cur_c; 
+      }
   }
 
   void ForwardLeft2Right(Tensor2D in, Tensor2D g, Tensor2D c, Tensor2D out) {
@@ -377,10 +385,15 @@ class LstmAutoencoderLayer : public Layer<xpu> {
     SplitGate(cur_g, i, f, o, cc);
     SplitGate(cur_g_er, i_er, f_er, o_er, cc_er);
 
-    mshadow::TensorContainer<xpu, 2> tanhc(cur_c.shape_);
-    tanhc = mshadow::expr::F<op::tanh>(cur_c);
-    o_er = mshadow::expr::F<op::sigmoid_grad>(o) * (cur_h_er * tanhc); // logi
-    cur_c_er += mshadow::expr::F<op::tanh_grad>(tanhc) * (cur_h_er * o);
+    if (!no_out_tanh) {
+      mshadow::TensorContainer<xpu, 2> tanhc(cur_c.shape_);
+      tanhc = mshadow::expr::F<op::tanh>(cur_c);
+      o_er = mshadow::expr::F<op::sigmoid_grad>(o) * (cur_h_er * tanhc); // logi
+      cur_c_er += mshadow::expr::F<op::tanh_grad>(tanhc) * (cur_h_er * o);
+    } else {
+      o_er = mshadow::expr::F<op::sigmoid_grad>(o) * (cur_h_er * cur_c); // logi
+      cur_c_er += cur_h_er * o;
+    }
 
     i_er = mshadow::expr::F<op::sigmoid_grad>(i) * (cur_c_er * cc);    // logi
     cc_er = mshadow::expr::F<op::tanh_grad>(cc) * (cur_c_er * i);      // tanh
@@ -568,9 +581,11 @@ class LstmAutoencoderLayer : public Layer<xpu> {
   }
   */
 
- protected:
+ public:
+// protected:
   int d_mem, d_input; //, total_max_len;
-  bool no_bias, reverse; 
+  bool no_bias, reverse, no_out_tanh; 
+  float max_norm2;
   // float grad_norm2;
   // float o_gate_bias_init;
   // float f_gate_bias_init;

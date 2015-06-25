@@ -114,8 +114,8 @@ class DatasetCfg:
             self.max_context_len = 10
 
             self.dp_rate = 0.0
-            self.d_user_rep = 10
-            self.d_item_rep = 10
+            self.d_user_rep = 30
+            self.d_item_rep = 30
 
             self.batch_size = 1
             self.train_batch_size = 1 
@@ -140,9 +140,10 @@ class DatasetCfg:
             
             self.max_doc_len = 33
             self.min_doc_len = 5 
-            self.vocab_size = 15586
+            # self.vocab_size = 15586
+            self.vocab_size = 50000
 
-            self.dp_rate = 0.5
+            self.dp_rate = 0.0
             self.num_class = 2
             self.d_word_rep = 50
             self.batch_size = 50
@@ -160,33 +161,33 @@ class DatasetCfg:
             self.test_max_iters  = self.n_test / self.test_batch_size
         elif dataset == 'nyt':
             self.data_dir = '/home/wsx/data/nyt/'
-            self.train_data_file = self.data_dir + 'nyt.wid.train'
+            self.train_data_file = self.data_dir + 'nyt.wid.train.with_msrp'
             self.valid_data_file = self.data_dir + 'nyt.wid.valid'
-            self.test_data_file  = self.data_dir + 'nyt.wid.valid'
+            self.test_data_file  = self.data_dir + 'msrp.sentence.valid'
             # self.embedding_file  = self.data_dir + 'wiki.embed'
             # self.update_indication_file = self.data_dir + 'wiki.ind'
             # self.word_class_file = self.data_dir + 'id2class'
             # self.word_freq_file = self.data_dir + 'word_freq'
             
-            self.max_doc_len = 52
+            self.max_doc_len = 60
             self.min_doc_len = 0
-            self.vocab_size = 42422 # without orc_unknown
+            self.vocab_size = 45844 # without orc_unknown
 
             self.dp_rate = 0.
-            self.d_word_rep = 2
+            self.d_word_rep = 50
             self.batch_size = 32
             self.train_batch_size = 32
             self.valid_batch_size = 32
             self.test_batch_size  = 32
-            self.n_train = 90000
+            self.n_train = 111456 
             self.n_valid = 10000
-            self.n_test = 10000
-            self.train_display_interval = 10
-            self.valid_display_interval = 1000 
-            self.test_display_interval  = 1000 
+            self.n_test = 1000
+            self.train_display_interval = 1
+            self.valid_display_interval = 500 
+            self.test_display_interval  = 500 
             self.train_max_iters = (self.n_train/self.train_batch_size) * 5
             self.valid_max_iters = (self.n_valid/10)/self.valid_batch_size
-            self.test_max_iters  = 1
+            self.test_max_iters  = (self.n_test)/self.test_batch_size
         elif dataset == 'wiki':
             self.data_dir = '/home/wsx/data/wiki/'
             self.train_data_file = self.data_dir + 'wiki.train.with_msrp'

@@ -28,6 +28,7 @@ class LstmAutoencoderSoftmaxLossLayer : public Layer<xpu>{
   virtual void Require() {
     // default value, just set the value you want
     this->defaults["word_embed_file"] = SettingV("");
+    this->defaults["no_bias"] = SettingV(false);
     
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -48,11 +49,20 @@ class LstmAutoencoderSoftmaxLossLayer : public Layer<xpu>{
 
     feat_size = setting["feat_size"].iVal();
     vocab_size= setting["vocab_size"].iVal();
+    no_bias = setting["no_bias"].bVal();
     word_embed_file = setting["word_embed_file"].sVal();
 
     // bottom[0], pred_rep, (batch_size, position_num, 1, feat_size)
     // bottom[1], label,    (batch_size, position_num, 1, 1)
     utils::Check(bottom[0]->data.size(0) == bottom[1]->data.size(0), "LstmAutoencoderSoftmaxLossLayer: input error.");
+    cout << bottom[0]->data.shape_[0] << endl;
+    cout << bottom[0]->data.shape_[1] << endl;
+    cout << bottom[0]->data.shape_[2] << endl;
+    cout << bottom[0]->data.shape_[3] << endl;
+    cout << bottom[1]->data.shape_[0] << endl;
+    cout << bottom[1]->data.shape_[1] << endl;
+    cout << bottom[1]->data.shape_[2] << endl;
+    cout << bottom[1]->data.shape_[3] << endl;
     utils::Check(bottom[0]->data.size(1) == bottom[1]->data.size(1), "LstmAutoencoderSoftmaxLossLayer: input error 1.");
     utils::Check(bottom[0]->data.size(3) == feat_size, "LstmAutoencoderSoftmaxLossLayer: input error 2.");
     utils::Check(bottom[0]->data.size(2) == 1, "LstmAutoencoderSoftmaxLossLayer: input error 3.");

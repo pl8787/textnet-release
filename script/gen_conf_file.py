@@ -6,6 +6,16 @@ def gen_zero_filter_setting():
 def gen_uniform_filter_setting(interval):
     return {'init_type':2, 'range':interval}
 
+def gen_sgd_setting(lr, l2 = None, batch_size = 1):
+    # assert not l2 or l2 == 0
+    setting = {}
+    setting['updater_type'] = 0
+    setting['lr'] = lr
+    setting['batch_size'] = batch_size
+    if l2:
+        setting['l2'] = l2
+    return  setting
+
 def gen_adadelta_setting(l2 = None, batch_size = 1, eps = None, rho = None, norm2=0.):
     setting = {}
     setting['updater_type'] = 4
