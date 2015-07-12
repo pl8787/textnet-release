@@ -2,6 +2,7 @@
 #define TEXTNET_LAYER_NODE_H_
 
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <map>
 #include <string>
@@ -200,6 +201,38 @@ struct Node {
 	diff_root["value"] = diff_value_root;
 
 	node_root["diff"] = diff_root;
+  }
+  // this load by ssv (space split) format, not json format, the first line is the shape info
+  void LoadDataSsv(const char *data_file) {
+    utils::Printf("Open data file: %s\n", data_file);     
+    std::vector<std::string> lines; 
+    std::ifstream fin(data_file); 
+    std::string s; 
+    utils::Check(fin, "Open data file problem."); 
+    while (!fin.eof()) { 
+      std::getline(fin, s);
+      if (s.empty()) break;
+      lines.push_back(s);
+    }
+    fin.close();
+    std::istringstream iss;
+    int row = 0, col = 0;
+    iss.str(lines[0]);
+    iss >> row >> col;
+    utils::Check(row == lines.size()-1, "Data error 1.");
+    utils::Check(this->data.shape_[0] == 1, "Data error 2.");
+    utils::Check(this->data.shape_[1] == 1, "Data error 3.");
+    utils::Check(this->data.shape_[2] == row, "Data error 4.");
+    utils::Check(this->data.shape_[3] == col, "Data error 5.");
+
+    for (int i = 0; i < row; ++i) {
+      iss.clear();
+      iss.seekg(0, iss.beg);
+      iss.str(lines[i+1]);
+      for (int j = 0; j < col; ++j) {
+        iss >> this->data[0][0][i][j];
+      }
+    }
   }
 
   void LoadNode(Json::Value &node_root, bool with_diff = false) {

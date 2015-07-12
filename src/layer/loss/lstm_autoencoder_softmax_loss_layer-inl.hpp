@@ -27,8 +27,10 @@ class LstmAutoencoderSoftmaxLossLayer : public Layer<xpu>{
   
   virtual void Require() {
     // default value, just set the value you want
-    this->defaults["word_embed_file"] = SettingV("");
+    // this->defaults["word_embed_file"] = SettingV("");
     this->defaults["no_bias"] = SettingV(false);
+    this->defaults["temperature"] = SettingV(1);
+    this->defaults["w_file"] = SettingV("");
     
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -48,9 +50,10 @@ class LstmAutoencoderSoftmaxLossLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(), "LstmAutoencoderSoftmaxLossLayer:top size problem.");
 
     feat_size = setting["feat_size"].iVal();
+    temperature = setting["temperature"].fVal();
     vocab_size= setting["vocab_size"].iVal();
     no_bias = setting["no_bias"].bVal();
-    word_embed_file = setting["word_embed_file"].sVal();
+    w_file = setting["w_file"].sVal();
 
     // bottom[0], pred_rep, (batch_size, position_num, 1, feat_size)
     // bottom[1], label,    (batch_size, position_num, 1, 1)
@@ -89,6 +92,9 @@ class LstmAutoencoderSoftmaxLossLayer : public Layer<xpu>{
                                                               w_updater, this->prnd_);
     this->params[1].updater_ = updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].iVal(),
                                                               b_updater, this->prnd_);
+    if (!w_file.empty()) {
+       this->params[0].LoadDataSsv(w_file.c_str());
+    }
   }
 
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -122,6 +128,9 @@ class LstmAutoencoderSoftmaxLossLayer : public Layer<xpu>{
         prob += repmat(b, pred_rep.size(0));
     }
     prob += dot(pred_rep, w.T());
+    if (temperature != 1.f) {
+      prob *= temperature;
+    }
     mshadow::Softmax(prob,  prob);
     // ==== 
 
@@ -160,6 +169,10 @@ class LstmAutoencoderSoftmaxLossLayer : public Layer<xpu>{
       prob_diff[i][y] -= 1.0f;
     }
 
+    if (temperature != 1.f) {
+      prob_diff *= temperature;
+    }
+
     // **** bp to param and bottom class
     mshadow::Tensor<xpu, 2> pred_rep_data = bottom[0]->data_d2_reverse();
     mshadow::Tensor<xpu, 2> pred_rep_diff = bottom[0]->diff_d2_reverse();
@@ -178,7 +191,8 @@ class LstmAutoencoderSoftmaxLossLayer : public Layer<xpu>{
 protected:
   bool no_bias;
   int feat_size, vocab_size;
-  string word_embed_file;
+  float temperature;
+  string w_file;
 };
 }  // namespace layer
 }  // namespace textnet

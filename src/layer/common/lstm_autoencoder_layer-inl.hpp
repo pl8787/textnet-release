@@ -31,7 +31,10 @@ class LstmAutoencoderLayer : public Layer<xpu> {
   virtual void Require() {
     // default value, just set the value you want
     this->defaults["no_bias"] = SettingV(false);
-    this->defaults["no_out_tanh"] = SettingV(false);
+    this->defaults["encoder_w_file"] = SettingV("");
+    this->defaults["encoder_u_file"] = SettingV("");
+    this->defaults["decoder_w_file"] = SettingV("");
+    this->defaults["decoder_u_file"] = SettingV("");
     // this->defaults["param_file"] = SettingV("");
     // this->defaults["o_gate_bias_init"] = SettingV(0.f);
     // this->defaults["f_gate_bias_init"] = SettingV(0.f);
@@ -41,6 +44,7 @@ class LstmAutoencoderLayer : public Layer<xpu> {
     // it will force custom to set in config
     // this->defaults["grad_norm2"] = SettingV();
     this->defaults["d_mem"] = SettingV();
+    this->defaults["no_out_tanh"] = SettingV();
     this->defaults["max_norm2"] = SettingV();
     // this->defaults["total_max_len"] = SettingV(); // len(encoder)==len(decodeer)
     this->defaults["w_ec_filler"] = SettingV();
@@ -77,6 +81,11 @@ class LstmAutoencoderLayer : public Layer<xpu> {
     d_input = bottom[0]->data.size(3);
     no_bias = setting["no_bias"].bVal();
     no_out_tanh = setting["no_out_tanh"].bVal();
+
+    encoder_w_file = setting["encoder_w_file"].sVal();
+    encoder_u_file = setting["encoder_u_file"].sVal();
+    decoder_w_file = setting["decoder_w_file"].sVal();
+    decoder_u_file = setting["decoder_u_file"].sVal();
     // reverse = setting["reverse"].bVal();
     // grad_norm2 = setting["grad_norm2"].fVal();
     // param_file = setting["param_file"].sVal();
@@ -151,6 +160,19 @@ class LstmAutoencoderLayer : public Layer<xpu> {
         updater::CreateUpdater<xpu, 4>(u_dc_updater["updater_type"].iVal(), u_dc_updater, this->prnd_);
     this->params[5].updater_ = 
         updater::CreateUpdater<xpu, 4>(b_dc_updater["updater_type"].iVal(), b_dc_updater, this->prnd_);
+
+    if (!encoder_w_file.empty()) {
+      this->params[0].LoadDataSsv(encoder_w_file.c_str());
+    }
+    if (!encoder_u_file.empty()) {
+      this->params[1].LoadDataSsv(encoder_u_file.c_str());
+    }
+    if (!decoder_w_file.empty()) {
+      this->params[3].LoadDataSsv(decoder_w_file.c_str());
+    }
+    if (!decoder_u_file.empty()) {
+      this->params[4].LoadDataSsv(decoder_u_file.c_str());
+    }
   }
 
   /*
@@ -586,6 +608,7 @@ class LstmAutoencoderLayer : public Layer<xpu> {
   int d_mem, d_input; //, total_max_len;
   bool no_bias, reverse, no_out_tanh; 
   float max_norm2;
+  string encoder_w_file, encoder_u_file, decoder_w_file, decoder_u_file;
   // float grad_norm2;
   // float o_gate_bias_init;
   // float f_gate_bias_init;

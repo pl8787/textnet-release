@@ -11,12 +11,15 @@ def gen_lm_lstm_autoencoder(d_mem, init, lr, dataset, l2, max_norm2, negative_nu
     # else:
     #     print "use <- lSTM"
     net = {}
+    para_dir = '/home/wsx/src/LstmMatlab/Standard_LSTM/'
 
     ds = DatasetCfg(dataset)
     g_filler        = gen_uniform_filter_setting(init)
     zero_filler     = gen_zero_filter_setting()
     # g_updater       = gen_adagrad_setting(lr=lr, l2=l2, batch_size=ds.train_batch_size)
     # zero_l2_updater = gen_adagrad_setting(lr=lr, batch_size=ds.train_batch_size)
+    # g_updater       = gen_sgd_setting(lr=lr, l2=l2, batch_size=ds.train_batch_size)
+    # zero_l2_updater = gen_sgd_setting(lr=lr, batch_size=ds.train_batch_size)
     g_updater       = gen_sgd_setting(lr=lr, l2=l2, batch_size=ds.train_batch_size)
     zero_l2_updater = gen_sgd_setting(lr=lr, batch_size=ds.train_batch_size)
 
@@ -92,7 +95,7 @@ def gen_lm_lstm_autoencoder(d_mem, init, lr, dataset, l2, max_norm2, negative_nu
     layer['layer_type'] = 21
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
-    # setting['embedding_file'] = ds.embedding_file
+    setting['embedding_file'] = para_dir + '30_v'
     # setting['update_indication_file'] = ds.update_indication_file
     setting['feat_size'] = ds.d_word_rep
     setting['word_count'] = ds.vocab_size
@@ -123,6 +126,12 @@ def gen_lm_lstm_autoencoder(d_mem, init, lr, dataset, l2, max_norm2, negative_nu
     setting['w_dc_updater'] = g_updater
     setting['u_dc_updater'] = g_updater
     setting['b_dc_updater'] = zero_l2_updater
+    print "LSTM NO_OUT_TANH"
+    setting['no_out_tanh'] = True
+    setting['encoder_w_file'] = para_dir + '30_encoder.W'
+    setting['encoder_u_file'] = para_dir + '30_encoder.U'
+    setting['decoder_w_file'] = para_dir + '30_decoder.W'
+    setting['decoder_u_file'] = para_dir + '30_decoder.U'
 
     layer = {}
     layers.append(layer) 
@@ -139,15 +148,17 @@ def gen_lm_lstm_autoencoder(d_mem, init, lr, dataset, l2, max_norm2, negative_nu
     layer['top_nodes'] = ['prob','loss']
     layer['layer_name'] = 'softmax_activation'
     layer['layer_type'] = 60
-    setting = {}
+    setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
     setting['vocab_size'] = ds.vocab_size
     setting['feat_size']  = ds.d_word_rep
-    setting['no_bias']  = True
+    setting['no_bias']  = False
     setting['w_filler']  = g_filler
     setting['b_filler']  = zero_filler
     setting['w_updater'] = g_updater
     setting['b_updater'] = zero_l2_updater
+    setting['temperature'] = 1
+    setting['w_file'] = para_dir + '30_soft_W'
 
     # layer = {}
     # layers.append(layer) 
@@ -172,18 +183,18 @@ def gen_lm_lstm_autoencoder(d_mem, init, lr, dataset, l2, max_norm2, negative_nu
 
     return net
 
-run = 8
+run = 14
 # l2 = 0.
 for dataset in ['nyt']:
-    for d_mem in [50]:
-        idx = 0
+    for d_mem in [1000]:
+        idx = 2
         # for init in [0.3, 0.1, 0.03]:
-        for init in [0.1]:
-            for lr in [3, 1, 0.3, 0.1, 0.05, 0.02]:
+        for init in [0.08]:
+            for lr in [0.1, 0.03]:
             # for lr in [0.1, 0.03, 0.01]:
             # for lr in [0.1]:
-                for max_norm2 in [1]:
-                    for l2 in [0.000]:
+                for max_norm2 in [32]:
+                    for l2 in [0.03]:
                         # max_norm2 = 0.1
                         net = gen_lm_lstm_autoencoder(d_mem=d_mem, init=init, lr=lr, dataset=dataset, l2=l2, \
                                                       max_norm2=max_norm2, negative_num=0)

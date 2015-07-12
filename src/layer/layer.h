@@ -71,6 +71,9 @@ const int kDup4lstm = 45;
 const int kPosPredRep = 46;
 const int kLstmAutoencoder = 47;
 const int kNbpGenLstmInput = 48;
+const int kPhraseAveRep = 49;
+const int kOneHot = 1000;
+const int kMatchTensor = 1001;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;
@@ -92,6 +95,7 @@ const int kNegativeSample = 74;
 const int kWordClassInput = 75;
 const int kLabelFeatValue = 76;
 const int kLstmAutoencoderInput = 77;
+const int kMatchPhraseRep = 78;
 
 /*! \brief these are enumeration */
 const int kInit = -1;

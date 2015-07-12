@@ -169,11 +169,11 @@ class SshWorker(Thread):
 
 def get_nodes():
     n_thread = 12
-    node_169 = Node('10.60.1.169', 'wsx', n_thread)
+    node_169 = Node('10.60.1.169', 'wsx', n_thread/2)
     node_52 = Node('10.60.0.52', 'wsx', n_thread)
-    node_59 = Node('10.60.0.59', 'wsx', n_thread/2)
+    node_59 = Node('10.60.0.59', 'wsx', n_thread)
     # node_168 = Node('10.60.1.168', 'wsx', 8)
-    return [node_52]
+    return [node_52, node_169, node_59]
     # return [node_169]
     # return [node_52, node_59]
     # return [node_59]
@@ -199,8 +199,9 @@ def main():
     # local_dir = '/home/wsx/exp/ccir2015/mr/birnn/run.2/'
     # local_dir = '/home/wsx/exp/match/msrp_char/bilstm_sim_dpool/run.3/'
     # local_dir = '/home/wsx/exp/match/msrp_dpool/run.1/'
-    local_dir = '/home/wsx/exp/match/msrp/lstm_sim_dpool/run.29/'
-    # local_dir = '/home/wsx/exp/nbp/tf/run.5/'
+    # local_dir = '/home/wsx/exp/match/msrp/lstm_sim_dpool/run.29/'
+    local_dir = '/home/wsx/exp/match/msrp/lstm_sim_dpool/run.30/'
+    # local_dir = '/home/wsx/exp/nbp/tf/run.8/'
     remote_dir = '/home/wsx/log.tmp/'
 
     conf_files = os.listdir(local_dir) 

@@ -177,7 +177,8 @@ class MatchLayer : public Layer<xpu>{
               float sub_elem = bottom0_data4[i][0][j][m] - bottom1_data4[i][0][k][m];
               sum_elem_square += sub_elem * sub_elem;
             }
-            top_data[i][0][j][k] = pow(sum_elem_square, 0.5);
+            // top_data[i][0][j][k] = pow(sum_elem_square, 0.5);
+            top_data[i][0][j][k] = sum_elem_square;
 		  } else if (op =="euc_exp") { // by wengpeng ying, no sqrt
             float sum_elem_square = 0.f;
             for (int m = 0; m < feat_size; ++m) {
@@ -257,10 +258,12 @@ class MatchLayer : public Layer<xpu>{
               float distance = top_data[i][0][j][k];
               float sub_elem = bottom0_data[i][0][j][m] - bottom1_data[i][0][k][m];
 			  if (this->prop_error[0]) {
-                bottom0_diff[i][0][j][m] += top_diff[i][0][j][k] * (1/(2*distance)) * 2*(sub_elem);
+                // bottom0_diff[i][0][j][m] += top_diff[i][0][j][k] * (1/(2*distance)) * 2*(sub_elem);
+                bottom0_diff[i][0][j][m] += top_diff[i][0][j][k] * 2*(sub_elem);
               }
 			  if (this->prop_error[1]) {
-				bottom1_diff[i][0][k][m] += top_diff[i][0][j][k] * (1/(2*distance)) * 2*(-sub_elem);
+				// bottom1_diff[i][0][k][m] += top_diff[i][0][j][k] * (1/(2*distance)) * 2*(-sub_elem);
+				bottom1_diff[i][0][k][m] += top_diff[i][0][j][k] * 2*(-sub_elem);
               }
 		    } else if (op == "euc_exp") {
               float distance = top_data[i][0][j][k];
