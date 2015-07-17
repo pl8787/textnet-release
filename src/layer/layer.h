@@ -74,6 +74,7 @@ const int kNbpGenLstmInput = 48;
 const int kPhraseAveRep = 49;
 const int kOneHot = 1000;
 const int kMatchTensor = 1001;
+const int kMatchWeightedDot = 1002;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;
