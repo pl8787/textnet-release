@@ -167,8 +167,8 @@ class SshWorker(Thread):
         scp2local(self.node, job.remote_log_file(), job.local_log_file())
 
 def get_nodes():
-    node_169 = Node('10.60.1.169', 'wsx', 12)
-    node_168 = Node('10.60.1.168', 'wsx', 8)
+    node_169 = Node('10.60.1.169', 'pangliang', 12)
+    # node_168 = Node('10.60.1.168', 'pangliang', 8)
     return [node_169]
 
 def main():
@@ -186,11 +186,12 @@ def main():
     # local_dir = '/home/wsx/exp/gate/lstm/run.9/'
     # local_dir  = '/home/wsx/exp/match/birnn_mlp/run.1/'
     # local_dir = '/home/wsx/exp/match/bilstm_mlp/run.17/'
-    local_dir = '/home/wsx/exp/ccir2015/mr/conv_bilstm/run.8/'
+    # local_dir = '/home/pangliang/matching/msrp_exp/msrp/run.1/'
+    local_dir = '/home/pangliang/matching/qa_exp/webscope/run.1/'
     # local_dir = '/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.2/'
     # local_dir = '/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.2/'
     # local_dir = '/home/wsx/exp/match/bilstm_sim_dpool/run.1/'
-    remote_dir = '/home/wsx/log.tmp/'
+    remote_dir = '/home/pangliang/log.tmp/'
 
     conf_files = os.listdir(local_dir) 
     print conf_files
