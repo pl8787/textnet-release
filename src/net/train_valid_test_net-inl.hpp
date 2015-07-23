@@ -3,6 +3,7 @@
 
 #include <mshadow/tensor.h>
 #include "./net.h"
+#include <ctime>
 
 namespace textnet {
 namespace net {
@@ -23,13 +24,18 @@ class TrainValidTestNet : public Net<xpu>{
 			"No [Test] tag in config.");
     
 
+    time_t begin = 0, end = 0;
+    time(&begin);
 	for (int iter = 0; iter < this->max_iters["Train"]; ++iter) {
         this->SaveModel(iter);
 
         this->SaveModelActivation(iter);
 
 		if (this->display_interval["Valid"] > 0 && iter % this->display_interval["Valid"] == 0) {
+            time(&end);
+            cout << "valid display interval: " << end-begin << "s." << endl;
 			this->TestAll("Valid", iter);
+            time(&begin);
 		}	
 
 		if (this->display_interval["Test"] > 0 && iter % this->display_interval["Test"] == 0) {

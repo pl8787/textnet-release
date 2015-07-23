@@ -69,6 +69,13 @@ const int kDynamicPooling = 43;
 const int kDiagRecurrent = 44;
 const int kDup4lstm = 45;
 const int kPosPredRep = 46;
+const int kLstmAutoencoder = 47;
+const int kNbpGenLstmInput = 48;
+const int kPhraseAveRep = 49;
+const int kOneHot = 1000;
+const int kMatchTensor = 1001;
+const int kMatchWeightedDot = 1002;
+const int kMatchTensorFact = 1003;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;
@@ -80,6 +87,7 @@ const int kAccuracy = 56;
 const int kCrossEntropyLoss = 57;
 const int kNegativeSampleLoss = 58;
 const int kWordClassSoftmaxLoss = 59;
+const int kLstmAutoencoderSoftmaxLoss = 60;
 
 // Input Layer 71-
 const int kTextData = 71;
@@ -87,7 +95,9 @@ const int kSequenceClassificationData = 72;
 const int kNextBasketData = 73;
 const int kNegativeSample = 74;
 const int kWordClassInput = 75;
-
+const int kLabelFeatValue = 76;
+const int kLstmAutoencoderInput = 77;
+const int kMatchPhraseRep = 78;
 
 /*! \brief these are enumeration */
 const int kInit = -1;

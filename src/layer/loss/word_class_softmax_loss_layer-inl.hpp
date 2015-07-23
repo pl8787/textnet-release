@@ -23,7 +23,7 @@ class WordClassSoftmaxLossLayer : public Layer<xpu>{
   
   virtual int BottomNodeNum() { return 2; } // pred_rep, label
   virtual int TopNodeNum() { return 4; }    // class_prob, word_prob, final_prob, loss
-  virtual int ParamNodeNum() { return 0; }
+  virtual int ParamNodeNum() { return 4; }
   
   virtual void Require() {
     // default value, just set the value you want
@@ -59,11 +59,11 @@ class WordClassSoftmaxLossLayer : public Layer<xpu>{
     // bottom[0], pred_rep, (batch_size, position_num, 1, feat_size)
     // bottom[1], label,    (batch_size, position_num, 1, 1)
     utils::Check(bottom[0]->data.size(0) == bottom[1]->data.size(0), "WordClassSoftmaxLossLayer: input error.");
-    utils::Check(bottom[0]->data.size(1) == bottom[1]->data.size(1), "WordClassSoftmaxLossLayer: input error.");
-    utils::Check(bottom[0]->data.size(3) == feat_size, "WordClassSoftmaxLossLayer: input error.");
-    utils::Check(bottom[0]->data.size(2) == 1, "WordClassSoftmaxLossLayer: input error.");
-    utils::Check(bottom[1]->data.size(2) == 1, "WordClassSoftmaxLossLayer: input error.");
-    utils::Check(bottom[1]->data.size(3) == 1, "WordClassSoftmaxLossLayer: input error.");
+    utils::Check(bottom[0]->data.size(1) == bottom[1]->data.size(1), "WordClassSoftmaxLossLayer: input error 1.");
+    utils::Check(bottom[0]->data.size(3) == feat_size, "WordClassSoftmaxLossLayer: input error 2.");
+    utils::Check(bottom[0]->data.size(2) == 1, "WordClassSoftmaxLossLayer: input error 3.");
+    utils::Check(bottom[1]->data.size(2) == 1, "WordClassSoftmaxLossLayer: input error 4.");
+    utils::Check(bottom[1]->data.size(3) == 1, "WordClassSoftmaxLossLayer: input error 5.");
 
     this->params.resize(4); // two embed and bias matrix
     this->params[0].Resize(1, 1, class_num,  feat_size, true); // class embed
@@ -92,6 +92,18 @@ class WordClassSoftmaxLossLayer : public Layer<xpu>{
     this->params[2].Init();
     this->params[3].Init();
 
+    std::map<std::string, SettingV> &w_class_updater = *setting["w_class_updater"].mVal();
+    std::map<std::string, SettingV> &b_class_updater = *setting["b_class_updater"].mVal();
+    std::map<std::string, SettingV> &w_word_updater = *setting["w_word_updater"].mVal();
+    std::map<std::string, SettingV> &b_word_updater = *setting["b_word_updater"].mVal();
+    this->params[0].updater_ = updater::CreateUpdater<xpu, 4>(w_class_updater["updater_type"].iVal(),
+                                                              w_class_updater, this->prnd_);
+    this->params[1].updater_ = updater::CreateUpdater<xpu, 4>(b_class_updater["updater_type"].iVal(),
+                                                              b_class_updater, this->prnd_);
+    this->params[2].updater_ = updater::CreateUpdater<xpu, 4>(w_word_updater["updater_type"].iVal(),
+                                                              w_word_updater, this->prnd_);
+    this->params[3].updater_ = updater::CreateUpdater<xpu, 4>(b_word_updater["updater_type"].iVal(),
+                                                              b_word_updater, this->prnd_);
     Prepare();
   }
 
@@ -139,19 +151,22 @@ class WordClassSoftmaxLossLayer : public Layer<xpu>{
     // **** compute word prob, for that label words belong to different classes, need to process one by one
     int batch_size = label.size(0);
     int position_num = label.size(1);
+    int cnt = 0;
     for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
       for (int pos_idx = 0; pos_idx < position_num; ++pos_idx) {
         int y = static_cast<int>(label[batch_idx][pos_idx][0][0]); // origin word idx
+        if (y == -1) continue;
+        cnt += 1;
         utils::Check(y >= 0 && y < vocab_size, "WordClassSoftmaxLossLayer: label error.");
         int c = word_2_class[y];
         utils::Check(c >= 0 && c < class_num, "WordClassSoftmaxLossLayer: label error.");
 
         int class_beg = class_begins[c];
-        int class_end   = class_ends[c];
+        int class_end = class_ends[c];
         mshadow::Tensor<xpu, 2> w_word_one_class    = this->params[2].data_d2_reverse().Slice(class_beg, class_end);
         mshadow::Tensor<xpu, 1> b_word_one_class    = this->params[3].data_d1_reverse().Slice(class_beg, class_end);
         mshadow::Tensor<xpu, 2> pred_rep            = bottom[0]->data[batch_idx][pos_idx];
-        mshadow::Tensor<xpu, 2> word_prob_all       = top[1]->data[batch_idx][pos_idx];
+        mshadow::Tensor<xpu, 2> word_prob_all       = word_prob[batch_idx][pos_idx];
         mshadow::Tensor<xpu, 2> word_prob_one_class(word_prob_all.dptr_+class_beg, mshadow::Shape2(1, class_end-class_beg));
         if (!no_bias) {
           word_prob_one_class += repmat(b_word_one_class, 1);
@@ -176,7 +191,7 @@ class WordClassSoftmaxLossLayer : public Layer<xpu>{
         }
       }
     }
-    loss[0] /= (batch_size * position_num);
+    loss[0] /= cnt;
     // ====
   }
   
@@ -199,6 +214,11 @@ class WordClassSoftmaxLossLayer : public Layer<xpu>{
     for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
       for (int pos_idx = 0; pos_idx < position_num; ++pos_idx) {
         int y = static_cast<int>(label[batch_idx][pos_idx][0][0]); // origin word idx
+        if (y == -1) {
+            class_prob_diff[batch_idx][pos_idx] = 0.f;
+            word_prob_diff[batch_idx][pos_idx] = 0.f;
+            continue;
+        }
         int c = word_2_class[y];
         int new_word_idx_by_class = word_2_new_idx[y]; // new idx
         
@@ -227,6 +247,7 @@ class WordClassSoftmaxLossLayer : public Layer<xpu>{
     for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
       for (int pos_idx = 0; pos_idx < position_num; ++pos_idx) {
         int y = static_cast<int>(label[batch_idx][pos_idx][0][0]);
+        if (y == -1) continue;
         int c = word_2_class[y];
         int class_beg = class_begins[c];
         int class_end   = class_ends[c];
@@ -235,10 +256,9 @@ class WordClassSoftmaxLossLayer : public Layer<xpu>{
         mshadow::Tensor<xpu, 2> w_word_one_class_diff = this->params[2].diff_d2_reverse().Slice(class_beg, class_end);
         mshadow::Tensor<xpu, 1> b_word_one_class_diff = this->params[3].diff_d1_reverse().Slice(class_beg, class_end);
 
-        mshadow::Tensor<xpu, 2> pred_rep_data            = bottom[0]->data[batch_idx][pos_idx];
-        mshadow::Tensor<xpu, 2> pred_rep_diff            = bottom[0]->diff[batch_idx][pos_idx];
-        // mshadow::Tensor<xpu, 2> word_prob_one_class_diff = top[1]->diff[batch_idx][pos_idx].T().Slice(class_beg, class_end).T();
-        mshadow::Tensor<xpu, 2> word_prob_all_diff       = top[1]->diff[batch_idx][pos_idx];
+        mshadow::Tensor<xpu, 2> pred_rep_data      = bottom[0]->data[batch_idx][pos_idx];
+        mshadow::Tensor<xpu, 2> pred_rep_diff      = bottom[0]->diff[batch_idx][pos_idx];
+        mshadow::Tensor<xpu, 2> word_prob_all_diff = top[1]->diff[batch_idx][pos_idx];
         mshadow::Tensor<xpu, 2> word_prob_one_class_diff(word_prob_all_diff.dptr_+class_beg, \
                                                          mshadow::Shape2(1, class_end-class_beg));
 
@@ -312,7 +332,9 @@ class WordClassSoftmaxLossLayer : public Layer<xpu>{
   void Prepare(void) {
     LoadWordClassFile();
     ReorganizeWordByClass();
-    ReorganizeWordEmbed();
+    if (!word_embed_file.empty()) {
+      ReorganizeWordEmbed();
+    }
   }
   
 protected:

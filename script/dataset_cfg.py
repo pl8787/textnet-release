@@ -77,6 +77,60 @@ class DatasetCfg:
             self.n_train = 4952
             self.n_valid = 500
             self.n_test = 500
+        elif dataset == 'msrp_char':
+            self.train_data_file = '/home/wsx/data/msrp/train.char'
+            self.valid_data_file = '/home/wsx/data/msrp/valid.char'
+            self.test_data_file  = '/home/wsx/data/msrp/test.char'
+            
+            self.max_doc_len = 225
+            self.min_doc_len = 1 
+            self.vocab_size = 128
+
+            self.dp_rate = 0.5
+            self.num_class = 2
+            self.d_word_rep = 100
+            self.batch_size = 50
+            self.train_batch_size = 50
+            self.valid_batch_size = 50
+            self.test_batch_size  = 50 
+            self.n_train = 7152
+            self.n_valid = 500
+            self.n_test = 1725
+            self.train_display_interval = 1 
+            self.valid_display_interval = 100
+            self.test_display_interval  = 100 
+            self.train_max_iters = 5000
+            self.valid_max_iters = self.n_valid/ self.valid_batch_size
+            self.test_max_iters  = self.n_test / self.test_batch_size
+
+        elif dataset == 'tf':
+            self.train_data_file = '/home/wsx/data/nbp/tf.train.lstm'
+            self.valid_data_file = '/home/wsx/data/nbp/tf.valid.lstm'
+            self.test_data_file  = '/home/wsx/data/nbp/tf.test.lstm'
+            
+            self.num_item = 7973
+            self.num_user = 2265
+            self.max_session_len = 105
+            self.max_context_len = 10
+
+            self.dp_rate = 0.0
+            self.d_user_rep = 30
+            self.d_item_rep = 30
+
+            self.batch_size = 1
+            self.train_batch_size = 1 
+            self.valid_batch_size = 1 
+            self.test_batch_size  = 1
+            self.n_train = 30747
+            self.n_valid = 2265
+            self.n_test = 2265
+            self.train_display_interval = 1 
+            self.valid_display_interval = 10000
+            self.test_display_interval  = 10000 
+            self.train_max_iters = 300000
+            self.valid_max_iters = self.n_valid/ self.valid_batch_size
+            self.test_max_iters  = self.n_test / self.test_batch_size
+        
         elif dataset == 'msrp':
             self.train_data_file = '/home/wsx/data/msrp/msr_paraphrase_num_local_train_wid_dup.txt'
             self.valid_data_file = '/home/wsx/data/msrp/msr_paraphrase_num_local_valid_wid.txt'
@@ -85,9 +139,10 @@ class DatasetCfg:
             self.update_indication_file = '/home/wsx/data/msrp/wikicorp_num_50_msr_ind.txt'
             self.max_doc_len = 33
             self.min_doc_len = 5 
-            self.vocab_size = 15586
+            # self.vocab_size = 15586
+            self.vocab_size = 50000
 
-            self.dp_rate = 0.5
+            self.dp_rate = 0.0
             self.num_class = 2
             self.d_word_rep = 50
             self.batch_size = 50
@@ -103,34 +158,92 @@ class DatasetCfg:
             self.train_max_iters = 5000
             self.valid_max_iters = self.n_valid/ self.valid_batch_size
             self.test_max_iters  = self.n_test / self.test_batch_size
+        elif dataset == 'msrp_seq':
+            self.train_data_file = '/home/wsx/data/msrp/train.seq'
+            self.valid_data_file = '/home/wsx/data/msrp/valid.seq'
+            self.test_data_file  = '/home/wsx/data/msrp/test.seq'
+            # self.embedding_file  = '/home/wsx/data/msrp/msrp.embed'
+            # self.update_indication_file = '/home/wsx/data/msrp/wikicorp_num_50_msr_ind.txt'
+            
+            self.max_doc_len = 33
+            self.min_doc_len = 5 
+            # self.vocab_size = 15586
+            # self.vocab_size = 50000
+
+            self.dp_rate = 0.0
+            self.num_class = 2
+            # self.d_word_rep = 50
+            self.batch_size = 50
+            self.train_batch_size = 50
+            self.valid_batch_size = 50
+            self.test_batch_size  = 50 
+            self.n_train = 7152
+            self.n_valid = 500
+            self.n_test = 1725
+            self.train_display_interval = 1 
+            self.valid_display_interval = 100
+            self.test_display_interval  = 100 
+            self.train_max_iters = 5000
+            self.valid_max_iters = self.n_valid/ self.valid_batch_size
+            self.test_max_iters  = self.n_test / self.test_batch_size
+
+        elif dataset == 'nyt':
+            self.data_dir = '/home/wsx/data/nyt/'
+            self.train_data_file = self.data_dir + 'nyt.wid.train.with_msrp'
+            self.valid_data_file = self.data_dir + 'nyt.wid.valid'
+            self.test_data_file  = self.data_dir + 'msrp.sentence.valid'
+            # self.embedding_file  = self.data_dir + 'wiki.embed'
+            # self.update_indication_file = self.data_dir + 'wiki.ind'
+            # self.word_class_file = self.data_dir + 'id2class'
+            # self.word_freq_file = self.data_dir + 'word_freq'
+            
+            self.max_doc_len = 60
+            self.min_doc_len = 0
+            self.vocab_size = 45844 # without orc_unknown
+
+            self.dp_rate = 0.
+            self.d_word_rep = 1000
+            self.batch_size = 32
+            self.train_batch_size = 32
+            self.valid_batch_size = 32
+            self.test_batch_size  = 32
+            self.n_train = 111456 
+            self.n_valid = 10000
+            self.n_test = 1000
+            self.train_display_interval = 1
+            self.valid_display_interval = 500 
+            self.test_display_interval  = 500 
+            self.train_max_iters = (self.n_train/self.train_batch_size) * 5
+            self.valid_max_iters = (self.n_valid/10)/self.valid_batch_size
+            self.test_max_iters  = (self.n_test)/self.test_batch_size
         elif dataset == 'wiki':
             self.data_dir = '/home/wsx/data/wiki/'
             self.train_data_file = self.data_dir + 'wiki.train.with_msrp'
             self.valid_data_file = self.data_dir + 'wiki.valid'
             self.test_data_file  = self.data_dir + 'msrp.sentence.valid'
-            self.embedding_file  = self.data_dir + 'wiki.embed'
-            self.update_indication_file = self.data_dir + 'wiki.ind'
+            # self.embedding_file  = self.data_dir + 'wiki.embed'
+            # self.update_indication_file = self.data_dir + 'wiki.ind'
             self.word_class_file = self.data_dir + 'id2class'
             # self.word_freq_file = self.data_dir + 'word_freq'
             
-            self.max_doc_len = 70
-            self.min_doc_len = 10 
+            self.max_doc_len = 50
+            self.min_doc_len = 5
             self.vocab_size = 177859 # without orc_unknown
 
             self.dp_rate = 0.
-            self.d_word_rep = 50
-            self.batch_size = 32
-            self.train_batch_size = 32
-            self.valid_batch_size = 32
-            self.test_batch_size  = 32
-            self.n_train = 933532
-            self.n_valid = 95780
+            self.d_word_rep = 2
+            self.batch_size = 10
+            self.train_batch_size = 10
+            self.valid_batch_size = 10
+            self.test_batch_size  = 10
+            self.n_train = 924735
+            self.n_valid = 94802
             self.n_test = 1000
-            self.train_display_interval = 10 
+            self.train_display_interval = 1
             self.valid_display_interval = 1000 
             self.test_display_interval  = 1000 
             self.train_max_iters = (self.n_train/self.train_batch_size) * 5
-            self.valid_max_iters = (self.n_valid/5)/self.valid_batch_size
+            self.valid_max_iters = (self.n_valid/50)/self.valid_batch_size
             self.test_max_iters  = self.n_test /self.test_batch_size
             self.valid_display_interval = 50
             self.test_display_interval  = 50 
@@ -306,30 +419,54 @@ class DatasetCfg:
             self.n_valid = 3000
             self.n_test = 2000
         elif dataset == 'test_lm':
-            self.train_data_file = '/home/wsx/data/test/test_lm/train.txt'
-            self.valid_data_file = '/home/wsx/data/test/test_lm/train.txt'
-            self.test_data_file = '/home/wsx/data/test/test_lm/train.txt'
-            self.embedding_file = ''
-            self.max_doc_len =8 
-            self.vocab_size = 10
-            self.negative_num = 2
-            self.position_num = 1
+            self.data_dir = '/home/wsx/data/test/test_lm/'
+            self.train_data_file = self.data_dir + 'train.txt'
+            self.valid_data_file = self.data_dir + 'train.txt'
+            self.test_data_file  = self.data_dir + 'train.txt'
+            self.word_class_file = self.data_dir + 'id2class'
+            self.word_freq_file = self.data_dir + 'word_freq'
+            
+            self.max_doc_len = 6
+            self.min_doc_len = 0
+            self.vocab_size = 8 # without orc_unknown
 
-            self.d_word_rep = 30
-            self.batch_size = 1
-            self.train_batch_size = 1
-            self.valid_batch_size = 1
-            self.test_batch_size = 1
+            self.dp_rate = 0.
+            self.d_word_rep = 5
+            self.batch_size = 2
+            self.train_batch_size = 2
+            self.valid_batch_size = 2
+            self.test_batch_size  = 2
             self.n_train = 4
             self.n_valid = 4
-            self.n_test = 4
-            self.train_display_interval = 1 
+            self.n_test = 4 
+            self.train_display_interval = 1
             self.valid_display_interval = 1 
-            self.test_display_interval = 1 
-            self.train_max_iters = 20000
+            self.test_display_interval  = 1 
+            self.train_max_iters = (self.n_train/self.train_batch_size) * 5
+            self.valid_max_iters = (self.n_valid/5)/self.valid_batch_size
+            self.test_max_iters  = self.n_test /self.test_batch_size
+        elif dataset == 'msrp_dpool':
+            self.train_data_file = '/home/wsx/data/msrp_dpool/train'
+            self.valid_data_file = '/home/wsx/data/msrp_dpool/valid'
+            self.test_data_file  = '/home/wsx/data/msrp_dpool/test'
+            
+            self.feat_size = 25
+
+            self.dp_rate = 0.5
+            self.num_class = 2
+            self.batch_size = 50
+            self.train_batch_size = 50
+            self.valid_batch_size = 50
+            self.test_batch_size  = 50 
+            self.n_train = 7152
+            self.n_valid = 500
+            self.n_test = 1725
+            self.train_display_interval = 1
+            self.valid_display_interval = 100
+            self.test_display_interval  = 100
+            self.train_max_iters = 5000
             self.valid_max_iters = self.n_valid/ self.valid_batch_size
             self.test_max_iters  = self.n_test / self.test_batch_size
-
         else:
             assert False
 

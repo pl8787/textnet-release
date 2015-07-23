@@ -80,6 +80,7 @@ class SwapAxisLayer : public Layer<xpu>{
 	mshadow::Tensor<xpu, 2> bottom_len = bottom[0]->length;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
 	mshadow::Tensor<xpu, 2> top_len = top[0]->length;
+    top_len = F<op::identity>(bottom_len);
 
 	switch (axis1) {
 		case 0:

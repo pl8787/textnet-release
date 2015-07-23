@@ -23,7 +23,8 @@ class SGDUpdater : public Updater<xpu, dim>{
     this->defaults["decay"] = SettingV(0.0f);
     this->defaults["momentum"] = SettingV(0.0f);
     this->defaults["l2"] = SettingV(0.0f);
-    
+    this->defaults["batch_size"] = SettingV(1);
+
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["lr"] = SettingV();
@@ -35,6 +36,7 @@ class SGDUpdater : public Updater<xpu, dim>{
     Updater<xpu, dim>::SetupUpdater(setting);
     
     this->updater_type = setting["updater_type"].iVal();
+    batch_size = setting["batch_size"].iVal(); 
     base_lr = setting["lr"].fVal();
     decay = setting["decay"].fVal();
     momentum = setting["momentum"].fVal();
@@ -47,6 +49,9 @@ class SGDUpdater : public Updater<xpu, dim>{
                       mshadow::Tensor<xpu, dim> diff) {
     if (momentum != 0.0 && iteration == 0) {
       history.Resize(data.shape_, 0);
+    }
+    if (batch_size > 1) {
+        diff /= float(batch_size);
     }
                         
     AdaptLearningRate();
@@ -65,6 +70,9 @@ class SGDUpdater : public Updater<xpu, dim>{
                             mshadow::Tensor<xpu, 1> idx) {
     if (momentum != 0.0 && iteration == 0) {
       history.Resize(data.shape_, 0);
+    }
+    if (batch_size > 1) {
+        diff /= float(batch_size);
     }
     
     AdaptLearningRate();
@@ -94,7 +102,7 @@ class SGDUpdater : public Updater<xpu, dim>{
  protected: 
   float momentum;
   mshadow::TensorContainer<xpu, dim> history;
-  int iteration;
+  int iteration, batch_size;
   float lr;
   float base_lr;
   float decay;

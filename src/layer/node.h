@@ -2,6 +2,7 @@
 #define TEXTNET_LAYER_NODE_H_
 
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <map>
 #include <string>
@@ -201,6 +202,38 @@ struct Node {
 
 	node_root["diff"] = diff_root;
   }
+  // this load by ssv (space split) format, not json format, the first line is the shape info
+  void LoadDataSsv(const char *data_file) {
+    utils::Printf("Open data file: %s\n", data_file);     
+    std::vector<std::string> lines; 
+    std::ifstream fin(data_file); 
+    std::string s; 
+    utils::Check(fin, "Open data file problem."); 
+    while (!fin.eof()) { 
+      std::getline(fin, s);
+      if (s.empty()) break;
+      lines.push_back(s);
+    }
+    fin.close();
+    std::istringstream iss;
+    int row = 0, col = 0;
+    iss.str(lines[0]);
+    iss >> row >> col;
+    utils::Check(row == lines.size()-1, "Data error 1.");
+    utils::Check(this->data.shape_[0] == 1, "Data error 2.");
+    utils::Check(this->data.shape_[1] == 1, "Data error 3.");
+    utils::Check(this->data.shape_[2] == row, "Data error 4.");
+    utils::Check(this->data.shape_[3] == col, "Data error 5.");
+
+    for (int i = 0; i < row; ++i) {
+      iss.clear();
+      iss.seekg(0, iss.beg);
+      iss.str(lines[i+1]);
+      for (int j = 0; j < col; ++j) {
+        iss >> this->data[0][0][i][j];
+      }
+    }
+  }
 
   void LoadNode(Json::Value &node_root, bool with_diff = false) {
     Json::Value data_root = node_root["data"];
@@ -233,6 +266,40 @@ struct Node {
     for (int i = 0; i < size; ++i) {
       diff.dptr_[i] = diff_root["value"][i].asFloat();
     }
+  }
+
+  float AbsMean(float *p, size_t size) {
+    utils::Check(size > 0, "Node: mean size error.");
+    float sum = 0;
+    for (size_t i = 0; i < size; ++i) {
+      if (p[i] > 0) {
+        sum += p[i];
+      } else {
+        sum -= p[i];
+      }
+    }
+    return sum/size;
+  }
+
+  float AbsMax(float *p, size_t size) {
+    utils::Check(size > 0, "Node: max size error.");
+    float max = -10000.f;
+    for (size_t i = 0; i < size; ++i) {
+      float v = p[i]>0?p[i]:-p[i];
+      if (max < v) 
+        max = v;
+    }
+    return max;
+  }
+
+  void PrintStatistic(string prefix) {
+    float data_mean = 0.f, data_max = 0.f, diff_mean = 0.f, diff_max = 0.f;
+    data_mean = AbsMean(data.dptr_, data.shape_.Size());
+    data_max  = AbsMax(data.dptr_, data.shape_.Size());
+    diff_mean = AbsMean(diff.dptr_, diff.shape_.Size());
+    diff_max  = AbsMax(diff.dptr_,  diff.shape_.Size());
+    cout << "Stat of " << prefix << ":" << data_mean << ":" \
+         << diff_mean << ":" << data_max << ":" << diff_max << endl;
   }
 
   Json::Value data_statistic(Json::Value &req_root) {
@@ -343,6 +410,13 @@ struct Node {
     return mshadow::Tensor<xpu, 2>(data.dptr_, mshadow::Shape2(s[0], ymax));
   }
 
+  inline mshadow::Tensor<xpu, 2> data_d2_middle() {
+    mshadow::Shape<4> s = data.shape_;
+    index_t  xmax = s[0]*s[1];
+    index_t  ymax = s[2]*s[3];
+    return mshadow::Tensor<xpu, 2>(data.dptr_, mshadow::Shape2(xmax, ymax));
+  }
+
   inline mshadow::Tensor<xpu, 2> data_d2_reverse() {
     mshadow::Shape<4> s = data.shape_;
     index_t  xmax = s[0]*s[1]*s[2];
@@ -354,6 +428,14 @@ struct Node {
     index_t  ymax = s[1]*s[2]*s[3];
     return mshadow::Tensor<xpu, 2>(diff.dptr_, mshadow::Shape2(s[0], ymax));
   }
+
+  inline mshadow::Tensor<xpu, 2> diff_d2_middle() {
+    mshadow::Shape<4> s = diff.shape_;
+    index_t  xmax = s[0]*s[1];
+    index_t  ymax = s[2]*s[3];
+    return mshadow::Tensor<xpu, 2>(diff.dptr_, mshadow::Shape2(xmax, ymax));
+  }
+
   inline mshadow::Tensor<xpu, 2> diff_d2_reverse() {
     mshadow::Shape<4> s = diff.shape_;
     index_t  xmax = s[0]*s[1]*s[2];
@@ -426,6 +508,21 @@ struct Node {
     }
     for (int i = 0; i < r_data.size(0); ++i) {
       merge_data[idx_map[r_idx[i]]] += r_data[i];
+    }
+  }
+
+  void CutOffGradient(float maxVal) {
+    utils::Check(maxVal >= 0.f, "Node: cut off gradient error.");
+    utils::Check(!is_share, "Node: cut off gradient error.");
+    utils::Check(!is_sparse, "Node: cut off gradient error.");
+    size_t size = diff.shape_.Size();
+    for (size_t i = 0; i < size; ++i) {
+      float *p = diff.dptr_ + i;
+      if (*p > maxVal) {
+        *p = maxVal;
+      } else if (*p < -maxVal) {
+        *p = -maxVal;
+      }
     }
   }
 

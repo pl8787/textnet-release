@@ -53,7 +53,7 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
     setting['batch_size'] = ds.train_batch_size
     setting['data_file'] = ds.train_data_file
     setting['max_doc_len'] = ds.max_doc_len
-    setting['position_num'] = 3
+    setting['position_num'] = ds.max_doc_len
     setting['vocab_size'] = ds.vocab_size
 
     layer = {}
@@ -68,7 +68,7 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
     setting['batch_size'] = ds.valid_batch_size
     setting['data_file'] = ds.valid_data_file
     setting['max_doc_len'] = ds.max_doc_len
-    setting['position_num'] = 3
+    setting['position_num'] = ds.max_doc_len
     setting['vocab_size'] = ds.vocab_size
 
     layer = {}
@@ -83,7 +83,7 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
     setting['batch_size'] = ds.test_batch_size
     setting['data_file'] = ds.test_data_file
     setting['max_doc_len'] = ds.max_doc_len
-    setting['position_num'] = 3
+    setting['position_num'] = ds.max_doc_len
     setting['vocab_size'] = ds.vocab_size
 
     layer = {}
@@ -113,6 +113,8 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
     setting['d_mem'] = d_mem
     setting['grad_norm2'] = lstm_norm2
     setting['reverse'] = False
+    setting['f_gate_bias_init'] = 1
+    setting['o_gate_bias_init'] = 0
 
     layer = {}
     layers.append(layer) 
@@ -125,6 +127,8 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
     setting['d_mem'] = d_mem
     setting['grad_norm2'] = lstm_norm2
     setting['reverse'] = True 
+    setting['f_gate_bias_init'] = 1
+    setting['o_gate_bias_init'] = 0
 
     layer = {}
     layers.append(layer) 
@@ -152,10 +156,10 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['layer_type'] = 59
     setting = {}
     layer['setting'] = setting
-    setting['w_class_filler'] = g_filler
-    setting['b_class_filler'] = g_filler
-    setting['w_word_filler']  = g_filler
-    setting['b_word_filler']  = g_filler
+    setting['w_class_filler'] = zero_filler
+    setting['b_class_filler'] = zero_filler
+    setting['w_word_filler']  = zero_filler
+    setting['b_word_filler']  = zero_filler
     setting['w_class_updater'] = g_updater
     setting['b_class_updater'] = zero_l2_updater
     setting['w_word_updater']  = g_updater
@@ -167,24 +171,24 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2):
 
     return net
 
-run = 15
+run = 18
 l2 = 0.
 for dataset in ['wiki']:
     for d_mem in [50]:
         idx = 0
         for init in [0.1]:
-            for lr in [0.03, 0.01, 0.003]:
-                for l2 in [0.00001, 0.0001, 0.001]:
-                    lstm_norm2 = 2
+            for lr in [0.03, 0.01]:
+                for l2 in [0.0003, 0.001, 0.003]:
+                    lstm_norm2 = 10000
                     net = gen_lm_bilstm_mlp(d_mem=d_mem, init=init, lr=lr, dataset=dataset, l2=l2, \
                                             lstm_norm2=lstm_norm2)
                     net['log'] = 'log.lm_bilstm.{0}.d{1}.run{2}.{3}'.format \
                                  (dataset, str(d_mem), str(run), str(idx))
                     net["save_model"] = {"file_prefix": "./model/model."+str(idx),"save_interval": 5000}
-                    net["save_activation"] = [{"tag":"Valid","file_prefix": \
-                                               "./model/valid."+str(idx), \
-                                               "save_interval": 5000, \
-                                               "save_iter_num":1}]
+                    # net["save_activation"] = [{"tag":"Valid","file_prefix": \
+                    #                            "./model/valid."+str(idx), \
+                    #                            "save_interval": 5000, \
+                    #                            "save_iter_num":1}]
                     gen_conf_file(net, '/home/wsx/exp/match/{0}_lm/run.{1}/'.format(dataset, str(run)) + \
                                        'model.lm_bilstm.{0}.d{1}.run{2}.{3}'.format \
                                        (dataset, str(d_mem), str(run), str(idx)))

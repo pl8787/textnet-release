@@ -27,6 +27,7 @@ const int kXavier = 4;
 const int kKaiming = 5;
 const int kUnitball = 6;
 const int kUniformRange = 7;
+const int kFileInit = 8;
 
 template<typename xpu, int dim>
 class Initializer {
@@ -77,3 +78,4 @@ Initializer<xpu, dim>* CreateInitializer(InitType type,
 }  // namespace initializer
 }  // namespace textnet
 #endif  // TEXTNET_INITIALIZER_INITIALIZER_H_
+

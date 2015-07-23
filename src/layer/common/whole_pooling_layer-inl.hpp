@@ -131,22 +131,27 @@ class WholePoolingLayer : public Layer<xpu>{
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
         int begin = 0, end = bottom_len[batch_idx][seq_idx]; 
-        utils::Assert(end >= 0, "WholePoolingLayer: sequence length error.");
+        utils::Assert(end >= 0 && begin <= end, "WholePoolingLayer: sequence length error.");
 
         if (pool_type == "max") {
+            if (begin == end) continue;
             wholeMaxPooling(bottom_data[batch_idx][seq_idx].Slice(begin, end), 
                             pos[batch_idx][seq_idx], 
                             top_data[batch_idx][seq_idx]);
         } else if (pool_type == "ave") {
+            if (begin == end) continue;
             wholeAvePooling(bottom_data[batch_idx][seq_idx].Slice(begin, end), 
                             top_data[batch_idx][seq_idx]);
         } else if (pool_type == "sum") {
+            if (begin == end) continue;
             wholeSumPooling(bottom_data[batch_idx][seq_idx].Slice(begin, end), 
                             top_data[batch_idx][seq_idx]);
         } else if (pool_type == "first") {
+            if (begin == end) continue;
             wholeFirstPooling(bottom_data[batch_idx][seq_idx].Slice(begin, end), 
                               top_data[batch_idx][seq_idx]);
         } else if (pool_type == "last") {
+            if (begin == end) continue;
             wholeLastPooling(bottom_data[batch_idx][seq_idx].Slice(begin, end), 
                              top_data[batch_idx][seq_idx]);
         } else {
@@ -174,19 +179,24 @@ class WholePoolingLayer : public Layer<xpu>{
 
         if (this->prop_error[0]) {
           if (pool_type == "max") {
+              if (begin == end) continue;
               wholeUnMaxPooling(top_diff[batch_idx][seq_idx], 
                                 pos[batch_idx][seq_idx], 
                                 bottom_diff[batch_idx][seq_idx].Slice(begin, end));
           } else if (pool_type == "ave") {
+              if (begin == end) continue;
               wholeUnAvePooling(top_diff[batch_idx][seq_idx], 
                                 bottom_diff[batch_idx][seq_idx].Slice(begin, end));
           } else if (pool_type == "sum") {
+              if (begin == end) continue;
               wholeUnSumPooling(top_diff[batch_idx][seq_idx], 
                                 bottom_diff[batch_idx][seq_idx].Slice(begin, end));
           } else if (pool_type == "first") {
+              if (begin == end) continue;
               wholeUnFirstPooling(top_diff[batch_idx][seq_idx],
                                   bottom_diff[batch_idx][seq_idx].Slice(begin, end));
           } else if (pool_type == "last") {
+              if (begin == end) continue;
               wholeUnLastPooling(top_diff[batch_idx][seq_idx], 
                                  bottom_diff[batch_idx][seq_idx].Slice(begin, end));
           } else {

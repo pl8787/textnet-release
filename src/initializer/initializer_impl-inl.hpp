@@ -7,6 +7,7 @@
 #include "./uniform_range_init-inl.hpp"
 #include "./gaussian_init-inl.hpp"
 #include "./unitball_init-inl.hpp"
+#include "./file_init-inl.hpp"
 
 namespace textnet {
 namespace initializer {
@@ -20,6 +21,7 @@ Initializer<xpu, dim>* CreateInitializer_(
     case kConstant: return new ConstantInitializer<xpu, dim>(setting, prnd);
     case kUniform: return new UniformInitializer<xpu, dim>(setting, prnd);
     case kUniformRange: return new UniformRangeInitializer<xpu, dim>(setting, prnd);
+    case kFileInit: return new FileInitializer<xpu, dim>(setting, prnd);
     case kGaussian: return new GaussianInitializer<xpu, dim>(setting, prnd);
     case kXavier: return new UniformInitializer<xpu, dim>(setting, prnd);
     case kKaiming: return new GaussianInitializer<xpu, dim>(setting, prnd);

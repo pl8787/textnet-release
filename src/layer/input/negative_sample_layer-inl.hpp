@@ -68,14 +68,14 @@ class NegativeSampleLayer : public Layer<xpu>{
 
   void construct_sample_pool() {
     sample_vector.clear();
-    if (sample_exp_factor == 0.f) {
+    if (sample_exp_factor == 0.f) { // uniform sample
       for (int i = 0; i < vocab_size; ++i) {
         sample_vector.push_back(i);
       }
       return;
     }
 
-    utils::Check(sample_exp_factor > 0.f && sample_exp_factor < 3, "NegativeSampleLayer: sample error 1.");
+    utils::Check(sample_exp_factor > 0.f && sample_exp_factor < 3, "NegativeSampleLayer: sample error.");
     std::ifstream ifs(word_freq_file.c_str());
     std::set<int> wids;
     while (!ifs.eof()) {
@@ -84,8 +84,8 @@ class NegativeSampleLayer : public Layer<xpu>{
       if (wid < 0) break;
       wids.insert(wid);
       // cout << wid << endl;
-      utils::Check(wid >= 0 && wid < vocab_size, "NegativeSampleLayer: sample error 2.");
-      utils::Check(freq >= 1, "NegativeSampleLayer: sample error 3.");
+      utils::Check(wid >= 0 && wid < vocab_size, "NegativeSampleLayer: sample error.");
+      utils::Check(freq >= 1, "NegativeSampleLayer: sample error.");
       float num = pow(freq, sample_exp_factor);
       if (num < 1.f) num = 1.1f;
       int i_num = floor(num);
@@ -94,7 +94,8 @@ class NegativeSampleLayer : public Layer<xpu>{
       }
     }
     ifs.close();
-    utils::Check(wids.size() == vocab_size, "NegativeSampleLayer: sample error 3.");
+    utils::Check(sample_vector.size() < 2^30, "NegativeSampleLayer: sample error.");
+    utils::Check(wids.size() == vocab_size, "NegativeSampleLayer: sample error.");
     utils::Printf("NegativeSampleLayer: sample_vector.size():%d\n", sample_vector.size());
   }
 
@@ -108,6 +109,7 @@ class NegativeSampleLayer : public Layer<xpu>{
       negative_sample.push_back(sample);
     }
   }
+  // 这个是之前用于sample language model 待预测单词位置的函数。
   // return a list of prediction positions
   void position_sampler(int length, vector<int> &position_sample) {
     position_sample.clear();
@@ -119,10 +121,45 @@ class NegativeSampleLayer : public Layer<xpu>{
 
     int end = length < position_num ? length : position_num;
     position_sample = vector<int>(shuffle_pos.begin(), shuffle_pos.begin() + end);
-    for (int i = length; i < position_num; ++i) {
+    sort(position_sample.begin(), position_sample.end());
+    utils::Check(position_sample.size() == position_num, "NegativeSampleLayer: sampler error.");
+    return;
+    for (int i = length; i < position_num; ++i) { // this code has not been used
       position_sample.push_back(-1);
     }
     utils::Check(position_sample.size() == position_num, "NegativeSampleLayer: sampler error.");
+  }
+
+  // 这个函数使用doc2vec那种loss的方式
+  // 具体是这样的，给定一个长度length，从length中sample一个sub_length，也就是句子中的某个位置
+  // 然后用sub_length上的lstm表达去预测sub_length位置比较近的某一个位置上的单词，也就是pred_position
+  void position_sampler_4_doc2vec_random_length(int length, int &sub_length, vector<int> &pred_position) {
+    vector<int> shuffle_pos;
+    int min_sub_length = 3; // 这个是规定的最小长度
+    int window_size = 5; // 也就是说某个位置之前的若干个单词中随机选择
+    utils::Check(length >= min_sub_length, "NegativeSampleLayer: length error.");
+    for (int i = min_sub_length; i <= length; ++i) {
+      shuffle_pos.push_back(i);
+    } 
+    this->sampler.Shuffle(shuffle_pos);
+    sub_length = shuffle_pos[0]; // random a sub length
+    // ATTENTION!!!
+    sub_length = length;
+
+    pred_position.clear();
+    utils::Check(position_num <= min_sub_length, "NegativeSampleLayer: position_num error.");
+    utils::Check(position_num <= window_size, "NegativeSampleLayer: position_num error.");
+    shuffle_pos.clear();
+    int left_bound = sub_length-window_size;
+    left_bound = left_bound >= 0 ? left_bound : 0;
+    for (int i = left_bound; i < sub_length; ++i) {
+      shuffle_pos.push_back(i);
+    } 
+    this->sampler.Shuffle(shuffle_pos);
+    utils::Check(position_num <= shuffle_pos.size(), "NegativeSampleLayer: position_num error.");
+    pred_position = vector<int>(shuffle_pos.begin(), shuffle_pos.begin() + position_num);
+    sort(pred_position.begin(), pred_position.end());
+    return;
   }
   
   void ReadSequenceData() {
@@ -180,35 +217,38 @@ class NegativeSampleLayer : public Layer<xpu>{
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
-    mshadow::Tensor<xpu, 4> x        = top[0]->data;
-    mshadow::Tensor<xpu, 4> pos      = top[1]->data;
+    mshadow::Tensor<xpu, 4> x        = top[0]->data; // this is sentence (sub sentence)
+    // mshadow::Tensor<xpu, 4> pos      = top[1]->data; not need
     mshadow::Tensor<xpu, 4> sample   = top[2]->data;
     mshadow::Tensor<xpu, 4> y        = top[3]->data;
     mshadow::Tensor<xpu, 2> x_length = top[0]->length;
-    mshadow::Tensor<xpu, 2> sample_length = top[2]->length;
+    mshadow::Tensor<xpu, 2> sample_length = top[2]->length; // this is for embedding layer of samples
 
     // sample_length = negative_num + 1;
 
     utils::Check(x.size(0) == batch_size, "ORC: error, need reshape.");
-    x = -1.f, pos = -1.f, sample = -1.f, y = -1.f, x_length = -1, sample_length = -1;
+    x = -1.f, /*pos = -1.f,*/ sample = -1.f, y = -1.f, x_length = -1, sample_length = -1;
     
+    int sub_length = -1;
     vector<int> position_sample, negative_sample;
     for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
       if (this->phrase_type == kTrain && line_ptr == 0) {
         this->sampler.Shuffle(example_ids);
       }
       int example_id = example_ids[line_ptr];
-      x[batch_idx] = F<op::identity>(data_set[example_id]);
-      x_length[batch_idx][0] = length[example_id];
+      int len = length[example_id];
+      position_sampler_4_doc2vec_random_length(len, sub_length, position_sample);
+      x[batch_idx][0][0].Slice(0, sub_length) = F<op::identity>(data_set[example_id][0][0].Slice(0, sub_length));
+      x_length[batch_idx][0] = sub_length;
       
-      position_sampler(length[example_id], position_sample);
+      // position_sampler(length[example_id], position_sample);
       for (int pos_idx = 0; pos_idx < position_num; ++pos_idx) {
-        pos[batch_idx][pos_idx][0][0] = position_sample[pos_idx];
-        if (position_sample[pos_idx] == -1) {
+        // pos[batch_idx][pos_idx][0][0] = position_sample[pos_idx];
+        int word_pos = position_sample[pos_idx];
+        if (word_pos == -1) {
           utils::Check(false, "NegativeSampleLayer: position must >= 0");
-          continue;
         }
-        int word_idx = x[batch_idx][0][0][position_sample[pos_idx]];
+        int word_idx = x[batch_idx][0][0][word_pos];
         sample[batch_idx][pos_idx][0][0] = word_idx;
         y[batch_idx][pos_idx][0][0] = 1;
         sample_length[batch_idx][pos_idx] = negative_num + 1;

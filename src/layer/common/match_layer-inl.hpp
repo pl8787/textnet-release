@@ -26,11 +26,14 @@ class MatchLayer : public Layer<xpu>{
   virtual void Require() {
     // default value, just set the value you want
     this->defaults["op"] = SettingV("xor"); 
+    this->defaults["interval"] = SettingV(1); 
     this->defaults["is_var_len"] = SettingV(true); 
 	// xor: can not bp
 	// mul: can bp
 	// plus: can bp
 	// cos: can bp
+	// euc: can bp
+    // euc_exp: can bp, see wenpeng's paper
     
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -50,9 +53,14 @@ class MatchLayer : public Layer<xpu>{
                   "MatchLayer:top size problem.");
     op = setting["op"].sVal();
     is_var_len = setting["is_var_len"].bVal();
+    interval = setting["interval"].iVal();
+    if (interval != 1) {
+      utils::Check(op != "cos", "MatchLayer: does not support cos when interval is set");
+    }
 
-	utils::Check(op=="xor" || op=="mul" || op=="plus" || op=="cos" || op=="elemwise_product" || op=="minus", 
-			"MatchLayer: one of xor, mul, plus, minus, elemwise_product or cos.");
+	utils::Check(op=="xor" || op=="mul" || op=="plus" || op=="cos" || op == "minus" ||\
+                 op=="elemwise_product" || op=="euc" || op=="euc_exp",
+			     "MatchLayer: one of xor, mul, plus, cos, minus, elemwise_product, euc or euc_exp.");
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -111,6 +119,7 @@ class MatchLayer : public Layer<xpu>{
           len_1 = doc_len;
         }
         utils::Check(len_0 > 0 && len_1 > 0, "MatchLayer: length error.");
+        utils::Check(len_0 <= doc_len && len_1 <= doc_len, "MatchLayer: length error.");
 		for (int j = 0; j < len_0; j++) {
 		  for (int m = 0; m < feat_size; ++m) {
             m_norm[i][0][j] += bottom0_data4[i][0][j][m] * bottom0_data4[i][0][j][m];
@@ -135,9 +144,12 @@ class MatchLayer : public Layer<xpu>{
         len_1 = doc_len;
       }
       utils::Check(len_0 > 0 && len_1 > 0, "MatchLayer: length error.");
+      utils::Check(len_0 <= doc_len && len_1 <= doc_len, "MatchLayer: length error.");
 
-      for (int j = 0; j < len_0; j++) {
-        for (int k = 0; k < len_1; k++) {
+      // for (int j = 0; j < len_0; j++) {
+      //   for (int k = 0; k < len_1; k++) {
+      for (int j = 0; j < len_0; j+=interval) {
+        for (int k = 0; k < len_1; k+=interval) {
 		  if (op == "xor") {
 			utils::Check(bottom0_data2[i][j]!=-1 && bottom1_data2[i][k]!=-1, 
 			  "In Match Layer: please check length setting. (%d, %d, %d)", i, j, k);
@@ -163,19 +175,34 @@ class MatchLayer : public Layer<xpu>{
             for (int m = 0; m < feat_size; ++m) {
               top_data[i][m][j][k] = bottom0_data4[i][0][j][m] + bottom1_data4[i][0][k][m];
 			}
+		  } else if (op =="euc") {
+            float sum_elem_square = 0.f;
+            for (int m = 0; m < feat_size; ++m) {
+              float sub_elem = bottom0_data4[i][0][j][m] - bottom1_data4[i][0][k][m];
+              sum_elem_square += sub_elem * sub_elem;
+            }
+            // top_data[i][0][j][k] = pow(sum_elem_square, 0.5);
+            top_data[i][0][j][k] = sum_elem_square;
+		  } else if (op =="euc_exp") { // by wengpeng ying, no sqrt
+            float sum_elem_square = 0.f;
+            for (int m = 0; m < feat_size; ++m) {
+              float sub_elem = bottom0_data4[i][0][j][m] - bottom1_data4[i][0][k][m];
+              sum_elem_square += sub_elem * sub_elem;
+            }
+            top_data[i][0][j][k] = exp(-(sum_elem_square)/(2*2.f)); // beta is set to 2.f
 		  }  else {
 			utils::Error("In Match Layer: no op named %s.\n", op.c_str());
 		  }
         }
       }
     }
-
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
                         const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 4> top_diff = top[0]->diff;
+    mshadow::Tensor<xpu, 4> top_data = top[0]->data;
 	mshadow::Tensor<xpu, 4> bottom0_data = bottom[0]->data;
 	mshadow::Tensor<xpu, 4> bottom1_data = bottom[1]->data;
 	mshadow::Tensor<xpu, 4> bottom0_diff = bottom[0]->diff;
@@ -200,9 +227,12 @@ class MatchLayer : public Layer<xpu>{
         len_1 = doc_len;
       }
       utils::Check(len_0 > 0 && len_1 > 0, "MatchLayer: length error.");
+      utils::Check(len_0 <= doc_len && len_1 <= doc_len, "MatchLayer: length error.");
 
-      for (int j = 0; j < len_0; ++j) {
-	    for (int k = 0; k < len_1; ++k) {
+      // for (int j = 0; j < len_0; ++j) {
+	  //   for (int k = 0; k < len_1; ++k) {
+      for (int j = 0; j < len_0; j+=interval) {
+	    for (int k = 0; k < len_1; k+=interval) {
 	      for (int m = 0; m < feat_size; ++m) {
             if (op == "mul") {  
 			  if (this->prop_error[0])
@@ -233,6 +263,26 @@ class MatchLayer : public Layer<xpu>{
                 bottom0_diff[i][0][j][m] += bottom1_data[i][0][k][m] * top_diff[i][m][j][k];
 			  if (this->prop_error[1])
 				bottom1_diff[i][0][k][m] += bottom0_data[i][0][j][m] * top_diff[i][m][j][k];
+		    } else if (op == "euc") {
+              float distance = top_data[i][0][j][k];
+              float sub_elem = bottom0_data[i][0][j][m] - bottom1_data[i][0][k][m];
+			  if (this->prop_error[0]) {
+                // bottom0_diff[i][0][j][m] += top_diff[i][0][j][k] * (1/(2*distance)) * 2*(sub_elem);
+                bottom0_diff[i][0][j][m] += top_diff[i][0][j][k] * 2*(sub_elem);
+              }
+			  if (this->prop_error[1]) {
+				// bottom1_diff[i][0][k][m] += top_diff[i][0][j][k] * (1/(2*distance)) * 2*(-sub_elem);
+				bottom1_diff[i][0][k][m] += top_diff[i][0][j][k] * 2*(-sub_elem);
+              }
+		    } else if (op == "euc_exp") {
+              float distance = top_data[i][0][j][k];
+              float sub_elem = bottom0_data[i][0][j][m] - bottom1_data[i][0][k][m];
+			  if (this->prop_error[0]) {
+                bottom0_diff[i][0][j][m] += top_diff[i][0][j][k] * distance * (-1/(2*2.f)) * 2*(sub_elem);
+              }
+			  if (this->prop_error[1]) {
+				bottom1_diff[i][0][k][m] += top_diff[i][0][j][k] * distance * (-1/(2*2.f)) * 2*(-sub_elem);
+              }
             }
 		  }
 		}
@@ -244,6 +294,7 @@ class MatchLayer : public Layer<xpu>{
   int doc_len;
   int feat_size;
   int nbatch;
+  int interval;
   bool is_var_len;
   std::string op;
   mshadow::TensorContainer<xpu, 3> m_norm;

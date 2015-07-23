@@ -20,6 +20,7 @@ class DynamicPoolingLayer : public Layer<xpu>{
   
   virtual void Require() {
     // default value, just set the value you want
+    this->defaults["dim"] = SettingV(2);
 
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -36,6 +37,11 @@ class DynamicPoolingLayer : public Layer<xpu>{
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
     row = setting["row"].iVal();
     col = setting["col"].iVal();
+    dim = setting["dim"].iVal();
+    utils::Check(dim == 1 || dim == 2, "DynamicPoolingLayer: dim error.");
+    if (dim == 1) {
+        utils::Check(row == 1, "DynamicPoolingLayer: dim error.");
+    }
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -44,6 +50,9 @@ class DynamicPoolingLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(), "DynamicPoolingLayer: top size problem.");
 
     mshadow::Shape<4> shape_out  = bottom[0]->data.shape_;
+    if (dim == 1) {
+        utils::Check(shape_out[2] == 1, "DynamicPoolingLayer: dim error.");
+    }
     shape_out[2] = row;
     shape_out[3] = col;
     top[0]->Resize(shape_out, true);
@@ -174,8 +183,16 @@ class DynamicPoolingLayer : public Layer<xpu>{
     top_data = 0;
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       for (index_t channel_idx = 0; channel_idx < bottom_data.size(1); ++channel_idx) {
+        int len_r = 0, len_l = 0;
+        if (dim==1) {
+            len_l = 1;
+            len_r = bottom_len_l[batch_idx][0];
+        } else {
+            len_l = bottom_len_l[batch_idx][0];
+            len_r = bottom_len_r[batch_idx][0];
+        } 
         pooling_one_matrix(bottom_data[batch_idx][channel_idx], top_data[batch_idx][channel_idx],
-                           bottom_len_l[batch_idx][0], bottom_len_r[batch_idx][0],
+                           len_l, len_r,
                            row, col,
                            pos_row[batch_idx][channel_idx], pos_col[batch_idx][channel_idx]);
       }
@@ -200,7 +217,7 @@ class DynamicPoolingLayer : public Layer<xpu>{
  protected:
   mshadow::TensorContainer<xpu, 4, int> pos_row;
   mshadow::TensorContainer<xpu, 4, int> pos_col;
-  int row, col;
+  int row, col, dim;
 };
 }  // namespace layer
 }  // namespace textnet

@@ -25,9 +25,10 @@ class NegativeSampleLossLayer : public Layer<xpu>{
   
   virtual void Require() {
     // default value, just set the value you want
-    
+   
     // require value, set to SettingV(),
     // it will force custom to set in config
+    this->defaults["is_pos_same_pred"] = SettingV();
     
     Layer<xpu>::Require();
   }
@@ -41,13 +42,19 @@ class NegativeSampleLossLayer : public Layer<xpu>{
     utils::Check(bottom.size() == BottomNodeNum(), "Layer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "NegativeSampleLossLayer:top size problem.");
 
+    is_pos_same_pred = setting["is_pos_same_pred"].bVal();
     // bottom[0], pred_rep, (batch_size, position_num, 1, feat_size)
+    // bottom[0], pred_rep, (batch_size, 1, 1, feat_size)
     // bottom[1], word_rep, (batch_size, position_num, sample_num, feat_size+1)
     // bottom[2], label,    (batch_size, position_num, sample_num, 1)
     utils::Check(bottom[0]->data.size(0) == bottom[1]->data.size(0), "NegativeSampleLossLayer: input error.");
     utils::Check(bottom[0]->data.size(0) == bottom[2]->data.size(0), "NegativeSampleLossLayer: input error.");
-    utils::Check(bottom[0]->data.size(1) == bottom[1]->data.size(1), "NegativeSampleLossLayer: input error.");
-    utils::Check(bottom[0]->data.size(1) == bottom[2]->data.size(1), "NegativeSampleLossLayer: input error.");
+    if (!is_pos_same_pred) {
+      utils::Check(bottom[0]->data.size(1) == bottom[1]->data.size(1), "NegativeSampleLossLayer: input error.");
+    } else {
+      utils::Check(bottom[0]->data.size(1) == 1, "NegativeSampleLossLayer: input error.");
+    }
+    utils::Check(bottom[1]->data.size(1) == bottom[2]->data.size(1), "NegativeSampleLossLayer: input error.");
     // utils::Check(bottom[0]->data.size(3)+1 == bottom[1]->data.size(3), "NegativeSampleLossLayer: input error.");
     utils::Check(bottom[0]->data.size(3) == bottom[1]->data.size(3), "NegativeSampleLossLayer: input error.");
     utils::Check(bottom[1]->data.size(2) == bottom[2]->data.size(2), "NegativeSampleLossLayer: input error.");
@@ -59,9 +66,8 @@ class NegativeSampleLossLayer : public Layer<xpu>{
                   "NegativeSampleLossLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "NegativeSampleLossLayer:top size problem.");
-    // nbatch = bottom[0]->data.size(0);  
-    int batch_size   = bottom[0]->data.size(0);
-    int position_num = bottom[0]->data.size(1);
+    int batch_size   = bottom[1]->data.size(0);
+    int position_num = bottom[1]->data.size(1);
     int sample_num   = bottom[1]->data.size(2);
     top[0]->Resize(batch_size, position_num, sample_num, 2, true);
     top[1]->Resize(1, 1, 1, 1, true);
@@ -88,14 +94,19 @@ class NegativeSampleLossLayer : public Layer<xpu>{
       for (int j = 0; j < bottom1_data.size(1); ++j) {     // position
         for (int k = 0; k < bottom1_data.size(2); ++k) {   // sample
           for (int f = 0; f < bottom0_data.size(3); ++f) { // feature and bias
-            top0_data[i][j][k][1] += bottom0_data[i][j][0][f] * bottom1_data[i][j][k][f]; 
+            if (is_pos_same_pred) {
+              top0_data[i][j][k][1] += bottom0_data[i][0][0][f] * bottom1_data[i][j][k][f]; 
+            } else {
+              top0_data[i][j][k][1] += bottom0_data[i][j][0][f] * bottom1_data[i][j][k][f]; 
+            }
           }
           // top0_data[i][j][k][1] += bottom1_data[i][j][k][bottom1_data.size(3)-1]; // bias
         }
       }
     }
-
-    mshadow::Softmax(top0_data_d2, top0_data_d2);
+    // check with ofey 
+    // utils::Check(false, "CHECH WITH OFEY");
+    mshadow::Softmax(top0_data_d2, top0_data_d2); // no problem
 	
     // loss
     int sample_cnt = 0;
@@ -144,8 +155,13 @@ class NegativeSampleLossLayer : public Layer<xpu>{
         for (int j = 0; j < bottom1_data.size(1); ++j) {
           for (int k = 0; k < bottom1_data.size(2); ++k) {
             for (int f = 0; f < bottom0_data.size(3); ++f) {
-              bottom0_diff[i][j][0][f] += top0_diff[i][j][k][1] * bottom1_data[i][j][k][f];
-              bottom1_diff[i][j][k][f] += top0_diff[i][j][k][1] * bottom0_data[i][j][0][f];
+              if (is_pos_same_pred) {
+                bottom0_diff[i][0][0][f] += top0_diff[i][j][k][1] * bottom1_data[i][j][k][f];
+                bottom1_diff[i][j][k][f] += top0_diff[i][j][k][1] * bottom0_data[i][0][0][f];
+              } else {
+                bottom0_diff[i][j][0][f] += top0_diff[i][j][k][1] * bottom1_data[i][j][k][f];
+                bottom1_diff[i][j][k][f] += top0_diff[i][j][k][1] * bottom0_data[i][j][0][f];
+              }
             }
             // bottom1_diff[i][j][k][bottom1_data.size(3)-1] += top0_diff[i][j][k][1];
           }
@@ -153,7 +169,8 @@ class NegativeSampleLossLayer : public Layer<xpu>{
       }
     // }
   }
- // protected:
+protected:
+  bool is_pos_same_pred;
 };
 }  // namespace layer
 }  // namespace textnet

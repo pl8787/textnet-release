@@ -8,13 +8,19 @@
 #include "./common/tensor_fullc_layer-inl.hpp"
 #include "./common/pooling_layer-inl.hpp"
 #include "./common/embedding_layer-inl.hpp"
+#include "./common/one_hot_layer-inl.hpp"
 #include "./common/cross_layer-inl.hpp"
 #include "./common/split_layer-inl.hpp"
 #include "./common/conv_result_transform_layer-inl.hpp"
 #include "./common/conv_lstm_split_layer-inl.hpp"
 #include "./common/dropout_layer-inl.hpp"
 #include "./common/match_layer-inl.hpp"
+#include "./common/match_tensor_layer-inl.hpp"
+#include "./common/match_tensor_fact_layer-inl.hpp"
+#include "./common/match_weighted_dot_layer-inl.hpp"
 #include "./common/lstm_layer-inl.hpp"
+#include "./common/lstm_autoencoder_layer-inl.hpp"
+#include "./input/lstm_autoencoder_input_layer-inl.hpp"
 #include "./common/product_layer-inl.hpp"
 #include "./common/sum_layer-inl.hpp"
 #include "./common/recurrent_layer-inl.hpp"
@@ -36,11 +42,15 @@
 #include "./common/flatten_layer-inl.hpp"
 #include "./common/lr2softmax_layer-inl.hpp"
 #include "./common/pos_pred_rep_layer-inl.hpp"
+#include "./common/nbp_gen_lstm_input_layer-inl.hpp"
+#include "./common/phrase_ave_rep_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
 #include "./input/sequence_classification_data_layer-inl.hpp"
 #include "./input/negative_sample_layer-inl.hpp"
 #include "./input/word_class_input_layer-inl.hpp"
+#include "./input/label_feat_value_layer-inl.hpp"
+#include "./input/match_phrase_rep_layer-inl.hpp"
 #include "./loss/hingeloss_layer-inl.hpp"
 #include "./loss/cross_entropy_loss_layer-inl.hpp"
 #include "./loss/pairhingeloss_layer-inl.hpp"
@@ -48,6 +58,7 @@
 #include "./loss/accuracy_layer-inl.hpp"
 #include "./loss/negative_sample_loss_layer-inl.hpp"
 #include "./loss/word_class_softmax_loss_layer-inl.hpp"
+#include "./loss/lstm_autoencoder_softmax_loss_layer-inl.hpp"
 
 namespace textnet {
 namespace layer {
@@ -67,6 +78,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kPosPredRep: return new PosPredRepLayer<xpu>(type);
     case kConcat: return new ConcatLayer<xpu>(type);
     case kEmbedding: return new EmbeddingLayer<xpu>(type);
+    case kOneHot: return new OneHotLayer<xpu>(type);
     case kCross: return new CrossLayer<xpu>(type);
     case kSplit: return new SplitLayer<xpu>(type);
     case kDup4lstm: return new Duplicate4lstmLayer<xpu>(type);
@@ -75,6 +87,10 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kDropout: return new DropoutLayer<xpu>(type);
     case kDynamicPooling: return new DynamicPoolingLayer<xpu>(type);
     case kLstm: return new LstmLayer<xpu>(type);
+    case kLstmAutoencoder: return new LstmAutoencoderLayer<xpu>(type);
+    case kLstmAutoencoderInput: return new LstmAutoencoderInputLayer<xpu>(type);
+    case kNbpGenLstmInput: return new NbpGenLstmInputLayer<xpu>(type);
+    case kPhraseAveRep: return new PhraseAveRepLayer<xpu>(type);
     case kProduct: return new ProductLayer<xpu>(type);
     case kRecurrent: return new RecurrentLayer<xpu>(type);
     case kMaxRecurrent: return new MaxRecurrentLayer<xpu>(type);
@@ -97,12 +113,18 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kSoftmaxFuncVarLen: return new SoftmaxFuncVarLenLayer<xpu>(type);
     case kNegativeSampleLoss: return new NegativeSampleLossLayer<xpu>(type);
     case kWordClassSoftmaxLoss: return new WordClassSoftmaxLossLayer<xpu>(type);
+    case kLstmAutoencoderSoftmaxLoss: return new LstmAutoencoderSoftmaxLossLayer<xpu>(type);
     case kWordClassInput: return new WordClassInputLayer<xpu>(type);
+    case kLabelFeatValue: return new LabelFeatValueLayer<xpu>(type);
     case kSumByAxis: return new SumLayer<xpu>(type);
     case kAccuracy: return new AccuracyLayer<xpu>(type);
     case kMatch: return new MatchLayer<xpu>(type);
+    case kMatchTensor: return new MatchTensorLayer<xpu>(type);
+    case kMatchTensorFact: return new MatchTensorFactLayer<xpu>(type);
+    case kMatchWeightedDot: return new MatchWeightedDotLayer<xpu>(type);
     case kSwapAxis: return new SwapAxisLayer<xpu>(type);
     case kFlatten: return new FlattenLayer<xpu>(type);
+    case kMatchPhraseRep: return new MatchPhraseRepLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }
