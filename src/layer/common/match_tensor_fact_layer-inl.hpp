@@ -27,11 +27,13 @@ class MatchTensorFactLayer : public Layer<xpu>{
     // default value, just set the value you want
     this->defaults["interval"] = SettingV(1); 
     this->defaults["is_var_len"] = SettingV(true); 
+    this->defaults["is_init_as_I"] = SettingV(true);
     
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["d_hidden"] = SettingV();
     this->defaults["d_factor"] = SettingV();
+    this->defaults["t_l2"] = SettingV();
 
     this->defaults["t_filler"] = SettingV();
     this->defaults["w_filler"] = SettingV();
@@ -61,9 +63,12 @@ class MatchTensorFactLayer : public Layer<xpu>{
     d_hidden = setting["d_hidden"].iVal();
     d_factor = setting["d_factor"].iVal();
     is_var_len = setting["is_var_len"].bVal();
+    is_init_as_I = setting["is_init_as_I"].bVal();
     interval = setting["interval"].iVal();
+    t_l2 = setting["t_l2"].fVal();
 	feat_size = bottom[0]->data.size(3);
 
+    diag_4_reg.Resize(feat_size, d_hidden, d_factor, 1, true);
     this->params.resize(3);
     this->params[0].Resize(feat_size, d_hidden, d_factor, 1, true); // t
     this->params[1].Resize(feat_size, d_hidden, 1,        1, true); // w
@@ -81,6 +86,9 @@ class MatchTensorFactLayer : public Layer<xpu>{
     this->params[0].Init();
     this->params[1].Init();
     this->params[2].Init();
+    if (is_init_as_I) {
+      InitAsDiag();
+    }
 
     std::map<std::string, SettingV> &t_updater = *setting["t_updater"].mVal();
     std::map<std::string, SettingV> &w_updater = *setting["w_updater"].mVal();
@@ -92,7 +100,19 @@ class MatchTensorFactLayer : public Layer<xpu>{
     this->params[2].updater_ = updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].iVal(),
                                                               b_updater, this->prnd_);
   }
-  
+
+  // init t nearly with I
+  void InitAsDiag(void) {
+    utils::Printf("Init As Diag.");
+    utils::Check(d_factor == feat_size, "MatchTensorFactLayer: init as diag error.");
+    for (int i = 0; i < d_factor; ++i) {
+      for (int j = 0; j < d_hidden; ++j) {
+        this->params[0].data[i][j][i][0] = 1.f;
+        diag_4_reg.data[i][j][i][0] = 1.f;
+      }
+    }
+  }
+
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     utils::Check(bottom.size() == BottomNodeNum(), "MatchTensorFactLayer:bottom size problem."); 
@@ -192,12 +212,18 @@ class MatchTensorFactLayer : public Layer<xpu>{
     t_diff += dot(bottom1_data_d2.T(), bottom_1_transform.diff_d2_middle());
     bottom0_diff_d2 += dot(bottom_0_transform.diff_d2_middle(), t_data.T());
     bottom1_diff_d2 += dot(bottom_1_transform.diff_d2_middle(), t_data.T());
+
+    // l2 by diag_4_reg
+    if (t_l2 > 0.) {
+      t_diff += (t_data - diag_4_reg) * t_l2;
+    }
   }
   
  protected:
   int doc_len, feat_size, batch_size, interval, d_hidden, d_factor;
-  bool is_var_len;
-  Node<xpu> bottom_0_transform, bottom_1_transform; // tensor layer is essentially a transform layer followed by a dot producttion
+  bool is_var_len, is_init_as_I;
+  float t_l2;
+  Node<xpu> bottom_0_transform, bottom_1_transform, diag_4_reg; // tensor layer is essentially a transform layer followed by a dot producttion
 };
 }  // namespace layer
 }  // namespace textnet
