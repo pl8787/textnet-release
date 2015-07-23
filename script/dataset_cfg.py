@@ -83,7 +83,6 @@ class DatasetCfg:
             self.test_data_file  = '/home/wsx/data/msrp/msr_paraphrase_num_test_wid.txt'
             self.embedding_file  = '/home/wsx/data/msrp/msrp.embed'
             self.update_indication_file = '/home/wsx/data/msrp/wikicorp_num_50_msr_ind.txt'
-            
             self.max_doc_len = 33
             self.min_doc_len = 5 
             self.vocab_size = 15586
@@ -133,6 +132,40 @@ class DatasetCfg:
             self.train_max_iters = (self.n_train/self.train_batch_size) * 5
             self.valid_max_iters = (self.n_valid/5)/self.valid_batch_size
             self.test_max_iters  = self.n_test /self.test_batch_size
+            self.valid_display_interval = 50
+            self.test_display_interval  = 50 
+            self.train_max_iters = 10000
+            self.valid_max_iters = self.n_valid/ self.valid_batch_size
+            self.test_max_iters  = self.n_test / self.test_batch_size
+
+        elif dataset == 'webscope':
+            self.train_data_file = '/home/pangliang/matching/data/webscope/qa_instances.train.dat'
+            self.valid_data_file = '/home/pangliang/matching/data/webscope/qa_instances.valid.dat'
+            self.test_data_file  = '/home/pangliang/matching/data/webscope/qa_instances.test.dat'
+            self.embedding_file  = ''
+            self.update_indication_file = ''
+            
+            self.max_doc_len = 32
+            self.min_doc_len = 5 
+            self.vocab_size = 214555
+
+            self.dp_rate = 0.5
+            self.num_class = 2
+            self.d_word_rep = 50
+            self.batch_size = 128
+            self.train_batch_size = 128
+            self.valid_batch_size = 128
+            self.test_batch_size  = 128
+            self.n_train = 114103
+            self.n_valid = 14262 
+            self.n_test = 14262
+            self.train_display_interval = 1 
+            self.valid_display_interval = 200
+            self.test_display_interval  = 200 
+            self.train_max_iters = 100000
+            self.valid_max_iters = self.n_valid/ self.valid_batch_size
+            self.test_max_iters  = self.n_test / self.test_batch_size
+
         elif dataset == 'paper':
             self.train_data_file = '/home/wsx/data/PaperData/relation.train.wid.txt'
             self.valid_data_file = '/home/wsx/data/PaperData/relation.valid.wid.txt'
@@ -277,13 +310,12 @@ class DatasetCfg:
             self.valid_data_file = '/home/wsx/data/test/test_lm/train.txt'
             self.test_data_file = '/home/wsx/data/test/test_lm/train.txt'
             self.embedding_file = ''
-            self.update_indication_file = ''
-            self.max_doc_len = 5
-            self.vocab_size = 8  
-            # self.negative_num = 1
-            # self.position_num = 1
+            self.max_doc_len =8 
+            self.vocab_size = 10
+            self.negative_num = 2
+            self.position_num = 1
 
-            self.d_word_rep = 5
+            self.d_word_rep = 30
             self.batch_size = 1
             self.train_batch_size = 1
             self.valid_batch_size = 1
@@ -294,7 +326,7 @@ class DatasetCfg:
             self.train_display_interval = 1 
             self.valid_display_interval = 1 
             self.test_display_interval = 1 
-            self.train_max_iters = 100
+            self.train_max_iters = 20000
             self.valid_max_iters = self.n_valid/ self.valid_batch_size
             self.test_max_iters  = self.n_test / self.test_batch_size
 

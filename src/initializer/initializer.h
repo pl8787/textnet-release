@@ -25,6 +25,7 @@ const int kUniform = 2;
 const int kGaussian = 3;
 const int kXavier = 4;
 const int kKaiming = 5;
+const int kUnitball = 6;
 const int kUniformRange = 7;
 
 template<typename xpu, int dim>

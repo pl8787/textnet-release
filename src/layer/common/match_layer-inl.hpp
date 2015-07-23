@@ -51,8 +51,8 @@ class MatchLayer : public Layer<xpu>{
     op = setting["op"].sVal();
     is_var_len = setting["is_var_len"].bVal();
 
-	utils::Check(op=="xor" || op=="mul" || op=="plus" || op=="cos" || op=="elemwise_product", 
-			"MatchLayer: one of xor, mul, plus or cos.");
+	utils::Check(op=="xor" || op=="mul" || op=="plus" || op=="cos" || op=="elemwise_product" || op=="minus", 
+			"MatchLayer: one of xor, mul, plus, minus, elemwise_product or cos.");
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -150,7 +150,11 @@ class MatchLayer : public Layer<xpu>{
             for (int m = 0; m < feat_size; ++m) {
               top_data[i][0][j][k] += bottom0_data4[i][0][j][m] + bottom1_data4[i][0][k][m];
 			}
-		  } else if (op =="cos") {
+		  } else if (op == "minus") {
+            for (int m = 0; m < feat_size; ++m) {
+              top_data[i][0][j][k] += bottom0_data4[i][0][j][m] - bottom1_data4[i][0][k][m];
+			}
+		  } else if (op == "cos") {
 			for (int m = 0; m < feat_size; ++m) {
               m_dot[i][j][k] += bottom0_data4[i][0][j][m] * bottom1_data4[i][0][k][m];
 			}
@@ -210,6 +214,11 @@ class MatchLayer : public Layer<xpu>{
 				bottom0_diff[i][0][j][m] += top_diff[i][0][j][k];
 			  if (this->prop_error[1])
 				bottom1_diff[i][0][k][m] += top_diff[i][0][j][k];
+		    } else if (op == "minus") {
+			  if (this->prop_error[0])
+				bottom0_diff[i][0][j][m] += top_diff[i][0][j][k];
+			  if (this->prop_error[1])
+				bottom1_diff[i][0][k][m] -= top_diff[i][0][j][k];
 			} else if (op == "cos") {
               if (this->prop_error[0])
 				bottom0_diff[i][0][j][m] += (bottom1_data[i][0][k][m] / (m_norm[i][0][j] * m_norm[i][1][k]) 
