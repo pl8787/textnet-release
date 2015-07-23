@@ -256,8 +256,8 @@ void TestMatchWeightedDotLayer(mshadow::Random<cpu>* prnd) {
 
 
 
-void TestMatchTensorLayer(mshadow::Random<cpu>* prnd) {
-  cout << "G Check Match Tensor Layer." << endl;
+void TestMatchTensorFactLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Match Tensor Fact Layer." << endl;
   Node<cpu> bottom1;
   Node<cpu> bottom2;
   Node<cpu> top;
@@ -280,6 +280,7 @@ void TestMatchTensorLayer(mshadow::Random<cpu>* prnd) {
   map<string, SettingV> setting;
   {
     setting["d_hidden"] = SettingV(2);
+    setting["d_factor"] = SettingV(2);
       
     map<string, SettingV> &t_filler = *(new map<string, SettingV>());
       t_filler["init_type"] = SettingV(initializer::kUniform);
@@ -301,7 +302,7 @@ void TestMatchTensorLayer(mshadow::Random<cpu>* prnd) {
   }
 
   // Test Match Layer
-  Layer<cpu> * layer_match = CreateLayer<cpu>(kMatchTensor);
+  Layer<cpu> * layer_match = CreateLayer<cpu>(kMatchTensorFact);
   layer_match->PropAll();
   layer_match->SetupLayer(setting, bottoms, tops, prnd);
   layer_match->Reshape(bottoms, tops);
@@ -2336,7 +2337,7 @@ int main(int argc, char *argv[]) {
   // TestConvResultTransformLayer(&rnd);
   // TestConvolutionLayer(&rnd);
   // TestMatchLayer(&rnd);
-  TestMatchTensorLayer(&rnd);
+  TestMatchTensorFactLayer(&rnd);
   // TestMatchWeightedDotLayer(&rnd);
 
   // TestGateLayer(&rnd);

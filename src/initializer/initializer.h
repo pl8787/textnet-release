@@ -26,6 +26,7 @@ const int kGaussian = 3;
 const int kXavier = 4;
 const int kKaiming = 5;
 const int kUniformRange = 7;
+const int kFileInit = 8;
 
 template<typename xpu, int dim>
 class Initializer {

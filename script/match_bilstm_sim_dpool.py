@@ -179,7 +179,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     layer['top_nodes'] = ['dot_similarity']
     layer['layer_name'] = 'match'
     layer['layer_type'] = 23 
-    print "ORC: use COS operation for similarity"
+    print "ORC: use MUL operation for similarity"
     layer['setting'] = {'op':'mul'}
 
     layer = {}
@@ -190,40 +190,41 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     layer['layer_type'] = 43
     layer['setting'] = {'row':5, 'col':5}
 
-    layer = {}
-    layers.append(layer) 
-    layer['bottom_nodes'] = ['dpool_rep']
-    layer['top_nodes'] = ['hidden_trans']
-    layer['layer_name'] = 'mlp_hidden'
-    layer['layer_type'] = 11 
-    setting = copy.deepcopy(g_layer_setting)
-    layer['setting'] = setting
-    setting['num_hidden'] = d_mem * 4
-
-    layer = {}
-    layers.append(layer) 
-    layer['bottom_nodes'] = ['hidden_trans']
-    layer['top_nodes'] = ['hidden_rep']
-    layer['layer_name'] = 'hidden_nonlinear'
-    layer['layer_type'] = 1 
-    setting = {}
-    layer['setting'] = setting
-    
-    layer = {}
-    layers.append(layer) 
-    layer['bottom_nodes'] = ['hidden_rep']
-    layer['top_nodes'] = ['hidden_drop_rep']
-    layer['layer_name'] = 'dropout'
-    layer['layer_type'] =  13
-    ds.dp_rate = 0.
-    print "ORC, dp rate:", ds.dp_rate
-    setting = {'rate':ds.dp_rate}
-    layer['setting'] = setting
-
-    layer = {}
-    layers.append(layer) 
-    layer['bottom_nodes'] = ['hidden_drop_rep']
+    # layer = {}
+    # layers.append(layer) 
     # layer['bottom_nodes'] = ['dpool_rep']
+    # layer['top_nodes'] = ['hidden_trans']
+    # layer['layer_name'] = 'mlp_hidden'
+    # layer['layer_type'] = 11 
+    # setting = copy.deepcopy(g_layer_setting)
+    # layer['setting'] = setting
+    # setting['num_hidden'] = d_mem * 4
+
+    # layer = {}
+    # layers.append(layer) 
+    # layer['bottom_nodes'] = ['hidden_trans']
+    # layer['top_nodes'] = ['hidden_rep']
+    # layer['layer_name'] = 'hidden_nonlinear'
+    # layer['layer_type'] = 1 
+    # setting = {}
+    # layer['setting'] = setting
+    # 
+    # layer = {}
+    # layers.append(layer) 
+    # layer['bottom_nodes'] = ['hidden_rep']
+    # layer['top_nodes'] = ['hidden_drop_rep']
+    # layer['layer_name'] = 'dropout'
+    # layer['layer_type'] =  13
+    # ds.dp_rate = 0.
+    # print "ORC, dp rate:", ds.dp_rate
+    # setting = {'rate':ds.dp_rate}
+    # layer['setting'] = setting
+
+    layer = {}
+    layers.append(layer) 
+    # layer['bottom_nodes'] = ['hidden_drop_rep']
+    # layer['bottom_nodes'] = ['hidden_drop_rep']
+    layer['bottom_nodes'] = ['dpool_rep']
     layer['top_nodes'] = ['softmax_prob']
     layer['layer_name'] = 'softmax_fullconnect'
     layer['layer_type'] = 11 
@@ -252,17 +253,18 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     layer['setting'] = setting
     return net
 
-run = 44
+run = 7 
 l2 = 0.
-for dataset in ['msrp']:
-    for d_mem in [20]:
+for dataset in ['paper']:
+    for d_mem in [30]:
         idx = 0
         # for model_no in [0,1,2,3,4,5,6,7,8]:
         #     for epoch_no in [20000, 40000, 80000]:
         for model_no in [2]:
             #  for epoch_no in [0, 10000, 25000]:
             for epoch_no in [0]:
-                for init in [0.5, 0.3, 0.1]:
+                # for init in [0.5, 0.3, 0.1]:
+                for init in [0.5, 0.3]:
                     for lr in [0.3, 0.1, 0.03]:
                         # for l2 in [0.00001, 0.0001]:
                         for l2 in [0]:

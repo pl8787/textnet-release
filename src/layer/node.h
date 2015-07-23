@@ -410,6 +410,13 @@ struct Node {
     return mshadow::Tensor<xpu, 2>(data.dptr_, mshadow::Shape2(s[0], ymax));
   }
 
+  inline mshadow::Tensor<xpu, 2> data_d2_middle() {
+    mshadow::Shape<4> s = data.shape_;
+    index_t  xmax = s[0]*s[1];
+    index_t  ymax = s[2]*s[3];
+    return mshadow::Tensor<xpu, 2>(data.dptr_, mshadow::Shape2(xmax, ymax));
+  }
+
   inline mshadow::Tensor<xpu, 2> data_d2_reverse() {
     mshadow::Shape<4> s = data.shape_;
     index_t  xmax = s[0]*s[1]*s[2];
@@ -421,6 +428,14 @@ struct Node {
     index_t  ymax = s[1]*s[2]*s[3];
     return mshadow::Tensor<xpu, 2>(diff.dptr_, mshadow::Shape2(s[0], ymax));
   }
+
+  inline mshadow::Tensor<xpu, 2> diff_d2_middle() {
+    mshadow::Shape<4> s = diff.shape_;
+    index_t  xmax = s[0]*s[1];
+    index_t  ymax = s[2]*s[3];
+    return mshadow::Tensor<xpu, 2>(diff.dptr_, mshadow::Shape2(xmax, ymax));
+  }
+
   inline mshadow::Tensor<xpu, 2> diff_d2_reverse() {
     mshadow::Shape<4> s = diff.shape_;
     index_t  xmax = s[0]*s[1]*s[2];

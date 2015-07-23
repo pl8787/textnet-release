@@ -16,6 +16,7 @@
 #include "./common/dropout_layer-inl.hpp"
 #include "./common/match_layer-inl.hpp"
 #include "./common/match_tensor_layer-inl.hpp"
+#include "./common/match_tensor_fact_layer-inl.hpp"
 #include "./common/match_weighted_dot_layer-inl.hpp"
 #include "./common/lstm_layer-inl.hpp"
 #include "./common/lstm_autoencoder_layer-inl.hpp"
@@ -119,6 +120,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kAccuracy: return new AccuracyLayer<xpu>(type);
     case kMatch: return new MatchLayer<xpu>(type);
     case kMatchTensor: return new MatchTensorLayer<xpu>(type);
+    case kMatchTensorFact: return new MatchTensorFactLayer<xpu>(type);
     case kMatchWeightedDot: return new MatchWeightedDotLayer<xpu>(type);
     case kSwapAxis: return new SwapAxisLayer<xpu>(type);
     case kFlatten: return new FlattenLayer<xpu>(type);

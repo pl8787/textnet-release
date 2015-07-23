@@ -1,6 +1,9 @@
 #-*-coding:utf8-*-
 import json
 
+def gen_gaussion_filler_setting(mu, sigma):
+    return {'init_type':3, 'mu':mu, 'sigma':sigma}
+
 def gen_zero_filter_setting():
     return {'init_type':0, 'value':0}
 def gen_uniform_filter_setting(interval):
