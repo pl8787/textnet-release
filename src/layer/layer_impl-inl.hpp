@@ -51,6 +51,8 @@
 #include "./input/word_class_input_layer-inl.hpp"
 #include "./input/label_feat_value_layer-inl.hpp"
 #include "./input/match_phrase_rep_layer-inl.hpp"
+#include "./input/pair_textdata_layer-inl.hpp"
+#include "./input/list_textdata_layer-inl.hpp"
 #include "./loss/hingeloss_layer-inl.hpp"
 #include "./loss/cross_entropy_loss_layer-inl.hpp"
 #include "./loss/pairhingeloss_layer-inl.hpp"
@@ -59,6 +61,7 @@
 #include "./loss/negative_sample_loss_layer-inl.hpp"
 #include "./loss/word_class_softmax_loss_layer-inl.hpp"
 #include "./loss/lstm_autoencoder_softmax_loss_layer-inl.hpp"
+#include "./loss/listwise_measure_layer-inl.hpp"
 
 namespace textnet {
 namespace layer {
@@ -125,6 +128,9 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kSwapAxis: return new SwapAxisLayer<xpu>(type);
     case kFlatten: return new FlattenLayer<xpu>(type);
     case kMatchPhraseRep: return new MatchPhraseRepLayer<xpu>(type);
+	case kPairTextData: return new PairTextDataLayer<xpu>(type);
+	case kListTextData: return new ListTextDataLayer<xpu>(type);
+	case kListwiseMeasure: return new ListwiseMeasureLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }
