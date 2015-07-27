@@ -224,6 +224,7 @@ class Net : public INet{
 
 	// Set init phrase type
 	phrase_type = kInit;
+	cur_tag = "";
   }
 
   void ReadNetConfig() {
@@ -505,10 +506,12 @@ class Net : public INet{
   }
   
   virtual void SetPhrase(string tag, PhraseType phrase) {
-    if (phrase_type == phrase) return;
+    if (phrase_type == phrase && cur_tag == tag) return;
 
+	utils::Printf("[Process] Set Tag to %s.\n", tag.c_str());
     utils::Printf("[Process] Set Phrase to %d.\n", phrase);
     phrase_type = phrase;
+	cur_tag = tag;
     for (int i = 0; i < nets[tag].size(); ++i) {
       nets[tag][i]->SetPhrase(phrase);
     }
@@ -897,6 +900,8 @@ class Net : public INet{
   vector<vector<Node<xpu>*> > top_vecs;
   // phrase type
   PhraseType phrase_type;
+  // current tag
+  string cur_tag;
   // Config
   Json::Value root;
   // need reshape

@@ -159,7 +159,7 @@ class PairTextDataLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 1> top1_data = top[1]->data_d1();
     for (int i = 0; i < batch_size; ++i) {
       if (shuffle) {
-		line_ptr = rand() % (total_ins_count/2) * 2;
+		line_ptr = (rand() % (total_ins_count/2)) * 2;
 	  } 
       top0_data[i*2] = F<op::identity>(data_set[line_ptr]);
 	  top0_length[i*2] = F<op::identity>(length_set[line_ptr]);

@@ -36,6 +36,7 @@ class ListwiseMeasureLayer : public Layer<xpu>{
   virtual void Require() {
     // default value, just set the value you want
     this->defaults["k"] = SettingV(1.0f);
+	this->defaults["col"] = SettingV(0);
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["method"] = SettingV();
@@ -55,6 +56,7 @@ class ListwiseMeasureLayer : public Layer<xpu>{
                   "ListwiseMeasureLayer:top size problem.");
     k = setting["k"].iVal();
 	method = setting["method"].sVal();
+	col = setting["col"].iVal();
     
 	utils::Check(method == "MRR" || method == "P@k" || method == "nDCG@k", 
 			      "Parameter [method] must be MRR or P@k or nDCG@k.");
@@ -73,7 +75,7 @@ class ListwiseMeasureLayer : public Layer<xpu>{
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
-    mshadow::Tensor<xpu, 1> bottom0_data = bottom[0]->data_d1();
+    mshadow::Tensor<xpu, 2> bottom0_data = bottom[0]->data_d2();
     mshadow::Tensor<xpu, 1> bottom1_data = bottom[1]->data_d1();
     mshadow::Tensor<xpu, 1> top_data = top[0]->data_d1();
 	vector< pair<float, float> > score_list;
@@ -82,7 +84,7 @@ class ListwiseMeasureLayer : public Layer<xpu>{
     for (int i = 0; i < nbatch; ++i) {
 	  if (bottom1_data[i] == -1)
 		  break;
-	  score_list.push_back( make_pair(bottom0_data[i], bottom1_data[i]) );
+	  score_list.push_back( make_pair(bottom0_data[i][col], bottom1_data[i]) );
     }
 
 	sort(score_list.begin(), score_list.end(), list_cmp);
@@ -119,6 +121,7 @@ class ListwiseMeasureLayer : public Layer<xpu>{
   int nbatch;
   int k;
   string method;
+  int col;
 
 };
 }  // namespace layer

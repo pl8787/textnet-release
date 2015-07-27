@@ -154,14 +154,14 @@ class ListTextDataLayer : public Layer<xpu>{
 		top0_length[i] = 0;
 		top1_data[i] = -1;
 		list_end = true;
-		utils::Printf(".");
+		// utils::Printf(".");
 	  } else {
         top0_data[i] = F<op::identity>(data_set[line_ptr]);
 	    top0_length[i] = F<op::identity>(length_set[line_ptr]);
         top1_data[i] = label_set[line_ptr];
         line_ptr = (line_ptr + 1) % line_count;
 	    if (list_begin) list_begin = false;
-		utils::Printf("x");
+		// utils::Printf("x");
 	  }
     }
   }

@@ -118,7 +118,7 @@ class MatchLayer : public Layer<xpu>{
           len_0 = doc_len;
           len_1 = doc_len;
         }
-        utils::Check(len_0 > 0 && len_1 > 0, "MatchLayer: length error.");
+        utils::Check(len_0 >= 0 && len_1 >= 0, "MatchLayer: length error.");
         utils::Check(len_0 <= doc_len && len_1 <= doc_len, "MatchLayer: length error.");
 		for (int j = 0; j < len_0; j++) {
 		  for (int m = 0; m < feat_size; ++m) {
@@ -143,7 +143,7 @@ class MatchLayer : public Layer<xpu>{
         len_0 = doc_len;
         len_1 = doc_len;
       }
-      utils::Check(len_0 > 0 && len_1 > 0, "MatchLayer: length error.");
+      utils::Check(len_0 >= 0 && len_1 >= 0, "MatchLayer: length error.");
       utils::Check(len_0 <= doc_len && len_1 <= doc_len, "MatchLayer: length error.");
 
       // for (int j = 0; j < len_0; j++) {
