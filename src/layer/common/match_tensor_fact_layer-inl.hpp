@@ -215,7 +215,7 @@ class MatchTensorFactLayer : public Layer<xpu>{
 
     // l2 by diag_4_reg
     if (t_l2 > 0.) {
-      t_diff += (t_data - diag_4_reg) * t_l2;
+      this->params[0].diff += (this->params[0].data - diag_4_reg.data) * t_l2;
     }
   }
   

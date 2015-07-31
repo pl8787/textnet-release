@@ -76,6 +76,7 @@ const int kOneHot = 1000;
 const int kMatchTensor = 1001;
 const int kMatchWeightedDot = 1002;
 const int kMatchTensorFact = 1003;
+const int kGru = 1004;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;

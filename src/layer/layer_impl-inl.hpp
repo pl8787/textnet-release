@@ -19,6 +19,7 @@
 #include "./common/match_tensor_fact_layer-inl.hpp"
 #include "./common/match_weighted_dot_layer-inl.hpp"
 #include "./common/lstm_layer-inl.hpp"
+#include "./common/gru_layer-inl.hpp"
 #include "./common/lstm_autoencoder_layer-inl.hpp"
 #include "./input/lstm_autoencoder_input_layer-inl.hpp"
 #include "./common/product_layer-inl.hpp"
@@ -125,6 +126,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kSwapAxis: return new SwapAxisLayer<xpu>(type);
     case kFlatten: return new FlattenLayer<xpu>(type);
     case kMatchPhraseRep: return new MatchPhraseRepLayer<xpu>(type);
+    case kGru: return new GruLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }
