@@ -254,8 +254,6 @@ void TestMatchWeightedDotLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckError(layer_match, bottoms, tops);
 }
 
-
-
 void TestMatchTensorFactLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Match Tensor Fact Layer." << endl;
   Node<cpu> bottom1;
@@ -1849,6 +1847,78 @@ void TestLstmAutoencoderLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckGrad(layer_fc, bottoms, tops);
 }
 
+void TestGruLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Gru Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(2,1,10,5), true);
+  bottom.length = 10;
+  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+  
+  map<string, SettingV> setting;
+  {
+    setting["d_mem"] = SettingV(3);
+    setting["reverse"] = SettingV(false);
+      
+    map<string, SettingV> &w_filler = *(new map<string, SettingV>());
+      w_filler["init_type"] = SettingV(initializer::kUniform);
+      w_filler["range"] = SettingV(0.5f);
+    setting["w_g_filler"] = SettingV(&w_filler);
+    setting["u_g_filler"] = SettingV(&w_filler);
+    setting["w_c_filler"] = SettingV(&w_filler);
+    setting["u_c_filler"] = SettingV(&w_filler);
+
+    map<string, SettingV> &b_filler = *(new map<string, SettingV>());
+      b_filler["init_type"] = SettingV(initializer::kZero);
+    setting["b_g_filler"] = SettingV(&b_filler);
+    setting["b_c_filler"] = SettingV(&b_filler);
+      
+    map<string, SettingV> &w_updater = *(new map<string, SettingV>());
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["eps"] = SettingV(0.01f);
+      w_updater["max_iter"] = SettingV(10000);
+      w_updater["batch_size"] = SettingV(1);
+      w_updater["lr"] = SettingV(0.1f);
+    setting["w_g_updater"] = SettingV(&w_updater);
+    setting["u_g_updater"] = SettingV(&w_updater);
+    setting["b_g_updater"] = SettingV(&w_updater);
+    setting["w_c_updater"] = SettingV(&w_updater);
+    setting["u_c_updater"] = SettingV(&w_updater);
+    setting["b_c_updater"] = SettingV(&w_updater);
+  }
+
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_fc = CreateLayer<cpu>(kGru);
+  layer_fc->PropAll();
+  layer_fc->SetupLayer(setting, bottoms, tops, prnd);
+  layer_fc->Reshape(bottoms, tops);
+  PrintTensor("b0", bottoms[0]->data);
+  layer_fc->Forward(bottoms, tops);
+  PrintTensor("t0", tops[0]->data);
+  // exit(0);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.00001f);
+  setting_checker["range_max"] = SettingV(0.00001f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_fc, bottoms, tops);
+
+  cout << "Check Grad." << endl;
+  cker->CheckGrad(layer_fc, bottoms, tops);
+}
+
+
 void TestLstmLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Lstm Layer." << endl;
   Node<cpu> bottom;
@@ -2337,8 +2407,9 @@ int main(int argc, char *argv[]) {
   // TestConvResultTransformLayer(&rnd);
   // TestConvolutionLayer(&rnd);
   // TestMatchLayer(&rnd);
-  TestMatchTensorFactLayer(&rnd);
+  // TestMatchTensorFactLayer(&rnd);
   // TestMatchWeightedDotLayer(&rnd);
+  TestGruLayer(&rnd);
 
   // TestGateLayer(&rnd);
   // TestDiagRecurrentLayer(&rnd);
