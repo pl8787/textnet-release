@@ -2371,6 +2371,41 @@ void TestListTextDataLayer(mshadow::Random<cpu>* prnd) {
   // PrintTensor("top2", top2.data);
 }
 
+void TestQATextDataLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check QATextData Layer." << endl;
+  Node<cpu> top1;
+  Node<cpu> top2;
+  Node<cpu> top3;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  tops.push_back(&top1);
+  tops.push_back(&top2);
+  tops.push_back(&top3);
+
+  map<string, SettingV> setting;
+  setting["question_data_file"] = SettingV("/home/pangliang/matching/data/webscope/x.32/question.full.dat.wid");
+  setting["answer_data_file"] = SettingV("/home/pangliang/matching/data/webscope/x.32/answer.dat.wid");
+  setting["question_rel_file"] = SettingV("/home/pangliang/matching/data/webscope/x.32/q.x.32.train.dat");
+  setting["answer_rel_file"] = SettingV("/home/pangliang/matching/data/webscope/x.32/a.x.32.train.dat");
+  setting["batch_size"] = SettingV(2);
+  setting["max_doc_len"] = SettingV(32);
+  setting["candids"] = SettingV(10);
+  setting["mode"] = SettingV("list");
+  
+  /// Test QATextData Layer
+  Layer<cpu> * layer_qa_textdata = CreateLayer<cpu>(kQATextData);
+  layer_qa_textdata->PropAll();
+  layer_qa_textdata->SetupLayer(setting, bottoms, tops, prnd);
+  layer_qa_textdata->Reshape(bottoms, tops);
+  layer_qa_textdata->Forward(bottoms, tops);
+  layer_qa_textdata->Backprop(bottoms, tops);
+
+  PrintTensor("top1", top1.data);
+  PrintTensor("top2", top2.data);
+  PrintTensor("top3", top3.data);
+}
+
 void TestActivationLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Act Layer." << endl;
   Node<cpu> bottom;
@@ -2417,14 +2452,99 @@ void TestActivationLayer(mshadow::Random<cpu>* prnd) {
   cout << "bottom diff: " << bottom.diff[0][0][0][0] << endl;
 }
 
+void TestMatchMultiLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check MatchMulti Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+
+  bottom.Resize(9, 1, 5, 2);
+  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+  bottom.length = 5;
+
+  map<string, SettingV> setting;
+  setting["op"] = SettingV("euc_exp");
+  setting["candids"] = SettingV(2);
+
+  // Test MatchMulti Layer
+  Layer<cpu> * layer_match_multi = CreateLayer<cpu>(kMatchMulti);
+  layer_match_multi->PropAll();
+  layer_match_multi->SetupLayer(setting, bottoms, tops, prnd);
+  layer_match_multi->Reshape(bottoms, tops);
+
+  layer_match_multi->Forward(bottoms, tops);
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("top", top.data);
+
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.001f);
+  cker->SetupChecker(setting_checker, prnd);
+
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_match_multi, bottoms, tops);
+}
+
+void TestBatchCombineLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Batch Combine Layer." << endl;
+  Node<cpu> bottom1;
+  Node<cpu> bottom2;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+
+  bottoms.push_back(&bottom1);
+  bottoms.push_back(&bottom2);
+  tops.push_back(&top);
+
+  bottom1.Resize(4, 2, 3, 2);
+  bottom2.Resize(4, 2, 3, 2);
+
+  prnd->SampleUniform(&bottom1.data, -1.0, 1.0);
+  prnd->SampleUniform(&bottom2.data, -1.0, 1.0);
+
+  map<string, SettingV> setting;
+  setting["op"] = SettingV("cos");
+  setting["element"] = SettingV(false);
+  setting["candids"] = SettingV(2);
+
+  // Test BatchCombine Layer
+  Layer<cpu> * layer_batch_combine = CreateLayer<cpu>(kBatchCombine);
+  layer_batch_combine->PropAll();
+  layer_batch_combine->SetupLayer(setting, bottoms, tops, prnd);
+  layer_batch_combine->Reshape(bottoms, tops);
+
+  layer_batch_combine->Forward(bottoms, tops);
+  PrintTensor("bottom1", bottom1.data);
+  PrintTensor("bottom2", bottom2.data);
+  PrintTensor("top", top.data);
+
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.001f);
+  cker->SetupChecker(setting_checker, prnd);
+
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_batch_combine, bottoms, tops);
+}
 int main(int argc, char *argv[]) {
   mshadow::Random<cpu> rnd(37);
-  //TestActivationLayer(&rnd);
+  // TestActivationLayer(&rnd);
   // TestFcLayer(&rnd);
   // TestConvLayer(&rnd);
-  //TestPoolLayer(&rnd);
+  // TestPoolLayer(&rnd);
   // TestCrossLayer(&rnd);
-  //TestDropoutLayer(&rnd);
+  // TestDropoutLayer(&rnd);
   // TestLstmLayer(&rnd);
   // TestLstmAutoencoderLayer(&rnd);
   // TestRnnLayer(&rnd);
@@ -2439,6 +2559,8 @@ int main(int argc, char *argv[]) {
   // TestMatchLayer(&rnd);
   // TestMatchTensorFactLayer(&rnd);
   // TestMatchWeightedDotLayer(&rnd);
+  // TestMatchMultiLayer(&rnd);
+  TestBatchCombineLayer(&rnd);
   // TestPairTextDataLayer(&rnd);
   // TestListTextDataLayer(&rnd);
   // TestGateLayer(&rnd);
@@ -2454,6 +2576,7 @@ int main(int argc, char *argv[]) {
   // TestSumLayer(&rnd);
   // TestTopkPoolingLayer(&rnd);
   // TestHingeLossLayer(&rnd);
-  TestListwiseMeasureLayer(&rnd);
+  // TestListwiseMeasureLayer(&rnd);
+  // TestQATextDataLayer(&rnd);
   return 0;
 }

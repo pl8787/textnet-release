@@ -76,6 +76,8 @@ const int kOneHot = 1000;
 const int kMatchTensor = 1001;
 const int kMatchWeightedDot = 1002;
 const int kMatchTensorFact = 1003;
+const int kMatchMulti = 1004;
+const int kBatchCombine = 1005;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;
@@ -101,6 +103,7 @@ const int kLstmAutoencoderInput = 77;
 const int kMatchPhraseRep = 78;
 const int kPairTextData = 79;
 const int kListTextData = 80;
+const int kQATextData = 81;
 
 /*! \brief these are enumeration */
 const int kInit = -1;

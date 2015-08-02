@@ -18,6 +18,8 @@
 #include "./common/match_tensor_layer-inl.hpp"
 #include "./common/match_tensor_fact_layer-inl.hpp"
 #include "./common/match_weighted_dot_layer-inl.hpp"
+#include "./common/match_multi_layer-inl.hpp"
+#include "./common/batch_combine_layer-inl.hpp"
 #include "./common/lstm_layer-inl.hpp"
 #include "./common/lstm_autoencoder_layer-inl.hpp"
 #include "./input/lstm_autoencoder_input_layer-inl.hpp"
@@ -53,6 +55,7 @@
 #include "./input/match_phrase_rep_layer-inl.hpp"
 #include "./input/pair_textdata_layer-inl.hpp"
 #include "./input/list_textdata_layer-inl.hpp"
+#include "./input/qa_textdata_layer-inl.hpp"
 #include "./loss/hingeloss_layer-inl.hpp"
 #include "./loss/cross_entropy_loss_layer-inl.hpp"
 #include "./loss/pairhingeloss_layer-inl.hpp"
@@ -125,12 +128,15 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kMatchTensor: return new MatchTensorLayer<xpu>(type);
     case kMatchTensorFact: return new MatchTensorFactLayer<xpu>(type);
     case kMatchWeightedDot: return new MatchWeightedDotLayer<xpu>(type);
+	case kMatchMulti: return new MatchMultiLayer<xpu>(type);
+    case kBatchCombine: return new BatchCombineLayer<xpu>(type);
     case kSwapAxis: return new SwapAxisLayer<xpu>(type);
     case kFlatten: return new FlattenLayer<xpu>(type);
     case kMatchPhraseRep: return new MatchPhraseRepLayer<xpu>(type);
 	case kPairTextData: return new PairTextDataLayer<xpu>(type);
 	case kListTextData: return new ListTextDataLayer<xpu>(type);
 	case kListwiseMeasure: return new ListwiseMeasureLayer<xpu>(type);
+	case kQATextData: return new QATextDataLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }
