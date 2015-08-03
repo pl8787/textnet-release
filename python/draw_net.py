@@ -54,6 +54,20 @@ Layer2Name = {
   39: 'SumByAxis',
   40: 'Gating',
   41: 'Lr2softmax',
+  42: 'SwapAxis',
+  43: 'DynamicPooling',
+  44: 'DiagRecurrent',
+  45: 'Dup4lstm',
+  46: 'PosPredRep',
+  47: 'LstmAutoencoder',
+  48: 'NbpGenLstmInput',
+  49: 'PhraseAveRep',
+  1000: 'OneHot',
+  1001: 'MatchTensor',
+  1002: 'MatchWeightedDot',
+  1003: 'MatchTensorFact',
+  1004: 'MatchMulti',
+  1005: 'BatchCombine',
 
   # Loss Layer 51-70
   51: 'Softmax', 
@@ -63,11 +77,23 @@ Layer2Name = {
   55: 'PairHingeLoss', 
   56: 'Accuracy', 
   57: 'CrossEntropyLoss', 
+  58: 'NegativeSampleLoss',
+  59: 'WordClassSoftmaxLoss',
+  60: 'LstmAutoencoderSoftmaxLoss',
+  61: 'ListwiseMeasure',
 
   # Input Layer 71-
   71: 'TextData', 
   72: 'SequenceClassificationData', 
   73: 'NextBasketData', 
+  74: 'NegativeSample',
+  75: 'WordClassInput',
+  76: 'LabelFeatValue',
+  77: 'LstmAutoencoderInput',
+  78: 'MatchPhraseRep',
+  79: 'PairTextData',
+  80: 'ListTextData',
+  81: 'QATextData',
 }
 
 def parse_args():
