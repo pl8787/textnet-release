@@ -65,6 +65,27 @@ class SplitLayer : public Layer<xpu>{
     top[1]->PrintShape("top1");
   }
   
+  virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,
+							const std::vector<Node<xpu>*> &top) {
+	// Check for reshape
+	bool need_reshape = false;
+	utils::Check(doc_len == bottom[0]->data.size(2), 
+			"Split Layer: doc_len.");
+	utils::Check(feat_size == bottom[0]->data.size(3),
+			"Split Layer: feat_size.");
+	if (nbatch != bottom[0]->data.size(0)) {
+		need_reshape = true;
+		nbatch = bottom[0]->data.size(0);
+	}
+
+	// Do reshape 
+	if (need_reshape) {
+		top[0]->Resize(nbatch, 1, doc_len, feat_size, true);
+		top[1]->Resize(nbatch, 1, doc_len, feat_size, true);
+		utils::Printf(".");
+	}
+  }
+
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;

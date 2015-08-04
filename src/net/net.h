@@ -212,6 +212,11 @@ class Net : public INet{
         utils::Printf("Set need_reshape to %d\n", need_reshape);
     }
 
+	if (!root["var_batch"].isNull()) {
+		var_batch = root["var_batch"].asBool();
+		utils::Printf("Set var_batch to %d\n", var_batch);
+	}
+
 	ReadNetConfig();
 	ReadLayers();
 	ReadNodes();
@@ -521,6 +526,8 @@ class Net : public INet{
   virtual void Forward(string tag) {
       for (int i = 0; i < nets[tag].size(); ++i) {
         int layer_idx = nets[tag][i]->layer_idx;
+		if (var_batch)
+			nets[tag][i]->CheckReshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
         nets[tag][i]->Forward(bottom_vecs[layer_idx], top_vecs[layer_idx]);
 #if DEBUG
         cout << "Feed " ;
@@ -904,8 +911,10 @@ class Net : public INet{
   string cur_tag;
   // Config
   Json::Value root;
-  // need reshape
+  // need reshape : when change tag/phrase change shape
   bool need_reshape;
+  // var batch : every batch is different, need check
+  bool var_batch;
   // node list
   vector<Node<xpu>*> node_list;
 

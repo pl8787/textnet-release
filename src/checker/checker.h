@@ -135,6 +135,7 @@ class Checker {
             calculate_error[i].dptr_[j] - estimate_error[i].dptr_[j] > range_max*scale  ) {
           cout << "E [" << i << ", " << j << "] = " << calculate_error[i].dptr_[j] << " | " << estimate_error[i].dptr_[j] << endl;
         }
+        cout << "I [" << i << ", " << j << "] = " << calculate_error[i].dptr_[j] << " | " << estimate_error[i].dptr_[j] << endl;
       }
     }
 
@@ -206,6 +207,7 @@ class Checker {
             calculate_grad[i].dptr_[j] - estimate_grad[i].dptr_[j] > range_max*scale  ) {
           cout << "E [" << i << ", " << j << "] = " << calculate_grad[i].dptr_[j] << " | " << estimate_grad[i].dptr_[j] << endl;
         }
+        cout << "I [" << i << ", " << j << "] = " << calculate_grad[i].dptr_[j] << " | " << estimate_grad[i].dptr_[j] << endl;
       }
     }
 

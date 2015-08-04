@@ -215,7 +215,7 @@ void TestListwiseMeasureLayer(mshadow::Random<cpu>* prnd) {
   map<string, SettingV> setting;
   setting["k"] = SettingV(1);
   setting["method"] = SettingV("MRR");
-  setting["method"] = SettingV("P@k");
+  // setting["method"] = SettingV("P@k");
   
   /// Test Activation Layer
   Layer<cpu> * layer_listwise = CreateLayer<cpu>(kListwiseMeasure);
@@ -2511,7 +2511,7 @@ void TestBatchCombineLayer(mshadow::Random<cpu>* prnd) {
   prnd->SampleUniform(&bottom2.data, -1.0, 1.0);
 
   map<string, SettingV> setting;
-  setting["op"] = SettingV("cos");
+  setting["op"] = SettingV("euc_exp");
   setting["element"] = SettingV(false);
   setting["candids"] = SettingV(2);
 
@@ -2560,7 +2560,7 @@ int main(int argc, char *argv[]) {
   // TestMatchTensorFactLayer(&rnd);
   // TestMatchWeightedDotLayer(&rnd);
   // TestMatchMultiLayer(&rnd);
-  TestBatchCombineLayer(&rnd);
+  // TestBatchCombineLayer(&rnd);
   // TestPairTextDataLayer(&rnd);
   // TestListTextDataLayer(&rnd);
   // TestGateLayer(&rnd);
@@ -2576,7 +2576,7 @@ int main(int argc, char *argv[]) {
   // TestSumLayer(&rnd);
   // TestTopkPoolingLayer(&rnd);
   // TestHingeLossLayer(&rnd);
-  // TestListwiseMeasureLayer(&rnd);
+  TestListwiseMeasureLayer(&rnd);
   // TestQATextDataLayer(&rnd);
   return 0;
 }

@@ -28,6 +28,7 @@ class BatchCombineLayer : public Layer<xpu>{
     this->defaults["element"] = SettingV(false);
     // require value, set to SettingV(),
     // it will force custom to set in config
+	this->defaults["candids"] = SettingV();
     this->defaults["op"] = SettingV(); 
 	// mul: can bp
 	// plus: can bp

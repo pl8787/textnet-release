@@ -140,6 +140,29 @@ class ListTextDataLayer : public Layer<xpu>{
 	top[1]->PrintShape("top1");
   }
   
+  virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,
+							const std::vector<Node<xpu>*> &top) {
+	// Check for reshape
+	bool need_reshape = false;
+	utils::Check(label_set[line_ptr] == 1, 
+			"ListTextDataLayer: do not begin with 1.");
+	int list_len = 1;
+	while (label_set[ (line_ptr+list_len) % line_count ] != 1) {
+		++list_len;
+	}
+	if (max_list_len != list_len) {
+		need_reshape = true;
+		max_list_len = list_len;
+	}
+
+	// Do reshape 
+	if (need_reshape) {
+		top[0]->Resize(max_list_len, 2, 1, max_doc_len, true);
+		top[1]->Resize(max_list_len, 1, 1, 1, true);
+		utils::Printf(".");
+	}
+  }
+
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;

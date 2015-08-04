@@ -80,6 +80,8 @@ class ListwiseMeasureLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 1> top_data = top[0]->data_d1();
 	vector< pair<float, float> > score_list;
 	float score = 0.0;
+
+	float check = 0.0;
     
     for (int i = 0; i < nbatch; ++i) {
 	  if (bottom1_data[i] == -1)
@@ -95,7 +97,9 @@ class ListwiseMeasureLayer : public Layer<xpu>{
       for (int i = 0; i < score_list_len; ++i) {
         if (score_list[i].second == 1)
 		  score += 1.0 / (i+1);
+		check += score_list[i].second;
 	  }
+	  utils::Check(check==1, "Not a valid list.");
 	} else if (method == "P@k") {
 	  for (int i = 0; i < min(k, score_list_len); ++i) {
         if (score_list[i].second == 1)

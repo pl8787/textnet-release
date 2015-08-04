@@ -141,6 +141,26 @@ class EmbeddingLayer : public Layer<xpu>{
     top[0]->PrintShape("top0");
   }
   
+  virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,
+							const std::vector<Node<xpu>*> &top) {
+	// Check for reshape
+	bool need_reshape = false;
+	utils::Check(max_doc_len == bottom[0]->data.size(3), 
+			"Embedding Layer: max_doc_len.");
+	utils::Check(doc_count == bottom[0]->data.size(1),
+			"Embedding Layer: doc_count.");
+	if (nbatch != bottom[0]->data.size(0)) {
+		need_reshape = true;
+		nbatch = bottom[0]->data.size(0);
+	}
+
+	// Do reshape 
+	if (need_reshape) {
+		top[0]->Resize(nbatch, doc_count, max_doc_len, feat_size, true);
+		utils::Printf(".");
+	}
+  }
+
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
