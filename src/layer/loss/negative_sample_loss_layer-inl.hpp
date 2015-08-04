@@ -61,7 +61,8 @@ class NegativeSampleLossLayer : public Layer<xpu>{
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(),
                   "NegativeSampleLossLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
@@ -71,6 +72,9 @@ class NegativeSampleLossLayer : public Layer<xpu>{
     int sample_num   = bottom[1]->data.size(2);
     top[0]->Resize(batch_size, position_num, sample_num, 2, true);
     top[1]->Resize(1, 1, 1, 1, true);
+	if (show_info) {
+		top[0]->PrintShape("top0");
+	}
   }
   void checkNan(float *p, int l) {
       for (int i = 0; i < l; ++i) {

@@ -48,7 +48,8 @@ class PoolingLayer : public Layer<xpu> {
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(),
                   "PoolingLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
@@ -63,8 +64,10 @@ class PoolingLayer : public Layer<xpu> {
     top[0]->Resize(shape_out);   
     // std::cout << shape_in[0] << "x" << shape_in[1] << "x" << shape_in[2] << "x" << shape_in[3] << std::endl;
     // std::cout << shape_out[0] << "x" << shape_out[1] << "x" << shape_out[2] << "x" << shape_out[3] << std::endl;
-	bottom[0]->PrintShape("bottom0");
-	top[0]->PrintShape("top0");
+	if (show_info) {
+		bottom[0]->PrintShape("bottom0");
+		top[0]->PrintShape("top0");
+	}
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

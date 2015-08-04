@@ -34,11 +34,15 @@ class CrossEntropyLossLayer : public Layer<xpu>{
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(), "CrossEntropyLossLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "CrossEntropyLossLayer:top size problem.");
                   
     top[0]->Resize(1, 1, 1, 1, true);
+	if (show_info) {
+		top[0]->PrintShape("top0");
+	}
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

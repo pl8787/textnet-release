@@ -498,7 +498,7 @@ class Net : public INet{
       utils::Printf("[layer] set layer %s\n", nets[tag][i]->layer_name.c_str());
       nets[tag][i]->SetupLayer(layers_root[layer_idx], 
           bottom_vecs[layer_idx], top_vecs[layer_idx], prnd);
-      nets[tag][i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+      nets[tag][i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx], true);
     }
   }
 
@@ -506,7 +506,7 @@ class Net : public INet{
     utils::Printf("[Process] Reshape network.\n");
     for (int i = 0; i < nets[tag].size(); ++i) {
       int layer_idx = nets[tag][i]->layer_idx;
-      nets[tag][i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+      nets[tag][i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx], false);
     }
   }
   

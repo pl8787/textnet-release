@@ -35,7 +35,8 @@ class NbpGenLstmInputLayer : public Layer<xpu>{
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(), "NbpGenLstmInputLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "NbpGenLstmInputLayer:top size problem.");
 
@@ -43,9 +44,11 @@ class NbpGenLstmInputLayer : public Layer<xpu>{
     mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in[0], 1, shape_in[1], shape_in[3]);
     top[0]->Resize(shape_out, true);
 
-    bottom[0]->PrintShape("bottom0");
-    bottom[1]->PrintShape("bottom1");
-    top[0]->PrintShape("top0");
+	if (show_info) {
+		bottom[0]->PrintShape("bottom0");
+		bottom[1]->PrintShape("bottom1");
+		top[0]->PrintShape("top0");
+	}
   }
 
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

@@ -46,7 +46,8 @@ class SplitLayer : public Layer<xpu>{
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(),
                   "SplitLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
@@ -60,9 +61,11 @@ class SplitLayer : public Layer<xpu>{
     top[0]->Resize(nbatch, 1, doc_len, feat_size, true);
     top[1]->Resize(nbatch, 1, doc_len, feat_size, true);
 
-    bottom[0]->PrintShape("bottom0");
-    top[0]->PrintShape("top0");
-    top[1]->PrintShape("top1");
+	if (show_info) {
+		bottom[0]->PrintShape("bottom0");
+		top[0]->PrintShape("top0");
+		top[1]->PrintShape("top1");
+	}
   }
   
   virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,

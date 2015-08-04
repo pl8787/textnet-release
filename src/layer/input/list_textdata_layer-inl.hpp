@@ -125,7 +125,8 @@ class ListTextDataLayer : public Layer<xpu>{
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(),
                   "TextDataLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
@@ -136,8 +137,10 @@ class ListTextDataLayer : public Layer<xpu>{
     top[0]->Resize(max_list_len, 2, 1, max_doc_len, true);
     top[1]->Resize(max_list_len, 1, 1, 1, true);
 	
-	top[0]->PrintShape("top0");
-	top[1]->PrintShape("top1");
+	if (show_info) {
+		top[0]->PrintShape("top0");
+		top[1]->PrintShape("top1");
+	}
   }
   
   virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,

@@ -44,7 +44,8 @@ class ConvLstmSplitLayer : public Layer<xpu>{
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(), "ConvLstmSplitLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "ConvLstmSplitLayer:top size problem.");
                   
@@ -58,9 +59,11 @@ class ConvLstmSplitLayer : public Layer<xpu>{
     top[0]->Resize(batch_size, feat_size, doc_len, 1, true);
     top[1]->Resize(batch_size, feat_size, doc_len, 1, true);
 
-    bottom[0]->PrintShape("bottom0");
-    top[0]->PrintShape("top0");
-    top[1]->PrintShape("top1");
+	if (show_info) {
+		bottom[0]->PrintShape("bottom0");
+		top[0]->PrintShape("top0");
+		top[1]->PrintShape("top1");
+	}
   }
 
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

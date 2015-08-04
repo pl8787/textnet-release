@@ -40,7 +40,8 @@ class ProductLayer : public Layer<xpu> {
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(), "ProductLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "ProductLayer:top size problem.");
     
@@ -58,9 +59,11 @@ class ProductLayer : public Layer<xpu> {
     int output_size = size_0_3 > size_1_3 ? size_0_3 : size_1_3;
     top[0]->Resize(shape0[0], shape0[1], shape0[2], output_size, true);
 
-	bottom[0]->PrintShape("bottom0");
-	bottom[1]->PrintShape("bottom1");
-	top[0]->PrintShape("top0");
+	if (show_info) {
+		bottom[0]->PrintShape("bottom0");
+		bottom[1]->PrintShape("bottom1");
+		top[0]->PrintShape("top0");
+	}
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

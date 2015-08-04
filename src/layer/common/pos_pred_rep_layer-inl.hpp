@@ -39,7 +39,8 @@ class PosPredRepLayer : public Layer<xpu>{
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(), "PosPredRepLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "PosPredRepLayer:top size problem.");
 
@@ -52,10 +53,12 @@ class PosPredRepLayer : public Layer<xpu>{
     mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in_pos[0], shape_in_pos[1], 1, feat_size * 2);
     top[0]->Resize(shape_out, true);
 
-    bottom[0]->PrintShape("bottom0");
-    bottom[1]->PrintShape("bottom1");
-    bottom[2]->PrintShape("bottom2");
-    top[0]->PrintShape("top0");
+	if (show_info) {
+		bottom[0]->PrintShape("bottom0");
+		bottom[1]->PrintShape("bottom1");
+		bottom[2]->PrintShape("bottom2");
+		top[0]->PrintShape("top0");
+	}
   }
 
   typedef mshadow::Tensor<xpu, 1> Tensor1D;

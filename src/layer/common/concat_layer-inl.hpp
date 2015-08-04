@@ -41,7 +41,8 @@ class ConcatLayer : public Layer<xpu>{
   
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(), "ConcatLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "ConcatLayer:top size problem.");
 
@@ -60,10 +61,12 @@ class ConcatLayer : public Layer<xpu>{
     shape_out[concat_dim_index] = out_size;
     top[0]->Resize(shape_out, true);
 
-    for (int i = 0; i < nBottomNode; ++i) {
-	  bottom[i]->PrintShape("bottom_i");
-    }
-	top[0]->PrintShape("top0");
+	if (show_info) {
+		for (int i = 0; i < nBottomNode; ++i) {
+			bottom[i]->PrintShape("bottom_i");
+		}
+		top[0]->PrintShape("top0");
+	}
   }
 
   // void checkNan(float *p, int l) {

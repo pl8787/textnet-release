@@ -89,7 +89,8 @@ class ConvolutionLayer : public Layer<xpu> {
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(),
                   "ConvolutionLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
@@ -110,8 +111,10 @@ class ConvolutionLayer : public Layer<xpu> {
 
     temp_data_.Resize(mshadow::Shape2(channel_out, shape_out[2]*shape_out[3]));
     
+	if (show_info) {
 	  bottom[0]->PrintShape("bottom0");
 	  top[0]->PrintShape("top0");
+	}
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

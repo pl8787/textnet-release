@@ -38,7 +38,8 @@ class WholePoolingLayer : public Layer<xpu>{
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(), "WholePoolingLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "WholePoolingLayer:top size problem.");
 
@@ -47,8 +48,10 @@ class WholePoolingLayer : public Layer<xpu>{
     top[0]->Resize(shape_out, true);
     pos.Resize(shape_out, -1);
 
-    bottom[0]->PrintShape("bottom0");
-    top[0]->PrintShape("top0");
+	if (show_info) {
+		bottom[0]->PrintShape("bottom0");
+		top[0]->PrintShape("top0");
+	}
   }
 
   typedef mshadow::Tensor<xpu, 1> Tensor1D;

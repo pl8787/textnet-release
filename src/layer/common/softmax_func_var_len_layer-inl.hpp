@@ -46,7 +46,8 @@ class SoftmaxFuncVarLenLayer : public Layer<xpu>{
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(),
                  "SoftmaxFuncVarLenLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),

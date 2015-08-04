@@ -101,15 +101,18 @@ class MatchPhraseRepLayer : public Layer<xpu>{
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(), "MatchPhraseRepLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "MatchPhraseRepLayer:top size problem.");
 	
     top[0]->Resize(batch_size, 2, max_doc_len, feat_size, true);
     top[1]->Resize(batch_size, 1, 1, 1, true);
 	
-	top[0]->PrintShape("top0");
-	top[1]->PrintShape("top1");
+	if (show_info) {
+		top[0]->PrintShape("top0");
+		top[1]->PrintShape("top1");
+	}
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

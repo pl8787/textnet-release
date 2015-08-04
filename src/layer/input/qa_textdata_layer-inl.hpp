@@ -219,7 +219,8 @@ class QATextDataLayer : public Layer<xpu>{
   }
 
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(),
                   "QATextDataLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
@@ -243,9 +244,11 @@ class QATextDataLayer : public Layer<xpu>{
 	  top[2]->Resize(max_list, 1, 1, 1, true);
 	}
 	
-    top[0]->PrintShape("top0");
-    top[1]->PrintShape("top1");
-	top[2]->PrintShape("top2");
+	if (show_info) {
+		top[0]->PrintShape("top0");
+		top[1]->PrintShape("top1");
+		top[2]->PrintShape("top2");
+	}
   }
 
   inline void FillData(mshadow::Tensor<xpu, 2> &top0_data, mshadow::Tensor<xpu, 1> &top0_length, 

@@ -49,7 +49,8 @@ class DropoutLayer : public Layer<xpu>{
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(),
                   "DropoutLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
@@ -58,8 +59,10 @@ class DropoutLayer : public Layer<xpu>{
     top[0]->Resize(bottom[0]->data.shape_, true);
 	mask.Resize(bottom[0]->data.shape_, true);
 
-    bottom[0]->PrintShape("bottom0");
-    top[0]->PrintShape("top0");
+	if (show_info) {
+		bottom[0]->PrintShape("bottom0");
+		top[0]->PrintShape("top0");
+	}
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

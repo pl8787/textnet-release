@@ -108,7 +108,8 @@ class WordClassSoftmaxLossLayer : public Layer<xpu>{
   }
 
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(), "WordClassSoftmaxLossLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "WordClassSoftmaxLossLayer:top size problem.");
 
@@ -118,6 +119,12 @@ class WordClassSoftmaxLossLayer : public Layer<xpu>{
     top[1]->Resize(batch_size, position_num, 1, vocab_size,true);
     top[2]->Resize(batch_size, position_num, 1, 1, true);
     top[3]->Resize(1, 1, 1, 1, true);
+	if (show_info) {
+		top[0]->PrintShape("top0");
+		top[1]->PrintShape("top1");
+		top[2]->PrintShape("top2");
+		top[3]->PrintShape("top3");
+	}
   }
   void checkNan(orc_real *p, int l) {
       for (int i = 0; i < l; ++i) {

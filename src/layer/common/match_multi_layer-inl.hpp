@@ -58,7 +58,8 @@ class MatchMultiLayer : public Layer<xpu>{
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(),
                   "MatchMultiLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
@@ -79,8 +80,10 @@ class MatchMultiLayer : public Layer<xpu>{
                   
     top[0]->Resize(nbatch * candids, 1, doc_len, doc_len, true);
     
-	bottom[0]->PrintShape("bottom0");
-    top[0]->PrintShape("top0");
+	if (show_info) {
+		bottom[0]->PrintShape("bottom0");
+		top[0]->PrintShape("top0");
+	}
 
 	if (op == "cos") {
       m_norm.Resize(mshadow::Shape2(nbatch * (candids+1), doc_len), 0.f);

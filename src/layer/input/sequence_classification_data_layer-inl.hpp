@@ -97,13 +97,18 @@ class SequenceClassificationDataLayer : public Layer<xpu>{
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(),
                   "SequenceClassificationDataLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "SequenceClassificationDataLayer:top size problem.");
     top[0]->Resize(batch_size, 1, 1, 1, true);
     top[1]->Resize(batch_size, 1, 1, max_doc_len, true);
+	if (show_info) {
+		top[0]->PrintShape("top0");
+		top[1]->PrintShape("top1");
+	}
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

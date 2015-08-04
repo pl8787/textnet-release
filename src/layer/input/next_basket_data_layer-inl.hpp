@@ -130,7 +130,8 @@ class NextBasketDataLayer : public Layer<xpu>{
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(), "NextBasketDataLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "NextBasketDataLayer:top size problem.");
 
@@ -139,6 +140,14 @@ class NextBasketDataLayer : public Layer<xpu>{
     top[2]->Resize(batch_size, 1, 1, 1, true); // context length
     top[3]->Resize(batch_size, 1, 1, 1, true); // y for train
     top[4]->Resize(batch_size, 1, 1, max_session_len, true); // ys for eval
+	if (show_info) {
+		top[0]->PrintShape("top0");
+		top[1]->PrintShape("top1");
+		top[2]->PrintShape("top2");
+		top[3]->PrintShape("top3");
+		top[4]->PrintShape("top4");
+	}
+		
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

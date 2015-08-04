@@ -94,7 +94,8 @@ class MatchTensorFactLayer : public Layer<xpu>{
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(), "MatchTensorFactLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "MatchTensorFactLayer:top size problem.");
                   
@@ -105,9 +106,11 @@ class MatchTensorFactLayer : public Layer<xpu>{
     bottom_1_transform.Resize(batch_size, doc_len, d_hidden, d_factor);
     top[0]->Resize(batch_size, d_hidden, doc_len, doc_len, true);
 
-    bottom[0]->PrintShape("bottom0");
-    bottom[1]->PrintShape("bottom1");
-    top[0]->PrintShape("top0");
+	if (show_info) {
+		bottom[0]->PrintShape("bottom0");
+		bottom[1]->PrintShape("bottom1");
+		top[0]->PrintShape("top0");
+	}
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

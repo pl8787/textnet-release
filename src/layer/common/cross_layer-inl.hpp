@@ -46,7 +46,8 @@ class CrossLayer : public Layer<xpu>{
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(),
                   "CrossLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
@@ -58,9 +59,11 @@ class CrossLayer : public Layer<xpu>{
                   
     top[0]->Resize(nbatch, channel, doc_len, doc_len, true);
 
+	if (show_info) {
 	  bottom[0]->PrintShape("bottom0");
 	  bottom[1]->PrintShape("bottom1");
 	  top[0]->PrintShape("top0");
+	}
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

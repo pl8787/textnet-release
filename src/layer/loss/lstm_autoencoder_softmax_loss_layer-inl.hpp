@@ -98,7 +98,8 @@ class LstmAutoencoderSoftmaxLossLayer : public Layer<xpu>{
   }
 
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(), "LstmAutoencoderSoftmaxLossLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "LstmAutoencoderSoftmaxLossLayer:top size problem.");
 
@@ -106,6 +107,10 @@ class LstmAutoencoderSoftmaxLossLayer : public Layer<xpu>{
     int position_num = bottom[0]->data.size(1);
     top[0]->Resize(batch_size, position_num, 1, vocab_size, true);
     top[1]->Resize(1, 1, 1, 1, true);
+	if (show_info) {
+		top[0]->PrintShape("top0");
+		top[1]->PrintShape("top1");
+	}
   }
   void checkNan(orc_real *p, int l) {
       for (int i = 0; i < l; ++i) {
