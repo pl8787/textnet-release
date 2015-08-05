@@ -160,10 +160,12 @@ class Layer {
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top,
-					   bool show_info = false) {}
+					   bool show_info = true) {}
 
   virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {}
+                       const std::vector<Node<xpu>*> &top) {
+	utils::Printf("No implement CheckReshape in %s(%d) layer.\n", this->layer_name.c_str(), this->layer_type);
+  }
 
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) = 0;

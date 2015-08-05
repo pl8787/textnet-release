@@ -61,6 +61,12 @@ class PairHingeLossLayer : public Layer<xpu>{
 	}
   }
   
+  virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,
+                            const std::vector<Node<xpu>*> &top) {
+    // Check for reshape
+    nbatch = bottom[0]->data.size(0);
+  }
+
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;

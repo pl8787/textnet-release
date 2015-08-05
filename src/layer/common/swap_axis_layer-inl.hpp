@@ -80,7 +80,7 @@ class SwapAxisLayer : public Layer<xpu>{
                             const std::vector<Node<xpu>*> &top) {
     // Check for reshape
     bool need_reshape = false;
-    if (bottom[0]->data.shape_ != bottom_shape) {
+    if (! (bottom[0]->data.shape_ == bottom_shape)) {
         need_reshape = true;
     }
 

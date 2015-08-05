@@ -75,6 +75,7 @@ class Net : public INet{
  public:
   Net() {
     need_reshape = false;
+	var_batch = false;
     model_save_interval = 0;
     InitSettingEngine();
   }

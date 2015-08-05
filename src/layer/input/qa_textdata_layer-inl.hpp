@@ -265,7 +265,7 @@ class QATextDataLayer : public Layer<xpu>{
     // Check for reshape
     bool need_reshape = false;
     if (mode == "list") {
-      if (max_list != list_set[line_ptr]) {
+      if (max_list != list_set[line_ptr].size()) {
         max_list = list_set[line_ptr].size();
         need_reshape = true;
       }

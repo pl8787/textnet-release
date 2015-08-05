@@ -4,6 +4,9 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <utility>
+#include <vector>
+#include <algorithm>
 #include "stdlib.h"
 
 #include <mshadow/tensor.h>
@@ -12,6 +15,8 @@
 
 namespace textnet {
 namespace layer {
+
+bool list_size_cmp(const vector<int> &x1, const vector<int> &x2); 
 
 template<typename xpu>
 class ListTextDataLayer : public Layer<xpu>{
@@ -68,18 +73,24 @@ class ListTextDataLayer : public Layer<xpu>{
     std::istringstream iss;
     int len_s1 = 0;
     int len_s2 = 0;
+	int label = -1;
     iss.clear();
     iss.seekg(0, iss.beg);
     iss.str(line);
-    iss >> label_set[idx] >> len_s1 >> len_s2;
-    length_set[idx][0] = len_s1;
-    length_set[idx][1] = len_s2;
+    iss >> label >> len_s1 >> len_s2;
+	label_set.push_back(label);
+
+	vector<int> q(len_s1);
     for (int j = 0; j < len_s1; ++j) {
-      iss >> data_set[idx][0][j];
+      iss >> q[j];
     }
+	q_data_set.push_back(q);
+
+	vector<int> a(len_s2);
     for (int j = 0; j < len_s2; ++j) {
-      iss >> data_set[idx][1][j];
+      iss >> a[j];
     }
+	a_data_set.push_back(a);
   }
 
   void ReadTextData() {
@@ -97,33 +108,37 @@ class ListTextDataLayer : public Layer<xpu>{
     
     line_count = lines.size();
 
-    // Calculate max list length
-    max_list_len = 0;
-    int list_len = 0;
-    for (int i = 0; i < line_count; ++i) {
-      int label = ReadLabel(lines[i]);
-      if (label == 1) {
-        max_list_len = max(max_list_len, list_len);
-        list_len = 1;
-      } else {
-        list_len += 1;
-      }
-    }
-        
-    data_set.Resize(mshadow::Shape3(line_count, 2, max_doc_len));
-    length_set.Resize(mshadow::Shape2(line_count, 2));
-    label_set.Resize(mshadow::Shape1(line_count), 0);
-    data_set = -1;
-    length_set = 0;
-    
-    utils::Printf("Line count in file: %d\n", line_count);
-    utils::Printf("Max list length: %d\n", max_list_len);
-
     for (int i = 0; i < line_count; ++i) {
       ReadLine(i, lines[i]);
     }
+
+	MakeLists(label_set, list_set);
+
+    utils::Printf("Line count in file: %d\n", line_count);
+    utils::Printf("Max list length: %d\n", max_list);
   }
   
+  void MakeLists(vector<int> &label_set, vector<vector<int> > &list_set) {
+    vector<int> list;
+    max_list = 0;
+    list.push_back(0);
+    for (int i = 1; i < line_count; ++i) {
+      if (label_set[i] == 1) {
+        list_set.push_back(list);
+        max_list = std::max(max_list, (int)list.size());
+        list = vector<int>();
+        list.push_back(i);
+      } else {
+        list.push_back(i);
+      }
+    }
+    list_set.push_back(list);
+    max_list = std::max(max_list, (int)list.size());
+
+    // for speed up we can sort list by list.size()
+    sort(list_set.begin(), list_set.end(), list_size_cmp);
+  }
+
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top,
                        bool show_info = false) {
@@ -134,8 +149,8 @@ class ListTextDataLayer : public Layer<xpu>{
     
     utils::Check(max_doc_len > 0, "max_doc_len <= 0");
 
-    top[0]->Resize(max_list_len, 2, 1, max_doc_len, true);
-    top[1]->Resize(max_list_len, 1, 1, 1, true);
+    top[0]->Resize(max_list, 2, 1, max_doc_len, true);
+    top[1]->Resize(max_list, 1, 1, 1, true);
     
     if (show_info) {
         top[0]->PrintShape("top0");
@@ -147,15 +162,9 @@ class ListTextDataLayer : public Layer<xpu>{
                             const std::vector<Node<xpu>*> &top) {
     // Check for reshape
     bool need_reshape = false;
-    utils::Check(label_set[line_ptr] == 1, 
-            "ListTextDataLayer: do not begin with 1.");
-    int list_len = 1;
-    while (label_set[ (line_ptr+list_len) % line_count ] != 1) {
-        ++list_len;
-    }
-    if (max_list_len != list_len) {
+    if (max_list != list_set[line_ptr].size()) {
         need_reshape = true;
-        max_list_len = list_len;
+        max_list = list_set[line_ptr].size();
     }
 
     // Do reshape 
@@ -170,24 +179,24 @@ class ListTextDataLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 3> top0_data = top[0]->data_d3();
     mshadow::Tensor<xpu, 2> top0_length = top[0]->length;
     mshadow::Tensor<xpu, 1> top1_data = top[1]->data_d1();
-    bool list_begin = true;
-    bool list_end = false;
-    for (int i = 0; i < max_list_len; ++i) {
-      if ( list_end || (label_set[line_ptr] == 1 && !list_begin) ) {
-        top0_data[i] = -1;
-        top0_length[i] = 0;
-        top1_data[i] = -1;
-        list_end = true;
-        // utils::Printf(".");
-      } else {
-        top0_data[i] = F<op::identity>(data_set[line_ptr]);
-        top0_length[i] = F<op::identity>(length_set[line_ptr]);
-        top1_data[i] = label_set[line_ptr];
-        line_ptr = (line_ptr + 1) % line_count;
-        if (list_begin) list_begin = false;
-        // utils::Printf("x");
-      }
+
+	top0_data = -1;
+	top0_length = 0;
+	top1_data = -1;
+
+    for (int i = 0; i < list_set[line_ptr].size(); ++i) {
+	  int idx = list_set[line_ptr][i];
+	  for (int j = 0; j < q_data_set[idx].size(); ++j) {
+		top0_data[i][0][j] = q_data_set[idx][j];
+	  }
+	  for (int j = 0; j < a_data_set[idx].size(); ++j) {
+		top0_data[i][1][j] = a_data_set[idx][j];
+	  }
+      top0_length[i][0] = q_data_set[idx].size();
+	  top0_length[i][1] = a_data_set[idx].size();
+      top1_data[i] = label_set[idx];
     }
+    line_ptr = (line_ptr + 1) % list_set.size();
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
@@ -202,12 +211,14 @@ class ListTextDataLayer : public Layer<xpu>{
   int max_doc_len;
   int min_doc_len;
   bool shuffle;
-  mshadow::TensorContainer<xpu, 3> data_set;
-  mshadow::TensorContainer<xpu, 2> length_set;
-  mshadow::TensorContainer<xpu, 1> label_set;
+  vector<vector<int> > q_data_set;
+  vector<vector<int> > a_data_set;
+  vector<int> label_set;
   int line_count;
-  int max_list_len;
+  int max_list;
   int line_ptr;
+
+  vector<vector<int> > list_set;
 };
 }  // namespace layer
 }  // namespace textnet

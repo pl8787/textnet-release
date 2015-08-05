@@ -53,7 +53,7 @@ class ActivationLayer : public Layer<xpu>{
                             const std::vector<Node<xpu>*> &top) {
     // Check for reshape
     bool need_reshape = false;
-    if (bottom[0]->data.shape_ != top[0]->data.shape_) {
+    if (! (bottom[0]->data.shape_ == top[0]->data.shape_)) {
         need_reshape = true;
     }
 

@@ -2353,7 +2353,7 @@ void TestListTextDataLayer(mshadow::Random<cpu>* prnd) {
   tops.push_back(&top2);
 
   map<string, SettingV> setting;
-  setting["data_file"] = SettingV("/home/pangliang/matching/data/webscope/qa_instances.train.dat");
+  setting["data_file"] = SettingV("/home/pangliang/matching/data/webscope/qa_instances.test.dat");
   setting["max_doc_len"] = SettingV(32);
   setting["min_doc_len"] = SettingV(5);
   
@@ -2367,8 +2367,8 @@ void TestListTextDataLayer(mshadow::Random<cpu>* prnd) {
   layer_list_textdata->Forward(bottoms, tops);
   layer_list_textdata->Backprop(bottoms, tops);
 
-  // PrintTensor("top1", top1.data);
-  // PrintTensor("top2", top2.data);
+  PrintTensor("top1", top1.data);
+  PrintTensor("top2", top2.data);
 }
 
 void TestQATextDataLayer(mshadow::Random<cpu>* prnd) {
@@ -2562,7 +2562,7 @@ int main(int argc, char *argv[]) {
   // TestMatchMultiLayer(&rnd);
   // TestBatchCombineLayer(&rnd);
   // TestPairTextDataLayer(&rnd);
-  // TestListTextDataLayer(&rnd);
+  TestListTextDataLayer(&rnd);
   // TestGateLayer(&rnd);
   // TestDiagRecurrentLayer(&rnd);
   // TestNegativeSampleLossLayer(&rnd);
@@ -2576,7 +2576,7 @@ int main(int argc, char *argv[]) {
   // TestSumLayer(&rnd);
   // TestTopkPoolingLayer(&rnd);
   // TestHingeLossLayer(&rnd);
-  TestListwiseMeasureLayer(&rnd);
+  // TestListwiseMeasureLayer(&rnd);
   // TestQATextDataLayer(&rnd);
   return 0;
 }

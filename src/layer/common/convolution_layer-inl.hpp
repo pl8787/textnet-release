@@ -125,7 +125,7 @@ class ConvolutionLayer : public Layer<xpu> {
     mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in[0], channel_out, 
                    (shape_in[2] + pad_y * 2 - kernel_y) / stride + 1,
                    (shape_in[3] + pad_x * 2 - kernel_x) / stride + 1);
-    if (shape_out != top[0]->data.shape_) {
+    if (! (shape_out == top[0]->data.shape_)) {
         need_reshape = true;
     }
 
