@@ -47,7 +47,7 @@ class SplitLayer : public Layer<xpu>{
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top,
-					   bool show_info = false) {
+                       bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(),
                   "SplitLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
@@ -61,49 +61,42 @@ class SplitLayer : public Layer<xpu>{
     top[0]->Resize(nbatch, 1, doc_len, feat_size, true);
     top[1]->Resize(nbatch, 1, doc_len, feat_size, true);
 
-	if (show_info) {
-		bottom[0]->PrintShape("bottom0");
-		top[0]->PrintShape("top0");
-		top[1]->PrintShape("top1");
-	}
+    if (show_info) {
+        bottom[0]->PrintShape("bottom0");
+        top[0]->PrintShape("top0");
+        top[1]->PrintShape("top1");
+    }
   }
   
   virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,
-							const std::vector<Node<xpu>*> &top) {
-	// Check for reshape
-	bool need_reshape = false;
-	utils::Check(doc_len == bottom[0]->data.size(2), 
-			"Split Layer: doc_len.");
-	utils::Check(feat_size == bottom[0]->data.size(3),
-			"Split Layer: feat_size.");
-	if (nbatch != bottom[0]->data.size(0)) {
-		need_reshape = true;
-		nbatch = bottom[0]->data.size(0);
-	}
+                            const std::vector<Node<xpu>*> &top) {
+    // Check for reshape
+    bool need_reshape = false;
+    if (nbatch != bottom[0]->data.size(0)) {
+        need_reshape = true;
+    }
 
-	// Do reshape 
-	if (need_reshape) {
-		top[0]->Resize(nbatch, 1, doc_len, feat_size, true);
-		top[1]->Resize(nbatch, 1, doc_len, feat_size, true);
-		utils::Printf(".");
-	}
+    // Do reshape 
+    if (need_reshape) {
+        this->Reshape(bottom, top);
+    }
   }
 
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
-	mshadow::Tensor<xpu, 2> bottom_len = bottom[0]->length;
+    mshadow::Tensor<xpu, 2> bottom_len = bottom[0]->length;
     mshadow::Tensor<xpu, 4> top0_data = top[0]->data;
     mshadow::Tensor<xpu, 4> top1_data = top[1]->data;
-	mshadow::Tensor<xpu, 2> top0_len = top[0]->length;
-	mshadow::Tensor<xpu, 2> top1_len = top[1]->length;
+    mshadow::Tensor<xpu, 2> top0_len = top[0]->length;
+    mshadow::Tensor<xpu, 2> top1_len = top[1]->length;
     
     for (int i = 0; i < nbatch; i++) {
       top0_data[i] = F<op::identity>(bottom_data[i].Slice(0, 1));
       top1_data[i] = F<op::identity>(bottom_data[i].Slice(1, 2));
-	  top0_len[i] = F<op::identity>(bottom_len[i].Slice(0, 1));
-	  top1_len[i] = F<op::identity>(bottom_len[i].Slice(1, 2));
+      top0_len[i] = F<op::identity>(bottom_len[i].Slice(0, 1));
+      top1_len[i] = F<op::identity>(bottom_len[i].Slice(1, 2));
     }
   }
   

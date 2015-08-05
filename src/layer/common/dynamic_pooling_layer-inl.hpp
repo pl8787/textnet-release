@@ -46,7 +46,7 @@ class DynamicPoolingLayer : public Layer<xpu>{
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top,
-					   bool show_info = false) {
+                       bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(), "DynamicPoolingLayer: bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "DynamicPoolingLayer: top size problem.");
 
@@ -60,12 +60,12 @@ class DynamicPoolingLayer : public Layer<xpu>{
     pos_row.Resize(shape_out, true);
     pos_col.Resize(shape_out, true);
 
-	if (show_info) {
-		bottom[0]->PrintShape("bottom0");
-		bottom[1]->PrintShape("bottom1");
-		bottom[2]->PrintShape("bottom2");
-		top[0]->PrintShape("top0");
-	}
+    if (show_info) {
+        bottom[0]->PrintShape("bottom0");
+        bottom[1]->PrintShape("bottom1");
+        bottom[2]->PrintShape("bottom2");
+        top[0]->PrintShape("top0");
+    }
   }
 
   typedef mshadow::Tensor<xpu,2> Tensor2D;
