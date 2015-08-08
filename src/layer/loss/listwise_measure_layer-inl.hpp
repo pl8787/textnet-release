@@ -8,6 +8,8 @@
 #include <utility>
 #include <vector>
 #include <algorithm>
+#include <random>
+#include <chrono>
 
 #include <mshadow/tensor.h>
 #include "../layer.h"
@@ -98,6 +100,10 @@ class ListwiseMeasureLayer : public Layer<xpu>{
           break;
       score_list.push_back( make_pair(bottom0_data[i][col], bottom1_data[i]) );
     }
+
+	// shuffle before sort!
+	unsigned seed = std::chrono::system_clock::now ().time_since_epoch ().count ();
+	std::shuffle (score_list.begin (), score_list.end (), std::default_random_engine (seed)); 
 
     sort(score_list.begin(), score_list.end(), list_cmp);
 

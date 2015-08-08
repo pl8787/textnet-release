@@ -25,6 +25,7 @@ class TextDataLayer : public Layer<xpu>{
   virtual void Require() {
     // default value, just set the value you want
     this->defaults["min_doc_len"] = SettingV(1);
+	this->defaults["shuffle"] = SettingV(false);
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["data_file"] = SettingV();
@@ -49,6 +50,7 @@ class TextDataLayer : public Layer<xpu>{
     batch_size = setting["batch_size"].iVal();
     max_doc_len = setting["max_doc_len"].iVal();
     min_doc_len = setting["min_doc_len"].iVal();
+	shuffle = setting["shuffle"].bVal();
     
     ReadTextData();
     
@@ -128,6 +130,9 @@ class TextDataLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 2> top0_length = top[0]->length;
     mshadow::Tensor<xpu, 1> top1_data = top[1]->data_d1();
     for (int i = 0; i < batch_size; ++i) {
+      if (shuffle) {
+        line_ptr = rand() % line_count;
+      } 
       top0_data[i] = F<op::identity>(data_set[line_ptr]);
 	  top0_length[i] = F<op::identity>(length_set[line_ptr]);
       top1_data[i] = label_set[line_ptr];
@@ -146,6 +151,7 @@ class TextDataLayer : public Layer<xpu>{
   int batch_size;
   int max_doc_len;
   int min_doc_len;
+  bool shuffle;
   mshadow::TensorContainer<xpu, 3> data_set;
   mshadow::TensorContainer<xpu, 2> length_set;
   mshadow::TensorContainer<xpu, 1> label_set;

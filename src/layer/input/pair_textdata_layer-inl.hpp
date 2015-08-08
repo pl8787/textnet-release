@@ -154,6 +154,10 @@ class PairTextDataLayer : public Layer<xpu>{
     }
   }
   
+  virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,
+                            const std::vector<Node<xpu>*> &top) {
+  }
+
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
