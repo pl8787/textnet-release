@@ -118,7 +118,8 @@ class WordClassInputLayer : public Layer<xpu>{
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(),
                   "WordClassInputLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
@@ -126,6 +127,11 @@ class WordClassInputLayer : public Layer<xpu>{
     top[0]->Resize(batch_size, 1, 1, max_doc_len, true);                // x
     top[1]->Resize(batch_size, position_num, 1, 1, true);               // pos
     top[2]->Resize(batch_size, position_num, 1, 1, true);               // y
+	if (show_info) {
+		top[0]->PrintShape("top0");
+		top[1]->PrintShape("top1");
+		top[2]->PrintShape("top2");
+	}
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

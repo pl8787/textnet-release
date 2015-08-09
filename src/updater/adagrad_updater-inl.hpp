@@ -101,7 +101,7 @@ class AdagradUpdater : public Updater<xpu, dim>{
     int w_idx = -1;
     for (int i = 0; i < idx.size(0); ++i) {
       w_idx = idx[i];
-      utils::Assert(w_idx >= 0 && w_idx < data.size(0), "");
+      utils::Assert(w_idx >= 0 && w_idx < data.size(0), "Adagrad Sparse Update index error.");
 
       mshadow::Tensor<xpu, dim> sumGradSquareRow = sumGradSquare.Slice(w_idx, w_idx+1);
       mshadow::Tensor<xpu, dim> diffRow = diff.Slice(i, i+1);

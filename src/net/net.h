@@ -75,6 +75,7 @@ class Net : public INet{
  public:
   Net() {
     need_reshape = false;
+	var_batch = false;
     model_save_interval = 0;
     InitSettingEngine();
   }
@@ -212,6 +213,11 @@ class Net : public INet{
         utils::Printf("Set need_reshape to %d\n", need_reshape);
     }
 
+	if (!root["var_batch"].isNull()) {
+		var_batch = root["var_batch"].asBool();
+		utils::Printf("Set var_batch to %d\n", var_batch);
+	}
+
 	ReadNetConfig();
 	ReadLayers();
 	ReadNodes();
@@ -224,6 +230,7 @@ class Net : public INet{
 
 	// Set init phrase type
 	phrase_type = kInit;
+	cur_tag = "";
   }
 
   void ReadNetConfig() {
@@ -492,7 +499,7 @@ class Net : public INet{
       utils::Printf("[layer] set layer %s\n", nets[tag][i]->layer_name.c_str());
       nets[tag][i]->SetupLayer(layers_root[layer_idx], 
           bottom_vecs[layer_idx], top_vecs[layer_idx], prnd);
-      nets[tag][i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+      nets[tag][i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx], true);
     }
   }
 
@@ -500,15 +507,17 @@ class Net : public INet{
     utils::Printf("[Process] Reshape network.\n");
     for (int i = 0; i < nets[tag].size(); ++i) {
       int layer_idx = nets[tag][i]->layer_idx;
-      nets[tag][i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+      nets[tag][i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx], false);
     }
   }
   
   virtual void SetPhrase(string tag, PhraseType phrase) {
-    if (phrase_type == phrase) return;
+    if (phrase_type == phrase && cur_tag == tag) return;
 
+	utils::Printf("[Process] Set Tag to %s.\n", tag.c_str());
     utils::Printf("[Process] Set Phrase to %d.\n", phrase);
     phrase_type = phrase;
+	cur_tag = tag;
     for (int i = 0; i < nets[tag].size(); ++i) {
       nets[tag][i]->SetPhrase(phrase);
     }
@@ -518,6 +527,8 @@ class Net : public INet{
   virtual void Forward(string tag) {
       for (int i = 0; i < nets[tag].size(); ++i) {
         int layer_idx = nets[tag][i]->layer_idx;
+		if (var_batch)
+			nets[tag][i]->CheckReshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
         nets[tag][i]->Forward(bottom_vecs[layer_idx], top_vecs[layer_idx]);
 #if DEBUG
         cout << "Feed " ;
@@ -897,10 +908,14 @@ class Net : public INet{
   vector<vector<Node<xpu>*> > top_vecs;
   // phrase type
   PhraseType phrase_type;
+  // current tag
+  string cur_tag;
   // Config
   Json::Value root;
-  // need reshape
+  // need reshape : when change tag/phrase change shape
   bool need_reshape;
+  // var batch : every batch is different, need check
+  bool var_batch;
   // node list
   vector<Node<xpu>*> node_list;
 

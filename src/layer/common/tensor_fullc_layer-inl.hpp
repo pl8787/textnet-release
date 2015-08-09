@@ -113,7 +113,8 @@ class TensorFullConnectLayer : public Layer<xpu> {
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(), "TensorFullConnectionLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "TensorFullConnectionLayer:top size problem.");
     
@@ -123,8 +124,10 @@ class TensorFullConnectLayer : public Layer<xpu> {
     out_product.Resize(batch_size, d_input, d_input, 1, true);
     top[0]->Resize(batch_size, d_hidden, 1, 1, true);
 
-	bottom[0]->PrintShape("bottom0");
-	top[0]->PrintShape("top0");
+	if (show_info) {
+		bottom[0]->PrintShape("bottom0");
+		top[0]->PrintShape("top0");
+	}
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

@@ -76,7 +76,8 @@ class ConvolutionalLstmLayer : public Layer<xpu> {
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(), "ConvolutionalLstmLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "ConvolutionalLstmLayer:top size problem.");
     utils::Check(bottom[0]->data.size(0) == bottom[1]->data.size(0), "ConvolutionalLstmLayer:bottom size problem.");
@@ -96,10 +97,12 @@ class ConvolutionalLstmLayer : public Layer<xpu> {
     concat_input_data = 0.f;
     concat_input_diff = 0.f;
 
-	bottom[0]->PrintShape("ConvolutionalLstm: bottom_0");
-	bottom[1]->PrintShape("ConvolutionalLstm: bottom_1");
-	bottom[2]->PrintShape("ConvolutionalLstm: bottom_2");
-	top[0]->PrintShape("ConvolutionalLstm: top_0");
+	if (show_info) {
+		bottom[0]->PrintShape("ConvolutionalLstm: bottom_0");
+		bottom[1]->PrintShape("ConvolutionalLstm: bottom_1");
+		bottom[2]->PrintShape("ConvolutionalLstm: bottom_2");
+		top[0]->PrintShape("ConvolutionalLstm: top_0");
+	}
   }
 
   typedef mshadow::Tensor<xpu, 4> Tensor4D;

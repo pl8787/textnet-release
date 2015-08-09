@@ -77,18 +77,37 @@ class FullConnectLayer : public Layer<xpu> {
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+                       bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(),
                   "FullConnectionLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "FullConnectionLayer:top size problem.");
     
     mshadow::Tensor<xpu, 2> bottom_data = bottom[0]->data_d2();
-    
-    top[0]->Resize(bottom_data.size(0), num_hidden, 1, 1, true);
 
-	bottom[0]->PrintShape("bottom0");
-	top[0]->PrintShape("top0");
+    nbatch = bottom_data.size(0);
+    
+    top[0]->Resize(nbatch, num_hidden, 1, 1, true);
+
+    if (show_info) {
+        bottom[0]->PrintShape("bottom0");
+        top[0]->PrintShape("top0");
+    }
+  }
+
+  virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,
+                            const std::vector<Node<xpu>*> &top) {
+    // Check for reshape
+    bool need_reshape = false;
+    if (nbatch != bottom[0]->data.size(0)) {
+        need_reshape = true;
+    }
+
+    // Do reshape 
+    if (need_reshape) {
+        this->Reshape(bottom, top);
+    }
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
@@ -127,6 +146,7 @@ class FullConnectLayer : public Layer<xpu> {
   int num_input;
   int num_hidden;
   bool no_bias;
+  int nbatch;
 
 };
 }  // namespace layer

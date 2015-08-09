@@ -119,13 +119,18 @@ class LstmAutoencoderInputLayer : public Layer<xpu>{
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(),
                   "LstmAutoencoderInputLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "LstmAutoencoderInputLayer:top size problem.");
     top[0]->Resize(batch_size, 1, 1, max_doc_len*2, true);              // x
     top[1]->Resize(batch_size, max_doc_len*2, 1, 1, true);              // y
+	if (show_info) {
+		top[0]->PrintShape("top0");
+		top[1]->PrintShape("top1");
+	}
   }
   typedef mshadow::Tensor<xpu, 3, float> Tensor3D;
 

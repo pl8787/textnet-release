@@ -48,7 +48,8 @@ class AccuracyLayer : public Layer<xpu>{
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(),
                   "AccuracyLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
@@ -56,6 +57,9 @@ class AccuracyLayer : public Layer<xpu>{
     nbatch = bottom[0]->data.size(0);  
     ncategory = bottom[0]->data.size(1);              
     top[0]->Resize(1, 1, 1, 1, true);
+	if (show_info) {
+		top[0]->PrintShape("top0");
+	}
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

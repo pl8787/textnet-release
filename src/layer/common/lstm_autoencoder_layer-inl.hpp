@@ -192,7 +192,8 @@ class LstmAutoencoderLayer : public Layer<xpu> {
   
   // bottom should be padded with only one zero on both sides
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(), "LstmAutoencoderLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "LstmAutoencoderLayer:top size problem.");
     
@@ -207,8 +208,10 @@ class LstmAutoencoderLayer : public Layer<xpu> {
     c_er.Resize(shape_out, 0.f);
     g_er.Resize(shape_gate, 0.f);
 
-	bottom[0]->PrintShape("bottom0");
-	top[0]->PrintShape("top0");
+	if (show_info) {
+		bottom[0]->PrintShape("bottom0");
+		top[0]->PrintShape("top0");
+	}
   }
 
   void checkNan(float *p, int l) {

@@ -12,9 +12,9 @@ ifdef CUSTOM_CXX
 endif
 
 ifeq ($(COMPILE_VERSION), debug)
-CXXFLAGS += -g -Ddebug -I./mshadow/
+CXXFLAGS += -g -Ddebug -I./mshadow/ -std=c++11
 else
-CXXFLAGS += -Wall -O3 -msse3 -Wno-unknown-pragmas -funroll-loops -I./mshadow/
+CXXFLAGS += -Wall -O3 -msse3 -Wno-unknown-pragmas -funroll-loops -I./mshadow/ -std=c++11
 endif
 
 CUDA_INCLUDE_DIR := $(CUDA_DIR)/include

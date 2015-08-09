@@ -35,15 +35,32 @@ class ActivationLayer : public Layer<xpu>{
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+                       bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(),
                   "ActivationLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "ActivationLayer:top size problem.");
     top[0]->Resize(bottom[0]->data.shape_);
 
-	  bottom[0]->PrintShape("bottom0");
-	  top[0]->PrintShape("top0");
+    if (show_info) {
+      bottom[0]->PrintShape("bottom0");
+      top[0]->PrintShape("top0");
+    }
+  }
+
+  virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,
+                            const std::vector<Node<xpu>*> &top) {
+    // Check for reshape
+    bool need_reshape = false;
+    if (! (bottom[0]->data.shape_ == top[0]->data.shape_)) {
+        need_reshape = true;
+    }
+
+    // Do reshape 
+    if (need_reshape) {
+        this->Reshape(bottom, top);
+    }
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

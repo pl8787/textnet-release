@@ -110,7 +110,8 @@ class MaxRecurrentLayer : public Layer<xpu> {
   
   // bottom should be padded with only one zero on both sides
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(), "MaxRecurrentLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "MaxRecurrentLayer:top size problem.");
     

@@ -104,7 +104,8 @@ class DiagRecurrentLayer : public Layer<xpu> {
   
   // bottom should be padded with only one zero on both sides
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(), "DiagRecurrentLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "DiagRecurrentLayer:top size problem.");
     
@@ -112,10 +113,12 @@ class DiagRecurrentLayer : public Layer<xpu> {
     mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in[0], shape_in[1], shape_in[2], d_mem);
     top[0]->Resize(shape_out, true);
 
-	bottom[0]->PrintShape("bottom0");
-	bottom[1]->PrintShape("bottom1");
-	bottom[2]->PrintShape("bottom2");
-	top[0]->PrintShape("top0");
+	if (show_info) {
+		bottom[0]->PrintShape("bottom0");
+		bottom[1]->PrintShape("bottom1");
+		bottom[2]->PrintShape("bottom2");
+		top[0]->PrintShape("top0");
+	}
   }
 
   void checkNan(float *p, int l) {

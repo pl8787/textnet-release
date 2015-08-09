@@ -83,7 +83,8 @@ class GatingLayer : public Layer<xpu> {
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(), "GatingLayer: bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "GatingLayer: top size problem.");
     
@@ -102,8 +103,10 @@ class GatingLayer : public Layer<xpu> {
 	word_p_diff.Resize(mshadow::Shape2(total_words, feat_size));
 	word_sum.Resize(mshadow::Shape1(total_words));
 
-	bottom[0]->PrintShape("bottom0");
-	top[0]->PrintShape("top0");
+	if (show_info) {
+		bottom[0]->PrintShape("bottom0");
+		top[0]->PrintShape("top0");
+	}
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

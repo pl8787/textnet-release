@@ -76,7 +76,9 @@ const int kOneHot = 1000;
 const int kMatchTensor = 1001;
 const int kMatchWeightedDot = 1002;
 const int kMatchTensorFact = 1003;
-const int kGru = 1004;
+const int kMatchMulti = 1004;
+const int kBatchCombine = 1005;
+const int kGru = 1006;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;
@@ -89,6 +91,7 @@ const int kCrossEntropyLoss = 57;
 const int kNegativeSampleLoss = 58;
 const int kWordClassSoftmaxLoss = 59;
 const int kLstmAutoencoderSoftmaxLoss = 60;
+const int kListwiseMeasure = 61;
 
 // Input Layer 71-
 const int kTextData = 71;
@@ -99,6 +102,9 @@ const int kWordClassInput = 75;
 const int kLabelFeatValue = 76;
 const int kLstmAutoencoderInput = 77;
 const int kMatchPhraseRep = 78;
+const int kPairTextData = 79;
+const int kListTextData = 80;
+const int kQATextData = 81;
 
 /*! \brief these are enumeration */
 const int kInit = -1;
@@ -154,7 +160,13 @@ class Layer {
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {}
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = true) {}
+
+  virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,
+                       const std::vector<Node<xpu>*> &top) {
+	utils::Printf("No implement CheckReshape in %s(%d) layer.\n", this->layer_name.c_str(), this->layer_type);
+  }
 
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) = 0;

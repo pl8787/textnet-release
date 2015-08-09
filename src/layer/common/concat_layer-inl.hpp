@@ -41,7 +41,8 @@ class ConcatLayer : public Layer<xpu>{
   
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top) {
+                       const std::vector<Node<xpu>*> &top,
+					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(), "ConcatLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "ConcatLayer:top size problem.");
 
@@ -60,10 +61,38 @@ class ConcatLayer : public Layer<xpu>{
     shape_out[concat_dim_index] = out_size;
     top[0]->Resize(shape_out, true);
 
-    for (int i = 0; i < nBottomNode; ++i) {
-	  bottom[i]->PrintShape("bottom_i");
+	if (show_info) {
+		for (int i = 0; i < nBottomNode; ++i) {
+			bottom[i]->PrintShape("bottom_i");
+		}
+		top[0]->PrintShape("top0");
+	}
+  }
+
+  virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,
+                            const std::vector<Node<xpu>*> &top) {
+    // Check for reshape
+    bool need_reshape = false;
+    int out_size = 0;
+    mshadow::Shape<4> shape_in_0 = bottom[0]->data.shape_;
+    for (int i = 0; i < BottomNodeNum(); ++i) {
+      mshadow::Shape<4> shape_in = bottom[i]->data.shape_;
+      out_size += shape_in[concat_dim_index];
+      for (int dim = 0; dim < 4; ++dim) {
+        if (dim == concat_dim_index) 
+            continue;
+        utils::Check(shape_in[dim] == shape_in_0[dim], "ConcatLayer: bottom size problem");
+      }
     }
-	top[0]->PrintShape("top0");
+
+    if ( !(shape_in_0 == top[0]->data.shape_) ) {
+        need_reshape = true;
+    }
+
+    // Do reshape 
+    if (need_reshape) {
+        this->Reshape(bottom, top);
+    }
   }
 
   // void checkNan(float *p, int l) {
