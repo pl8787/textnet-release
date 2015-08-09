@@ -27,7 +27,9 @@ class MatchTensorFactLayer : public Layer<xpu>{
     // default value, just set the value you want
     this->defaults["interval"] = SettingV(1); 
     this->defaults["is_var_len"] = SettingV(true); 
+    this->defaults["is_use_linear"] = SettingV(true); 
     this->defaults["is_init_as_I"] = SettingV(true);
+    this->defaults["is_update_tensor"] = SettingV(true);
     
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -64,6 +66,8 @@ class MatchTensorFactLayer : public Layer<xpu>{
     d_factor = setting["d_factor"].iVal();
     is_var_len = setting["is_var_len"].bVal();
     is_init_as_I = setting["is_init_as_I"].bVal();
+    is_update_tensor = setting["is_update_tensor"].bVal();
+    is_use_linear = setting["is_use_linear"].bVal();
     interval = setting["interval"].iVal();
     t_l2 = setting["t_l2"].fVal();
 	feat_size = bottom[0]->data.size(3);
@@ -123,6 +127,8 @@ class MatchTensorFactLayer : public Layer<xpu>{
                   
     bottom_0_transform.Resize(batch_size, doc_len, d_hidden, d_factor);
     bottom_1_transform.Resize(batch_size, doc_len, d_hidden, d_factor);
+    bottom_0_transform_linear.Resize(batch_size, 1, doc_len, d_hidden);
+    bottom_1_transform_linear.Resize(batch_size, 1, doc_len, d_hidden);
     top[0]->Resize(batch_size, d_hidden, doc_len, doc_len, true);
 
     bottom[0]->PrintShape("bottom0");
@@ -142,7 +148,12 @@ class MatchTensorFactLayer : public Layer<xpu>{
     Tensor2D bottom0_data_d2 = bottom[0]->data_d2_reverse();
     Tensor2D bottom1_data_d2 = bottom[1]->data_d2_reverse();
     Tensor2D t_data = this->params[0].data_d2();
+    Tensor2D w_data = this->params[1].data_d2();
 
+    if (is_use_linear) {
+      bottom_0_transform_linear.data_d2_reverse() = dot(bottom0_data_d2, w_data);
+      bottom_1_transform_linear.data_d2_reverse() = dot(bottom1_data_d2, w_data);
+    }
     // without consider var len
     bottom_0_transform.data_d2_middle() = dot(bottom0_data_d2, t_data);
     bottom_1_transform.data_d2_middle() = dot(bottom1_data_d2, t_data);
@@ -160,6 +171,10 @@ class MatchTensorFactLayer : public Layer<xpu>{
       for (int i = 0; i < len_0; i+=interval) {
         for (int j = 0; j < len_1; j+=interval) {
           for (int d = 0; d < d_hidden; ++d) {
+            if (is_use_linear) {
+              top_data[batch_idx][d][i][j] += bottom_0_transform_linear.data[batch_idx][0][i][d];
+              top_data[batch_idx][d][i][j] += bottom_1_transform_linear.data[batch_idx][0][j][d];
+            }
             for (int f = 0; f < d_factor; ++f) {
               top_data[batch_idx][d][i][j] += bottom_0_transform.data[batch_idx][i][d][f] * \
                                               bottom_1_transform.data[batch_idx][j][d][f];
@@ -178,6 +193,7 @@ class MatchTensorFactLayer : public Layer<xpu>{
 	Tensor1D bottom1_len = bottom[1]->length_d1();
 
     bottom_0_transform.diff = 0.f, bottom_1_transform.diff = 0.f;
+    bottom_0_transform_linear.diff = 0.f, bottom_1_transform_linear.diff = 0.f;
     // compute dot
     for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
       int len_0 = -1, len_1 = -1;
@@ -191,6 +207,10 @@ class MatchTensorFactLayer : public Layer<xpu>{
       for (int i = 0; i < len_0; i+=interval) {
         for (int j = 0; j < len_1; j+=interval) {
           for (int d = 0; d < d_hidden; ++d) {
+            if (is_use_linear) {
+              bottom_0_transform_linear.diff[batch_idx][0][i][d] += top_diff[batch_idx][d][i][j];
+              bottom_1_transform_linear.diff[batch_idx][0][j][d] += top_diff[batch_idx][d][i][j];
+            }
             for (int f = 0; f < d_factor; ++f) {
               bottom_0_transform.diff[batch_idx][i][d][f] += top_diff[batch_idx][d][i][j] * \
                                                              bottom_1_transform.data[batch_idx][j][d][f];
@@ -208,10 +228,21 @@ class MatchTensorFactLayer : public Layer<xpu>{
     Tensor2D bottom1_diff_d2 = bottom[1]->diff_d2_reverse();
     Tensor2D t_data = this->params[0].data_d2();
     Tensor2D t_diff = this->params[0].diff_d2();
-    t_diff += dot(bottom0_data_d2.T(), bottom_0_transform.diff_d2_middle());
-    t_diff += dot(bottom1_data_d2.T(), bottom_1_transform.diff_d2_middle());
+    Tensor2D w_data = this->params[1].data_d2();
+    Tensor2D w_diff = this->params[1].diff_d2();
+    if (is_update_tensor) {
+      t_diff += dot(bottom0_data_d2.T(), bottom_0_transform.diff_d2_middle());
+      t_diff += dot(bottom1_data_d2.T(), bottom_1_transform.diff_d2_middle());
+    }
     bottom0_diff_d2 += dot(bottom_0_transform.diff_d2_middle(), t_data.T());
     bottom1_diff_d2 += dot(bottom_1_transform.diff_d2_middle(), t_data.T());
+
+    if (is_use_linear) {
+      w_diff += dot(bottom0_data_d2.T(), bottom_0_transform_linear.diff_d2_reverse());
+      w_diff += dot(bottom1_data_d2.T(), bottom_1_transform_linear.diff_d2_reverse());
+      bottom0_diff_d2 += dot(bottom_0_transform_linear.diff_d2_reverse(), w_data.T());
+      bottom1_diff_d2 += dot(bottom_1_transform_linear.diff_d2_reverse(), w_data.T());
+    }
 
     // l2 by diag_4_reg
     if (t_l2 > 0.) {
@@ -221,9 +252,10 @@ class MatchTensorFactLayer : public Layer<xpu>{
   
  protected:
   int doc_len, feat_size, batch_size, interval, d_hidden, d_factor;
-  bool is_var_len, is_init_as_I;
+  bool is_var_len, is_init_as_I, is_use_linear, is_update_tensor;
   float t_l2;
   Node<xpu> bottom_0_transform, bottom_1_transform, diag_4_reg; // tensor layer is essentially a transform layer followed by a dot producttion
+  Node<xpu> bottom_0_transform_linear, bottom_1_transform_linear; // this is for w in tensor layer
 };
 }  // namespace layer
 }  // namespace textnet

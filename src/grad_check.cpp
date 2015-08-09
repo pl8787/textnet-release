@@ -279,6 +279,8 @@ void TestMatchTensorFactLayer(mshadow::Random<cpu>* prnd) {
   {
     setting["d_hidden"] = SettingV(2);
     setting["d_factor"] = SettingV(2);
+    setting["t_l2"] = SettingV(0);
+    setting["is_init_as_I"] = SettingV(false);
       
     map<string, SettingV> &t_filler = *(new map<string, SettingV>());
       t_filler["init_type"] = SettingV(initializer::kUniform);
@@ -305,10 +307,10 @@ void TestMatchTensorFactLayer(mshadow::Random<cpu>* prnd) {
   layer_match->SetupLayer(setting, bottoms, tops, prnd);
   layer_match->Reshape(bottoms, tops);
 
-  layer_match->Forward(bottoms, tops);
-  PrintTensor("bottom1", bottom1.data);
-  PrintTensor("bottom2", bottom2.data);
-  PrintTensor("top", top.data);
+  // layer_match->Forward(bottoms, tops);
+  // PrintTensor("bottom1", bottom1.data);
+  // PrintTensor("bottom2", bottom2.data);
+  // PrintTensor("top", top.data);
 
   using namespace checker;
   Checker<cpu> * cker = CreateChecker<cpu>();
@@ -316,10 +318,14 @@ void TestMatchTensorFactLayer(mshadow::Random<cpu>* prnd) {
   setting_checker["range_min"] = SettingV(-0.0001f);
   setting_checker["range_max"] = SettingV(0.0001f);
   setting_checker["delta"] = SettingV(0.001f);
+
   cker->SetupChecker(setting_checker, prnd);
 
   cout << "Check Error." << endl;
   cker->CheckError(layer_match, bottoms, tops);
+
+  cout << "Check Grad." << endl;
+  cker->CheckGrad(layer_match, bottoms, tops);
 }
 
 
@@ -2407,9 +2413,9 @@ int main(int argc, char *argv[]) {
   // TestConvResultTransformLayer(&rnd);
   // TestConvolutionLayer(&rnd);
   // TestMatchLayer(&rnd);
-  // TestMatchTensorFactLayer(&rnd);
+  TestMatchTensorFactLayer(&rnd);
   // TestMatchWeightedDotLayer(&rnd);
-  TestGruLayer(&rnd);
+  // TestGruLayer(&rnd);
 
   // TestGateLayer(&rnd);
   // TestDiagRecurrentLayer(&rnd);

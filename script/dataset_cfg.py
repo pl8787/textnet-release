@@ -158,6 +158,60 @@ class DatasetCfg:
             self.train_max_iters = 5000
             self.valid_max_iters = self.n_valid/ self.valid_batch_size
             self.test_max_iters  = self.n_test / self.test_batch_size
+        elif dataset == 'qa':
+            self.train_data_file = '/home/wsx/data/qa/qa.neg.xmore10.32.train.dat'
+            self.valid_data_file = '/home/wsx/data/qa/qa.neg.xmore10.32.valid.dat'
+            self.test_data_file  = '/home/wsx/data/qa/qa.neg.xmore10.32.test.dat'
+            self.embedding_file  = '/home/wsx/data/qa/qa_embed'
+            # self.update_indication_file = '/home/wsx/data/msrp/wikicorp_num_50_msr_ind.txt'
+            self.max_doc_len = 33
+            self.min_doc_len = 5 
+            # self.vocab_size = 15586
+            self.vocab_size = 219071
+
+            self.dp_rate = 0.0
+            self.num_class = 2
+            self.d_word_rep = 50
+            self.batch_size = 128
+            self.train_batch_size = 128
+            self.valid_batch_size = 128
+            self.test_batch_size  = 128
+            self.n_train = 1082851
+            self.n_valid = 135355
+            self.n_test  = 135355
+            self.train_display_interval = 10
+            self.valid_display_interval = 500
+            self.test_display_interval  = 500
+            self.train_max_iters = 10000
+            self.valid_max_iters = self.n_valid/ 10 / self.valid_batch_size
+            self.test_max_iters  = self.n_test / 10 / self.test_batch_size
+        elif dataset == 'qa_balance':
+            self.train_data_file = '/home/wsx/data/qa/qa.neg.xmore10.32.train.dat.balance'
+            self.valid_data_file = '/home/wsx/data/qa/qa.neg.xmore10.32.valid.dat.balance'
+            self.test_data_file  = '/home/wsx/data/qa/qa.neg.xmore10.32.test.dat.balance'
+            self.embedding_file  = '/home/wsx/data/qa/qa_embed'
+            # self.update_indication_file = '/home/wsx/data/msrp/wikicorp_num_50_msr_ind.txt'
+            self.max_doc_len = 33
+            self.min_doc_len = 5 
+            # self.vocab_size = 15586
+            self.vocab_size = 219071
+
+            self.dp_rate = 0.0
+            self.num_class = 2
+            self.d_word_rep = 50
+            self.batch_size = 128
+            self.train_batch_size = 128
+            self.valid_batch_size = 128
+            self.test_batch_size  = 128
+            self.n_train = 196882
+            self.n_valid = 24610
+            self.n_test  = 24610
+            self.train_display_interval = 10
+            self.valid_display_interval = 500
+            self.test_display_interval  = 500
+            self.train_max_iters = 20000
+            self.valid_max_iters = self.n_valid / self.valid_batch_size
+            self.test_max_iters  = self.n_test  / self.test_batch_size
         elif dataset == 'msrp_seq':
             self.train_data_file = '/home/wsx/data/msrp/train.seq'
             self.valid_data_file = '/home/wsx/data/msrp/valid.seq'
