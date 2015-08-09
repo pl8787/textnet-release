@@ -268,11 +268,11 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     layer['setting'] = setting
     return net
 
-run = 2
+run = 3
 l2 = 0.
 # for dataset in ['paper']:
 for dataset in ['qa_balance']:
-    for d_mem in [20]:
+    for d_mem in [40]:
         idx = 0
         # for model_no in [0,1,2,3,4,5,6,7,8]:
         #     for epoch_no in [20000, 40000, 80000]:
