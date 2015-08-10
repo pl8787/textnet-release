@@ -186,6 +186,21 @@ class GruLayer : public Layer<xpu> {
     }
   }
 
+  virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,
+                            const std::vector<Node<xpu>*> &top) {
+    // Check for reshape
+    bool need_reshape = false;
+    mshadow::Shape<4> shape_in  = bottom[0]->data.shape_;
+    mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in[0], shape_in[1], shape_in[2], d_mem);
+    if ( !(shape_out == top[0]->data.shape_) ) {
+        need_reshape = true;
+    }
+    // Do reshape 
+    if (need_reshape) {
+        this->Reshape(bottom, top);
+    }
+  }
+ 
   void checkNan(float *p, int l) {
       for (int i = 0; i < l; ++i) {
           assert(!isnan(p[i]));

@@ -138,7 +138,21 @@ class MatchTensorFactLayer : public Layer<xpu>{
 		top[0]->PrintShape("top0");
 	}
   }
-  
+
+  virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,
+                            const std::vector<Node<xpu>*> &top) {
+    // Check for reshape
+    bool need_reshape = false;
+    if (batch_size != bottom[0]->data.size(0)) {
+        need_reshape = true;
+    }
+
+    // Do reshape 
+    if (need_reshape) {
+        this->Reshape(bottom, top);
+    }
+  }
+ 
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
