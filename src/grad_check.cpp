@@ -2532,11 +2532,15 @@ void TestMatchMultiLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check MatchMulti Layer." << endl;
   Node<cpu> bottom;
   Node<cpu> top;
+  Node<cpu> len1;
+  Node<cpu> len2;
   vector<Node<cpu>*> bottoms;
   vector<Node<cpu>*> tops;
 
   bottoms.push_back(&bottom);
   tops.push_back(&top);
+  tops.push_back(&len1);
+  tops.push_back(&len2);
 
   bottom.Resize(9, 1, 5, 2);
   prnd->SampleUniform(&bottom.data, -1.0, 1.0);
@@ -2545,6 +2549,7 @@ void TestMatchMultiLayer(mshadow::Random<cpu>* prnd) {
   map<string, SettingV> setting;
   setting["op"] = SettingV("euc_exp");
   setting["candids"] = SettingV(2);
+  setting["output_len"] = SettingV(true);
 
   // Test MatchMulti Layer
   Layer<cpu> * layer_match_multi = CreateLayer<cpu>(kMatchMulti);
@@ -2555,6 +2560,8 @@ void TestMatchMultiLayer(mshadow::Random<cpu>* prnd) {
   layer_match_multi->Forward(bottoms, tops);
   PrintTensor("bottom", bottom.data);
   PrintTensor("top", top.data);
+  PrintTensor("len1", len1.data);
+  PrintTensor("len2", len2.data);
 
   using namespace checker;
   Checker<cpu> * cker = CreateChecker<cpu>();
@@ -2636,10 +2643,10 @@ int main(int argc, char *argv[]) {
   // TestMatchTensorFactLayer(&rnd);
   // TestMatchWeightedDotLayer(&rnd);
   // TestGruLayer(&rnd);
-  // TestMatchMultiLayer(&rnd);
+  TestMatchMultiLayer(&rnd);
   // TestBatchCombineLayer(&rnd);
   // TestPairTextDataLayer(&rnd);
-  TestListTextDataLayer(&rnd);
+  // TestListTextDataLayer(&rnd);
   // TestGateLayer(&rnd);
   // TestDiagRecurrentLayer(&rnd);
   // TestNegativeSampleLossLayer(&rnd);

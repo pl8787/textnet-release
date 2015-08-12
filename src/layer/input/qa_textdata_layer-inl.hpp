@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <utility>
 #include <algorithm>
+#include "stdlib.h"
 
 #include <mshadow/tensor.h>
 #include "../layer.h"
@@ -37,6 +38,8 @@ class QATextDataLayer : public Layer<xpu>{
     // default value, just set the value you want
     this->defaults["batch_size"] = SettingV(0);
     this->defaults["mode"] = SettingV("batch"); // batch, pair, list    
+	this->defaults["shuffle"] = SettingV(false);
+	this->defaults["speedup_list"] = SettingV(true); // only when list
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["question_data_file"] = SettingV();
@@ -68,6 +71,8 @@ class QATextDataLayer : public Layer<xpu>{
     max_doc_len = setting["max_doc_len"].iVal();
     candids = setting["candids"].iVal();
     mode = setting["mode"].sVal();
+	shuffle = setting["shuffle"].bVal();
+	speedup_list = setting["speedup_list"].bVal();
     
     utils::Check(mode == "batch" || mode == "pair" || mode == "list",
                   "QATextDataLayer: mode is one of batch, pair or list.");
@@ -224,7 +229,8 @@ class QATextDataLayer : public Layer<xpu>{
     max_list = std::max(max_list, (int)list.size());
 
     // for speed up we can sort list by list.size()
-    sort(list_set.begin(), list_set.end(), list_size_cmp);
+	if (speedup_list)
+	  sort(list_set.begin(), list_set.end(), list_size_cmp);
   }
 
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -314,12 +320,18 @@ class QATextDataLayer : public Layer<xpu>{
 
     if (mode == "batch") {
       for (int i = 0; i < batch_size; ++i) {
+        if (shuffle) {
+          line_ptr = rand() % line_count;
+        } 
         FillData(top0_data, top0_length, top1_data, top1_length, i, line_ptr);
         top2_data[i] = label_set[line_ptr];
         line_ptr = (line_ptr + 1) % line_count;
       }
     } else if (mode == "pair") {
       for (int i = 0; i < batch_size; ++i) {
+        if (shuffle) {
+          line_ptr = rand() % pair_set.size();
+        } 
 
         int pos_idx = pair_set[line_ptr][0];
         int neg_idx = pair_set[line_ptr][1];
@@ -357,6 +369,8 @@ class QATextDataLayer : public Layer<xpu>{
   int max_doc_len;
   int candids;
   string mode;
+  bool shuffle;
+  bool speedup_list;
   
   unordered_map<string, vector<int> > question_data_set;
   unordered_map<string, vector<int> > answer_data_set;
