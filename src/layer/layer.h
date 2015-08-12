@@ -79,6 +79,7 @@ const int kMatchTensorFact = 1003;
 const int kMatchMulti = 1004;
 const int kBatchCombine = 1005;
 const int kGru = 1006;
+const int kDynamicKMaxPooling = 10001;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;

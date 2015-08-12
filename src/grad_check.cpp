@@ -1303,6 +1303,69 @@ void TestDiagRecurrentLayer(mshadow::Random<cpu>* prnd) {
   cout << "Done." << endl;
 }
 
+void TestDynamicKMaxPoolingLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Product Layer." << endl;
+  Node<cpu> bottom0;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom0);
+  bottoms.push_back(&bottom0);
+  tops.push_back(&top);
+  
+  bottom0.Resize(Shape4(2,2,6,3), true);
+  bottom0.length = 5;
+  prnd->SampleUniform(&bottom0.data, -0.1, 0.1);
+  
+  map<string, SettingV> setting;
+  {
+      setting["L"] = 2;
+      setting["l"] = 1;
+      setting["max_sentence_length"] = 6;
+      setting["min_rep_length"] = 3;
+  }
+
+  Layer<cpu> *layer = CreateLayer<cpu>(kDynamicKMaxPooling);
+  layer->PropAll();
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+  // layer->Forward(bottoms, tops);
+  // top.diff = 1.f; // bottom.data;
+  // PrintTensor("bottom0", bottom0.data);
+  // PrintTensor("bottom1", bottom1.data);
+  // PrintTensor("top", top.data);
+  // PrintTensor("top_diff", top.diff);
+  // PrintTensor("param_diff", layer->GetParams()[0].diff);
+  
+  // using namespace checker;
+  // Checker<cpu> * cker = CreateChecker<cpu>();
+  // map<string, SettingV> setting_checker;
+  // setting_checker["range_min"] = SettingV(-0.0001f);
+  // setting_checker["range_max"] = SettingV(0.0001f);
+  // setting_checker["delta"] = SettingV(0.0001f);
+  // cker->SetupChecker(setting_checker, prnd);
+  // cout << "Check Error." << endl;
+  // cker->CheckError(layer, bottoms, tops);
+  // PrintTensor("bottom0_diff", bottom0.diff);
+  // PrintTensor("bottom1_diff", bottom1.diff);
+
+  // cout << "Check Grad." << endl;
+  // cker->CheckGrad(layer, bottoms, tops);
+
+  layer->Forward(bottoms, tops);
+  top.diff = 1.f; // bottom.data;
+  layer->Backprop(bottoms, tops);
+  PrintTensor("b0_data", bottoms[0]->data);
+  PrintTensor("t_data",  tops[0]->data);
+  PrintTensor("b0_length", bottoms[0]->length);
+  PrintTensor("t_length", tops[0]->length);
+  PrintTensor("b0_diff", bottoms[0]->diff);
+  PrintTensor("t_diff", tops[0]->diff);
+  cout << "Done." << endl;
+}
+
+
 
 void TestDynamicPoolingLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Product Layer." << endl;
@@ -2643,7 +2706,8 @@ int main(int argc, char *argv[]) {
   // TestMatchTensorFactLayer(&rnd);
   // TestMatchWeightedDotLayer(&rnd);
   // TestGruLayer(&rnd);
-  TestMatchMultiLayer(&rnd);
+  // TestMatchMultiLayer(&rnd);
+  TestDynamicKMaxPoolingLayer(&rnd);
   // TestBatchCombineLayer(&rnd);
   // TestPairTextDataLayer(&rnd);
   // TestListTextDataLayer(&rnd);
