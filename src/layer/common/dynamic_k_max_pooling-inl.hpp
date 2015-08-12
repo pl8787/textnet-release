@@ -1,5 +1,5 @@
-#ifndef TEXTNET_LAYER_DYNAMIC_POOLING_LAYER_INL_HPP_
-#define TEXTNET_LAYER_DYNAMIC_POOLING_LAYER_INL_HPP_
+#ifndef TEXTNET_LAYER_DYNAMIC_K_MAX_POOLING_LAYER_INL_HPP_
+#define TEXTNET_LAYER_DYNAMIC_K_MAX_POOLING_LAYER_INL_HPP_
 
 #include <mshadow/tensor.h>
 #include "../layer.h"
@@ -8,24 +8,30 @@
 namespace textnet {
 namespace layer {
 
+// ref: Yin, W., et al., "MultiGranCNN: An Architecture for General Matching of Text Chunks on Multiple Levels of Granularity", ACL'14
+//
+// this layer is different with dynamic pooling
+// 1. k is not fixed and is rescaled by the input length
+// 2. this layer selects top k values of one dimension which are position independent
 template<typename xpu>
-class DynamicPoolingLayer : public Layer<xpu>{
+class DynamicKMaxPoolingLayer : public Layer<xpu>{
  public:
-  DynamicPoolingLayer(LayerType type) { this->layer_type = type; }
-  virtual ~DynamicPoolingLayer(void) {}
+  DynamicKMaxPoolingLayer(LayerType type) { this->layer_type = type; }
+  virtual ~DynamicKMaxPoolingLayer(void) {}
   
-  virtual int BottomNodeNum() { return 3; } // matrix node, l_seq for length, r_seq for length
+  virtual int BottomNodeNum() { return 2; } // input_rep for pooling, origin_word_embedding_rep for length info
   virtual int TopNodeNum() { return 1; }
   virtual int ParamNodeNum() { return 0; }
   
   virtual void Require() {
     // default value, just set the value you want
-    this->defaults["dim"] = SettingV(2);
 
     // require value, set to SettingV(),
     // it will force custom to set in config
-    this->defaults["row"] = SettingV();
-    this->defaults["col"] = SettingV();
+    this->defaults["L"] = SettingV(); // L in the num of pooling layers used in the whole model
+    this->defaults["l"] = SettingV(); // l is begin from 1
+    this->defaults["max_sentence_length"] = SettingV(); // the max length of the original sentence
+    this->defaults["min_rep_length"] = SettingV();      // avoid too short representations in middle layer
 
     Layer<xpu>::Require();
   }
@@ -35,25 +41,29 @@ class DynamicPoolingLayer : public Layer<xpu>{
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
-    row = setting["row"].iVal();
-    col = setting["col"].iVal();
-    dim = setting["dim"].iVal();
-    utils::Check(dim == 1 || dim == 2, "DynamicPoolingLayer: dim error.");
-    if (dim == 1) {
-        utils::Check(row == 1, "DynamicPoolingLayer: dim error.");
-    }
+    L = setting["L"].iVal();
+    l = setting["l"].iVal();
+    max_sentence_length = setting["max_sentence_length"].iVal();
+    min_rep_length      = setting["min_rep_length"].iVal();
+    utils::Check(l > 0 && l <= L, "DynamicKMaxPoolingLayer: parameter error.");
+  }
+
+  int get_dynamic_k(int sentence_length, int min_rep_length, int L, int l) {
+    if (l == L) return 1;
+    int k = ((L-l)*sentence_length + L-1) / L;
+    if (k < min_rep_length) k = min_rep_length;
+    return k;
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top,
                        bool show_info = false) {
-    utils::Check(bottom.size() == BottomNodeNum(), "DynamicPoolingLayer: bottom size problem."); 
-    utils::Check(top.size() == TopNodeNum(), "DynamicPoolingLayer: top size problem.");
+    utils::Check(bottom.size() == BottomNodeNum(), "DynamicKMaxPoolingLayer: bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(), "DynamicKMaxPoolingLayer: top size problem.");
 
+    
+    int max_k = get_dynamic_k(max_sentence_length, min_rep_length, L, l);
     mshadow::Shape<4> shape_out  = bottom[0]->data.shape_;
-    if (dim == 1) {
-        utils::Check(shape_out[2] == 1, "DynamicPoolingLayer: dim error.");
-    }
     shape_out[2] = row;
     shape_out[3] = col;
     top[0]->Resize(shape_out, true);
@@ -108,7 +118,7 @@ class DynamicPoolingLayer : public Layer<xpu>{
   }
   // void duplicate_by_row(Tensor2D &t, int ori_row, int dst_row) {
   //   int max_row = t.size(0);
-  //   utils::Check(ori_row < dst_row && dst_row <= max_row, "DynamicPoolingLayer: duplicate error.");
+  //   utils::Check(ori_row < dst_row && dst_row <= max_row, "DynamicKMaxPoolingLayer: duplicate error.");
   //   for (int row_idx = ori_row; row_idx < dst_row; ++row_idx) {
   //     int src_row_idx = (row_idx-ori_row) % ori_row;
   //     for (int col_idx = 0; col_idx < t.size(1); ++col_idx) {
@@ -118,7 +128,7 @@ class DynamicPoolingLayer : public Layer<xpu>{
   // }
   // void duplicate_by_col(Tensor2D &t, int ori_col, int dst_col) {
   //   int max_col = t.size(0);
-  //   utils::Check(ori_col < dst_col && dst_col <= max_col, "DynamicPoolingLayer: duplicate error.");
+  //   utils::Check(ori_col < dst_col && dst_col <= max_col, "DynamicKMaxPoolingLayer: duplicate error.");
   //   for (int col_idx = ori_col; col_idx < dst_col; ++col_idx) {
   //     int src_col_idx = (col_idx-ori_col) % ori_col;
   //     for (int row_idx = 0; row_idx < t.size(0); ++row_idx) {
@@ -140,11 +150,11 @@ class DynamicPoolingLayer : public Layer<xpu>{
       }
     }
     
-    utils::Check(pos[pos.size()-1] == pad_input_row, "DynamicPoolingLayer: split error.");
+    utils::Check(pos[pos.size()-1] == pad_input_row, "DynamicKMaxPoolingLayer: split error.");
     
     for (size_t i = 1; i < pos.size(); ++i) {
-      utils::Check(pos[i-1] < pos[i], "DynamicPoolingLayer: split error.");
-      utils::Check((pos[i] - pos[i-1]) <= ((pad_input_row-1)/pool_row) + 1, "DynamicPoolingLayer: split error.");
+      utils::Check(pos[i-1] < pos[i], "DynamicKMaxPoolingLayer: split error.");
+      utils::Check((pos[i] - pos[i-1]) <= ((pad_input_row-1)/pool_row) + 1, "DynamicKMaxPoolingLayer: split error.");
     }
   }
 
@@ -152,9 +162,9 @@ class DynamicPoolingLayer : public Layer<xpu>{
                           int input_row,  int input_col,
                           int pool_row,   int pool_col,
                           Tensor2DInt row_pos, Tensor2DInt col_pos) {
-    utils::Check(t_out.size(0) == pool_row && t_out.size(1) == pool_col, "DynamicPoolingLayer: size error.");
-    utils::Check(t_in.size(0) >= input_row && t_in.size(1) >= input_col, "DynamicPoolingLayer: size error.");
-    utils::Check(t_in.size(0) >= pool_row  && t_in.size(1) >= pool_col, "DynamicPoolingLayer: size error.");
+    utils::Check(t_out.size(0) == pool_row && t_out.size(1) == pool_col, "DynamicKMaxPoolingLayer: size error.");
+    utils::Check(t_in.size(0) >= input_row && t_in.size(1) >= input_col, "DynamicKMaxPoolingLayer: size error.");
+    utils::Check(t_in.size(0) >= pool_row  && t_in.size(1) >= pool_col, "DynamicKMaxPoolingLayer: size error.");
 
     vector<int> begin_pos_row, begin_pos_col;
     dynamic_split(input_row, pool_row, begin_pos_row);
@@ -233,9 +243,11 @@ class DynamicPoolingLayer : public Layer<xpu>{
     }
   }
  protected:
-  mshadow::TensorContainer<xpu, 4, int> pos_row;
-  mshadow::TensorContainer<xpu, 4, int> pos_col;
-  int row, col, dim;
+  mshadow::TensorContainer<xpu, 4, int> pos;
+  int L, l, max_sentence_length, min_rep_length;
+  // mshadow::TensorContainer<xpu, 4, int> pos_row;
+  // mshadow::TensorContainer<xpu, 4, int> pos_col;
+  // int row, col, dim;
 };
 }  // namespace layer
 }  // namespace textnet

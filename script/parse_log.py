@@ -87,11 +87,13 @@ def parse_tvt(inFile):
     # max_test = max(test)
     # print valid[test.index(max_test)], max_test
 
-dir = '/home/wsx/exp/match/qa_balance/bilstm_sim_dpool/run.2/'
+dir = '/home/wsx/exp/match/qa_balance/bilstm_tensor_dpool/run.12/'
+# dir = '/home/wsx/exp/match/qa_balance/bilstm_sim_dpool/run.4/'
 ## dir = '/home/wsx/exp/match/paper/bilstm_tensor_dpool/run.6/'
-for i in range(12):
+for i in range(30):
     try:
-        parse_tvt(dir + 'log.match.bilstm_sim_dpool.qa_balance.d20.run2.'+str(i))
+        #parse_tvt(dir + 'log.match.bilstm_sim_dpool.qa_balance.d80.run4.'+str(i))
+        parse_tvt(dir + 'log.match.bilstm_tensor_dpool.qa_balance.d40.run12.'+str(i))
     except:
         continue
 exit(0)

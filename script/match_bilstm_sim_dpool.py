@@ -119,7 +119,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     layer['top_nodes'] = ['l_lstm_seq']
     layer['layer_name'] = 'l_lstm'
     # layer['layer_type'] = 24
-    layer['layer_type'] = 1004 # gru
+    layer['layer_type'] = 1006 # gru
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
     setting['d_mem'] = d_mem
@@ -139,7 +139,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     layer['top_nodes'] = ['r_lstm_seq']
     layer['layer_name'] = 'r_lstm'
     # layer['layer_type'] = 24
-    layer['layer_type'] = 1004 # gru
+    layer['layer_type'] = 1006 # gru
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
     setting['d_mem'] = d_mem
@@ -268,11 +268,11 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     layer['setting'] = setting
     return net
 
-run = 3
+run = 4
 l2 = 0.
 # for dataset in ['paper']:
 for dataset in ['qa_balance']:
-    for d_mem in [40]:
+    for d_mem in [80]:
         idx = 0
         # for model_no in [0,1,2,3,4,5,6,7,8]:
         #     for epoch_no in [20000, 40000, 80000]:
@@ -280,7 +280,7 @@ for dataset in ['qa_balance']:
             #  for epoch_no in [0, 10000, 25000]:
             for epoch_no in [0]:
                 # for init in [0.5, 0.3, 0.1]:
-                for init in [0.5, 0.3, 0.1]:
+                for init in [0.1, 0.03, 0.01]:
                     for lr in [0.3, 0.1, 0.03]:
                         # for l2 in [0.00001, 0.0001]:
                         for l2 in [0]:

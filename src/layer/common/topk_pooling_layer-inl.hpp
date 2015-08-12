@@ -8,6 +8,8 @@
 namespace textnet {
 namespace layer {
 
+// this layer selects the top k position by gate data
+// then fills the top nodes with rep values by the position
 template<typename xpu>
 class TopkPoolingLayer : public Layer<xpu>{
  public:
