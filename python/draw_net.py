@@ -68,6 +68,7 @@ Layer2Name = {
   1003: 'MatchTensorFact',
   1004: 'MatchMulti',
   1005: 'BatchCombine',
+  1006: 'Gru',
 
   # Loss Layer 51-70
   51: 'Softmax', 

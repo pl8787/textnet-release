@@ -20,12 +20,19 @@ class MatchMultiLayer : public Layer<xpu>{
   virtual ~MatchMultiLayer(void) {}
   
   virtual int BottomNodeNum() { return 1; }
-  virtual int TopNodeNum() { return 1; }
+  virtual int TopNodeNum() { 
+	  if (output_len) {
+		return 3;
+	  } else {
+		return 1; 
+	  }
+  }
   virtual int ParamNodeNum() { return 0; }
   
   virtual void Require() {
     // default value, just set the value you want
     this->defaults["op"] = SettingV("xor"); 
+	this->defaults["output_len"] = SettingV(false);
     // xor: can not bp
     // mul: can bp
     // plus: can bp
@@ -45,12 +52,9 @@ class MatchMultiLayer : public Layer<xpu>{
                           mshadow::Random<xpu> *prnd) {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
     
-    utils::Check(bottom.size() == BottomNodeNum(),
-                  "MatchLayer:bottom size problem."); 
-    utils::Check(top.size() == TopNodeNum(),
-                  "MatchLayer:top size problem.");
     op = setting["op"].sVal();
     candids = setting["candids"].iVal();
+	output_len = setting["output_len"].bVal();
 
     utils::Check(op=="xor" || op=="mul" || op=="plus" || op=="cos" || op == "minus" ||\
                  op=="euc" || op=="euc_exp",
@@ -79,6 +83,11 @@ class MatchMultiLayer : public Layer<xpu>{
     }        
                   
     top[0]->Resize(nbatch * candids, 1, doc_len, doc_len, true);
+
+	if (output_len) {
+	  top[1]->Resize(nbatch * candids, 1, 1, 1);
+	  top[2]->Resize(nbatch * candids, 1, 1, 1);
+	}
     
     if (show_info) {
         bottom[0]->PrintShape("bottom0");
@@ -166,6 +175,13 @@ class MatchMultiLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 4> bottom_data4 = bottom[0]->data;
     mshadow::Tensor<xpu, 1> bottom_len = bottom[0]->length_d1();
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
+	mshadow::Tensor<xpu, 1> top_len1;
+	mshadow::Tensor<xpu, 1> top_len2;
+
+	if (output_len) {
+		top_len1 = top[1]->length_d1();
+		top_len2 = top[2]->length_d1();
+	}
 
     top_data = 0.0f;
     m_norm = 0.0f;
@@ -190,6 +206,10 @@ class MatchMultiLayer : public Layer<xpu>{
     for (int i = 0; i < nbatch; ++i) {
       for (int c = 1; c < candids+1; ++c) {
         ForwardOne(i*(candids+1), i*(candids+1)+c, i*candids+c-1, bottom_data2, bottom_data4, bottom_len, top_data);
+		if (output_len) {
+		  top_len1[i*candids+c-1] = bottom_len[i*(candids+1)];
+		  top_len2[i*candids+c-1] = bottom_len[i*(candids+1)+c];
+		}
       }
     }
   }
@@ -270,6 +290,8 @@ class MatchMultiLayer : public Layer<xpu>{
   int nbatch;
   int candids;
   std::string op;
+  bool output_len;
+
   mshadow::TensorContainer<xpu, 2> m_norm;
   mshadow::TensorContainer<xpu, 3> m_dot;
 

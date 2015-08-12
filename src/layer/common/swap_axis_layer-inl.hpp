@@ -25,6 +25,8 @@ class SwapAxisLayer : public Layer<xpu>{
   
   virtual void Require() {
     // default value, just set the value you want
+	this->defaults["pass_len"] = SettingV(false);
+	this->defaults["pass_len_dim"] = SettingV(2);
 
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -45,6 +47,11 @@ class SwapAxisLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(),
                   "SwapAxisLayer:top size problem.");    
     
+	pass_len = setting["pass_len"].bVal();
+	pass_len_dim = setting["pass_len_dim"].iVal();
+	utils::Check(pass_len_dim == 1 || pass_len_dim == 2,
+			"SwapAxisLayer:pass_len_dim eq 1 or 2");
+
     axis1 = setting["axis1"].iVal();
     axis2 = setting["axis2"].iVal();
     if (axis1 > axis2) {
@@ -97,7 +104,16 @@ class SwapAxisLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 2> bottom_len = bottom[0]->length;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
     mshadow::Tensor<xpu, 2> top_len = top[0]->length;
-    top_len = F<op::identity>(bottom_len);
+
+	if (pass_len) {
+		if (pass_len_dim == 2) {
+			top_len = F<op::identity>(bottom_len);
+		} else if (pass_len_dim == 1) {
+			for (int i=0; i<top_len.shape_[0]; ++i) {
+				top_len[i] = bottom_len[i][0];
+			}
+		}
+	}
 
     switch (axis1) {
         case 0:
@@ -169,6 +185,9 @@ class SwapAxisLayer : public Layer<xpu>{
  protected:
   int axis1;
   int axis2;
+  bool pass_len;
+  int pass_len_dim;
+
   mshadow::Shape<4> top_shape;
   mshadow::Shape<4> bottom_shape;
 

@@ -31,6 +31,7 @@ class ListTextDataLayer : public Layer<xpu>{
   virtual void Require() {
     // default value, just set the value you want
     this->defaults["min_doc_len"] = SettingV(1);
+	this->defaults["speedup_list"] = SettingV(true);
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["data_file"] = SettingV();
@@ -53,6 +54,7 @@ class ListTextDataLayer : public Layer<xpu>{
     data_file = setting["data_file"].sVal();
     max_doc_len = setting["max_doc_len"].iVal();
     min_doc_len = setting["min_doc_len"].iVal();
+	speedup_list = setting["speedup_list"].bVal();
     
     ReadTextData();
     
@@ -136,7 +138,8 @@ class ListTextDataLayer : public Layer<xpu>{
     max_list = std::max(max_list, (int)list.size());
 
     // for speed up we can sort list by list.size()
-    sort(list_set.begin(), list_set.end(), list_size_cmp);
+	if (speedup_list)
+      sort(list_set.begin(), list_set.end(), list_size_cmp);
   }
 
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -211,6 +214,8 @@ class ListTextDataLayer : public Layer<xpu>{
   int max_doc_len;
   int min_doc_len;
   bool shuffle;
+  bool speedup_list;
+
   vector<vector<int> > q_data_set;
   vector<vector<int> > a_data_set;
   vector<int> label_set;

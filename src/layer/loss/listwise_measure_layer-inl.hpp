@@ -74,6 +74,7 @@ class ListwiseMeasureLayer : public Layer<xpu>{
     nbatch = bottom[0]->data.size(0);    
     top[0]->Resize(1, 1, 1, 1, true);
     if (show_info) {
+		bottom[0]->PrintShape("bottom0");
         top[0]->PrintShape("top0");
     }
   }
