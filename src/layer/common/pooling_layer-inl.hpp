@@ -61,7 +61,8 @@ class PoolingLayer : public Layer<xpu> {
     mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in[0], shape_in[1], 
                    (shape_in[2] - kernel_y) / stride + 1,
                    (shape_in[3] - kernel_x) / stride + 1);
-    top[0]->Resize(shape_out);   
+	mshadow::Shape<2> shape_len = bottom[0]->length.shape_;
+    top[0]->Resize(shape_out, shape_len);   
     // std::cout << shape_in[0] << "x" << shape_in[1] << "x" << shape_in[2] << "x" << shape_in[3] << std::endl;
     // std::cout << shape_out[0] << "x" << shape_out[1] << "x" << shape_out[2] << "x" << shape_out[3] << std::endl;
     if (show_info) {
@@ -93,8 +94,21 @@ class PoolingLayer : public Layer<xpu> {
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
+	mshadow::Tensor<xpu, 2> top_len = top[0]->length;
+	mshadow::Tensor<xpu, 2> bottom_len = bottom[0]->length;
     
     mshadow::Shape<2> pshape = top_data[0][0].shape_;
+
+	for (int i = 0; i < top_len.shape_[0]; ++i) {
+	  top_len[i][0] = (bottom_len[i][0] - kernel_x) / stride + 1;
+	  top_len[i][1] = (bottom_len[i][1] - kernel_y) / stride + 1;
+	  if (top_len[i][0] <= 0) {
+		top_len[i][0] = 1;
+	  }
+	  if (top_len[i][1] <= 0) {
+		top_len[i][1] = 1;
+	  }
+	}
 
     if (this->layer_type == kMaxPooling || this->layer_type == kSumPooling) {
       top_data = pool<Reducer>(bottom_data, pshape, kernel_y, kernel_x, stride);

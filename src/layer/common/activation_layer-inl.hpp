@@ -41,7 +41,7 @@ class ActivationLayer : public Layer<xpu>{
                   "ActivationLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "ActivationLayer:top size problem.");
-    top[0]->Resize(bottom[0]->data.shape_);
+    top[0]->Resize(bottom[0]->data.shape_, bottom[0]->length.shape_);
 
     if (show_info) {
       bottom[0]->PrintShape("bottom0");

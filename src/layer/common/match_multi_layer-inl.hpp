@@ -57,8 +57,8 @@ class MatchMultiLayer : public Layer<xpu>{
 	output_len = setting["output_len"].bVal();
 
     utils::Check(op=="xor" || op=="mul" || op=="plus" || op=="cos" || op == "minus" ||\
-                 op=="euc" || op=="euc_exp",
-                 "MatchMultiLayer: one of xor, mul, plus, cos, minus, euc or euc_exp.");
+                 op=="elemwise_product" || op=="elemwise_plus" || op=="euc" || op=="euc_exp",
+                 "MatchMultiLayer: one of xor, mul, plus, cos, minus, elemwise_product, elemwise_plus, euc or euc_exp.");
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -81,8 +81,16 @@ class MatchMultiLayer : public Layer<xpu>{
       doc_len = bottom[0]->data.size(2);
       feat_size = bottom[0]->data.size(3);
     }        
-                  
-    top[0]->Resize(nbatch * candids, 1, doc_len, doc_len, true);
+    
+	if (op == "elemwise_product" || op == "elemwise_plus") {
+	  // Set data shape to (nbatch * candids, feat_size, doc_len, doc_len)
+	  // Set length shape to (nbatch * candids, 2)
+	  top[0]->Resize(nbatch * candids, feat_size, doc_len, doc_len, nbatch * candids, 2, true);
+	} else {
+	  // Set data shape to (nbatch * candids, 1, doc_len, doc_len)
+	  // Set length shape to (nbatch * candids, 2)
+	  top[0]->Resize(nbatch * candids, 1, doc_len, doc_len, nbatch * candids, 2, true);
+	}
 
 	if (output_len) {
 	  top[1]->Resize(nbatch * candids, 1, 1, 1);
@@ -161,6 +169,14 @@ class MatchMultiLayer : public Layer<xpu>{
               sum_elem_square += sub_elem * sub_elem;
             }
             top_data[out_idx][0][j][k] = exp(-(sum_elem_square)/(2*2.f)); // beta is set to 2.f
+		  } else if (op =="elemwise_product") {
+            for (int m = 0; m < feat_size; ++m) {
+              top_data[out_idx][m][j][k] = bottom_data4[s1_idx][0][j][m] * bottom_data4[s2_idx][0][k][m];
+            }
+          } else if (op =="elemwise_plus") {
+            for (int m = 0; m < feat_size; ++m) {
+              top_data[out_idx][m][j][k] = bottom_data4[s1_idx][0][j][m] + bottom_data4[s2_idx][0][k][m];
+            }
           }  else {
             utils::Error("In Match Layer: no op named %s.\n", op.c_str());
           }
@@ -175,6 +191,7 @@ class MatchMultiLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 4> bottom_data4 = bottom[0]->data;
     mshadow::Tensor<xpu, 1> bottom_len = bottom[0]->length_d1();
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
+	mshadow::Tensor<xpu, 2> top_len = top[0]->length;
 	mshadow::Tensor<xpu, 1> top_len1;
 	mshadow::Tensor<xpu, 1> top_len2;
 
@@ -206,6 +223,8 @@ class MatchMultiLayer : public Layer<xpu>{
     for (int i = 0; i < nbatch; ++i) {
       for (int c = 1; c < candids+1; ++c) {
         ForwardOne(i*(candids+1), i*(candids+1)+c, i*candids+c-1, bottom_data2, bottom_data4, bottom_len, top_data);
+		top_len[i*candids+c-1][0] = bottom_len[i*(candids+1)];
+		top_len[i*candids+c-1][1] = bottom_len[i*(candids+1)+c];
 		if (output_len) {
 		  top_len1[i*candids+c-1] = bottom_len[i*(candids+1)];
 		  top_len2[i*candids+c-1] = bottom_len[i*(candids+1)+c];
@@ -250,11 +269,17 @@ class MatchMultiLayer : public Layer<xpu>{
                 // bottom1_diff[i][0][k][m] += top_diff[i][0][j][k] * (1/(2*distance)) * 2*(-sub_elem);
                 bottom_diff[s2_idx][0][k][m] += top_diff[in_idx][0][j][k] * 2*(-sub_elem);
             } else if (op == "euc_exp") {
-            float distance = top_data[in_idx][0][j][k];
-            float sub_elem = bottom_data[s1_idx][0][j][m] - bottom_data[s2_idx][0][k][m];
-            bottom_diff[s1_idx][0][j][m] += top_diff[in_idx][0][j][k] * distance * (-1/(2*2.f)) * 2*(sub_elem);
+              float distance = top_data[in_idx][0][j][k];
+              float sub_elem = bottom_data[s1_idx][0][j][m] - bottom_data[s2_idx][0][k][m];
+              bottom_diff[s1_idx][0][j][m] += top_diff[in_idx][0][j][k] * distance * (-1/(2*2.f)) * 2*(sub_elem);
               bottom_diff[s2_idx][0][k][m] += top_diff[in_idx][0][j][k] * distance * (-1/(2*2.f)) * 2*(-sub_elem);
-          }
+            } else if (op == "elemwise_product") {
+                bottom_diff[s1_idx][0][j][m] += bottom_data[s2_idx][0][k][m] * top_diff[in_idx][m][j][k];
+                bottom_diff[s2_idx][0][k][m] += bottom_data[s1_idx][0][j][m] * top_diff[in_idx][m][j][k];
+            } else if (op == "elemwise_plus") {
+                bottom_diff[s1_idx][0][j][m] += top_diff[in_idx][m][j][k];
+                bottom_diff[s2_idx][0][k][m] += top_diff[in_idx][m][j][k];
+            }
           }
         }
     }

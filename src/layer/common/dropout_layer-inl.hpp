@@ -56,7 +56,7 @@ class DropoutLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(),
                   "DropoutLayer:top size problem.");
                   
-    top[0]->Resize(bottom[0]->data.shape_, true);
+    top[0]->Resize(bottom[0]->data.shape_, bottom[0]->length.shape_, true);
     mask.Resize(bottom[0]->data.shape_, true);
 
     if (show_info) {
