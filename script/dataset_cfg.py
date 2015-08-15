@@ -180,9 +180,9 @@ class DatasetCfg:
             self.n_valid = 135355
             self.n_test  = 135355
             self.train_display_interval = 10
-            self.valid_display_interval = 500
-            self.test_display_interval  = 500
-            self.train_max_iters = 20000
+            self.valid_display_interval = 10000000
+            self.test_display_interval  = 1000
+            self.train_max_iters = 40000
             self.valid_max_iters =12305
             self.test_max_iters  =12305
         elif dataset == 'qa_candi':

@@ -20,6 +20,7 @@ class ConcatLayer : public Layer<xpu>{
 
   virtual void Require() {
     // default value, just set the value you want
+    this->defaults["is_concat_by_length"] = SettingV(false); // this is to concat on dim 2 by length, for var length cases
 
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -36,7 +37,9 @@ class ConcatLayer : public Layer<xpu>{
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
     nBottomNode = setting["bottom_node_num"].i_val;
     concat_dim_index = setting["concat_dim_index"].i_val;
+    is_concat_by_length = setting["is_concat_by_length"].b_val;
     utils::Check(concat_dim_index < 4, "ConcatLayer: setting problem."); 
+    utils::Check((!is_concat_by_length) || concat_dim_index == 2, "ConcatLayer: length is used only on dim 2");
   }
   
   
@@ -129,17 +132,35 @@ class ConcatLayer : public Layer<xpu>{
   void ConcatDim2(const std::vector<Node<xpu>*> &bottom,
                   const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
-    Tensor4D top_data = top[0]->data;
-    // not support variable length under dimension 2 concat
+    if (!is_concat_by_length) {
+        Tensor4D top_data = top[0]->data;
+        // not support variable length under dimension 2 concat
 
-    // i, j, m, n
-    for (index_t i = 0; i < top_data.size(0); ++i) {
-      for (index_t j = 0; j < top_data.size(1); ++j) {
-        int cnt = 0;
-        for (index_t n = 0; n < BottomNodeNum(); ++n){
-          Tensor2D t = bottom[n]->data[i][j];
-          top_data[i][j].Slice(cnt, cnt+t.size(0)) = F<op::identity>(t);
-          cnt += t.size(0);
+        // i, j, m, n
+        for (index_t i = 0; i < top_data.size(0); ++i) {
+          for (index_t j = 0; j < top_data.size(1); ++j) {
+            int cnt = 0;
+            for (index_t n = 0; n < BottomNodeNum(); ++n){
+              Tensor2D t = bottom[n]->data[i][j];
+              top_data[i][j].Slice(cnt, cnt+t.size(0)) = F<op::identity>(t);
+              cnt += t.size(0);
+            }
+          }
+        }
+    } else {
+      // support variable length under dimension 2 concat
+      Tensor4D top_data = top[0]->data;
+      Tensor2D top_len  = top[0]->length;
+      for (index_t i = 0; i < top_data.size(0); ++i) {
+        for (index_t j = 0; j < top_data.size(1); ++j) {
+          int cnt = 0;
+          for (index_t n = 0; n < BottomNodeNum(); ++n){
+            Tensor2D t = bottom[n]->data[i][j];
+            int l = bottom[n]->length[i][j];
+            top_data[i][j].Slice(cnt, cnt+l) = F<op::identity>(t.Slice(0, l));
+            cnt += l;
+          }
+          top_len[i][j] = cnt;
         }
       }
     }
@@ -274,6 +295,7 @@ class ConcatLayer : public Layer<xpu>{
   }
  protected:
   int nBottomNode, concat_dim_index;
+  bool is_concat_by_length;
 };
 }  // namespace layer
 }  // namespace textnet
