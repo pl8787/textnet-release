@@ -4,7 +4,7 @@ import copy, os
 from gen_conf_file import *
 from dataset_cfg import *
 
-def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretrain_run_no, model_no, epoch_no):
+def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     # print "ORC: left & right lstm share parameters"
     net = {}
 
@@ -16,27 +16,13 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
 
     g_layer_setting = {}
     g_layer_setting['no_bias'] = False
+
     g_layer_setting['w_filler'] = g_filler 
-    g_layer_setting['u_filler'] = g_filler
     g_layer_setting['b_filler'] = zero_filler
     g_layer_setting['w_updater'] = g_updater
-    g_layer_setting['u_updater'] = g_updater
     g_layer_setting['b_updater'] = g_updater
-    g_layer_setting['w_g_filler'] = g_filler 
-    g_layer_setting['u_g_filler'] = g_filler
-    g_layer_setting['b_g_filler'] = zero_filler
-    g_layer_setting['w_c_filler'] = g_filler 
-    g_layer_setting['u_c_filler'] = g_filler
-    g_layer_setting['b_c_filler'] = zero_filler
-    g_layer_setting['w_g_updater'] = g_updater
-    g_layer_setting['u_g_updater'] = g_updater
-    g_layer_setting['b_g_updater'] = g_updater
-    g_layer_setting['w_c_updater'] = g_updater
-    g_layer_setting['u_c_updater'] = g_updater
-    g_layer_setting['b_c_updater'] = g_updater
 
-
-    net['net_name'] = 'match_bilstm_sim_dpool'
+    net['net_name'] = 'match_arcii'
     net['need_reshape'] = True 
     net_cfg_train, net_cfg_valid, net_cfg_test = {}, {}, {}
     net['net_config'] = [net_cfg_train, net_cfg_valid, net_cfg_test]
@@ -117,96 +103,137 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     layer = {}
     layers.append(layer) 
     layer['bottom_nodes'] = ['word_rep_seq']
-    layer['top_nodes'] = ['l_lstm_seq']
-    layer['layer_name'] = 'l_lstm'
-    # layer['layer_type'] = 24
-    layer['layer_type'] = 1006 # gru
+    layer['top_nodes'] = ['l_sentence', 'r_sentence']
+    layer['layer_name'] = 'sentence_split'
+    layer['layer_type'] = 20 
+    setting = {}
+    layer['setting'] = setting
+
+    layer = {}
+    layers.append(layer)
+    layer['bottom_nodes'] = ['l_sentence']
+    layer['top_nodes'] = ['l_sentence_conv_1']
+    layer['layer_name'] = 'l_conv_1'
+    layer['layer_type'] = 14
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
-    setting['d_mem'] = d_mem
-    setting['grad_norm2'] = lstm_norm2
-    setting['grad_cut_off'] = 100
-    setting['max_norm2'] = 100
-    setting['reverse'] = False
-    setting['f_gate_bias_init'] = 0.
-    setting['o_gate_bias_init'] = 0.
+    setting['channel_out'] = d_mem 
+    setting['kernel_x'] = d_mem 
+    setting['kernel_y'] = 3
+    setting['pad_x'] = 0
+    setting['pad_y'] = 2
+    setting['no_bias'] = True
+    setting['stride'] = 1
+    # setting['d1_var_len'] = True 
 
     layer = {}
-    layers.append(layer) 
-    layer['bottom_nodes'] = ['l_lstm_seq']
-    layer['top_nodes'] = ['l_pool_rep']
-    layer['layer_name'] = 'l_wholePooling'
-    layer['layer_type'] =  25
-    setting = {"pool_type":"last"}
-    layer['setting'] = setting
-
-    layer = {}
-    layers.append(layer) 
-    layer['bottom_nodes'] = ['word_rep_seq']
-    layer['top_nodes'] = ['r_lstm_seq']
-    layer['layer_name'] = 'r_lstm'
-    # layer['layer_type'] = 24
-    layer['layer_type'] = 1006 # gru
+    layers.append(layer)
+    layer['bottom_nodes'] = ['r_sentence']
+    layer['top_nodes'] = ['r_sentence_conv_1']
+    layer['layer_name'] = 'r_conv_1'
+    layer['layer_type'] = 14
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
-    setting['d_mem'] = d_mem
-    setting['grad_norm2'] = lstm_norm2
-    setting['reverse'] = True 
-    setting['grad_cut_off'] = 100
-    setting['max_norm2'] = 100
-    setting['f_gate_bias_init'] = 0.
-    setting['o_gate_bias_init'] = 0.
+    setting['channel_out'] = d_mem 
+    setting['kernel_x'] = d_mem 
+    setting['kernel_y'] = 3
+    setting['pad_x'] = 0
+    setting['pad_y'] = 2
+    setting['no_bias'] = True
+    setting['stride'] = 1
+    # setting['d1_var_len'] = True 
 
     layer = {}
-    layers.append(layer) 
-    layer['bottom_nodes'] = ['r_lstm_seq']
-    layer['top_nodes'] = ['r_pool_rep']
-    layer['layer_name'] = 'r_wholePooling'
-    layer['layer_type'] =  25
-    setting = {"pool_type":"first"}
+    layers.append(layer)
+    layer['bottom_nodes'] = ['l_sentence_conv_1', 'r_sentence_conv_1']
+    layer['top_nodes'] = ['cross']
+    layer['layer_name'] = 'cross_layer'
+    layer['layer_type'] = 22 
+    setting = {}
     layer['setting'] = setting
 
     layer = {}
-    layers.append(layer) 
-    layer['bottom_nodes'] = ['l_pool_rep', 'r_pool_rep']
-    layer['top_nodes'] = ['bi_pool_rep']
-    layer['layer_name'] = 'concat'
-    layer['layer_type'] = 18
+    layers.append(layer)
+    layer['bottom_nodes'] = ['cross']
+    layer['top_nodes'] = ['pool1']
+    layer['layer_name'] = 'maxpool1'
+    layer['layer_type'] = 15 
+    setting = {'kernel_x':2, 'kernel_y':2, 'stride':2}
+    layer['setting'] = setting
+
+    layer = {}
+    layers.append(layer)
+    layer['bottom_nodes'] = ['pool1']
+    layer['top_nodes'] = ['relu1']
+    layer['layer_name'] = 'nonlinear_1'
+    layer['layer_type'] = 1 
+    setting = {}
+    layer['setting'] = setting
+
+    layer = {}
+    layers.append(layer)
+    layer['bottom_nodes'] = ['relu1']
+    layer['top_nodes'] = ['conv_2']
+    layer['layer_name'] = 'r_conv_1'
+    layer['layer_type'] = 14
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
-    setting['bottom_node_num'] = 2
-    setting['concat_dim_index'] = 3
+    setting['channel_out'] = d_mem 
+    setting['kernel_x'] = 2 
+    setting['kernel_y'] = 2
+    setting['pad_x'] = 0
+    setting['pad_y'] = 0
+    setting['no_bias'] = True
+    setting['stride'] = 1
+
+    layer = {}
+    layers.append(layer)
+    layer['bottom_nodes'] = ['conv_2']
+    layer['top_nodes'] = ['pool2']
+    layer['layer_name'] = 'maxpool2'
+    layer['layer_type'] = 15 
+    setting = {'kernel_x':2, 'kernel_y':2, 'stride':2}
+    layer['setting'] = setting
+
+    layer = {}
+    layers.append(layer)
+    layer['bottom_nodes'] = ['pool2']
+    layer['top_nodes'] = ['relu2']
+    layer['layer_name'] = 'nonlinear_2'
+    layer['layer_type'] = 1 
+    setting = {}
+    layer['setting'] = setting
 
     layer = {}
     layers.append(layer) 
-    layer['bottom_nodes'] = ['bi_pool_rep']
+    layer['bottom_nodes'] = ['relu2']
     layer['top_nodes'] = ['hidden_trans']
     layer['layer_name'] = 'mlp_hidden'
-    layer['layer_type'] = 11 
+    layer['layer_type'] = 11
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
     setting['num_hidden'] = d_mem * 2
-    # setting['no_bias'] = False
 
     layer = {}
     layers.append(layer) 
     layer['bottom_nodes'] = ['hidden_trans']
     layer['top_nodes'] = ['hidden_rep']
     layer['layer_name'] = 'hidden_nonlinear'
-    layer['layer_type'] = 3 
+    layer['layer_type'] = 1
     setting = {}
     layer['setting'] = setting
      
     layer = {}
     layers.append(layer) 
     layer['bottom_nodes'] = ['hidden_rep']
+    # layer['bottom_nodes'] = ['dpool_rep']
     layer['top_nodes'] = ['softmax_prob']
     layer['layer_name'] = 'softmax_fullconnect'
-    layer['layer_type'] = 11 
+    layer['layer_type'] = 11
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
     setting['num_hidden'] = 1 # ds.num_class
-    # setting['no_bias'] = False
+    # setting['no_bias'] = True
     setting['w_filler'] = zero_filler
 
     layer = {}
@@ -247,26 +274,32 @@ run = 1
 l2 = 0.
 # for dataset in ['paper']:
 for dataset in ['qa']:
-# for dataset in ['qa_candi']:
     for d_mem in [50]:
         idx = 0
-        # for model_no in [0,1,2,3,4,5,6,7,8]:
-        #     for epoch_no in [20000, 40000, 80000]:
-        for model_no in [2]:
-            #  for epoch_no in [0, 10000, 25000]:
-            for epoch_no in [0]:
-                # for init in [0.5, 0.3, 0.1]:
-                for init in [0.3, 0.1, 0.03]:
-                    for lr in [0.5, 0.3, 0.1]:
-                        # for l2 in [0.00001, 0.0001]:
-                        for l2 in [0]:
-                            pretrain_run_no = 18
-                            lstm_norm2 = 10000 
-                            net = gen_match_lstm(d_mem=d_mem,init=init,lr=lr,dataset=dataset,l2=l2,lstm_norm2=lstm_norm2,  \
-                                                 is_pretrain=False,pretrain_run_no=pretrain_run_no,model_no=model_no,epoch_no=epoch_no)
-                            net['log'] = 'log.match.bilstm_mlp.{0}.d{1}.run{2}.{3}'.format\
-                                         (dataset, str(d_mem), str(run), str(idx))
-                            gen_conf_file(net, '/home/wsx/exp/match/{0}/bilstm_mlp/run.{1}/'.format(dataset,str(run)) + \
-                                               'model.match.bilstm_mlp.{0}.d{1}.run{2}.{3}'.format\
-                                               (dataset, str(d_mem), str(run), str(idx)))
-                            idx += 1
+        # for epoch_no in [0, 10000, 25000]:
+        for epoch_no in [0]:
+            for init in [0.3, 0.1, 0.03]:
+                for lr in [0.3, 0.1, 0.03]:
+                    # for l2 in [0.00001, 0.0001, 0.001]:
+                    init_t = init
+                    # t_lr = t_lr_mul * lr
+                    pretrain_run_no = 0 
+                    lstm_norm2 = 100000 
+                    net = gen_match_lstm(d_mem=d_mem,init=init,lr=lr,dataset=dataset,l2=l2,lstm_norm2=lstm_norm2)
+                    net['log'] = 'log.match.arcii.{0}.d{1}.run{2}.{3}'.format\
+                                 (dataset, str(d_mem), str(run), str(idx))
+                    # net["save_model"] = {"file_prefix": "./model/model."+str(idx),"save_interval": 500}
+                    # net["save_activation"] = [{"tag":"Valid","file_prefix": \
+                    #                            "./model/valid."+str(idx), \
+                    #                            "save_interval": 500, \
+                    #                            "save_nodes":["x","y","word_rep_seq","l_sentence",\
+                    #                                          "r_sentence","interaction_rep", \
+                    #                                          # "interaction_rep_nonlinear",\
+                    #                                          "dpool_rep","softmax_prob"], \
+                    #                            "save_iter_num":1}]
+
+
+                    gen_conf_file(net, '/home/wsx/exp/match/{0}/arcii/run.{1}/'.format(dataset,str(run)) + \
+                                       'model.match.arcii.{0}.d{1}.run{2}.{3}'.format\
+                                       (dataset, str(d_mem), str(run), str(idx)))
+                    idx += 1
