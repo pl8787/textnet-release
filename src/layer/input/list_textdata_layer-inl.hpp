@@ -30,6 +30,7 @@ class ListTextDataLayer : public Layer<xpu>{
   
   virtual void Require() {
     // default value, just set the value you want
+	this->defaults["batch_size"] = SettingV(1);
     this->defaults["min_doc_len"] = SettingV(1);
 	this->defaults["speedup_list"] = SettingV(true);
     // require value, set to SettingV(),
@@ -51,6 +52,7 @@ class ListTextDataLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(),
                   "TextDataLayer:top size problem.");
 
+	batch_size = setting["batch_size"].iVal();
     data_file = setting["data_file"].sVal();
     max_doc_len = setting["max_doc_len"].iVal();
     min_doc_len = setting["min_doc_len"].iVal();
@@ -152,8 +154,8 @@ class ListTextDataLayer : public Layer<xpu>{
     
     utils::Check(max_doc_len > 0, "max_doc_len <= 0");
 
-    top[0]->Resize(max_list, 2, 1, max_doc_len, true);
-    top[1]->Resize(max_list, 1, 1, 1, true);
+    top[0]->Resize(max_list * batch_size, 2, 1, max_doc_len, true);
+    top[1]->Resize(max_list * batch_size, 1, 1, 1, true);
     
     if (show_info) {
         top[0]->PrintShape("top0");
@@ -187,19 +189,22 @@ class ListTextDataLayer : public Layer<xpu>{
 	top0_length = 0;
 	top1_data = -1;
 
-    for (int i = 0; i < list_set[line_ptr].size(); ++i) {
-	  int idx = list_set[line_ptr][i];
-	  for (int j = 0; j < q_data_set[idx].size(); ++j) {
-		top0_data[i][0][j] = q_data_set[idx][j];
-	  }
-	  for (int j = 0; j < a_data_set[idx].size(); ++j) {
-		top0_data[i][1][j] = a_data_set[idx][j];
-	  }
-      top0_length[i][0] = q_data_set[idx].size();
-	  top0_length[i][1] = a_data_set[idx].size();
-      top1_data[i] = label_set[idx];
-    }
-    line_ptr = (line_ptr + 1) % list_set.size();
+	for (int s = 0; s < batch_size; ++s) {
+      for (int i = 0; i < list_set[line_ptr].size(); ++i) {
+	    int idx = list_set[line_ptr][i];
+		int out_idx = s * list_set[line_ptr].size() + i;
+	    for (int j = 0; j < q_data_set[idx].size(); ++j) {
+	  	  top0_data[out_idx][0][j] = q_data_set[idx][j];
+	    }
+	    for (int j = 0; j < a_data_set[idx].size(); ++j) {
+	  	  top0_data[out_idx][1][j] = a_data_set[idx][j];
+	    }
+        top0_length[out_idx][0] = q_data_set[idx].size();
+	    top0_length[out_idx][1] = a_data_set[idx].size();
+        top1_data[out_idx] = label_set[idx];
+      }
+      line_ptr = (line_ptr + 1) % list_set.size();
+	}
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,

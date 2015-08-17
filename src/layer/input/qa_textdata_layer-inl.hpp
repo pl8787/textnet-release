@@ -36,7 +36,7 @@ class QATextDataLayer : public Layer<xpu>{
   
   virtual void Require() {
     // default value, just set the value you want
-    this->defaults["batch_size"] = SettingV(0);
+    this->defaults["batch_size"] = SettingV(1);
     this->defaults["mode"] = SettingV("batch"); // batch, pair, list    
 	this->defaults["shuffle"] = SettingV(false);
 	this->defaults["speedup_list"] = SettingV(true); // only when list
@@ -254,9 +254,9 @@ class QATextDataLayer : public Layer<xpu>{
       top[1]->Resize(2 * batch_size * (candids + 1), 1, 1, max_doc_len, true);
       top[2]->Resize(2 * batch_size, 1, 1, 1, true);
     } else if (mode == "list") {
-      top[0]->Resize(max_list * (candids + 1), 1, 1, max_doc_len, true);
-      top[1]->Resize(max_list * (candids + 1), 1, 1, max_doc_len, true);
-      top[2]->Resize(max_list, 1, 1, 1, true);
+      top[0]->Resize(max_list * batch_size * (candids + 1), 1, 1, max_doc_len, true);
+      top[1]->Resize(max_list * batch_size * (candids + 1), 1, 1, max_doc_len, true);
+      top[2]->Resize(max_list * batch_size, 1, 1, 1, true);
     }
     
     if (show_info) {
@@ -344,12 +344,15 @@ class QATextDataLayer : public Layer<xpu>{
         line_ptr = (line_ptr + 1) % pair_set.size();
       }
     } else if (mode == "list") {
-      for (int i = 0; i < list_set[line_ptr].size(); ++i) {
-        int idx = list_set[line_ptr][i];
-        FillData(top0_data, top0_length, top1_data, top1_length, i, idx);
-        top2_data[i] = label_set[idx];
-      }
-      line_ptr = (line_ptr + 1) % list_set.size();
+	  for (int s = 0; s < batch_size; ++s) {
+        for (int i = 0; i < list_set[line_ptr].size(); ++i) {
+          int idx = list_set[line_ptr][i];
+		  int out_idx = s * list_set[line_ptr].size() + i;
+          FillData(top0_data, top0_length, top1_data, top1_length, out_idx, idx);
+          top2_data[out_idx] = label_set[idx];
+        }
+        line_ptr = (line_ptr + 1) % list_set.size();
+	  }
     }
   }
   

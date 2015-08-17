@@ -69,6 +69,7 @@ Layer2Name = {
   1004: 'MatchMulti',
   1005: 'BatchCombine',
   1006: 'Gru',
+  10001: 'kMaxDynamicPooling',
 
   # Loss Layer 51-70
   51: 'Softmax', 

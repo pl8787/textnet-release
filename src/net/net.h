@@ -552,6 +552,9 @@ class Net : public INet{
     for (int i = nets[tag].size()-1; i>=0; --i) {
       int layer_idx = nets[tag][i]->layer_idx;
       nets[tag][i]->Backprop(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+#if DEBUG
+		cout << "BP " << nets[tag][i]->layer_name << endl;
+#endif
     }
     NormLstmGradient(tag);
   }
@@ -630,10 +633,10 @@ class Net : public INet{
 
   virtual void SetupAllNets() {
     // Prepare
-    PropAll();
     for (int i = 0; i < tags.size(); ++i) {
       SetupReshape(tags[i]);
     }
+    PropAll();
   }
   
   virtual void TrainOneStep(string tag, int iter = 0) {

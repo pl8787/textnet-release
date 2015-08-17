@@ -39,6 +39,7 @@ class ListwiseMeasureLayer : public Layer<xpu>{
     // default value, just set the value you want
     this->defaults["k"] = SettingV(1.0f);
     this->defaults["col"] = SettingV(0);
+	this->defaults["batch_size"] = SettingV(1);
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["method"] = SettingV();
@@ -59,6 +60,7 @@ class ListwiseMeasureLayer : public Layer<xpu>{
     k = setting["k"].iVal();
     method = setting["method"].sVal();
     col = setting["col"].iVal();
+	batch_size = setting["batch_size"].iVal();
     
     utils::Check(method == "MRR" || method == "P@k" || method == "nDCG@k", 
                   "Parameter [method] must be MRR or P@k or nDCG@k.");
@@ -68,11 +70,16 @@ class ListwiseMeasureLayer : public Layer<xpu>{
                        const std::vector<Node<xpu>*> &top,
                        bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(),
-                  "PairHingeLossLayer:bottom size problem."); 
+                  "ListwiseMeasureLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
-                  "PairHingeLossLayer:top size problem.");
+                  "ListwiseMeasureLayer:top size problem.");
     nbatch = bottom[0]->data.size(0);    
     top[0]->Resize(1, 1, 1, 1, true);
+
+	utils::Check(nbatch % batch_size == 0,
+					"ListwiseMeasureLayer:nbatch %% batch_size != 0.");
+	list_size = nbatch / batch_size;
+
     if (show_info) {
 		bottom[0]->PrintShape("bottom0");
         top[0]->PrintShape("top0");
@@ -91,45 +98,52 @@ class ListwiseMeasureLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 2> bottom0_data = bottom[0]->data_d2();
     mshadow::Tensor<xpu, 1> bottom1_data = bottom[1]->data_d1();
     mshadow::Tensor<xpu, 1> top_data = top[0]->data_d1();
-    vector< pair<float, float> > score_list;
-    float score = 0.0;
-
-    float check = 0.0;
     
-    for (int i = 0; i < nbatch; ++i) {
-      if (bottom1_data[i] == -1)
+	top_data = 0.0;
+
+	for (int s = 0; s < batch_size; ++s) {
+      vector< pair<float, float> > score_list;
+      float score = 0.0;
+      float check = 0.0;
+
+      for (int i = 0; i < list_size; ++i) {
+	    int idx = s * list_size + i;
+        if (bottom1_data[idx] == -1)
           break;
-      score_list.push_back( make_pair(bottom0_data[i][col], bottom1_data[i]) );
-    }
-
-	// shuffle before sort!
-	unsigned seed = std::chrono::system_clock::now ().time_since_epoch ().count ();
-	std::shuffle (score_list.begin (), score_list.end (), std::default_random_engine (seed)); 
-
-    sort(score_list.begin(), score_list.end(), list_cmp);
-
-    int score_list_len = score_list.size();
-
-    if (method == "MRR") {
-      for (int i = 0; i < score_list_len; ++i) {
-        if (score_list[i].second == 1)
-          score += 1.0 / (i+1);
-        check += score_list[i].second;
+        score_list.push_back( make_pair(bottom0_data[idx][col], bottom1_data[idx]) );
       }
-      utils::Check(check==1, "Not a valid list.");
-    } else if (method == "P@k") {
-      for (int i = 0; i < min(k, score_list_len); ++i) {
-        if (score_list[i].second == 1)
-          score = 1.0;
+
+	  // shuffle before sort!
+	  unsigned seed = std::chrono::system_clock::now ().time_since_epoch ().count ();
+	  std::shuffle (score_list.begin (), score_list.end (), std::default_random_engine (seed)); 
+
+      sort(score_list.begin(), score_list.end(), list_cmp);
+
+      int score_list_len = score_list.size();
+
+      if (method == "MRR") {
+        for (int i = 0; i < score_list_len; ++i) {
+          if (score_list[i].second == 1)
+            score += 1.0 / (i+1);
+          check += score_list[i].second;
+        }
+        utils::Check(check==1, "Not a valid list.");
+      } else if (method == "P@k") {
+        for (int i = 0; i < min(k, score_list_len); ++i) {
+          if (score_list[i].second == 1)
+            score = 1.0;
+        }
+      } else if (method == "nDCG@k") {
+        for (int i = 0; i < min(k, score_list_len); ++i) {
+          if (score_list[i].second == 1)
+            score += 1.0 / log(i+2);
+        }
       }
-    } else if (method == "nDCG@k") {
-      for (int i = 0; i < min(k, score_list_len); ++i) {
-        if (score_list[i].second == 1)
-          score += 1.0 / log(i+2);
-      }
-    }
     
-    top_data[0] = score;
+      top_data[0] += score;
+	}
+
+	top_data[0] /= batch_size;
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
@@ -143,6 +157,8 @@ class ListwiseMeasureLayer : public Layer<xpu>{
   int k;
   string method;
   int col;
+  int batch_size;
+  int list_size;
 
 };
 }  // namespace layer
