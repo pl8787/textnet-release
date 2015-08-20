@@ -90,6 +90,7 @@ class ListwiseMeasureLayer : public Layer<xpu>{
                             const std::vector<Node<xpu>*> &top) {
     // Check for reshape
     nbatch = bottom[0]->data.size(0);
+	list_size = nbatch / batch_size;
   }
 
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
@@ -114,8 +115,8 @@ class ListwiseMeasureLayer : public Layer<xpu>{
       }
 
 	  // shuffle before sort!
-	  unsigned seed = std::chrono::system_clock::now ().time_since_epoch ().count ();
-	  std::shuffle (score_list.begin (), score_list.end (), std::default_random_engine (seed)); 
+	  unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+	  std::shuffle(score_list.begin(), score_list.end(), std::default_random_engine(seed)); 
 
       sort(score_list.begin(), score_list.end(), list_cmp);
 
@@ -139,7 +140,6 @@ class ListwiseMeasureLayer : public Layer<xpu>{
             score += 1.0 / log(i+2);
         }
       }
-    
       top_data[0] += score;
 	}
 

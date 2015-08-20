@@ -20,6 +20,7 @@
 #include "./common/match_weighted_dot_layer-inl.hpp"
 #include "./common/match_multi_layer-inl.hpp"
 #include "./common/batch_combine_layer-inl.hpp"
+#include "./common/batch_select_layer-inl.hpp"
 #include "./common/lstm_layer-inl.hpp"
 #include "./common/gru_layer-inl.hpp"
 #include "./common/lstm_autoencoder_layer-inl.hpp"
@@ -131,6 +132,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kMatchWeightedDot: return new MatchWeightedDotLayer<xpu>(type);
 	case kMatchMulti: return new MatchMultiLayer<xpu>(type);
     case kBatchCombine: return new BatchCombineLayer<xpu>(type);
+    case kBatchSelect: return new BatchSelectLayer<xpu>(type);
     case kSwapAxis: return new SwapAxisLayer<xpu>(type);
     case kFlatten: return new FlattenLayer<xpu>(type);
     case kMatchPhraseRep: return new MatchPhraseRepLayer<xpu>(type);
