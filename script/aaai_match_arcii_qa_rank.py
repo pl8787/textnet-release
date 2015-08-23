@@ -118,7 +118,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
     setting['channel_out'] = d_mem 
-    setting['kernel_x'] = d_mem 
+    setting['kernel_x'] = ds.d_word_rep 
     setting['kernel_y'] = 3
     setting['pad_x'] = 0
     setting['pad_y'] = 2
@@ -135,7 +135,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
     setting['channel_out'] = d_mem 
-    setting['kernel_x'] = d_mem 
+    setting['kernel_x'] = ds.d_word_rep
     setting['kernel_y'] = 3
     setting['pad_x'] = 0
     setting['pad_y'] = 2
@@ -170,43 +170,43 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     setting = {}
     layer['setting'] = setting
 
-    layer = {}
-    layers.append(layer)
-    layer['bottom_nodes'] = ['relu1']
-    layer['top_nodes'] = ['conv_2']
-    layer['layer_name'] = 'r_conv_1'
-    layer['layer_type'] = 14
-    setting = copy.deepcopy(g_layer_setting)
-    layer['setting'] = setting
-    setting['channel_out'] = d_mem 
-    setting['kernel_x'] = 2 
-    setting['kernel_y'] = 2
-    setting['pad_x'] = 0
-    setting['pad_y'] = 0
-    setting['no_bias'] = True
-    setting['stride'] = 1
+    # layer = {}
+    # layers.append(layer)
+    # layer['bottom_nodes'] = ['relu1']
+    # layer['top_nodes'] = ['conv_2']
+    # layer['layer_name'] = 'r_conv_1'
+    # layer['layer_type'] = 14
+    # setting = copy.deepcopy(g_layer_setting)
+    # layer['setting'] = setting
+    # setting['channel_out'] = d_mem 
+    # setting['kernel_x'] = 2 
+    # setting['kernel_y'] = 2
+    # setting['pad_x'] = 0
+    # setting['pad_y'] = 0
+    # setting['no_bias'] = True
+    # setting['stride'] = 1
 
-    layer = {}
-    layers.append(layer)
-    layer['bottom_nodes'] = ['conv_2']
-    layer['top_nodes'] = ['pool2']
-    layer['layer_name'] = 'maxpool2'
-    layer['layer_type'] = 15 
-    setting = {'kernel_x':2, 'kernel_y':2, 'stride':2}
-    layer['setting'] = setting
+    # layer = {}
+    # layers.append(layer)
+    # layer['bottom_nodes'] = ['conv_2']
+    # layer['top_nodes'] = ['pool2']
+    # layer['layer_name'] = 'maxpool2'
+    # layer['layer_type'] = 15 
+    # setting = {'kernel_x':2, 'kernel_y':2, 'stride':2}
+    # layer['setting'] = setting
 
-    layer = {}
-    layers.append(layer)
-    layer['bottom_nodes'] = ['pool2']
-    layer['top_nodes'] = ['relu2']
-    layer['layer_name'] = 'nonlinear_2'
-    layer['layer_type'] = 1 
-    setting = {}
-    layer['setting'] = setting
+    # layer = {}
+    # layers.append(layer)
+    # layer['bottom_nodes'] = ['pool2']
+    # layer['top_nodes'] = ['relu2']
+    # layer['layer_name'] = 'nonlinear_2'
+    # layer['layer_type'] = 1 
+    # setting = {}
+    # layer['setting'] = setting
 
     layer = {}
     layers.append(layer) 
-    layer['bottom_nodes'] = ['relu2']
+    layer['bottom_nodes'] = ['relu1']
     layer['top_nodes'] = ['hidden_trans']
     layer['layer_name'] = 'mlp_hidden'
     layer['layer_type'] = 11
@@ -273,13 +273,15 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
 run = 1
 l2 = 0.
 # for dataset in ['paper']:
-for dataset in ['qa']:
-    for d_mem in [50]:
+for dataset in ['qa_50']:
+    for d_mem in [30]:
         idx = 0
         # for epoch_no in [0, 10000, 25000]:
         for epoch_no in [0]:
-            for init in [0.3, 0.1, 0.03]:
-                for lr in [0.3, 0.1, 0.03]:
+            for init in [0.1, 0.03, 0.01]:
+                for lr in [0.3, 0.1, 0.03, 0.01]:
+            # for init in [0.2, 0.05, 0.01]:
+            #     for lr in [0.15, 0.06, 0.02]:
                     # for l2 in [0.00001, 0.0001, 0.001]:
                     init_t = init
                     # t_lr = t_lr_mul * lr

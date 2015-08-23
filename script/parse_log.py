@@ -92,12 +92,16 @@ def parse_tvt(inFile, measure='acc'):
 # dir = '/home/wsx/exp/match/qa_balance/bilstm_sim_dpool/run.4/'
 # dir = '/home/wsx/exp/match/qa_balance/bilstm_sim_dpool/run.4/'
 # dir = '/home/wsx/exp/match/qa/bilstm_sim_dpool/run.3/'
-dir = '/home/wsx/exp/match/qa/bilstm_tensor_dpool/run.1/'
+# dir = '/home/wsx/exp/match/qa/bilstm_tensor_dpool/run.1/'
+data_set = 'msrp'
+run = 50
+# dir = '/home/wsx/exp/match/{0}/bilstm_tensor_dpool/run.{1}/'.format(data_set, str(run))
+dir = '/home/wsx/exp/match/{0}/bilstm_sim_dpool/run.{1}/'.format(data_set, str(run))
 # dir = '/home/wsx/exp/match/qa_balance/mul_cnn_sim_dpool/run.1/'
 ## dir = '/home/wsx/exp/match/paper/bilstm_tensor_dpool/run.6/'
-for i in range(15):
+for i in range(20):
     try:
-        parse_tvt(dir + 'log.match.bilstm_tensor_dpool.qa.d50.run1.'+str(i), 'P@k')
+        parse_tvt(dir + 'log.match.bilstm_sim_dpool.{0}.d50.run{1}.{2}'.format(data_set, str(run), str(i)), 'acc')
         # cparse_tvt(dir + 'log.match.bilstm_tensor_dpool.qa_balance.d50.run1.'+str(i), 'acc')
         # parse_tvt(dir + 'log.match.bilstm_tensor_dpool.qa_balance.d40.run12.'+str(i))
     except:

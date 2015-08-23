@@ -32,21 +32,21 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     g_layer_setting['b_updater'] = g_updater
 
     net['net_name'] = 'match_multigran_cnn_tensor_dpool'
-    net['need_reshape'] = False
+    net['need_reshape'] = True
     net_cfg_train, net_cfg_valid, net_cfg_test = {}, {}, {}
     net['net_config'] = [net_cfg_train, net_cfg_valid, net_cfg_test]
     net_cfg_train["tag"] = "Train"
     net_cfg_train["max_iters"] = ds.train_max_iters 
     net_cfg_train["display_interval"] = ds.train_display_interval
-    net_cfg_train["out_nodes"] = ['loss', 'acc']
+    net_cfg_train["out_nodes"] = ['loss']
     net_cfg_valid["tag"] = "Valid"
     net_cfg_valid["max_iters"] = ds.valid_max_iters 
     net_cfg_valid["display_interval"] = ds.valid_display_interval 
-    net_cfg_valid["out_nodes"] = ['loss','acc']
-    net_cfg_test["tag"] = "Test"
+    net_cfg_valid["out_nodes"] = ['P@k','MRR']
+    net_cfg_test["tag"]  = "Test"
     net_cfg_test["max_iters"]  = ds.test_max_iters 
     net_cfg_test["display_interval"] = ds.test_display_interval
-    net_cfg_test["out_nodes"]  = ['loss','acc']
+    net_cfg_test["out_nodes"]  = ['P@k','MRR']
     layers = []
     net['layers'] = layers
 
@@ -55,11 +55,12 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['bottom_nodes'] = []
     layer['top_nodes'] = ['x', 'y']
     layer['layer_name'] = 'train_data'
-    layer['layer_type'] = 71
+    layer['layer_type'] = 79
     layer['tag'] = ['Train']
     setting = {}
     layer['setting'] = setting
     setting['batch_size'] = ds.train_batch_size
+    setting['shuffle'] = True
     setting['data_file'] = ds.train_data_file
     setting['max_doc_len'] = ds.max_doc_len
     setting['min_doc_len'] = ds.min_doc_len
@@ -69,7 +70,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['bottom_nodes'] = []
     layer['top_nodes'] = ['x', 'y']
     layer['layer_name'] = 'valid_data'
-    layer['layer_type'] = 71
+    layer['layer_type'] = 80 
     layer['tag'] = ['Valid']
     setting = {}
     layer['setting'] = setting
@@ -83,7 +84,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['bottom_nodes'] = []
     layer['top_nodes'] = ['x', 'y']
     layer['layer_name'] = 'test_data'
-    layer['layer_type'] = 71
+    layer['layer_type'] = 80 
     layer['tag'] = ['Test']
     setting = {}
     layer['setting'] = setting
@@ -126,7 +127,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
     setting['channel_out'] = d_mem 
-    setting['kernel_x'] = d_mem 
+    setting['kernel_x'] = ds.d_word_rep
     setting['kernel_y'] = 3
     setting['pad_x'] = 0
     setting['pad_y'] = 2
@@ -139,7 +140,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['bottom_nodes'] = ['l_sentence_conv_1']
     layer['top_nodes'] = ['l_sentence_conv_nonlinear_1']
     layer['layer_name'] = 'l_conv_nonlinear_1'
-    layer['layer_type'] = 1 
+    layer['layer_type'] = 3 
     setting = {}
     layer['setting'] = setting
 
@@ -162,7 +163,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['setting'] = setting
     setting['L'] = 3
     setting['l'] = 1
-    setting['max_sentence_length'] = 32
+    setting['max_sentence_length'] = ds.max_doc_len
     setting['min_rep_length'] = 4
 
     layer = {}
@@ -187,7 +188,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['bottom_nodes'] = ['l_sentence_conv_2']
     layer['top_nodes'] = ['l_sentence_conv_nonlinear_2']
     layer['layer_name'] = 'l_conv_nonlinear_2'
-    layer['layer_type'] = 1 
+    layer['layer_type'] = 3 
     setting = {}
     layer['setting'] = setting
 
@@ -210,7 +211,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['setting'] = setting
     setting['L'] = 3
     setting['l'] = 2
-    setting['max_sentence_length'] = 32
+    setting['max_sentence_length'] = ds.max_doc_len
     setting['min_rep_length'] = 4
 
     layer = {}
@@ -235,7 +236,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['bottom_nodes'] = ['l_sentence_conv_3']
     layer['top_nodes'] = ['l_sentence_conv_nonlinear_3']
     layer['layer_name'] = 'l_conv_nonlinear_3'
-    layer['layer_type'] = 1 
+    layer['layer_type'] = 3 
     setting = {}
     layer['setting'] = setting
 
@@ -258,7 +259,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['setting'] = setting
     setting['L'] = 3
     setting['l'] = 3
-    setting['max_sentence_length'] = 32
+    setting['max_sentence_length'] = ds.max_doc_len
     setting['min_rep_length'] = 4
 
     layer = {}
@@ -269,8 +270,8 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['layer_type'] = 14
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
-    setting['channel_out'] = d_mem 
-    setting['kernel_x'] = d_mem 
+    setting['channel_out'] = d_mem
+    setting['kernel_x'] = ds.d_word_rep
     setting['kernel_y'] = 3
     setting['pad_x'] = 0
     setting['pad_y'] = 2
@@ -283,7 +284,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['bottom_nodes'] = ['r_sentence_conv_1']
     layer['top_nodes'] = ['r_sentence_conv_nonlinear_1']
     layer['layer_name'] = 'r_conv_nonlinear_1'
-    layer['layer_type'] = 1 
+    layer['layer_type'] = 3 
     setting = {}
     layer['setting'] = setting
 
@@ -306,7 +307,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['setting'] = setting
     setting['L'] = 3
     setting['l'] = 1
-    setting['max_sentence_length'] = 32
+    setting['max_sentence_length'] = ds.max_doc_len
     setting['min_rep_length'] = 4
 
     layer = {}
@@ -331,7 +332,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['bottom_nodes'] = ['r_sentence_conv_2']
     layer['top_nodes'] = ['r_sentence_conv_nonlinear_2']
     layer['layer_name'] = 'r_conv_nonlinear_2'
-    layer['layer_type'] = 1 
+    layer['layer_type'] = 3 
     setting = {}
     layer['setting'] = setting
 
@@ -354,7 +355,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['setting'] = setting
     setting['L'] = 3
     setting['l'] = 2
-    setting['max_sentence_length'] = 32
+    setting['max_sentence_length'] = ds.max_doc_len
     setting['min_rep_length'] = 4
 
     layer = {}
@@ -379,7 +380,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['bottom_nodes'] = ['r_sentence_conv_3']
     layer['top_nodes'] = ['r_sentence_conv_nonlinear_3']
     layer['layer_name'] = 'r_conv_nonlinear_3'
-    layer['layer_type'] = 1 
+    layer['layer_type'] = 3 
     setting = {}
     layer['setting'] = setting
 
@@ -402,7 +403,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['setting'] = setting
     setting['L'] = 3
     setting['l'] = 3
-    setting['max_sentence_length'] = 32
+    setting['max_sentence_length'] = ds.max_doc_len
     setting['min_rep_length'] = 4
 
     layer = {}
@@ -432,30 +433,51 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer = {}
     layers.append(layer) 
     layer['bottom_nodes'] = ['l_sentence_all', 'r_sentence_all']
-    layer['top_nodes'] = ['dot_similarity']
-    layer['layer_name'] = 'match'
-    layer['layer_type'] = 23 
-    print "ORC: use MUL operation for similarity"
-    layer['setting'] = {'op':'mul'}
+    layer['top_nodes'] = ['interaction_rep']
+    layer['layer_name'] = 'match_tensor'
+    layer['layer_type'] = 1003
+    # print "ORC: use COS operation for similarity"
+    setting = copy.deepcopy(g_layer_setting)
+    layer['setting'] = setting
+    setting['d_hidden'] = 1
+    setting['d_factor'] = d_mem 
+    setting['t_l2'] = t_l2
+    setting['is_init_as_I'] = False
+    # setting['is_init_as_I'] = True
+    setting['is_use_linear'] = False
+    # setting['is_update_tensor'] = False
+    setting['is_update_tensor'] = True
+    setting['t_updater'] = t_updater
+    setting['w_updater'] = t_updater
+    setting['t_filler'] = gen_uniform_filter_setting(init_t)
+    setting['w_filler'] = gen_uniform_filter_setting(init_t)
 
     layer = {}
     layers.append(layer) 
-    layer['bottom_nodes'] = ['dot_similarity', 'l_sentence_all', 'r_sentence_all']
+    layer['bottom_nodes'] = ['interaction_rep']
+    layer['top_nodes'] = ['interaction_rep_nonlinear']
+    layer['layer_name'] = 'tensor_nonlinear'
+    layer['layer_type'] = 1 
+    setting = {}
+    layer['setting'] = setting
+    
+    layer = {}
+    layers.append(layer) 
+    layer['bottom_nodes'] = ['interaction_rep_nonlinear', 'l_sentence_all', 'r_sentence_all']
     layer['top_nodes'] = ['dpool_rep']
     layer['layer_name'] = 'dynamic_pooling'
     layer['layer_type'] = 43
-    layer['setting'] = {'row':5, 'col':5, 'interval':1}
+    layer['setting'] = {'row':15, 'col':15, 'interval':1}
 
     layer = {}
     layers.append(layer) 
-    # layer['bottom_nodes'] = ['hidden_drop_rep']
     layer['bottom_nodes'] = ['dpool_rep']
     layer['top_nodes'] = ['softmax_prob']
     layer['layer_name'] = 'softmax_fullconnect'
     layer['layer_type'] = 11
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
-    setting['num_hidden'] = ds.num_class
+    setting['num_hidden'] = 1
     # setting['no_bias'] = True
     setting['w_filler'] = zero_filler
 
@@ -463,31 +485,47 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layers.append(layer) 
     layer['bottom_nodes'] = ['softmax_prob', 'y']
     layer['top_nodes'] = ['loss']
-    layer['layer_name'] = 'softmax_activation'
-    layer['layer_type'] = 51 
+    # layer['layer_name'] = 'softmax_activation'
+    layer['layer_name'] = 'pair_hinge'
+    layer['layer_type'] = 55
+    layer['tag'] = ['Train'] 
     setting = {}
+    layer['setting'] = setting
+    setting['delta'] = 1.
+
+    layer = {}
+    layers.append(layer) 
+    layer['bottom_nodes'] = ['softmax_prob', 'y']
+    layer['top_nodes'] = ['P@k']
+    layer['layer_name'] = 'P@k_layer'
+    layer['layer_type'] = 61 
+    layer['tag'] = ['Valid', 'Test'] 
+    setting = {'k':1, 'col':0, 'method':'P@k'}
     layer['setting'] = setting
 
     layer = {}
     layers.append(layer) 
     layer['bottom_nodes'] = ['softmax_prob', 'y']
-    layer['top_nodes'] = ['acc']
-    layer['layer_name'] = 'accuracy'
-    layer['layer_type'] = 56 
-    setting = {'topk':1}
+    layer['top_nodes'] = ['MRR']
+    layer['layer_name'] = 'MRR_layer'
+    layer['layer_type'] = 61 
+    layer['tag'] = ['Valid', 'Test'] 
+    setting = {'k':1, 'col':0, 'method':'MRR'}
     layer['setting'] = setting
+
     return net
 
 run = 2
 l2 = 0.
 # for dataset in ['paper']:
-for dataset in ['qa_balance']:
+# for dataset in ['qa_balance']:
+for dataset in ['qa_50']:
     for d_mem in [50]:
-        idx = 0
+        idx = 2
         # for epoch_no in [0, 10000, 25000]:
         for epoch_no in [0]:
-            for init in [0.3, 0.1, 0.03]:
-                for lr in [0.3, 0.1, 0.03]:
+            for init in [0.1]:
+                for lr in [0.2, 0.1]:
                     # for l2 in [0.00001, 0.0001, 0.001]:
                     t_l2 = 0.0
                     init_t = init
@@ -495,7 +533,7 @@ for dataset in ['qa_balance']:
                     pretrain_run_no = 0 
                     lstm_norm2 = 100000 
                     net = gen_match_lstm(d_mem=d_mem,init=init,lr=lr,dataset=dataset,l2=l2,lstm_norm2=lstm_norm2)
-                    net['log'] = 'log.match.mul_cnn_sim_dpool.{0}.d{1}.run{2}.{3}'.format\
+                    net['log'] = 'log.match.mul_cnn_tensor_dpool.{0}.d{1}.run{2}.{3}'.format\
                                  (dataset, str(d_mem), str(run), str(idx))
                     # net["save_model"] = {"file_prefix": "./model/model."+str(idx),"save_interval": 500}
                     # net["save_activation"] = [{"tag":"Valid","file_prefix": \
@@ -508,7 +546,7 @@ for dataset in ['qa_balance']:
                     #                            "save_iter_num":1}]
 
 
-                    gen_conf_file(net, '/home/wsx/exp/match/{0}/mul_cnn_sim_dpool/run.{1}/'.format(dataset,str(run)) + \
-                                       'model.match.mul_cnn_sim_dpool.{0}.d{1}.run{2}.{3}'.format\
+                    gen_conf_file(net, '/home/wsx/exp/match/{0}/mul_cnn_tensor_dpool/run.{1}/'.format(dataset,str(run)) + \
+                                       'model.match.mul_cnn_tensor_dpool.{0}.d{1}.run{2}.{3}'.format\
                                        (dataset, str(d_mem), str(run), str(idx)))
                     idx += 1

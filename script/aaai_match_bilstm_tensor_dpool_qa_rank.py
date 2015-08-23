@@ -9,6 +9,8 @@ t_lr = 0.
 init_t = 0.0
 
 def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretrain_run_no, model_no, epoch_no):
+    is_use_mlp = True
+    is_deep_lstm = False
     # print "ORC: left & right lstm share parameters"
     net = {}
 
@@ -48,8 +50,6 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     g_layer_setting['w_c_updater'] = g_updater
     g_layer_setting['u_c_updater'] = g_updater
     g_layer_setting['b_c_updater'] = g_updater
-
-
 
     net['net_name'] = 'match_bilstm_tensor_dpool'
     net['need_reshape'] = True
@@ -134,17 +134,17 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     layer['bottom_nodes'] = ['word_rep_seq']
     layer['top_nodes'] = ['l_lstm_seq']
     layer['layer_name'] = 'l_lstm'
-    # layer['layer_type'] = 24
-    layer['layer_type'] = 1006 # gru
+    layer['layer_type'] = 24
+    # layer['layer_type'] = 1006 # gru
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
     setting['d_mem'] = d_mem
     setting['grad_norm2'] = lstm_norm2
     setting['reverse'] = False
-    setting['grad_cut_off'] = 100
-    setting['max_norm2'] = 100
+    setting['grad_cut_off'] = 10000
+    setting['max_norm2'] = 10000
     # setting['f_gate_bias_init'] = 0.5
-    setting['f_gate_bias_init'] = 0.0
+    setting['f_gate_bias_init'] = 0.
     setting['o_gate_bias_init'] = 0.
 
     layer = {}
@@ -152,14 +152,14 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     layer['bottom_nodes'] = ['word_rep_seq']
     layer['top_nodes'] = ['r_lstm_seq']
     layer['layer_name'] = 'r_lstm'
-    # layer['layer_type'] = 24
-    layer['layer_type'] = 1006 # gru
+    layer['layer_type'] = 24
+    # layer['layer_type'] = 1006 # gru
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
     setting['d_mem'] = d_mem
     setting['grad_norm2'] = lstm_norm2
-    setting['max_norm2'] = 100
-    setting['grad_cut_off'] = 100
+    setting['max_norm2'] = 10000
+    setting['grad_cut_off'] = 10000
     setting['reverse'] = True 
     # setting['f_gate_bias_init'] = 0.5
     setting['f_gate_bias_init'] = 0.
@@ -167,14 +167,62 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
 
     layer = {}
     layers.append(layer) 
-    layer['bottom_nodes'] = ['l_lstm_seq', 'r_lstm_seq']
+    layer['bottom_nodes'] = ['word_rep_seq','l_lstm_seq', 'r_lstm_seq']
     layer['top_nodes'] = ['bi_lstm_seq']
     layer['layer_name'] = 'concat'
     layer['layer_type'] = 18
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
-    setting['bottom_node_num'] = 2
+    setting['bottom_node_num'] = 3
     setting['concat_dim_index'] = 3
+
+    if is_deep_lstm:
+        layer = {}
+        layers.append(layer) 
+        layer['bottom_nodes'] = ['bi_lstm_seq']
+        layer['top_nodes'] = ['l_lstm_seq_1']
+        layer['layer_name'] = 'l_lstm_1'
+        # layer['layer_type'] = 24
+        layer['layer_type'] = 1006 # gru
+        setting = copy.deepcopy(g_layer_setting)
+        layer['setting'] = setting
+        setting['d_mem'] = d_mem
+        setting['grad_norm2'] = lstm_norm2
+        setting['reverse'] = False
+        setting['grad_cut_off'] = 10000
+        setting['max_norm2'] = 10000
+        # setting['f_gate_bias_init'] = 0.5
+        setting['f_gate_bias_init'] = 0.
+        setting['o_gate_bias_init'] = 0.
+
+        layer = {}
+        layers.append(layer) 
+        layer['bottom_nodes'] = ['bi_lstm_seq']
+        layer['top_nodes'] = ['r_lstm_seq_1']
+        layer['layer_name'] = 'r_lstm_1'
+        # layer['layer_type'] = 24
+        layer['layer_type'] = 1006 # gru
+        setting = copy.deepcopy(g_layer_setting)
+        layer['setting'] = setting
+        setting['d_mem'] = d_mem
+        setting['grad_norm2'] = lstm_norm2
+        setting['max_norm2'] = 10000
+        setting['grad_cut_off'] = 10000
+        setting['reverse'] = True 
+        # setting['f_gate_bias_init'] = 0.5
+        setting['f_gate_bias_init'] = 0.
+        setting['o_gate_bias_init'] = 0.
+
+        layer = {}
+        layers.append(layer) 
+        layer['bottom_nodes'] = ['word_rep_seq', 'bi_lstm_seq', 'l_lstm_seq_1', 'r_lstm_seq_1']
+        layer['top_nodes'] = ['bi_lstm_seq_1']
+        layer['layer_name'] = 'concat'
+        layer['layer_type'] = 18
+        setting = copy.deepcopy(g_layer_setting)
+        layer['setting'] = setting
+        setting['bottom_node_num'] = 4
+        setting['concat_dim_index'] = 3
 
     layer = {}
     layers.append(layer) 
@@ -195,7 +243,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
     setting['d_hidden'] = 5
-    setting['d_factor'] = 2*d_mem 
+    setting['d_factor'] = 3*d_mem 
     setting['t_l2'] = t_l2
     setting['is_init_as_I'] = False
     # setting['is_init_as_I'] = True
@@ -225,10 +273,43 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     layer['layer_type'] = 43
     layer['setting'] = {'row':5, 'col':5, 'interval':1}
 
+    if is_use_mlp:
+        layer = {}
+        layers.append(layer) 
+        layer['bottom_nodes'] = ['dpool_rep']
+        layer['top_nodes'] = ['hidden_trans']
+        layer['layer_name'] = 'mlp_hidden'
+        layer['layer_type'] = 11 
+        setting = copy.deepcopy(g_layer_setting)
+        layer['setting'] = setting
+        setting['num_hidden'] = d_mem * 4
+
+        layer = {}
+        layers.append(layer) 
+        layer['bottom_nodes'] = ['hidden_trans']
+        layer['top_nodes'] = ['hidden_rep']
+        layer['layer_name'] = 'hidden_nonlinear'
+        layer['layer_type'] = 1 
+        setting = {}
+        layer['setting'] = setting
+        
+        layer = {}
+        layers.append(layer) 
+        layer['bottom_nodes'] = ['hidden_rep']
+        layer['top_nodes'] = ['hidden_drop_rep']
+        layer['layer_name'] = 'dropout'
+        layer['layer_type'] =  13
+        ds.dp_rate = 0.
+        print "ORC, dp rate:", ds.dp_rate
+        setting = {'rate':ds.dp_rate}
+        layer['setting'] = setting
+
     layer = {}
     layers.append(layer) 
-    # layer['bottom_nodes'] = ['hidden_drop_rep']
-    layer['bottom_nodes'] = ['dpool_rep']
+    if is_use_mlp:
+        layer['bottom_nodes'] = ['hidden_drop_rep']
+    else:
+        layer['bottom_nodes'] = ['dpool_rep']
     layer['top_nodes'] = ['softmax_prob']
     layer['layer_name'] = 'softmax_fullconnect'
     layer['layer_type'] = 11
@@ -272,11 +353,11 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
 
     return net
 
-run = 1 
+run = 1
 l2 = 0.
 # for dataset in ['paper']:
 # for dataset in ['qa_balance']:
-for dataset in ['qa']:
+for dataset in ['qa_top1k']:
     for d_mem in [50]:
         idx = 0
         # for model_no in [0,1,2,3,4,5,6,7,8]:
@@ -285,13 +366,14 @@ for dataset in ['qa']:
             # for epoch_no in [0, 10000, 25000]:
             for epoch_no in [0]:
                 # for init in [0.3, 0.1, 0.03]:
-                for init in [0.1, 0.03]:
-                    for lr in [0.2, 0.1, 0.03]:
+                for init in [0.3, 0.1, 0.05]:
+                    for lr in [0.2, 0.1, 0.05]:
                         # for l2 in [0.00001, 0.0001]:
                         # for l2 in [0.00001, 0.0001, 0.001]:
                         # for t_l2_ in [0.0]:
                         # for t_lr_mul in [1, 0.3, 0.1]:
-                        for t_lr_mul in [1, 0.3]:
+                        # for t_lr_mul in [1, 0.3]:
+                        for t_lr_mul in [0.3]:
                             t_l2 = 0.0
                             init_t = init
                             t_lr = t_lr_mul * lr

@@ -116,8 +116,8 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['layer_type'] = 14
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
-    setting['channel_out'] = d_mem 
-    setting['kernel_x'] = d_mem 
+    setting['channel_out'] = d_mem
+    setting['kernel_x'] = ds.d_word_rep
     setting['kernel_y'] = 3
     setting['pad_x'] = 0
     setting['pad_y'] = 2
@@ -151,7 +151,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['layer_type'] = 10001 
     setting = {}
     layer['setting'] = setting
-    setting['L'] = 3
+    setting['L'] = 2
     setting['l'] = 1
     setting['max_sentence_length'] = 32
     setting['min_rep_length'] = 4
@@ -199,58 +199,58 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['layer_type'] = 10001 
     setting = {}
     layer['setting'] = setting
-    setting['L'] = 3
+    setting['L'] = 2
     setting['l'] = 2
     setting['max_sentence_length'] = 32
     setting['min_rep_length'] = 4
 
-    layer = {}
-    layers.append(layer)
-    layer['bottom_nodes'] = ['l_sentence_pool_2']
-    layer['top_nodes'] = ['l_sentence_conv_3']
-    layer['layer_name'] = 'l_conv_3'
-    layer['layer_type'] = 14
-    setting = copy.deepcopy(g_layer_setting)
-    layer['setting'] = setting
-    setting['channel_out'] = d_mem 
-    setting['kernel_x'] = d_mem 
-    setting['kernel_y'] = 3
-    setting['pad_x'] = 0
-    setting['pad_y'] = 2
-    setting['no_bias'] = True
-    setting['stride'] = 1
-    setting['d1_var_len'] = True 
+    # layer = {}
+    # layers.append(layer)
+    # layer['bottom_nodes'] = ['l_sentence_pool_2']
+    # layer['top_nodes'] = ['l_sentence_conv_3']
+    # layer['layer_name'] = 'l_conv_3'
+    # layer['layer_type'] = 14
+    # setting = copy.deepcopy(g_layer_setting)
+    # layer['setting'] = setting
+    # setting['channel_out'] = d_mem 
+    # setting['kernel_x'] = d_mem 
+    # setting['kernel_y'] = 3
+    # setting['pad_x'] = 0
+    # setting['pad_y'] = 2
+    # setting['no_bias'] = True
+    # setting['stride'] = 1
+    # setting['d1_var_len'] = True 
 
-    layer = {}
-    layers.append(layer) 
-    layer['bottom_nodes'] = ['l_sentence_conv_3']
-    layer['top_nodes'] = ['l_sentence_conv_nonlinear_3']
-    layer['layer_name'] = 'l_conv_nonlinear_3'
-    layer['layer_type'] = 3 
-    setting = {}
-    layer['setting'] = setting
+    # layer = {}
+    # layers.append(layer) 
+    # layer['bottom_nodes'] = ['l_sentence_conv_3']
+    # layer['top_nodes'] = ['l_sentence_conv_nonlinear_3']
+    # layer['layer_name'] = 'l_conv_nonlinear_3'
+    # layer['layer_type'] = 3 
+    # setting = {}
+    # layer['setting'] = setting
 
-    layer = {}
-    layers.append(layer)
-    layer['bottom_nodes'] = ['l_sentence_conv_nonlinear_3']
-    layer['top_nodes'] = ['l_sentence_swap_3']
-    layer['layer_name'] = 'l_swap_3'
-    layer['layer_type'] = 42
-    setting = {'pass_len':True, 'pass_len_dim':1, 'axis1':1, 'axis2':3}
-    layer['setting'] = setting
+    # layer = {}
+    # layers.append(layer)
+    # layer['bottom_nodes'] = ['l_sentence_conv_nonlinear_3']
+    # layer['top_nodes'] = ['l_sentence_swap_3']
+    # layer['layer_name'] = 'l_swap_3'
+    # layer['layer_type'] = 42
+    # setting = {'pass_len':True, 'pass_len_dim':1, 'axis1':1, 'axis2':3}
+    # layer['setting'] = setting
 
-    layer = {}
-    layers.append(layer)
-    layer['bottom_nodes'] = ['l_sentence_swap_3', 'l_sentence']
-    layer['top_nodes'] = ['l_sentence_pool_3']
-    layer['layer_name'] = 'l_pool_3'
-    layer['layer_type'] = 10001 
-    setting = {}
-    layer['setting'] = setting
-    setting['L'] = 3
-    setting['l'] = 3
-    setting['max_sentence_length'] = 32
-    setting['min_rep_length'] = 4
+    # layer = {}
+    # layers.append(layer)
+    # layer['bottom_nodes'] = ['l_sentence_swap_3', 'l_sentence']
+    # layer['top_nodes'] = ['l_sentence_pool_3']
+    # layer['layer_name'] = 'l_pool_3'
+    # layer['layer_type'] = 10001 
+    # setting = {}
+    # layer['setting'] = setting
+    # setting['L'] = 3
+    # setting['l'] = 3
+    # setting['max_sentence_length'] = 32
+    # setting['min_rep_length'] = 4
 
     layer = {}
     layers.append(layer)
@@ -260,8 +260,8 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['layer_type'] = 14
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
-    setting['channel_out'] = d_mem 
-    setting['kernel_x'] = d_mem 
+    setting['channel_out'] = d_mem
+    setting['kernel_x'] = ds.d_word_rep
     setting['kernel_y'] = 3
     setting['pad_x'] = 0
     setting['pad_y'] = 2
@@ -295,7 +295,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['layer_type'] = 10001 
     setting = {}
     layer['setting'] = setting
-    setting['L'] = 3
+    setting['L'] = 2
     setting['l'] = 1
     setting['max_sentence_length'] = 32
     setting['min_rep_length'] = 4
@@ -343,62 +343,63 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['layer_type'] = 10001 
     setting = {}
     layer['setting'] = setting
-    setting['L'] = 3
+    setting['L'] = 2
     setting['l'] = 2
     setting['max_sentence_length'] = 32
     setting['min_rep_length'] = 4
 
-    layer = {}
-    layers.append(layer)
-    layer['bottom_nodes'] = ['r_sentence_pool_2']
-    layer['top_nodes'] = ['r_sentence_conv_3']
-    layer['layer_name'] = 'r_conv_3'
-    layer['layer_type'] = 14
-    setting = copy.deepcopy(g_layer_setting)
-    layer['setting'] = setting
-    setting['channel_out'] = d_mem 
-    setting['kernel_x'] = d_mem 
-    setting['kernel_y'] = 3
-    setting['pad_x'] = 0
-    setting['pad_y'] = 2
-    setting['no_bias'] = True
-    setting['stride'] = 1
-    setting['d1_var_len'] = True 
+    # layer = {}
+    # layers.append(layer)
+    # layer['bottom_nodes'] = ['r_sentence_pool_2']
+    # layer['top_nodes'] = ['r_sentence_conv_3']
+    # layer['layer_name'] = 'r_conv_3'
+    # layer['layer_type'] = 14
+    # setting = copy.deepcopy(g_layer_setting)
+    # layer['setting'] = setting
+    # setting['channel_out'] = d_mem 
+    # setting['kernel_x'] = d_mem 
+    # setting['kernel_y'] = 3
+    # setting['pad_x'] = 0
+    # setting['pad_y'] = 2
+    # setting['no_bias'] = True
+    # setting['stride'] = 1
+    # setting['d1_var_len'] = True 
+
+    # layer = {}
+    # layers.append(layer) 
+    # layer['bottom_nodes'] = ['r_sentence_conv_3']
+    # layer['top_nodes'] = ['r_sentence_conv_nonlinear_3']
+    # layer['layer_name'] = 'r_conv_nonlinear_3'
+    # layer['layer_type'] = 3 
+    # setting = {}
+    # layer['setting'] = setting
+
+    # layer = {}
+    # layers.append(layer)
+    # layer['bottom_nodes'] = ['r_sentence_conv_nonlinear_3']
+    # layer['top_nodes'] = ['r_sentence_swap_3']
+    # layer['layer_name'] = 'r_swap_3'
+    # layer['layer_type'] = 42
+    # setting = {'pass_len':True, 'pass_len_dim':1, 'axis1':1, 'axis2':3}
+    # layer['setting'] = setting
+
+    # layer = {}
+    # layers.append(layer)
+    # layer['bottom_nodes'] = ['r_sentence_swap_3', 'r_sentence']
+    # layer['top_nodes'] = ['r_sentence_pool_3']
+    # layer['layer_name'] = 'r_pool_3'
+    # layer['layer_type'] = 10001 
+    # setting = {}
+    # layer['setting'] = setting
+    # setting['L'] = 3
+    # setting['l'] = 3
+    # setting['max_sentence_length'] = 32
+    # setting['min_rep_length'] = 4
 
     layer = {}
-    layers.append(layer) 
-    layer['bottom_nodes'] = ['r_sentence_conv_3']
-    layer['top_nodes'] = ['r_sentence_conv_nonlinear_3']
-    layer['layer_name'] = 'r_conv_nonlinear_3'
-    layer['layer_type'] = 3 
-    setting = {}
-    layer['setting'] = setting
-
-    layer = {}
     layers.append(layer)
-    layer['bottom_nodes'] = ['r_sentence_conv_nonlinear_3']
-    layer['top_nodes'] = ['r_sentence_swap_3']
-    layer['layer_name'] = 'r_swap_3'
-    layer['layer_type'] = 42
-    setting = {'pass_len':True, 'pass_len_dim':1, 'axis1':1, 'axis2':3}
-    layer['setting'] = setting
-
-    layer = {}
-    layers.append(layer)
-    layer['bottom_nodes'] = ['r_sentence_swap_3', 'r_sentence']
-    layer['top_nodes'] = ['r_sentence_pool_3']
-    layer['layer_name'] = 'r_pool_3'
-    layer['layer_type'] = 10001 
-    setting = {}
-    layer['setting'] = setting
-    setting['L'] = 3
-    setting['l'] = 3
-    setting['max_sentence_length'] = 32
-    setting['min_rep_length'] = 4
-
-    layer = {}
-    layers.append(layer)
-    layer['bottom_nodes'] = ['l_sentence_pool_3', 'r_sentence_pool_3']
+    # layer['bottom_nodes'] = ['l_sentence_pool_3', 'r_sentence_pool_3']
+    layer['bottom_nodes'] = ['l_sentence_pool_2', 'r_sentence_pool_2']
     layer['top_nodes'] = ['bi_sentence_rep']
     layer['layer_name'] = 'concat'
     layer['layer_type'] = 18
@@ -416,14 +417,14 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['layer_type'] = 11 
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
-    setting['num_hidden'] = d_mem
+    setting['num_hidden'] = d_mem * 2
 
     layer = {}
     layers.append(layer) 
     layer['bottom_nodes'] = ['hidden_trans']
     layer['top_nodes'] = ['hidden_rep']
     layer['layer_name'] = 'hidden_nonlinear'
-    layer['layer_type'] = 3
+    layer['layer_type'] = 1
     setting = {}
     layer['setting'] = setting
      
@@ -470,7 +471,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['setting'] = setting
     return net
 
-run = 1
+run = 2
 l2 = 0.
 # for dataset in ['paper']:
 for dataset in ['qa_balance']:
