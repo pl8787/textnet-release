@@ -27,6 +27,7 @@ class MatchTensorLayer : public Layer<xpu>{
     // default value, just set the value you want
     this->defaults["interval"] = SettingV(1); 
     this->defaults["is_var_len"] = SettingV(true); 
+    this->defaults["is_use_linear"] = SettingV(true); 
     
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -59,12 +60,13 @@ class MatchTensorLayer : public Layer<xpu>{
 
     d_hidden = setting["d_hidden"].iVal();
     is_var_len = setting["is_var_len"].bVal();
+    is_use_linear = setting["is_use_linear"].bVal();
     interval = setting["interval"].iVal();
 	feat_size = bottom[0]->data.size(3);
 
     this->params.resize(3);
     this->params[0].Resize(d_hidden, feat_size,   feat_size, 1, true); // t
-    this->params[1].Resize(d_hidden, 2*feat_size, 1,         1, true); // w
+    this->params[1].Resize(2*feat_size, d_hidden,         1, 1, true); // w
     this->params[2].Resize(d_hidden, 1,           1,         1, true); // b
 
     std::map<std::string, SettingV> &t_setting = *setting["t_filler"].mVal();
@@ -101,8 +103,9 @@ class MatchTensorLayer : public Layer<xpu>{
     batch_size = bottom[0]->data.size(0); 
     doc_len = bottom[0]->data.size(2);
                   
-    out_product.Resize(batch_size*doc_len*doc_len, feat_size, feat_size, 1, true);
-    // top_data_swap.Resize(batch_size, doc_len, doc_len, d_hidden, true);
+    left_product.Resize(batch_size, doc_len, d_hidden, feat_size, 1, true);
+    bottom_0_transform_linear.Resize(batch_size, 1, doc_len, d_hidden);
+    bottom_1_transform_linear.Resize(batch_size, 1, doc_len, d_hidden);
     top[0]->Resize(batch_size, d_hidden, doc_len, doc_len, true);
 
 	if (show_info) {
@@ -117,15 +120,19 @@ class MatchTensorLayer : public Layer<xpu>{
     using namespace mshadow::expr;
     Tensor4D bottom0_data = bottom[0]->data;
     Tensor4D bottom1_data = bottom[1]->data;
-	Tensor1D bottom0_len = bottom[0]->length_d1();
-	Tensor1D bottom1_len = bottom[1]->length_d1();
-    Tensor4D top_data = top[0]->data;
+	Tensor1D bottom0_len  = bottom[0]->length_d1();
+	Tensor1D bottom1_len  = bottom[1]->length_d1();
+    Tensor4D top_data     = top[0]->data;
+    Tensor3D t_data       = this->params[0].data_d3();
+    Tensor2D w_data       = this->params[1].data_d2();
 
-	top_data = 0.f, out_product.data = 0.f; // top_data_swap.data = 0.f;
+	top_data = 0.f, left_product = 0.f;
 
-    // comput for out_product for every pair
-    Tensor3D out_prod = out_product.data_d3();
-    idxes.clear();
+    if (is_use_linear) {
+      bottom_0_transform_linear.data_d2_reverse() = dot(bottom0_data_d2, w_data.Slice(0,feat_size));
+      bottom_1_transform_linear.data_d2_reverse() = dot(bottom1_data_d2, w_data.Slice(feat_size, 2*feat_size));
+    }
+
     for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
       int len_0 = -1, len_1 = -1;
       if (is_var_len) {
@@ -137,100 +144,38 @@ class MatchTensorLayer : public Layer<xpu>{
       }
       for (int i = 0; i < len_0; i+=interval) {
         Tensor2D rep_0 = bottom0_data[batch_idx][0].Slice(i,i+1);
-        for (int j = 0; j < len_1; j+=interval) {
-          Tensor2D rep_1 = bottom1_data[batch_idx][0].Slice(j,j+1);
-          int idx = batch_idx*doc_len*doc_len + i*doc_len + j;
-          out_prod[idx] = dot(rep_0.T(), rep_1);
-          idxes.push_back(idx);
+        for (int k = 0; k < d_hidden; ++k) {
+          Tensor2D rep_trans = left_product.data[batch_idx][i].Slice(k, k+1);
+          rep_trans = dot(rep_0, t_data[k]);
+          for (int j = 0; j < len_1; j+=interval) {
+            Tensor2D rep_1 = bottom1_data[batch_idx][0].Slice(j,j+1);
+            top_data[batch_idx][k][i][j] = dot(rep_trans, rep_1.T());
+            if (is_use_linear) {
+              top_data[batch_idx][k][i][j] += bottom_0_transform_linear.data[batch_idx][0][i][k];
+              top_data[batch_idx][k][i][j] += bottom_1_transform_linear.data[batch_idx][0][j][k];
+            }
+          }
         }
       }
     }
-    out_product_dense.Resize(idxes.size(), feat_size, feat_size, 1, true);
-    Tensor3D out_prod_dense = out_product_dense.data_d3();
-    for (size_t i = 0; i < idxes.size(); ++i) {
-        out_prod_dense[i] = F<op::identity>(out_prod[idxes[i]]);
-    }
-
-    // product with tensor
-    Tensor2D t = this->params[0].data_d2();
-    Tensor2D input = out_product_dense.data_d2();
-    top_data_dense.Resize(1, 1, idxes.size(), d_hidden, true);
-    top_data_dense.data_d2_reverse() += dot(input, t.T());
-
-    // need to swap axis
-    for (size_t i = 0; i < idxes.size(); ++i) {
-      int idx = idxes[i];
-      int batch_idx = idx / (doc_len*doc_len);
-      int pos = idx % (doc_len*doc_len);
-      int row = pos / doc_len; 
-      int col = pos % doc_len;
-
-      for (int f = 0; f < d_hidden; ++f) {
-        top_data[batch_idx][f][row][col] = top_data_dense.data[0][0][i][f];
-      }
-    }
-
-    // top_data_swap.data_d2_reverse() += dot(input, t.T());
-
-    // swap axis 1->2, 2->3, 3->1
-    // for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
-    //   for (int i = 0; i < doc_len; ++i) {
-    //     for (int j = 0; j < doc_len; ++j) {
-    //       for (int f = 0; f < d_hidden; ++f) {
-    //         top_data[batch_idx][f][i][j] = top_data_swap.data[batch_idx][i][j][f];
-    //       }
-    //     }
-    //   }
-    // }
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
                         const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
-    Tensor4D top_diff = top[0]->diff;
-    Tensor4D top_data = top[0]->data;
+    Tensor4D top_diff     = top[0]->diff;
+    Tensor4D top_data     = top[0]->data;
 	Tensor4D bottom0_data = bottom[0]->data;
 	Tensor4D bottom1_data = bottom[1]->data;
 	Tensor4D bottom0_diff = bottom[0]->diff;
 	Tensor4D bottom1_diff = bottom[1]->diff;
-	Tensor1D bottom0_len = bottom[0]->length_d1();
-	Tensor1D bottom1_len = bottom[1]->length_d1();
+	Tensor1D bottom0_len  = bottom[0]->length_d1();
+	Tensor1D bottom1_len  = bottom[1]->length_d1();
+    Tensor3D t_data       = this->params[0].data_d3();
+    Tensor3D t_diff       = this->params[0].diff_d3();
 
-    top_data_dense.diff = 0.f, out_product.diff = 0.f, out_product_dense.diff = 0.f;
-
-    // need to swap axis
-    for (size_t i = 0; i < idxes.size(); ++i) {
-      int idx = idxes[i];
-      int batch_idx = idx / (doc_len*doc_len);
-      int pos = idx % (doc_len*doc_len);
-      int row = pos / doc_len; 
-      int col = pos % doc_len;
-
-      for (int f = 0; f < d_hidden; ++f) {
-        top_data_dense.diff[0][0][i][f] = top_diff[batch_idx][f][row][col];
-      }
-    }
-
-    // for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
-    //   for (int i = 0; i < doc_len; ++i) {
-    //     for (int j = 0; j < doc_len; ++j) {
-    //       for (int f = 0; f < d_hidden; ++f) {
-    //         top_data_swap.diff[batch_idx][i][j][f] = top_diff[batch_idx][f][i][j];
-    //       }
-    //     }
-    //   }
-    // }
-
-    // Tensor3D out_prod_dense = out_product_dense.diff_d3();
-    this->params[0].diff_d2() += dot(top_data_dense.diff_d2_reverse().T(), out_product_dense.data_d2());
-    out_product_dense.diff_d2() = dot(top_data_dense.diff_d2_reverse(), this->params[0].data_d2());
-
-         
-    Tensor3D out_prod = out_product.diff_d3();
-    Tensor3D out_prod_dense = out_product_dense.diff_d3();
-    for (size_t i = 0; i < idxes.size(); ++i) {
-      out_prod[idxes[i]] = F<op::identity>(out_prod_dense[i]);
-    }
+    left_product.diff = 0.f;
+    bottom_0_transform_linear.diff = 0.f, bottom_1_transform_linear.diff = 0.f;
 
     for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
       int len_0 = -1, len_1 = -1;
@@ -242,25 +187,42 @@ class MatchTensorLayer : public Layer<xpu>{
         len_1 = doc_len;
       }
       for (int i = 0; i < len_0; i+=interval) {
-        Tensor2D rep_data_0 = bottom0_data[batch_idx][0].Slice(i,i+1);
-        Tensor2D rep_diff_0 = bottom0_diff[batch_idx][0].Slice(i,i+1);
-        for (int j = 0; j < len_1; j+=interval) {
-          Tensor2D rep_data_1 = bottom1_data[batch_idx][0].Slice(j,j+1);
-          Tensor2D rep_diff_1 = bottom1_diff[batch_idx][0].Slice(j,j+1);
+        Tensor2D rep_0_data = bottom0_data[batch_idx][0].Slice(i,i+1);
+        Tensor2D rep_0_diff = bottom0_diff[batch_idx][0].Slice(i,i+1);
+        for (int k = 0; k < d_hidden; ++k) {
+          Tensor2D rep_trans_data = left_product.data[batch_idx][i].Slice(k, k+1);
+          Tensor2D rep_trans_diff = left_product.diff[batch_idx][i].Slice(k, k+1);
+          for (int j = 0; j < len_1; j+=interval) {
+            if (is_use_linear) {
+              bottom_0_transform_linear.diff[batch_idx][0][i][k] += top_diff[batch_idx][k][i][j];
+              bottom_1_transform_linear.diff[batch_idx][0][j][k] += top_diff[batch_idx][k][i][j];
+            }
 
-          int idx = batch_idx*doc_len*doc_len + i*doc_len + j;
-          rep_diff_1 += dot(rep_data_0, out_prod[idx]);
-          rep_diff_0 += dot(rep_data_1, out_prod[idx].T());
+            Tensor2D rep_1_data = bottom1_data[batch_idx][0].Slice(j,j+1);
+            Tensor2D rep_1_diff = bottom1_diff[batch_idx][0].Slice(j,j+1);
+            rep_1_diff += top_diff[batch_idx][k][i][j] * rep_trans_data;
+            rep_trans_diff += top_diff[batch_idx][k][i][j] * rep_1_data;
+          }
+          t_diff[k] += dot(rep_0_data.T(), rep_trans_diff);
+          rep_0_diff += dot(rep_trans_diff, t_data[k].T());
         }
       }
+    }
+    if (is_use_linear) {
+      Tensor2D w_data = this->params[1].data_d2();
+      Tensor2D w_diff = this->params[1].diff_d2();
+      w_diff.Slice(0,feat_size) += dot(bottom0_data_d2.T(), bottom_0_transform_linear.diff_d2_reverse());
+      w_diff.Slice(feat_size,2*feat_size) += dot(bottom1_data_d2.T(), bottom_1_transform_linear.diff_d2_reverse());
+      bottom0_diff_d2 += dot(bottom_0_transform_linear.diff_d2_reverse(), w_data.Slice(0,feat_size).T());
+      bottom1_diff_d2 += dot(bottom_1_transform_linear.diff_d2_reverse(), w_data.Slice(feat_size, 2*feat_size).T());
     }
   }
   
  protected:
   int doc_len, feat_size, batch_size, interval, d_hidden;
   bool is_var_len;
-  Node<xpu> out_product, out_product_dense, top_data_dense;
-  vector<int> idxes; // out_product maybe sparse, this is the index of non 0 values
+  Node<xpu> left_product;
+  Node<xpu> bottom_0_transform_linear, bottom_1_transform_linear; // this is for w in tensor layer
 };
 }  // namespace layer
 }  // namespace textnet
