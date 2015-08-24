@@ -400,35 +400,58 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     # setting['min_rep_length'] = 4
 
     layer = {}
-    layers.append(layer)
-    layer['bottom_nodes'] = ['l_sentence_pool_2', 'r_sentence_pool_2']
-    layer['top_nodes'] = ['bi_sentence_rep']
-    layer['layer_name'] = 'concat'
-    layer['layer_type'] = 18
-    setting = {}
-    layer['setting'] = setting
-    setting['bottom_node_num']  = 2
-    setting['concat_dim_index'] = 3
-    setting['is_concat_by_length'] = False 
-
-    layer = {}
     layers.append(layer) 
-    layer['bottom_nodes'] = ['bi_sentence_rep']
+    layer['bottom_nodes'] = ['l_sentence_pool_2', 'r_sentence_pool_2']
     layer['top_nodes'] = ['tensor_trans']
-    layer['layer_name'] = 'tensor_layer'
-    layer['layer_type'] = 30
+    layer['layer_name'] = 'match_tensor'
+    layer['layer_type'] = 1001
+    # print "ORC: use COS operation for similarity"
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
-    setting['num_hidden'] = 5
+    setting['d_hidden'] = 1
+    # setting['d_factor'] = 3*d_mem 
+    # setting['t_l2'] = t_l2
+    # setting['is_init_as_I'] = False
+    # setting['is_init_as_I'] = True
+    setting['is_use_linear'] = False
+    setting['is_var_len'] = False
+    # setting['is_update_tensor'] = False
+    # setting['is_update_tensor'] = True
+    # setting['t_updater'] = t_updater
+    # setting['w_updater'] = t_updater
+    setting['t_filler'] = gen_uniform_filter_setting(init_t)
+    setting['w_filler'] = gen_uniform_filter_setting(init_t)
 
-    layer = {}
-    layers.append(layer) 
-    layer['bottom_nodes'] = ['tensor_trans']
-    layer['top_nodes'] = ['hidden_rep']
-    layer['layer_name'] = 'hidden_nonlinear'
-    layer['layer_type'] = 1
-    setting = {}
-    layer['setting'] = setting
+    # layer = {}
+    # layers.append(layer)
+    # layer['bottom_nodes'] = ['l_sentence_pool_2', 'r_sentence_pool_2']
+    # layer['top_nodes'] = ['bi_sentence_rep']
+    # layer['layer_name'] = 'concat'
+    # layer['layer_type'] = 18
+    # setting = {}
+    # layer['setting'] = setting
+    # setting['bottom_node_num']  = 2
+    # setting['concat_dim_index'] = 3
+    # setting['is_concat_by_length'] = False 
+
+    # layer = {}
+    # layers.append(layer) 
+    # layer['bottom_nodes'] = ['bi_sentence_rep']
+    # layer['top_nodes'] = ['tensor_trans']
+    # layer['layer_name'] = 'tensor_layer'
+    # layer['layer_type'] = 30
+    # setting = copy.deepcopy(g_layer_setting)
+    # layer['setting'] = setting
+    # setting['num_hidden'] = 1
+
+    # layer = {}
+    # layers.append(layer) 
+    # layer['bottom_nodes'] = ['tensor_trans']
+    # layer['top_nodes'] = ['hidden_rep']
+    # layer['layer_name'] = 'hidden_nonlinear'
+    # layer['layer_type'] = 0
+    # setting = {}
+    # layer['setting'] = setting
      
     # layer = {}
     # layers.append(layer) 
@@ -443,7 +466,8 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
 
     layer = {}
     layers.append(layer) 
-    layer['bottom_nodes'] = ['hidden_rep']
+    # layer['bottom_nodes'] = ['hidden_rep']
+    layer['bottom_nodes'] = ['tensor_trans']
     # layer['bottom_nodes'] = ['dpool_rep']
     layer['top_nodes'] = ['softmax_prob']
     layer['layer_name'] = 'softmax_fullconnect'
@@ -488,15 +512,15 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
 
     return net
 
-run = 1
+run = 3
 l2 = 0.
 # for dataset in ['paper']:
 for dataset in ['qa_50']:
-    for d_mem in [50]:
+    for d_mem in [20]:
         idx = 0
         # for epoch_no in [0, 10000, 25000]:
         for epoch_no in [0]:
-            for init in [0.3, 0.1, 0.03]:
+            for init in [0.1, 0.03, 0.01]:
                 for lr in [0.3, 0.1, 0.03]:
                     # for l2 in [0.00001, 0.0001, 0.001]:
                     init_t = init
