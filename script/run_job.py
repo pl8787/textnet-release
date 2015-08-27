@@ -180,7 +180,7 @@ def get_nodes():
     # return [node_52 , node_59]# , node_169]
     # return [node_169]
     # return [node_52, node_59, node_169]
-    return [node_59]
+    return [node_59]#, node_59]
 
 def main():
     run_nodes = get_nodes()
@@ -213,10 +213,12 @@ def main():
     # local_dir = '/home/wsx/exp/match/qa_50/bilstm_tensor_dpool/run.6/'
     # local_dir = '/home/wsx/exp/match/qa_50/bilstm_tensor_dpool/run.12/'
     # local_dir = '/home/wsx/exp/match/sentence/bilstm_tensor_dpool/run.2/'
-    # local_dir = '/home/wsx/exp/match/sentence/arcii/run.1/'
-    # local_dir = '/home/wsx/exp/match/qa_50/mul_cnn_tensor_dpool/run.3/'
+    local_dir = '/home/wsx/exp/match/sentence/arcii/run.3/'
+    # local_dir = '/home/wsx/exp/match/qa_50/mul_cnn_tensor_dpool/run.1/'
     # local_dir = '/home/wsx/exp/match/sentence/ctnn/run.2/'
-    local_dir = '/home/wsx/exp/match/qa_50/mul_cnn_tensor_dpool/run.4/'
+    # local_dir = '/home/wsx/exp/match/qa_50/mul_cnn_tensor_dpool/run.5/'
+    # local_dir = '/home/wsx/exp/match/sentence/bilstm_cos/run.1/'
+    # local_dir = '/home/wsx/exp/match/sentence/bilstm_cos/run.1/'
     # local_dir = '/home/wsx/exp/match/sentence/mul_cnn_tensor_dpool/run.1/'
     # local_dir = '/home/wsx/exp/match/qa_50/arcii/run.1/'
     # local_dir = '/home/wsx/exp/match/qa_50/ctnn/run.2/'

@@ -14,8 +14,8 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     is_use_mlp = True
 
     ds = DatasetCfg(dataset)
-    g_filler    = gen_uniform_filter_setting(init)
-    zero_filler = gen_zero_filter_setting()
+    g_filler    = gen_uniform_filler_setting(init)
+    zero_filler = gen_zero_filler_setting()
     t_updater   = gen_adagrad_setting(lr = t_lr, l2 = l2, batch_size = ds.train_batch_size)
     g_updater   = gen_adagrad_setting(lr = lr, l2 = l2, batch_size = ds.train_batch_size)
     zero_l2_updater   = gen_adagrad_setting(lr = lr, batch_size = ds.train_batch_size)
@@ -141,7 +141,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['bottom_nodes'] = ['l_sentence_conv_1']
     layer['top_nodes'] = ['l_sentence_conv_nonlinear_1']
     layer['layer_name'] = 'l_conv_nonlinear_1'
-    layer['layer_type'] = 3 
+    layer['layer_type'] = 1 
     setting = {}
     layer['setting'] = setting
 
@@ -189,7 +189,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['bottom_nodes'] = ['l_sentence_conv_2']
     layer['top_nodes'] = ['l_sentence_conv_nonlinear_2']
     layer['layer_name'] = 'l_conv_nonlinear_2'
-    layer['layer_type'] = 3 
+    layer['layer_type'] = 1 
     setting = {}
     layer['setting'] = setting
 
@@ -237,7 +237,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['bottom_nodes'] = ['l_sentence_conv_3']
     layer['top_nodes'] = ['l_sentence_conv_nonlinear_3']
     layer['layer_name'] = 'l_conv_nonlinear_3'
-    layer['layer_type'] = 3 
+    layer['layer_type'] = 1 
     setting = {}
     layer['setting'] = setting
 
@@ -285,7 +285,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['bottom_nodes'] = ['r_sentence_conv_1']
     layer['top_nodes'] = ['r_sentence_conv_nonlinear_1']
     layer['layer_name'] = 'r_conv_nonlinear_1'
-    layer['layer_type'] = 3 
+    layer['layer_type'] = 1 
     setting = {}
     layer['setting'] = setting
 
@@ -333,7 +333,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['bottom_nodes'] = ['r_sentence_conv_2']
     layer['top_nodes'] = ['r_sentence_conv_nonlinear_2']
     layer['layer_name'] = 'r_conv_nonlinear_2'
-    layer['layer_type'] = 3 
+    layer['layer_type'] = 1 
     setting = {}
     layer['setting'] = setting
 
@@ -381,7 +381,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['bottom_nodes'] = ['r_sentence_conv_3']
     layer['top_nodes'] = ['r_sentence_conv_nonlinear_3']
     layer['layer_name'] = 'r_conv_nonlinear_3'
-    layer['layer_type'] = 3 
+    layer['layer_type'] = 1 
     setting = {}
     layer['setting'] = setting
 
@@ -452,8 +452,8 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     setting['is_update_tensor'] = True
     setting['t_updater'] = t_updater
     setting['w_updater'] = t_updater
-    setting['t_filler'] = gen_uniform_filter_setting(init_t)
-    setting['w_filler'] = gen_uniform_filter_setting(init_t)
+    setting['t_filler'] = gen_uniform_filler_setting(init_t)
+    setting['w_filler'] = gen_uniform_filler_setting(init_t)
 
     layer = {}
     layers.append(layer) 
@@ -552,12 +552,12 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
 
     return net
 
-run = 4
+run = 5
 l2 = 0.
 # for dataset in ['paper']:
 # for dataset in ['qa_balance']:
 for dataset in ['qa_50']:
-    for d_mem in [50]:
+    for d_mem in [100]:
         idx = 0
         # for epoch_no in [0, 10000, 25000]
         for epoch_no in [0]:
