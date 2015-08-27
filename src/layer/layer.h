@@ -80,6 +80,8 @@ const int kMatchMulti = 1004;
 const int kBatchCombine = 1005;
 const int kGru = 1006;
 const int kBatchSelect = 1007;
+const int kBatchSplit = 1008;
+const int kBatchConcat = 1009;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;

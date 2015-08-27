@@ -2620,6 +2620,134 @@ void TestBatchCombineLayer(mshadow::Random<cpu>* prnd) {
   cout << "Check Error." << endl;
   cker->CheckError(layer_batch_combine, bottoms, tops);
 }
+
+void TestBatchSelectLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Batch Select Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+
+  bottom.Resize(4, 2, 3, 2);
+
+  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+
+  map<string, SettingV> setting;
+  setting["step"] = SettingV(2);
+
+  // Test BatchCombine Layer
+  Layer<cpu> * layer_batch_select = CreateLayer<cpu>(kBatchSelect);
+  layer_batch_select->PropAll();
+  layer_batch_select->SetupLayer(setting, bottoms, tops, prnd);
+  layer_batch_select->Reshape(bottoms, tops);
+
+  layer_batch_select->Forward(bottoms, tops);
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("top", top.data);
+
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.001f);
+  cker->SetupChecker(setting_checker, prnd);
+
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_batch_select, bottoms, tops);
+}
+
+void TestBatchSplitLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Batch Split Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top0;
+  Node<cpu> top1;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+
+  bottoms.push_back(&bottom);
+  tops.push_back(&top0);
+  tops.push_back(&top1);
+
+  bottom.Resize(6, 2, 3, 2);
+
+  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+
+  map<string, SettingV> setting;
+  setting["batch_step"] = SettingV(3);
+  setting["batch_count"] = SettingV(1);
+
+  // Test BatchCombine Layer
+  Layer<cpu> * layer_batch_split = CreateLayer<cpu>(kBatchSplit);
+  layer_batch_split->PropAll();
+  layer_batch_split->SetupLayer(setting, bottoms, tops, prnd);
+  layer_batch_split->Reshape(bottoms, tops);
+
+  layer_batch_split->Forward(bottoms, tops);
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("top0", top0.data);
+  PrintTensor("top1", top1.data);
+
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.001f);
+  cker->SetupChecker(setting_checker, prnd);
+
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_batch_split, bottoms, tops);
+}
+
+void TestBatchConcatLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Batch Concat Layer." << endl;
+  Node<cpu> bottom0;
+  Node<cpu> bottom1;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+
+  bottoms.push_back(&bottom0);
+  bottoms.push_back(&bottom1);
+  tops.push_back(&top);
+
+  bottom0.Resize(2, 2, 3, 2);
+  bottom1.Resize(4, 2, 3, 2);
+
+  prnd->SampleUniform(&bottom0.data, -1.0, 1.0);
+  prnd->SampleUniform(&bottom1.data, -1.0, 1.0);
+
+  map<string, SettingV> setting;
+  setting["batch_step"] = SettingV(3);
+  setting["batch_count"] = SettingV(1);
+
+  // Test BatchCombine Layer
+  Layer<cpu> * layer_batch_concat = CreateLayer<cpu>(kBatchConcat);
+  layer_batch_concat->PropAll();
+  layer_batch_concat->SetupLayer(setting, bottoms, tops, prnd);
+  layer_batch_concat->Reshape(bottoms, tops);
+
+  layer_batch_concat->Forward(bottoms, tops);
+  PrintTensor("bottom0", bottom0.data);
+  PrintTensor("bottom1", bottom1.data);
+  PrintTensor("top", top.data);
+
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.001f);
+  cker->SetupChecker(setting_checker, prnd);
+
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_batch_concat, bottoms, tops);
+}
+
 int main(int argc, char *argv[]) {
   mshadow::Random<cpu> rnd(37);
   // TestActivationLayer(&rnd);
@@ -2643,8 +2771,11 @@ int main(int argc, char *argv[]) {
   // TestMatchTensorFactLayer(&rnd);
   // TestMatchWeightedDotLayer(&rnd);
   // TestGruLayer(&rnd);
-  TestMatchMultiLayer(&rnd);
+  // TestMatchMultiLayer(&rnd);
   // TestBatchCombineLayer(&rnd);
+  // TestBatchSelectLayer(&rnd);
+  TestBatchSplitLayer(&rnd);
+  TestBatchConcatLayer(&rnd);
   // TestPairTextDataLayer(&rnd);
   // TestListTextDataLayer(&rnd);
   // TestGateLayer(&rnd);

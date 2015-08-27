@@ -454,6 +454,11 @@ class Net : public INet{
     if (!save_model_root.isNull()) {
       model_save_interval = save_model_root["save_interval"].asInt();
       model_save_file_prefix = save_model_root["file_prefix"].asString();
+	  if (!save_model_root["everything"].isNull()) {
+	    model_save_everything = save_model_root["everything"].asBool();
+	  } else {
+		model_save_everything = false;
+	  }
     }
     Json::Value save_act_root = root["save_activation"];
     if (!save_act_root.isNull()) {
@@ -661,6 +666,11 @@ class Net : public INet{
         cout << node_list[k]->diff[0][0][0][i] << "\t";
       }
       cout << endl;
+      cout << "length : ";
+      for (int i = 0; i < 5; ++i) {
+        cout << node_list[k]->length[0][i] << "\t";
+      }
+      cout << endl;
     }
 #endif
 
@@ -762,8 +772,9 @@ class Net : public INet{
             continue;
         }
         // oracle 
-        if (layers[layer_idx]->layer_type == kEmbedding || \
-            layers[layer_idx]->layer_type == kWordClassSoftmaxLoss) {
+        if (!model_save_everything && \
+				(layers[layer_idx]->layer_type == kEmbedding || \
+                 layers[layer_idx]->layer_type == kWordClassSoftmaxLoss) ) {
             cout << "ORC: without save embedding" << endl;
             layer_params_root.append(0);
             continue;
@@ -894,6 +905,7 @@ class Net : public INet{
   map<string, vector<string> > activation_save_nodes;
   int model_save_interval;
   string model_save_file_prefix;
+  bool model_save_everything;
   // is save best or not, output file is file_prefix + ".best" // to do
   // map<string, bool> save_best;
   // nets output nodes
