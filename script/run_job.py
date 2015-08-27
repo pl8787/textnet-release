@@ -168,9 +168,9 @@ class SshWorker(Thread):
         scp2local(self.node, job.remote_log_file(), job.local_log_file())
 
 def get_nodes():
-    n_thread = 6 
-    node_169 = Node('10.60.1.169', 'wsx', n_thread-3)
-    node_52 = Node('10.60.0.52', 'wsx', n_thread+2)
+    n_thread = 12
+    node_169 = Node('10.60.1.169', 'wsx', n_thread-4)
+    node_52 = Node('10.60.0.52', 'wsx', n_thread)
     node_59 = Node('10.60.0.59', 'wsx', n_thread)
     node_53 = Node('10.60.0.53', 'wsx', n_thread)
     # node_168 = Node('10.60.1.168', 'wsx', 8)
@@ -180,13 +180,13 @@ def get_nodes():
     # return [node_52 , node_59]# , node_169]
     # return [node_169]
     # return [node_52, node_59, node_169]
-    return [node_59,node_52]
+    return [node_59]
 
 def main():
     run_nodes = get_nodes()
     # kill_job(run_nodes[0] , ['textnet'])
     # kill_job(run_nodes[1] , ['textnet'])
-    # # kill_job(run_nodes[0] , ['textnet'])
+    # kill_job(run_nodes[2] , ['textnet'])
     # exit(0)
 
     # max_proc_num = sys.args[1]
@@ -211,7 +211,13 @@ def main():
     # local_dir = '/home/wsx/exp/match/qa/bilstm_tensor_dpool/run.4/'
     # local_dir = '/home/wsx/exp/match/qa/bilstm_concat/run.2/'
     # local_dir = '/home/wsx/exp/match/qa_50/bilstm_tensor_dpool/run.6/'
-    local_dir = '/home/wsx/exp/match/qa_50/bilstm_tensor_dpool/run.9/'
+    # local_dir = '/home/wsx/exp/match/qa_50/bilstm_tensor_dpool/run.12/'
+    # local_dir = '/home/wsx/exp/match/sentence/bilstm_tensor_dpool/run.2/'
+    # local_dir = '/home/wsx/exp/match/sentence/arcii/run.1/'
+    # local_dir = '/home/wsx/exp/match/qa_50/mul_cnn_tensor_dpool/run.3/'
+    # local_dir = '/home/wsx/exp/match/sentence/ctnn/run.2/'
+    local_dir = '/home/wsx/exp/match/qa_50/mul_cnn_tensor_dpool/run.4/'
+    # local_dir = '/home/wsx/exp/match/sentence/mul_cnn_tensor_dpool/run.1/'
     # local_dir = '/home/wsx/exp/match/qa_50/arcii/run.1/'
     # local_dir = '/home/wsx/exp/match/qa_50/ctnn/run.2/'
     # local_dir = '/home/wsx/exp/match/qa/mul_cnn_tensor_dpool/run.1/'

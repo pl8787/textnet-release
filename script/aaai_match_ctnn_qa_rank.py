@@ -404,18 +404,15 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['bottom_nodes'] = ['l_sentence_pool_2', 'r_sentence_pool_2']
     layer['top_nodes'] = ['tensor_trans']
     layer['layer_name'] = 'match_tensor'
-    layer['layer_type'] = 1001
-    # print "ORC: use COS operation for similarity"
+    layer['layer_type'] = 1003
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
-    setting['d_hidden'] = 1
-    # setting['d_factor'] = 3*d_mem 
-    # setting['t_l2'] = t_l2
+    setting['d_hidden'] = 5
+    setting['d_factor'] = d_mem 
+    setting['t_l2'] = 0.
     # setting['is_init_as_I'] = False
-    # setting['is_init_as_I'] = True
-    setting['is_use_linear'] = False
+    setting['is_use_linear'] = True
     setting['is_var_len'] = False
-    # setting['is_update_tensor'] = False
     # setting['is_update_tensor'] = True
     # setting['t_updater'] = t_updater
     # setting['w_updater'] = t_updater
@@ -444,14 +441,14 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     # layer['setting'] = setting
     # setting['num_hidden'] = 1
 
-    # layer = {}
-    # layers.append(layer) 
-    # layer['bottom_nodes'] = ['tensor_trans']
-    # layer['top_nodes'] = ['hidden_rep']
-    # layer['layer_name'] = 'hidden_nonlinear'
-    # layer['layer_type'] = 0
-    # setting = {}
-    # layer['setting'] = setting
+    layer = {}
+    layers.append(layer) 
+    layer['bottom_nodes'] = ['tensor_trans']
+    layer['top_nodes'] = ['hidden_rep']
+    layer['layer_name'] = 'hidden_nonlinear'
+    layer['layer_type'] = 3
+    setting = {}
+    layer['setting'] = setting
      
     # layer = {}
     # layers.append(layer) 
@@ -466,8 +463,8 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
 
     layer = {}
     layers.append(layer) 
-    # layer['bottom_nodes'] = ['hidden_rep']
-    layer['bottom_nodes'] = ['tensor_trans']
+    layer['bottom_nodes'] = ['hidden_rep']
+    # layer['bottom_nodes'] = ['tensor_trans']
     # layer['bottom_nodes'] = ['dpool_rep']
     layer['top_nodes'] = ['softmax_prob']
     layer['layer_name'] = 'softmax_fullconnect'
@@ -516,11 +513,11 @@ run = 3
 l2 = 0.
 # for dataset in ['paper']:
 for dataset in ['qa_50']:
-    for d_mem in [20]:
+    for d_mem in [50]:
         idx = 0
         # for epoch_no in [0, 10000, 25000]:
         for epoch_no in [0]:
-            for init in [0.1, 0.03, 0.01]:
+            for init in [0.3, 0.1]:
                 for lr in [0.3, 0.1, 0.03]:
                     # for l2 in [0.00001, 0.0001, 0.001]:
                     init_t = init

@@ -187,6 +187,34 @@ class DatasetCfg:
             self.valid_max_iters =6056
             self.test_max_iters  =6056
 
+        elif dataset == 'sentence':
+            self.train_data_file = '/home/wsx/data/sentence/train'
+            self.valid_data_file = '/home/wsx/data/sentence/test'
+            self.test_data_file  = '/home/wsx/data/sentence/test'
+            self.embedding_file  = '/home/wsx/data/sentence/sentence_embed'
+            # self.update_indication_file = '/home/wsx/data/msrp/wikicorp_num_50_msr_ind.txt'
+            self.max_doc_len = 28
+            self.min_doc_len = 4 
+            # self.vocab_size = 15586
+            # self.vocab_size = 219071
+            self.vocab_size = 127889
+
+            self.dp_rate = 0.0
+            self.num_class = 2
+            self.d_word_rep = 50
+            self.batch_size = 128
+            self.train_batch_size = 128
+            self.valid_batch_size = 128
+            self.test_batch_size  = 128
+            # self.n_train = 1082851
+            # self.n_valid = 135355
+            # self.n_test  = 135355
+            self.train_display_interval = 10
+            self.valid_display_interval = 10000000
+            self.test_display_interval  = 2000
+            self.train_max_iters = 40000
+            self.valid_max_iters = 50000
+            self.test_max_iters  = 50000
         elif dataset == 'qa_50':
             self.train_data_file = '/home/wsx/data/qa_50/qa.neg.10.50.train'
             self.valid_data_file = '/home/wsx/data/qa_50/qa.neg.10.50.valid'

@@ -28,7 +28,7 @@ class MatchTensorFactLayer : public Layer<xpu>{
     this->defaults["interval"] = SettingV(1); 
     this->defaults["is_var_len"] = SettingV(true); 
     this->defaults["is_use_linear"] = SettingV(true); 
-    this->defaults["is_init_as_I"] = SettingV(true);
+    this->defaults["is_init_as_I"] = SettingV(false);
     this->defaults["is_update_tensor"] = SettingV(true);
     
     // require value, set to SettingV(),

@@ -11,6 +11,7 @@ init_t = 0.0
 def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     # print "ORC: left & right lstm share parameters"
     net = {}
+    is_use_mlp = True
 
     ds = DatasetCfg(dataset)
     g_filler    = gen_uniform_filter_setting(init)
@@ -408,25 +409,27 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
 
     layer = {}
     layers.append(layer)
-    layer['bottom_nodes'] = ['l_sentence', 'l_sentence_pool_1', 'l_sentence_pool_2', 'l_sentence_pool_3']
+    # layer['bottom_nodes'] = ['l_sentence', 'l_sentence_pool_1', 'l_sentence_pool_2', 'l_sentence_pool_3']
+    layer['bottom_nodes'] = ['l_sentence', 'l_sentence_swap_1', 'l_sentence_swap_2', 'l_sentence_swap_3', 'l_sentence_pool_3']
     layer['top_nodes'] = ['l_sentence_all']
     layer['layer_name'] = 'l_concat'
     layer['layer_type'] = 18
     setting = {}
     layer['setting'] = setting
-    setting['bottom_node_num']  = 4
+    setting['bottom_node_num']  = 5
     setting['concat_dim_index'] = 2
     setting['is_concat_by_length'] = True
 
     layer = {}
     layers.append(layer)
-    layer['bottom_nodes'] = ['r_sentence', 'r_sentence_pool_1', 'r_sentence_pool_2', 'r_sentence_pool_3']
+    # layer['bottom_nodes'] = ['r_sentence', 'r_sentence_pool_1', 'r_sentence_pool_2', 'r_sentence_pool_3']
+    layer['bottom_nodes'] = ['r_sentence', 'r_sentence_swap_1', 'r_sentence_swap_2', 'r_sentence_swap_3', 'r_sentence_pool_3']
     layer['top_nodes'] = ['r_sentence_all']
     layer['layer_name'] = 'r_concat'
     layer['layer_type'] = 18
     setting = {}
     layer['setting'] = setting
-    setting['bottom_node_num']  = 4 
+    setting['bottom_node_num']  = 5 
     setting['concat_dim_index'] = 2
     setting['is_concat_by_length'] = True
 
@@ -469,9 +472,43 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['layer_type'] = 43
     layer['setting'] = {'row':15, 'col':15, 'interval':1}
 
+    if is_use_mlp:
+        layer = {}
+        layers.append(layer) 
+        layer['bottom_nodes'] = ['dpool_rep']
+        layer['top_nodes'] = ['hidden_trans']
+        layer['layer_name'] = 'mlp_hidden'
+        layer['layer_type'] = 11 
+        setting = copy.deepcopy(g_layer_setting)
+        layer['setting'] = setting
+        setting['num_hidden'] = d_mem * 4
+
+        layer = {}
+        layers.append(layer) 
+        layer['bottom_nodes'] = ['hidden_trans']
+        layer['top_nodes'] = ['hidden_rep']
+        layer['layer_name'] = 'hidden_nonlinear'
+        layer['layer_type'] = 1 
+        setting = {}
+        layer['setting'] = setting
+        
+        layer = {}
+        layers.append(layer) 
+        layer['bottom_nodes'] = ['hidden_rep']
+        layer['top_nodes'] = ['hidden_drop_rep']
+        layer['layer_name'] = 'dropout'
+        layer['layer_type'] =  13
+        ds.dp_rate = 0.
+        print "ORC, dp rate:", ds.dp_rate
+        setting = {'rate':ds.dp_rate}
+        layer['setting'] = setting
+
     layer = {}
     layers.append(layer) 
-    layer['bottom_nodes'] = ['dpool_rep']
+    if is_use_mlp:
+        layer['bottom_nodes'] = ['hidden_drop_rep']
+    else:
+        layer['bottom_nodes'] = ['dpool_rep']
     layer['top_nodes'] = ['softmax_prob']
     layer['layer_name'] = 'softmax_fullconnect'
     layer['layer_type'] = 11
@@ -515,17 +552,17 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
 
     return net
 
-run = 2
+run = 4
 l2 = 0.
 # for dataset in ['paper']:
 # for dataset in ['qa_balance']:
 for dataset in ['qa_50']:
     for d_mem in [50]:
-        idx = 2
-        # for epoch_no in [0, 10000, 25000]:
+        idx = 0
+        # for epoch_no in [0, 10000, 25000]
         for epoch_no in [0]:
-            for init in [0.1]:
-                for lr in [0.2, 0.1]:
+            for init in [0.3, 0.1]:
+                for lr in [0.3, 0.1, 0.03]:
                     # for l2 in [0.00001, 0.0001, 0.001]:
                     t_l2 = 0.0
                     init_t = init
