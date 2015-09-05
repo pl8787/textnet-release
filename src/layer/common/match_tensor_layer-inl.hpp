@@ -30,11 +30,11 @@ class MatchTensorLayer : public Layer<xpu>{
     this->defaults["is_use_linear"] = SettingV(true); 
     this->defaults["is_init_as_I"] = SettingV(false);
     this->defaults["is_update_tensor"] = SettingV(true);
+    this->defaults["t_l2"] = SettingV(0.f);
     
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["d_hidden"] = SettingV();
-    this->defaults["t_l2"] = SettingV();
 
     this->defaults["t_filler"] = SettingV();
     this->defaults["w_filler"] = SettingV();
@@ -69,6 +69,7 @@ class MatchTensorLayer : public Layer<xpu>{
     interval = setting["interval"].iVal();
     t_l2 = setting["t_l2"].fVal();
 	feat_size = bottom[0]->data.size(3);
+    utils::Check(feat_size == bottom[1]->data.size(3), "MatchTensorLayer: input dim error.");
 
     diag_4_reg.Resize(feat_size, d_hidden, feat_size, 1, true);
     this->params.resize(3);
@@ -161,6 +162,7 @@ class MatchTensorLayer : public Layer<xpu>{
 
     Tensor2D bottom0_data_d2 = bottom[0]->data_d2_reverse();
     Tensor2D bottom1_data_d2 = bottom[1]->data_d2_reverse();
+    Tensor4D bottom1_data = bottom[1]->data;
     Tensor2D t_data = this->params[0].data_d2();
     Tensor2D w_data = this->params[1].data_d2();
 
@@ -170,7 +172,16 @@ class MatchTensorLayer : public Layer<xpu>{
     }
     // without consider var len
     bottom_0_transform.data_d2_middle() = dot(bottom0_data_d2, t_data);
-    bottom_1_transform.data_d2_middle() = dot(bottom1_data_d2, t_data);
+    // bottom_1_transform.data_d2_middle() = dot(bottom1_data_d2, t_data);
+    for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
+      for (int word_idx = 0; word_idx < doc_len; ++word_idx) {
+        for (int d = 0; d < d_hidden; ++d) {
+          for (int f = 0; f < feat_size; ++f) {
+            bottom_1_transform.data[batch_idx][word_idx][d][f] = bottom1_data[batch_idx][0][word_idx][f];
+          }
+        }
+      }
+    }
 
     // compute dot
     for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
@@ -240,16 +251,26 @@ class MatchTensorLayer : public Layer<xpu>{
     Tensor2D bottom0_diff_d2 = bottom[0]->diff_d2_reverse();
     Tensor2D bottom1_data_d2 = bottom[1]->data_d2_reverse();
     Tensor2D bottom1_diff_d2 = bottom[1]->diff_d2_reverse();
+    Tensor4D bottom1_diff    = bottom[1]->diff;
     Tensor2D t_data = this->params[0].data_d2();
     Tensor2D t_diff = this->params[0].diff_d2();
     Tensor2D w_data = this->params[1].data_d2();
     Tensor2D w_diff = this->params[1].diff_d2();
     if (is_update_tensor) {
       t_diff += dot(bottom0_data_d2.T(), bottom_0_transform.diff_d2_middle());
-      t_diff += dot(bottom1_data_d2.T(), bottom_1_transform.diff_d2_middle());
+      // t_diff += dot(bottom1_data_d2.T(), bottom_1_transform.diff_d2_middle());
     }
     bottom0_diff_d2 += dot(bottom_0_transform.diff_d2_middle(), t_data.T());
-    bottom1_diff_d2 += dot(bottom_1_transform.diff_d2_middle(), t_data.T());
+    // bottom1_diff_d2 += dot(bottom_1_transform.diff_d2_middle(), t_data.T());
+    for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
+      for (int word_idx = 0; word_idx < doc_len; ++word_idx) {
+        for (int d = 0; d < d_hidden; ++d) {
+          for (int f = 0; f < feat_size; ++f) {
+            bottom1_diff[batch_idx][0][word_idx][f] += bottom_1_transform.diff[batch_idx][word_idx][d][f];
+          }
+        }
+      }
+    }
 
     if (is_use_linear) {
       w_diff += dot(bottom0_data_d2.T(), bottom_0_transform_linear.diff_d2_reverse());

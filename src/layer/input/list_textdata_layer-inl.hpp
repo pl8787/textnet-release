@@ -31,7 +31,7 @@ class ListTextDataLayer : public Layer<xpu>{
   virtual void Require() {
     // default value, just set the value you want
     this->defaults["min_doc_len"] = SettingV(1);
-	this->defaults["speedup_list"] = SettingV(true);
+	this->defaults["speedup_list"] = SettingV(false);
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["data_file"] = SettingV();

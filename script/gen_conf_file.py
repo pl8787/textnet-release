@@ -6,6 +6,8 @@ def gen_gaussion_filler_setting(mu, sigma):
 
 def gen_zero_filler_setting():
     return {'init_type':0, 'value':0}
+def gen_constant_filler_setting(val):
+    return {'init_type':1, 'value':val}
 def gen_uniform_filler_setting(interval):
     return {'init_type':2, 'range':interval}
 

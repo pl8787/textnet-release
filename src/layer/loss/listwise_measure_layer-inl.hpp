@@ -120,7 +120,7 @@ class ListwiseMeasureLayer : public Layer<xpu>{
     } else if (method == "P@k") {
       for (int i = 0; i < min(k, score_list_len); ++i) {
         if (score_list[i].second == 1)
-          score += 1.0;
+          score = 1.0;
       }
     } else if (method == "nDCG@k") {
       for (int i = 0; i < min(k, score_list_len); ++i) {

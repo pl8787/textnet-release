@@ -75,6 +75,15 @@ struct square {
   }
 };
 
+// orc
+struct pow_3{
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return a * a * a;
+  }
+};
+
+
+
 /*! \brief used for generate Bernoulli mask */
 struct threshold {
   MSHADOW_XINLINE static real_t Map(real_t a, real_t b) {

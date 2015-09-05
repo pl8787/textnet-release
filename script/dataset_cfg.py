@@ -211,8 +211,8 @@ class DatasetCfg:
             # self.n_test  = 135355
             self.train_display_interval = 10
             self.valid_display_interval = 10000000
-            self.test_display_interval  = 2000
-            self.train_max_iters = 40000
+            self.test_display_interval  = 4000
+            self.train_max_iters = 40001
             self.valid_max_iters = 50000
             self.test_max_iters  = 50000
         elif dataset == 'qa_50':
@@ -239,8 +239,8 @@ class DatasetCfg:
             # self.n_test  = 135355
             self.train_display_interval = 10
             self.valid_display_interval = 10000000
-            self.test_display_interval  = 1000
-            self.train_max_iters = 20000
+            self.test_display_interval  = 2000
+            self.train_max_iters = 20001
             self.valid_max_iters =6057
             self.test_max_iters  =6057
 
