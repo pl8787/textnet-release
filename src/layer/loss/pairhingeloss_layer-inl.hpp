@@ -75,8 +75,8 @@ class PairHingeLossLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 1> top_data = top[0]->data_d1();
     
     for (int i = 0; i < nbatch; i += 2) {
-      utils::Check(bottom1_data[i] == 1 && bottom1_data[i+1] == 0, 
-                    "Instances come like 1 0 1 0 ...");
+      utils::Check(bottom1_data[i] > bottom1_data[i+1], 
+                    "Instances come like x y ... x > y");
       top_data[0] += std::max(0.0f, delta + bottom0_data[i+1] - bottom0_data[i]);
     }
     

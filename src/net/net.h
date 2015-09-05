@@ -389,6 +389,14 @@ class Net : public INet{
       }
     }
 
+	// Check outnode exist
+    for (int t = 0; t < tags.size(); ++t) {
+      for (int i = 0; i < out_nodes[tags[t]].size(); ++i) {
+        utils::Check(nodes.count(out_nodes[tags[t]][i]), 
+				"out_node [%s] not in nodes.", out_nodes[tags[t]][i].c_str());
+      }
+	}
+
     utils::Printf("Nodes count: %d\n", nodes.size());
   }
 

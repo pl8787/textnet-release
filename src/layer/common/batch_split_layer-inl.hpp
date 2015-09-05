@@ -132,12 +132,12 @@ class BatchSplitLayer : public Layer<xpu>{
 	
 	while (bottom_ptr < nbatch) {
 		for (int i = 0; i < batch_count; ++i) {
-			bottom_diff2[bottom_ptr] = F<op::identity>(top0_diff2[top0_ptr]);
+			bottom_diff2[bottom_ptr] += F<op::identity>(top0_diff2[top0_ptr]);
 			++bottom_ptr;
 			++top0_ptr;
 		}
 		for (int i = 0; i < batch_step - batch_count; ++i) {
-			bottom_diff2[bottom_ptr] = F<op::identity>(top1_diff2[top1_ptr]);
+			bottom_diff2[bottom_ptr] += F<op::identity>(top1_diff2[top1_ptr]);
 			++bottom_ptr;
 			++top1_ptr;
 		}

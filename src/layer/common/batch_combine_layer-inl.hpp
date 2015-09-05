@@ -66,8 +66,8 @@ class BatchCombineLayer : public Layer<xpu>{
                  "BatchCombineLayer: only mul, plus, minus support element.");
       else
         utils::Check(op=="cat" || op=="mul" || op=="plus" || op=="cos" || op == "minus" ||\
-                 op=="euc" || op=="euc_exp",
-                 "BatchCombineLayer: one of cat, mul, plus, cos, minus, euc or euc_exp.");
+                 op=="euc" || op=="euc_neg" || op=="euc_exp",
+                 "BatchCombineLayer: one of cat, mul, plus, cos, minus, euc, euc_neg or euc_exp.");
 	}
   }
   
@@ -222,6 +222,15 @@ class BatchCombineLayer : public Layer<xpu>{
             // top_data[i][0][j][k] = pow(sum_elem_square, 0.5);
             top_data[i][0][0][c] = sum_elem_square;
           } 
+          else if (op =="euc_neg") {
+            float sum_elem_square = 0.f;
+            for (int m = 0; m < feat_size; ++m) {
+              float sub_elem = bottom0_data2[j][m] - bottom1_data2[j][m];
+              sum_elem_square += sub_elem * sub_elem;
+            }
+            // top_data[i][0][j][k] = pow(sum_elem_square, 0.5);
+            top_data[i][0][0][c] = -sum_elem_square;
+          } 
           else if (op =="euc_exp") { // by wengpeng ying, no sqrt
             float sum_elem_square = 0.f;
             for (int m = 0; m < feat_size; ++m) {
@@ -325,6 +334,17 @@ class BatchCombineLayer : public Layer<xpu>{
               if (this->prop_error[1]) {
                 // bottom1_diff[i][0][k][m] += top_diff[i][0][j][k] * (1/(2*distance)) * 2*(-sub_elem);
                 bottom1_diff2[j][m] += top_diff[i][0][0][c] * 2*(-sub_elem);
+              }
+            } else if (op == "euc_neg") {
+              float distance = top_data[i][0][0][c];
+              float sub_elem = bottom0_data2[j][m] - bottom1_data2[j][m];
+              if (this->prop_error[0]) {
+                // bottom0_diff[i][0][j][m] += top_diff[i][0][j][k] * (1/(2*distance)) * 2*(sub_elem);
+                bottom0_diff2[j][m] += top_diff[i][0][0][c] * 2*(-sub_elem);
+              }
+              if (this->prop_error[1]) {
+                // bottom1_diff[i][0][k][m] += top_diff[i][0][j][k] * (1/(2*distance)) * 2*(-sub_elem);
+                bottom1_diff2[j][m] += top_diff[i][0][0][c] * 2*(sub_elem);
               }
             } else if (op == "euc_exp") {
               float distance = top_data[i][0][0][c];

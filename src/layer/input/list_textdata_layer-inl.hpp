@@ -125,16 +125,15 @@ class ListTextDataLayer : public Layer<xpu>{
   void MakeLists(vector<int> &label_set, vector<vector<int> > &list_set) {
     vector<int> list;
     max_list = 0;
-    list.push_back(0);
-    for (int i = 1; i < line_count; ++i) {
-      if (label_set[i] == 1) {
+	int cur_class = -1;
+    for (int i = 0; i < line_count; ++i) {
+      if (label_set[i] > cur_class && list.size() != 0) {
         list_set.push_back(list);
         max_list = std::max(max_list, (int)list.size());
         list = vector<int>();
-        list.push_back(i);
-      } else {
-        list.push_back(i);
       }
+	  cur_class = label_set[i];
+      list.push_back(i);
     }
     list_set.push_back(list);
     max_list = std::max(max_list, (int)list.size());

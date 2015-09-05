@@ -72,6 +72,7 @@ Layer2Name = {
   1007: 'BatchSelect',
   1008: 'BatchSplit',
   1009: 'BatchConcat',
+  1010: 'BatchDuplicate',
   10001: 'kMaxDynamicPooling',
 
   # Loss Layer 51-70

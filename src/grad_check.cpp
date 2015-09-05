@@ -2400,11 +2400,12 @@ void TestPairTextDataLayer(mshadow::Random<cpu>* prnd) {
   tops.push_back(&top2);
 
   map<string, SettingV> setting;
-  setting["data_file"] = SettingV("/home/pangliang/matching/data/webscope/qa_instances.train.dat");
+  // setting["data_file"] = SettingV("/home/pangliang/matching/data/webap/qaSentWordIndex.dat.sample");
+  setting["data_file"] = SettingV("/home/pangliang/matching/data/webscope/xrear10.3.32/qa.xrear10.3.32.train.dat");
   setting["batch_size"] = SettingV(2);
   setting["max_doc_len"] = SettingV(32);
   setting["min_doc_len"] = SettingV(5);
-  setting["shuffle"] = SettingV(true);
+  setting["shuffle"] = SettingV(false);
   
   /// Test PairTextData Layer
   Layer<cpu> * layer_pair_textdata = CreateLayer<cpu>(kPairTextData);
@@ -2748,6 +2749,45 @@ void TestBatchConcatLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckError(layer_batch_concat, bottoms, tops);
 }
 
+void TestBatchDuplicateLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Batch Duplicate Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+
+  bottom.Resize(2, 2, 3, 2);
+
+  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+
+  map<string, SettingV> setting;
+  setting["dup_count"] = SettingV(3);
+
+  // Test BatchCombine Layer
+  Layer<cpu> * layer_batch_duplicate = CreateLayer<cpu>(kBatchDuplicate);
+  layer_batch_duplicate->PropAll();
+  layer_batch_duplicate->SetupLayer(setting, bottoms, tops, prnd);
+  layer_batch_duplicate->Reshape(bottoms, tops);
+
+  layer_batch_duplicate->Forward(bottoms, tops);
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("top", top.data);
+
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.001f);
+  cker->SetupChecker(setting_checker, prnd);
+
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_batch_duplicate, bottoms, tops);
+}
+
 int main(int argc, char *argv[]) {
   mshadow::Random<cpu> rnd(37);
   // TestActivationLayer(&rnd);
@@ -2774,9 +2814,10 @@ int main(int argc, char *argv[]) {
   // TestMatchMultiLayer(&rnd);
   // TestBatchCombineLayer(&rnd);
   // TestBatchSelectLayer(&rnd);
-  TestBatchSplitLayer(&rnd);
-  TestBatchConcatLayer(&rnd);
-  // TestPairTextDataLayer(&rnd);
+  // TestBatchSplitLayer(&rnd);
+  // TestBatchConcatLayer(&rnd);
+  // TestBatchDuplicateLayer(&rnd);
+  TestPairTextDataLayer(&rnd);
   // TestListTextDataLayer(&rnd);
   // TestGateLayer(&rnd);
   // TestDiagRecurrentLayer(&rnd);

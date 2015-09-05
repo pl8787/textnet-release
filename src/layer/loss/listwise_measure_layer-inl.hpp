@@ -24,6 +24,9 @@ bool list_cmp(const pair<float, float> &x1, const pair<float, float> &x2) {
   return x1.first > x2.first; // sort decrease
 }
 
+bool list_cmp_label(const pair<float, float> &x1, const pair<float, float> &x2) {
+  return x1.second > x2.second; // sort decrease
+}
 
 template<typename xpu>
 class ListwiseMeasureLayer : public Layer<xpu>{
@@ -62,8 +65,8 @@ class ListwiseMeasureLayer : public Layer<xpu>{
     col = setting["col"].iVal();
 	batch_size = setting["batch_size"].iVal();
     
-    utils::Check(method == "MRR" || method == "P@k" || method == "nDCG@k", 
-                  "Parameter [method] must be MRR or P@k or nDCG@k.");
+    utils::Check(method == "MRR" || method == "P@k" || method == "nDCG@k" || method == "MAP" || method == "P@R", 
+                  "Parameter [method] must be MRR or P@k or nDCG@k or MAP or P@R.");
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -114,32 +117,78 @@ class ListwiseMeasureLayer : public Layer<xpu>{
         score_list.push_back( make_pair(bottom0_data[idx][col], bottom1_data[idx]) );
       }
 
+      int score_list_len = score_list.size();
+
+	  if (method == "nDCG") {
+        idcg = 0.0;
+		for (int i = 0; i < min(k, score_list_len); ++i) {
+          idcg += score_list[i].second / log(i+2);
+		}
+	  }
+
 	  // shuffle before sort!
 	  unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
 	  std::shuffle(score_list.begin(), score_list.end(), std::default_random_engine(seed)); 
 
       sort(score_list.begin(), score_list.end(), list_cmp);
 
-      int score_list_len = score_list.size();
-
       if (method == "MRR") {
         for (int i = 0; i < score_list_len; ++i) {
-          if (score_list[i].second == 1)
+		  if (score_list[i].second > 0) 
+			  score_list[i].second = 1;
+		  utils::Check(score_list[i].second == 0 || score_list[i].second == 1, 
+				  "Not a valid list for MRR, only 0 and 1.");
+          if (score_list[i].second == 1) {
             score += 1.0 / (i+1);
-          check += score_list[i].second;
+		  }
         }
-        utils::Check(check==1, "Not a valid list.");
       } else if (method == "P@k") {
         for (int i = 0; i < min(k, score_list_len); ++i) {
-          if (score_list[i].second == 1)
-            score = 1.0;
+		  if (score_list[i].second > 0) 
+			  score_list[i].second = 1;
+		  utils::Check(score_list[i].second == 0 || score_list[i].second == 1, 
+				  "Not a valid list for P@k, only 0 and 1.");
+          if (score_list[i].second == 1) {
+            score += 1.0;
+		  }
         }
+		score /= k;
+      } else if (method == "P@R") {
+		int r = 0;
+        for (int i = 0; i < score_list_len; ++i) {
+		  if (score_list[i].second > 0) 
+			  score_list[i].second = 1;
+		  if (score_list[i].second == 1) {
+			r += 1;
+		  }
+		}
+		for (int i = 0; i < min(r, score_list_len); ++i) {
+		  utils::Check(score_list[i].second == 0 || score_list[i].second == 1, 
+				  "Not a valid list for P@R, only 0 and 1.");
+          if (score_list[i].second == 1) {
+            score += 1.0;
+		  }
+        }
+		score /= r;
       } else if (method == "nDCG@k") {
         for (int i = 0; i < min(k, score_list_len); ++i) {
-          if (score_list[i].second == 1)
-            score += 1.0 / log(i+2);
+          score += score_list[i].second / log(i+2);
         }
-      }
+		score /= idcg;
+      } else if (method == "MAP") {
+		int p_count = 0;
+		for (int i = 0; i < score_list_len; ++i) {
+          score_list[i].first = i;
+		}
+		sort(score_list.begin(), score_list.end(), list_cmp_label);
+		for (int i = 0; i < score_list_len; ++i) {
+		  if (score_list[i].second == 0)
+			  break;
+		  p_count += 1;
+          score += i / score_list[i].first;
+		}
+		score /= p_count;
+	  }
       top_data[0] += score;
 	}
 
@@ -159,6 +208,7 @@ class ListwiseMeasureLayer : public Layer<xpu>{
   int col;
   int batch_size;
   int list_size;
+  float idcg;
 
 };
 }  // namespace layer

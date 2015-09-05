@@ -136,11 +136,11 @@ class BatchConcatLayer : public Layer<xpu>{
 
 	for (int i = 0; i < top_nbatch; i += batch_step) {
 		for (int j = 0; j < batch_count; ++j) {
-			bottom0_diff2[bottom0_ptr] = F<op::identity>(top_diff2[i + j]);
+			bottom0_diff2[bottom0_ptr] += F<op::identity>(top_diff2[i + j]);
 			++bottom0_ptr;
 		}
 		for (int j = 0; j < batch_step - batch_count; ++j) {
-			bottom1_diff2[bottom1_ptr] = F<op::identity>(top_diff2[i + j + batch_count]);
+			bottom1_diff2[bottom1_ptr] += F<op::identity>(top_diff2[i + j + batch_count]);
 			++bottom1_ptr;
 		}
 	}
