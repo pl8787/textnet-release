@@ -158,6 +158,34 @@ class DatasetCfg:
             self.train_max_iters = 5000
             self.valid_max_iters = self.n_valid/ self.valid_batch_size
             self.test_max_iters  = self.n_test / self.test_batch_size
+        elif dataset == 'qa_top10':
+            self.train_data_file = '/home/wsx/data/qa_top10/qa.neg.10.50.train'
+            self.valid_data_file = '/home/wsx/data/qa_top10/qa.neg.10.50.valid'
+            self.test_data_file  = '/home/wsx/data/qa_top10/qa.neg.10.50.test'
+            self.embedding_file  = '/home/wsx/data/qa_top10/qa_embed'
+            # self.update_indication_file = '/home/wsx/data/msrp/wikicorp_num_50_msr_ind.txt'
+            self.max_doc_len = 50
+            self.min_doc_len = 5 
+            # self.vocab_size = 15586
+            # self.vocab_size = 219071
+            self.vocab_size = 130242
+
+            self.dp_rate = 0.0
+            self.num_class = 2
+            self.d_word_rep = 50
+            self.batch_size = 128
+            self.train_batch_size = 128
+            self.valid_batch_size = 128
+            self.test_batch_size  = 128
+            # self.n_train = 1082851
+            # self.n_valid = 135355
+            # self.n_test  = 135355
+            self.train_display_interval = 10
+            self.valid_display_interval = 10000000
+            self.test_display_interval  = 1000
+            self.train_max_iters = 20000
+            self.valid_max_iters =6056
+            self.test_max_iters  =6056
         elif dataset == 'qa_top1k':
             self.train_data_file = '/home/wsx/data/qa_top1k/qa.neg.10.50.train'
             self.valid_data_file = '/home/wsx/data/qa_top1k/qa.neg.10.50.valid'

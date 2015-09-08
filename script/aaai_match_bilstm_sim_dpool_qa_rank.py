@@ -11,8 +11,8 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     net = {}
 
     ds = DatasetCfg(dataset)
-    g_filler    = gen_uniform_filter_setting(init)
-    zero_filler = gen_zero_filter_setting()
+    g_filler    = gen_uniform_filler_setting(init)
+    zero_filler = gen_zero_filler_setting()
     g_updater   = gen_adagrad_setting(lr = lr, l2 = l2, batch_size = ds.train_batch_size)
     zero_l2_updater   = gen_adagrad_setting(lr = lr, batch_size = ds.train_batch_size)
 
@@ -185,7 +185,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     layer['top_nodes'] = ['dpool_rep']
     layer['layer_name'] = 'dynamic_pooling'
     layer['layer_type'] = 43
-    layer['setting'] = {'row':5, 'col':5}
+    layer['setting'] = {'row':3, 'col':3}
 
     if is_use_mlp:
         layer = {}
@@ -268,10 +268,11 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
 
     return net
 
-run = 7
+run = 1
 l2 = 0.
 # for dataset in ['paper']:
-for dataset in ['qa']:
+# for dataset in ['qa']:
+for dataset in ['qa_top10']:
 # for dataset in ['qa_candi']:
     for d_mem in [50]:
         idx = 0

@@ -9,8 +9,8 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     net = {}
 
     ds = DatasetCfg(dataset)
-    g_filler    = gen_uniform_filter_setting(init)
-    zero_filler = gen_zero_filter_setting()
+    g_filler    = gen_uniform_filler_setting(init)
+    zero_filler = gen_zero_filler_setting()
     g_updater   = gen_adagrad_setting(lr = lr, l2 = l2, batch_size = ds.train_batch_size)
     zero_l2_updater   = gen_adagrad_setting(lr = lr, batch_size = ds.train_batch_size)
 
@@ -417,7 +417,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['layer_type'] = 11 
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
-    setting['num_hidden'] = d_mem * 2
+    setting['num_hidden'] = d_mem * 4
 
     layer = {}
     layers.append(layer) 
@@ -489,13 +489,13 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
 run = 1
 l2 = 0.
 # for dataset in ['paper']:
-for dataset in ['qa_50']:
+for dataset in ['qa_top1k']:
     for d_mem in [50]:
         idx = 0
         # for epoch_no in [0, 10000, 25000]:
         for epoch_no in [0]:
             for init in [0.3, 0.1, 0.03]:
-                for lr in [0.3, 0.1, 0.03]:
+                for lr in [0.5, 0.3, 0.1, 0.03]:
                     # for l2 in [0.00001, 0.0001, 0.001]:
                     init_t = init
                     # t_lr = t_lr_mul * lr

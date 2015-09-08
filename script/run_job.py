@@ -169,10 +169,10 @@ class SshWorker(Thread):
 
 def get_nodes():
     n_thread = 4
-    node_169 = Node('10.60.1.169', 'wsx', 6)
-    node_52 = Node('10.60.0.52', 'wsx', 9)
-    node_59 = Node('10.60.0.59', 'wsx', 9)
-    node_53 = Node('10.60.0.53', 'wsx', 9)
+    node_169 = Node('10.60.1.169', 'wsx', 12)
+    node_52 = Node('10.60.0.52', 'wsx', 8)
+    node_59 = Node('10.60.0.59', 'wsx', 8)
+    node_53 = Node('10.60.0.53', 'wsx', 8)
     # node_168 = Node('10.60.1.168', 'wsx', 8)
     # return [node_169]# , node_169]
     # return [node_52,node_53] # , node_52, node_59]
@@ -180,7 +180,7 @@ def get_nodes():
     # return [node_52 , node_59]# , node_169]
     # return [node_169]
     # return [node_52, node_59, node_169]
-    return [node_52,node_53, node_59]# , node_59]# , node_53]#, node_59]
+    return [node_52, node_169, node_53, node_59]# , node_59]# , node_53]#, node_59]
 
 def main():
     run_nodes = get_nodes()
@@ -194,50 +194,14 @@ def main():
     # local_dir = sys.args[3]
     # remote_dir = sys.args[4]
     bin = 'textnet'
-    # local_dir = '/home/wsx/exp/topk_simulation/run.4/'
-    # local_dir = '/home/wsx/exp/gate/lstm/run.9/'
-    # local_dir  = '/home/wsx/exp/match/birnn_mlp/run.1/'
-    # local_dir = '/home/wsx/exp/match/msrp/cnn/run.2/'
-    # local_dir = '/home/wsx/exp/ccir2015/mr/bilstm/run.2/'
-    # local_dir = '/home/wsx/exp/ccir2015/mr/birnn/run.2/'
-    # local_dir = '/home/wsx/exp/ccir2015/mr/birnn/run.2/'
-    # local_dir = '/home/wsx/exp/match/msrp_char/bilstm_sim_dpool/run.3/'
-    # local_dir = '/home/wsx/exp/match/msrp_dpool/run.1/'
-    # local_dir = '/home/wsx/exp/match/msrp/lstm_sim_dpool/run.29/'
-    # local_dir = '/home/wsx/exp/match/msrp/lstm_sim_dpool/run.30/'
-    # local_dir = '/home/wsx/exp/match/qa_balance/bilstm_tensor_dpool/run.14/'
-    # local_dir = '/home/wsx/exp/match/qa/bilstm_tensor_dpool/run.1/'
-    # local_dir = '/home/wsx/exp/match/qa/bilstm_sim_dpool/run.6/'
-    # local_dir = '/home/wsx/exp/match/qa/bilstm_tensor_dpool/run.4/'
-    # local_dir = '/home/wsx/exp/match/qa/bilstm_concat/run.2/'
-    # local_dir = '/home/wsx/exp/match/qa_50/bilstm_tensor_dpool/run.6/'
-    # local_dir = '/home/wsx/exp/match/qa_50/bilstm_tensor_dpool/run.12/'
-    # local_dir = '/home/wsx/exp/match/sentence/mul_cnn_tensor_dpool/run.4/'
-    # local_dir = '/home/wsx/exp/match/sentence/mul_cnn_tensor_dpool/run.4/'
-    # local_dir = '/home/wsx/exp/match/qa_50/bilstm_sim_dpool/run.7/'
     # local_dir = '/home/wsx/exp/match/sentence/bilstm_tensor_dpool/run.17/'
-    local_dir = '/home/wsx/exp/match/qa_50/bilstm_tensor_dpool/run.18/'
-    # local_dir = '/home/wsx/exp/match/sentence/arcii/run.3/'
-    # local_dir = '/home/wsx/exp/match/qa_50/bilstm_tensor_dpool/run.15/'
-    # local_dir = '/home/wsx/exp/match/qa_50/bilstm_sim_dpool/run.1/'
-    # local_dir = '/home/wsx/exp/match/qa_50/bilstm_sim_dpool/run.2/'
-    # local_dir = '/home/wsx/exp/match/qa_50/mul_cnn_tensor_dpool/run.1/'
-    # local_dir = '/home/wsx/exp/match/sentence/ctnn/run.2/'
-    # local_dir = '/home/wsx/exp/match/qa_50/mul_cnn_tensor_dpool/run.5/'
-    # local_dir = '/home/wsx/exp/match/sentence/bilstm_cos/run.2/'
-    # local_dir = '/home/wsx/exp/match/sentence/bilstm_cos/run.1/'
-    # local_dir = '/home/wsx/exp/match/sentence/mul_cnn_tensor_dpool/run.1/'
-    # local_dir = '/home/wsx/exp/match/qa_50/arcii/run.1/'
-    # local_dir = '/home/wsx/exp/match/qa_50/ctnn/run.2/'
-    # local_dir = '/home/wsx/exp/match/qa/mul_cnn_tensor_dpool/run.1/'
-    # local_dir = '/home/wsx/exp/match/qa/bilstm_mlp/run.1/'
-    # local_dir = '/home/wsx/exp/match/qa_balance/arci/run.1/'
-    # local_dir = '/home/wsx/exp/match/msrp/bilstm_tensor_dpool/run.13/'
-    # local_dir = '/home/wsx/exp/match/qa/arcii/run.3/'
-    # local_dir = '/home/wsx/exp/match/qa_balance/arci/run.2/'
-    # local_dir = '/home/wsx/exp/match/qa/ctnn/run.1/'
-    # local_dir = '/home/wsx/exp/match/msrp/bilstm_sim_dpool/run.50/'
-    # local_dir = '/home/wsx/exp/match/qa_balance/mul_cnn_sim_dpool/run.2/'
+    # local_dir = '/home/wsx/exp/match/qa_50/ctnn/run.3/'
+    # local_dir = '/home/wsx/exp/match/sentence/word_sim_dpool/run.2/'
+    # local_dir = '/home/wsx/exp/match/qa_top1k/word_sim_dpool/run.1/'
+    # local_dir = '/home/wsx/exp/match/qa_top1k/mul_cnn_tensor_dpool/run.1/'
+    # local_dir = '/home/wsx/exp/match/qa_top10/bilstm_sim_dpool/run.1/'
+    local_dir = '/home/wsx/exp/match/qa_top10/word_sim_dpool/run.1/'
+
     # local_dir = '/home/wsx/exp/match/qa_balance/bilstm_sim_dpool/run.5/'
     # local_dir = '/home/wsx/exp/nbp/tf/run.8/'
     remote_dir = '/home/wsx/log.tmp/'

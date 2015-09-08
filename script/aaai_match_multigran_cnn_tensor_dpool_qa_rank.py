@@ -438,7 +438,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['bottom_nodes'] = ['l_sentence_all', 'r_sentence_all']
     layer['top_nodes'] = ['interaction_rep']
     layer['layer_name'] = 'match_tensor'
-    layer['layer_type'] = 1003
+    layer['layer_type'] = 1001
     # print "ORC: use COS operation for similarity"
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
@@ -552,16 +552,17 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
 
     return net
 
-run = 5
+run = 1
 l2 = 0.
 # for dataset in ['paper']:
 # for dataset in ['qa_balance']:
-for dataset in ['qa_50']:
-    for d_mem in [100]:
+# for dataset in ['qa_50']:
+for dataset in ['qa_top1k']:
+    for d_mem in [50]:
         idx = 0
         # for epoch_no in [0, 10000, 25000]
         for epoch_no in [0]:
-            for init in [0.3, 0.1]:
+            for init in [0.3, 0.1, 0.03]:
                 for lr in [0.3, 0.1, 0.03]:
                     # for l2 in [0.00001, 0.0001, 0.001]:
                     t_l2 = 0.0
