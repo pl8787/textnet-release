@@ -193,7 +193,7 @@ class MatchLayer : public Layer<xpu>{
             top_data[i][0][j][k] = m_dot[i][j][k] / (m_norm[i][0][j] * m_norm[i][1][k]);    
           } else if (op =="elemwise_product") {
             for (int m = 0; m < feat_size; ++m) {
-              top_data[i][m][j][k] = bottom0_data4[i][0][j][m] + bottom1_data4[i][0][k][m];
+              top_data[i][m][j][k] = bottom0_data4[i][0][j][m] * bottom1_data4[i][0][k][m];
             }
           } else if (op =="euc") {
             float sum_elem_square = 0.f;

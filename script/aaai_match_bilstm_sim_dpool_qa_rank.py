@@ -152,13 +152,13 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
 
     layer = {}
     layers.append(layer) 
-    layer['bottom_nodes'] = ['l_lstm_seq', 'r_lstm_seq']
+    layer['bottom_nodes'] = ['word_rep_seq', 'l_lstm_seq', 'r_lstm_seq']
     layer['top_nodes'] = ['bi_lstm_seq']
     layer['layer_name'] = 'concat'
     layer['layer_type'] = 18
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
-    setting['bottom_node_num'] = 2
+    setting['bottom_node_num'] = 3
     setting['concat_dim_index'] = 3
 
     layer = {}
@@ -268,11 +268,12 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
 
     return net
 
-run = 1
+run = 2
 l2 = 0.
 # for dataset in ['paper']:
 # for dataset in ['qa']:
-for dataset in ['qa_top10']:
+# for dataset in ['qa_top1k']:
+for dataset in ['qa_top1k_4']:
 # for dataset in ['qa_candi']:
     for d_mem in [50]:
         idx = 0
@@ -282,8 +283,8 @@ for dataset in ['qa_top10']:
             #  for epoch_no in [0, 10000, 25000]:
             for epoch_no in [0]:
                 # for init in [0.5, 0.3, 0.1]:
-                for init in [0.5, 0.3, 0.1]:
-                    for lr in [0.5, 0.3, 0.1]:
+                for init in [0.3, 0.1, 0.03]:
+                    for lr in [0.5, 0.3, 0.1, 0.05]:
                         # for l2 in [0.00001, 0.0001]:
                         for l2 in [0]:
                             pretrain_run_no = 18
