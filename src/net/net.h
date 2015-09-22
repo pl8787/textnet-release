@@ -389,6 +389,14 @@ class Net : public INet{
       }
     }
 
+	// Check outnode exist
+    for (int t = 0; t < tags.size(); ++t) {
+      for (int i = 0; i < out_nodes[tags[t]].size(); ++i) {
+        utils::Check(nodes.count(out_nodes[tags[t]][i]), 
+				"out_node [%s] not in nodes.", out_nodes[tags[t]][i].c_str());
+      }
+	}
+
     utils::Printf("Nodes count: %d\n", nodes.size());
   }
 
@@ -454,6 +462,11 @@ class Net : public INet{
     if (!save_model_root.isNull()) {
       model_save_interval = save_model_root["save_interval"].asInt();
       model_save_file_prefix = save_model_root["file_prefix"].asString();
+	  if (!save_model_root["everything"].isNull()) {
+	    model_save_everything = save_model_root["everything"].asBool();
+	  } else {
+		model_save_everything = false;
+	  }
     }
     Json::Value save_act_root = root["save_activation"];
     if (!save_act_root.isNull()) {
@@ -552,6 +565,9 @@ class Net : public INet{
     for (int i = nets[tag].size()-1; i>=0; --i) {
       int layer_idx = nets[tag][i]->layer_idx;
       nets[tag][i]->Backprop(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+#if DEBUG
+		cout << "BP " << nets[tag][i]->layer_name << endl;
+#endif
     }
     NormLstmGradient(tag);
   }
@@ -630,10 +646,10 @@ class Net : public INet{
 
   virtual void SetupAllNets() {
     // Prepare
-    PropAll();
     for (int i = 0; i < tags.size(); ++i) {
       SetupReshape(tags[i]);
     }
+    PropAll();
   }
   
   virtual void TrainOneStep(string tag, int iter = 0) {
@@ -656,6 +672,11 @@ class Net : public INet{
       cout << "diff : ";
       for (int i = 0; i < 5; ++i) {
         cout << node_list[k]->diff[0][0][0][i] << "\t";
+      }
+      cout << endl;
+      cout << "length : ";
+      for (int i = 0; i < 5; ++i) {
+        cout << node_list[k]->length[0][i] << "\t";
       }
       cout << endl;
     }
@@ -759,12 +780,13 @@ class Net : public INet{
             continue;
         }
         // oracle 
-        // if (layers[layer_idx]->layer_type == kEmbedding || \
-        //    layers[layer_idx]->layer_type == kWordClassSoftmaxLoss) {
-        //    cout << "ORC: without save embedding" << endl;
-        //    layer_params_root.append(0);
-        //    continue;
-        //}
+        if (!model_save_everything && \
+				(layers[layer_idx]->layer_type == kEmbedding || \
+                 layers[layer_idx]->layer_type == kWordClassSoftmaxLoss) ) {
+            cout << "ORC: without save embedding" << endl;
+            layer_params_root.append(0);
+            continue;
+        }
         // save the content of the matrix
         Json::Value node_root;
         layers[layer_idx]->params[param_idx].SaveNode(node_root, false);
@@ -891,6 +913,7 @@ class Net : public INet{
   map<string, vector<string> > activation_save_nodes;
   int model_save_interval;
   string model_save_file_prefix;
+  bool model_save_everything;
   // is save best or not, output file is file_prefix + ".best" // to do
   // map<string, bool> save_best;
   // nets output nodes

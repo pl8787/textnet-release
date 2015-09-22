@@ -19,13 +19,14 @@ class BatchCombineLayer : public Layer<xpu>{
   BatchCombineLayer(LayerType type) { this->layer_type = type; }
   virtual ~BatchCombineLayer(void) {}
   
-  virtual int BottomNodeNum() { return 2; }
+  virtual int BottomNodeNum() { return nbottom; }
   virtual int TopNodeNum() { return 1; }
   virtual int ParamNodeNum() { return 0; }
   
   virtual void Require() {
     // default value, just set the value you want
     this->defaults["element"] = SettingV(false);
+	this->defaults["nbottom"] = SettingV(2);
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["candids"] = SettingV();
@@ -46,21 +47,28 @@ class BatchCombineLayer : public Layer<xpu>{
                           mshadow::Random<xpu> *prnd) {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
     
+    op = setting["op"].sVal();
+    candids = setting["candids"].iVal();
+    element = setting["element"].bVal();
+	nbottom = setting["nbottom"].iVal();
+
     utils::Check(bottom.size() == BottomNodeNum(),
                   "BatchCombineLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "BatchCombineLayer:top size problem.");
-    op = setting["op"].sVal();
-    candids = setting["candids"].iVal();
-    element = setting["element"].bVal();
 
-    if (element)
-      utils::Check(op=="mul" || op=="plus" || op=="minus",
+	if (nbottom == 1) {
+	  utils::Check(op=="ind", 
+			     "BatchCombineLayer: bottom num equal 1, only ind op support.");
+	} else {
+      if (element)
+        utils::Check(op=="mul" || op=="plus" || op=="minus",
                  "BatchCombineLayer: only mul, plus, minus support element.");
-    else
-      utils::Check(op=="cat" || op=="mul" || op=="plus" || op=="cos" || op == "minus" ||\
-                 op=="euc" || op=="euc_exp",
-                 "BatchCombineLayer: one of cat, mul, plus, cos, minus, euc or euc_exp.");
+      else
+        utils::Check(op=="cat" || op=="mul" || op=="plus" || op=="cos" || op == "minus" ||\
+                 op=="euc" || op=="euc_neg" || op=="euc_exp",
+                 "BatchCombineLayer: one of cat, mul, plus, cos, minus, euc, euc_neg or euc_exp.");
+	}
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -73,13 +81,15 @@ class BatchCombineLayer : public Layer<xpu>{
                   
     nbatch = bottom[0]->data.size(0); 
     utils::Check(nbatch % candids == 0, 
-                  "BatchCombineLayer: nbatch div (candids+1).");
+                  "BatchCombineLayer: nbatch div candids.");
     nbatch = nbatch / candids;
 
     feat_size = bottom[0]->data.size(1) * bottom[0]->data.size(2) * bottom[0]->data.size(3);
                   
     if (op == "cat") {
       top[0]->Resize(nbatch, 2, candids, feat_size, true);
+	} else if (op == "ind") {
+      top[0]->Resize(nbatch, 1, candids, feat_size, true);
     } else if (element) {
       top[0]->Resize(nbatch, 1, candids, feat_size, true);
     } else {
@@ -88,7 +98,8 @@ class BatchCombineLayer : public Layer<xpu>{
 
     if (show_info) {
         bottom[0]->PrintShape("bottom0");
-        bottom[1]->PrintShape("bottom1");
+		if (nbottom == 2)
+		  bottom[1]->PrintShape("bottom1");
         top[0]->PrintShape("top0");
     }
 
@@ -116,10 +127,24 @@ class BatchCombineLayer : public Layer<xpu>{
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 2> bottom0_data2 = bottom[0]->data_d2();
-    mshadow::Tensor<xpu, 2> bottom1_data2 = bottom[1]->data_d2();
     mshadow::Tensor<xpu, 4> bottom0_data4 = bottom[0]->data;
-    mshadow::Tensor<xpu, 4> bottom1_data4 = bottom[1]->data;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
+
+	if (op == "ind") {
+	  for (int i = 0; i < nbatch; ++i) {
+		for (int c = 0; c < candids; ++c) {
+		  int j = i * candids + c;
+		  for (int m = 0; m < feat_size; ++m) {
+			top_data[i][0][c][m] = bottom0_data2[j][m];
+		  }
+		}
+	  }
+	  // if nbottm == 1 just change the shape of the node
+	  return;
+	}
+
+    mshadow::Tensor<xpu, 2> bottom1_data2 = bottom[1]->data_d2();
+    mshadow::Tensor<xpu, 4> bottom1_data4 = bottom[1]->data;
 
     top_data = 0.0f;
     m_norm = 0.0f;
@@ -197,6 +222,15 @@ class BatchCombineLayer : public Layer<xpu>{
             // top_data[i][0][j][k] = pow(sum_elem_square, 0.5);
             top_data[i][0][0][c] = sum_elem_square;
           } 
+          else if (op =="euc_neg") {
+            float sum_elem_square = 0.f;
+            for (int m = 0; m < feat_size; ++m) {
+              float sub_elem = bottom0_data2[j][m] - bottom1_data2[j][m];
+              sum_elem_square += sub_elem * sub_elem;
+            }
+            // top_data[i][0][j][k] = pow(sum_elem_square, 0.5);
+            top_data[i][0][0][c] = -sum_elem_square;
+          } 
           else if (op =="euc_exp") { // by wengpeng ying, no sqrt
             float sum_elem_square = 0.f;
             for (int m = 0; m < feat_size; ++m) {
@@ -219,11 +253,25 @@ class BatchCombineLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 4> top_diff = top[0]->diff;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
     mshadow::Tensor<xpu, 2> bottom0_data2 = bottom[0]->data_d2();
-    mshadow::Tensor<xpu, 2> bottom1_data2 = bottom[1]->data_d2();
     mshadow::Tensor<xpu, 2> bottom0_diff2 = bottom[0]->diff_d2();
-    mshadow::Tensor<xpu, 2> bottom1_diff2 = bottom[1]->diff_d2();
+
+	if (op == "ind") {
+      if (!this->prop_error[0]) return;
+      for (int i = 0; i < nbatch; ++i) {
+		for (int c = 0; c < candids; ++c) {
+		  int j = i * candids + c;
+		  for (int m = 0; m < feat_size; ++m) {
+			bottom0_diff2[j][m] += top_diff[i][0][c][m];
+		  }
+		}
+	  }
+	  return;
+	}
 
     if (!this->prop_error[0] && !this->prop_error[1]) return;
+
+    mshadow::Tensor<xpu, 2> bottom1_data2 = bottom[1]->data_d2();
+    mshadow::Tensor<xpu, 2> bottom1_diff2 = bottom[1]->diff_d2();
 
     for (int i = 0; i < nbatch; ++i) {
       for (int c = 0; c < candids; ++c) {
@@ -287,6 +335,17 @@ class BatchCombineLayer : public Layer<xpu>{
                 // bottom1_diff[i][0][k][m] += top_diff[i][0][j][k] * (1/(2*distance)) * 2*(-sub_elem);
                 bottom1_diff2[j][m] += top_diff[i][0][0][c] * 2*(-sub_elem);
               }
+            } else if (op == "euc_neg") {
+              float distance = top_data[i][0][0][c];
+              float sub_elem = bottom0_data2[j][m] - bottom1_data2[j][m];
+              if (this->prop_error[0]) {
+                // bottom0_diff[i][0][j][m] += top_diff[i][0][j][k] * (1/(2*distance)) * 2*(sub_elem);
+                bottom0_diff2[j][m] += top_diff[i][0][0][c] * 2*(-sub_elem);
+              }
+              if (this->prop_error[1]) {
+                // bottom1_diff[i][0][k][m] += top_diff[i][0][j][k] * (1/(2*distance)) * 2*(-sub_elem);
+                bottom1_diff2[j][m] += top_diff[i][0][0][c] * 2*(sub_elem);
+              }
             } else if (op == "euc_exp") {
               float distance = top_data[i][0][0][c];
               float sub_elem = bottom0_data2[j][m] - bottom1_data2[j][m];
@@ -309,6 +368,7 @@ class BatchCombineLayer : public Layer<xpu>{
   int nbatch;
   int candids;
   bool element;
+  int nbottom;
   std::string op;
   mshadow::TensorContainer<xpu, 3> m_norm;
   mshadow::TensorContainer<xpu, 2> m_dot;

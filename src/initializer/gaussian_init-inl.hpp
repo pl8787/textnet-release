@@ -36,11 +36,18 @@ class GaussianInitializer : public Initializer<xpu, dim>{
       this->mu = setting["mu"].fVal();
       this->sigma = setting["sigma"].fVal();
     } else if (this->init_type == kKaiming) {
-      // Todo
+      this->mu = 0.0;
+	  this->sigma = 1.0;
     }
   }
   
   virtual void DoInitialize(mshadow::Tensor<xpu, dim> data) {
+	if (this->init_type == kKaiming) {
+		float node_size = 1.0;
+		for (int i = 1; i < dim; ++i)
+			node_size *= data.shape_[i];
+		this->sigma = sqrt(2.0 / node_size);
+	}
     this->prnd_->SampleGaussian(&data, mu, sigma);
   }
   

@@ -77,9 +77,6 @@ class GatingLayer : public Layer<xpu> {
     this->params[0].updater_ = 
         updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].iVal(),
           w_updater, this->prnd_);
-	
-	// Don't prop down bottom1 error
-	this->prop_error[1] = false;
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -90,25 +87,39 @@ class GatingLayer : public Layer<xpu> {
     
 	utils::Check(feat_size == bottom[0]->data.size(3), "GatingLayer: feat_size error.");
 
-    int batch_size = bottom[0]->data.size(0);
+    nbatch = bottom[0]->data.size(0);
     int num_seq    = bottom[0]->data.size(1);
     int max_length = bottom[0]->data.size(2);
     
-    top[0]->Resize(batch_size, num_seq, max_length, feat_size, true);
+    top[0]->Resize(nbatch, num_seq, max_length, feat_size, true);
 	
-	total_words = batch_size * num_seq * max_length;
+	total_words = nbatch * num_seq * max_length;
     gate_value.Resize(mshadow::Shape2(total_words, 1));
     gate_grad.Resize(mshadow::Shape2(1, total_words));
 	word_bias.Resize(mshadow::Shape2(total_words, 1));	
 	word_p_diff.Resize(mshadow::Shape2(total_words, feat_size));
 	word_sum.Resize(mshadow::Shape1(total_words));
-
+	
 	if (show_info) {
 		bottom[0]->PrintShape("bottom0");
 		top[0]->PrintShape("top0");
 	}
   }
   
+  virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,
+                            const std::vector<Node<xpu>*> &top) {
+    // Check for reshape
+    bool need_reshape = false;
+    if (nbatch != bottom[0]->data.size(0)) {
+        need_reshape = true;
+    }
+
+    // Do reshape 
+    if (need_reshape) {
+        this->Reshape(bottom, top);
+    }
+  }
+
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
@@ -216,6 +227,7 @@ class GatingLayer : public Layer<xpu> {
   std::string activefun_type;
   int feat_size;
   int word_count;
+  int nbatch;
   // Temp var
   mshadow::TensorContainer<xpu, 2> gate_value;
   mshadow::TensorContainer<xpu, 2> gate_grad;

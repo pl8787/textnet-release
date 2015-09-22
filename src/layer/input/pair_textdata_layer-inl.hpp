@@ -54,36 +54,9 @@ class PairTextDataLayer : public Layer<xpu>{
     shuffle = setting["shuffle"].bVal();
     
     ReadTextData();
+	MakePair();
     
     line_ptr = 0;
-  }
-
-  int ReadLabel(string &line) {
-    std::istringstream iss;
-    int label = -1;
-    iss.clear();
-    iss.seekg(0, iss.beg);
-    iss.str(line);
-    iss >> label;
-    return label;
-  }
-  
-  void ReadLine(int idx, string &line) {
-    std::istringstream iss;
-    int len_s1 = 0;
-    int len_s2 = 0;
-    iss.clear();
-    iss.seekg(0, iss.beg);
-    iss.str(line);
-    iss >> label_set[idx] >> len_s1 >> len_s2;
-    length_set[idx][0] = len_s1;
-    length_set[idx][1] = len_s2;
-    for (int j = 0; j < len_s1; ++j) {
-      iss >> data_set[idx][0][j];
-    }
-    for (int j = 0; j < len_s2; ++j) {
-      iss >> data_set[idx][1][j];
-    }
   }
 
   void ReadTextData() {
@@ -101,37 +74,67 @@ class PairTextDataLayer : public Layer<xpu>{
     
     line_count = lines.size();
 
-    // Calculate total instances count
-    total_ins_count = 0;
-    for (int i = 0; i < line_count; ++i) {
-      int label = ReadLabel(lines[i]);
-      if (label == 0) total_ins_count += 1;
-    }
-    total_ins_count *= 2;
-        
-    data_set.Resize(mshadow::Shape3(total_ins_count, 2, max_doc_len));
-    length_set.Resize(mshadow::Shape2(total_ins_count, 2));
-    label_set.Resize(mshadow::Shape1(total_ins_count), 0);
-    data_set = -1;
-    length_set = 0;
-    
+    std::istringstream iss;
+	for (int i = 0; i < lines.size(); ++i) {
+      int len_s1 = 0;
+      int len_s2 = 0;
+	  int label = -1;
+	  int wid = -1;
+	  vector<int> s1;
+	  vector<int> s2;
+      iss.clear();
+      iss.seekg(0, iss.beg);
+      iss.str(lines[i]);
+      iss >> label >> len_s1 >> len_s2;
+	  label_set.push_back(label);
+      for (int j = 0; j < len_s1; ++j) {
+        iss >> wid;
+        s1.push_back(wid);
+      }
+	  s1_data_set.push_back(s1);
+      for (int j = 0; j < len_s2; ++j) {
+        iss >> wid;
+		s2.push_back(wid);
+      }
+	  s2_data_set.push_back(s2);
+	}
     utils::Printf("Line count in file: %d\n", line_count);
-    utils::Printf("Total instances count: %d\n", total_ins_count);
+  }
 
-    int ins_idx = 0;
-    int pos_idx = -1;
-    for (int i = 0; i < line_count; ++i) {
-      int label = ReadLabel(lines[i]);
-      if (label == 1) {
-        pos_idx = i;
-      }
-      else {
-        ReadLine(ins_idx, lines[pos_idx]);
-        ins_idx += 1;
-        ReadLine(ins_idx, lines[i]);
-        ins_idx += 1;
-      }
-    }
+  void MakePair() {
+    int list_count = 0;
+	int cur_class = 0;
+	vector<vector<int> > class_set;
+
+	// for store the last list pair, so i<=line_count
+	for (int i = 0; i <= line_count; ++i) {
+	  if (i == line_count || label_set[i] > cur_class) {
+		for (int c = 0; c < (int)(class_set.size())-1; ++c) {
+		  for (int j = 0; j < (int)(class_set[c].size()); ++j) {
+			for (int cc = c+1; cc < (int)(class_set.size()); ++cc) {
+		      for (int k = 0; k < (int)(class_set[cc].size()); ++k) {
+                vector<int> p(2);
+			    p[0] = class_set[cc][k];
+			    p[1] = class_set[c][j];
+			    pair_set.push_back(p);
+			  }
+			}
+		  }
+		  list_count += 1;
+		}
+
+        cur_class = label_set[i];
+		class_set = vector<vector<int> >(cur_class+1);
+	  }
+	  if (i == line_count) break;
+	  cur_class = label_set[i];
+	  if (cur_class >= 0)
+		class_set[cur_class].push_back(i);
+	}
+	total_ins_count = pair_set.size();
+
+    utils::Printf("Total instances count: %d\n", total_ins_count);
+	utils::Printf("Total list count: %d\n", list_count);
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -158,24 +161,41 @@ class PairTextDataLayer : public Layer<xpu>{
                             const std::vector<Node<xpu>*> &top) {
   }
 
+  inline void FillData(mshadow::Tensor<xpu, 3> &top0_data, mshadow::Tensor<xpu, 2> &top0_length, 
+                       mshadow::Tensor<xpu, 1> &top1_data, int top_idx, int data_idx) {
+    vector<int> s1 = s1_data_set[data_idx];
+	vector<int> s2 = s2_data_set[data_idx];
+	int label = label_set[data_idx];
+	for (int i = 0; i < s1.size(); ++i) {
+	  top0_data[top_idx][0][i] = s1[i];
+	}
+	for (int i = 0; i < s2.size(); ++i) {
+      top0_data[top_idx][1][i] = s2[i];
+	}
+	top0_length[top_idx][0] = s1.size();
+	top0_length[top_idx][1] = s2.size();
+
+	top1_data[top_idx] = label;
+  } 
+
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 3> top0_data = top[0]->data_d3();
     mshadow::Tensor<xpu, 2> top0_length = top[0]->length;
     mshadow::Tensor<xpu, 1> top1_data = top[1]->data_d1();
+
+	top0_data = -1;
+	top0_length = 0;
+	top1_data = -1;
+
     for (int i = 0; i < batch_size; ++i) {
       if (shuffle) {
-        line_ptr = (rand() % (total_ins_count/2)) * 2;
+        line_ptr = rand() % total_ins_count;
       } 
-      top0_data[i*2] = F<op::identity>(data_set[line_ptr]);
-      top0_length[i*2] = F<op::identity>(length_set[line_ptr]);
-      top1_data[i*2] = label_set[line_ptr];
-      line_ptr += 1;
-      top0_data[i*2+1] = F<op::identity>(data_set[line_ptr]);
-      top0_length[i*2+1] = F<op::identity>(length_set[line_ptr]);
-      top1_data[i*2+1] = label_set[line_ptr];
-      line_ptr = (line_ptr + 1) % total_ins_count;
+	  FillData(top0_data, top0_length, top1_data, i*2, pair_set[line_ptr][0]);
+	  FillData(top0_data, top0_length, top1_data, i*2+1, pair_set[line_ptr][1]);
+	  line_ptr += 1;
     }
   }
   
@@ -191,12 +211,13 @@ class PairTextDataLayer : public Layer<xpu>{
   int max_doc_len;
   int min_doc_len;
   bool shuffle;
-  mshadow::TensorContainer<xpu, 3> data_set;
-  mshadow::TensorContainer<xpu, 2> length_set;
-  mshadow::TensorContainer<xpu, 1> label_set;
+  vector<vector<int> > s1_data_set;
+  vector<vector<int> > s2_data_set;
+  vector<int> label_set;
+  vector<vector<int> > pair_set;
+  int line_ptr;
   int line_count;
   int total_ins_count;
-  int line_ptr;
 };
 }  // namespace layer
 }  // namespace textnet

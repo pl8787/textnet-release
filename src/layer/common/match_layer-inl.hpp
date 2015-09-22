@@ -59,7 +59,7 @@ class MatchLayer : public Layer<xpu>{
     }
 
     utils::Check(op=="xor" || op=="mul" || op=="plus" || op=="cos" || op == "minus" ||\
-                 op=="elemwise_product" || op=="euc" || op=="euc_exp",
+                 op=="elemwise_product" || op=="elemwise_plus" || op=="euc" || op=="euc_exp",
                  "MatchLayer: one of xor, mul, plus, cos, minus, elemwise_product, euc or euc_exp.");
   }
   
@@ -79,11 +79,16 @@ class MatchLayer : public Layer<xpu>{
       feat_size = bottom[0]->data.size(3);
     }        
                   
-    if (op == "elemwise_product") {
-      top[0]->Resize(nbatch, feat_size, doc_len, doc_len, true);
+    if (op == "elemwise_product" || op == "elemwise_plus") {
+	  // Set data shape to (nbatch, feat_size, doc_len, doc_len)
+	  // Set length shape to (nbatch, 2)
+      top[0]->Resize(nbatch, feat_size, doc_len, doc_len, nbatch, 2, true);
     } else {
-      top[0]->Resize(nbatch, 1, doc_len, doc_len, true);
+	  // Set data shape to (nbatch, 1, doc_len, doc_len)
+	  // Set length shape to (nbatch, 2)
+      top[0]->Resize(nbatch, 1, doc_len, doc_len, nbatch, 2, true);
     }
+
     if (show_info) {
         bottom[0]->PrintShape("bottom0");
         bottom[1]->PrintShape("bottom1");
@@ -121,6 +126,7 @@ class MatchLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 1> bottom0_len = bottom[0]->length_d1();
     mshadow::Tensor<xpu, 1> bottom1_len = bottom[1]->length_d1();
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
+	mshadow::Tensor<xpu, 2> top_len = top[0]->length;
 
     top_data = 0.0f;
     m_norm = 0.0f;
@@ -159,6 +165,8 @@ class MatchLayer : public Layer<xpu>{
       if (is_var_len) {
         len_0 = bottom0_len[i];
         len_1 = bottom1_len[i];
+		top_len[i][0] = len_0;
+		top_len[i][1] = len_1;
       } else {
         len_0 = doc_len;
         len_1 = doc_len;
@@ -194,6 +202,10 @@ class MatchLayer : public Layer<xpu>{
           } else if (op =="elemwise_product") {
             for (int m = 0; m < feat_size; ++m) {
               top_data[i][m][j][k] = bottom0_data4[i][0][j][m] * bottom1_data4[i][0][k][m];
+            }
+          } else if (op =="elemwise_plus") {
+            for (int m = 0; m < feat_size; ++m) {
+              top_data[i][m][j][k] = bottom0_data4[i][0][j][m] + bottom1_data4[i][0][k][m];
             }
           } else if (op =="euc") {
             float sum_elem_square = 0.f;
@@ -283,6 +295,11 @@ class MatchLayer : public Layer<xpu>{
                 bottom0_diff[i][0][j][m] += bottom1_data[i][0][k][m] * top_diff[i][m][j][k];
               if (this->prop_error[1])
                 bottom1_diff[i][0][k][m] += bottom0_data[i][0][j][m] * top_diff[i][m][j][k];
+            } else if (op == "elemwise_plus") {
+              if (this->prop_error[0])
+                bottom0_diff[i][0][j][m] += top_diff[i][m][j][k];
+              if (this->prop_error[1])
+                bottom1_diff[i][0][k][m] += top_diff[i][m][j][k];
             } else if (op == "euc") {
               float distance = top_data[i][0][j][k];
               float sub_elem = bottom0_data[i][0][j][m] - bottom1_data[i][0][k][m];

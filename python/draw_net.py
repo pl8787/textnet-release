@@ -69,6 +69,11 @@ Layer2Name = {
   1004: 'MatchMulti',
   1005: 'BatchCombine',
   1006: 'Gru',
+  1007: 'BatchSelect',
+  1008: 'BatchSplit',
+  1009: 'BatchConcat',
+  1010: 'BatchDuplicate',
+  10001: 'kMaxDynamicPooling',
 
   # Loss Layer 51-70
   51: 'Softmax', 
@@ -176,7 +181,7 @@ def choose_color_by_layertype(layertype):
       color = '#FF9900'
   elif layertype == 'FullConnect':
       color = '#CC33FF'
-  elif layertype == 'MaxPooling' or layertype == 'AvgPooling':
+  elif layertype == 'MaxPooling' or layertype == 'AvgPooling' or layertype == 'DynamicPooling':
       color = '#66CC66'
   return color
 

@@ -14,7 +14,7 @@ class DynamicPoolingLayer : public Layer<xpu>{
   DynamicPoolingLayer(LayerType type) { this->layer_type = type; }
   virtual ~DynamicPoolingLayer(void) {}
   
-  virtual int BottomNodeNum() { return 3; } // matrix node, l_seq for length, r_seq for length
+  virtual int BottomNodeNum() { return nbottom; } // matrix node, l_seq for length, r_seq for length
   virtual int TopNodeNum() { return 1; }
   virtual int ParamNodeNum() { return 0; }
   
@@ -38,6 +38,7 @@ class DynamicPoolingLayer : public Layer<xpu>{
     row = setting["row"].iVal();
     col = setting["col"].iVal();
     dim = setting["dim"].iVal();
+	nbottom = bottom.size();
     utils::Check(dim == 1 || dim == 2, "DynamicPoolingLayer: dim error.");
     if (dim == 1) {
         utils::Check(row == 1, "DynamicPoolingLayer: dim error.");
@@ -56,14 +57,16 @@ class DynamicPoolingLayer : public Layer<xpu>{
     }
     shape_out[2] = row;
     shape_out[3] = col;
-    top[0]->Resize(shape_out, true);
+    top[0]->Resize(shape_out, bottom[0]->length.shape_, true);
     pos_row.Resize(shape_out, true);
     pos_col.Resize(shape_out, true);
 
     if (show_info) {
         bottom[0]->PrintShape("bottom0");
-        bottom[1]->PrintShape("bottom1");
-        bottom[2]->PrintShape("bottom2");
+		if (nbottom == 3) {
+          bottom[1]->PrintShape("bottom1");
+          bottom[2]->PrintShape("bottom2");
+		}
         top[0]->PrintShape("top0");
     }
   }
@@ -194,21 +197,44 @@ class DynamicPoolingLayer : public Layer<xpu>{
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
-    mshadow::Tensor<xpu, 2> bottom_len_l = bottom[1]->length;
-    mshadow::Tensor<xpu, 2> bottom_len_r = bottom[2]->length;
+	mshadow::Tensor<xpu, 2> bottom_len;
+    mshadow::Tensor<xpu, 2> bottom_len_l;
+    mshadow::Tensor<xpu, 2> bottom_len_r;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
+	mshadow::Tensor<xpu, 2> top_len = top[0]->length;
+
+	if (nbottom == 1) {
+	  bottom_len = bottom[0]->length;
+	} else if (nbottom == 3) {
+	  bottom_len_l = bottom[1]->length;
+	  bottom_len_r = bottom[2]->length;
+	}
 
     top_data = 0;
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
+      if (nbottom == 1) {
+        top_len[batch_idx][0] = row;
+		top_len[batch_idx][1] = col;
+	  }
       for (index_t channel_idx = 0; channel_idx < bottom_data.size(1); ++channel_idx) {
         int len_r = 0, len_l = 0;
-        if (dim==1) {
+		if (nbottom == 3) {
+          if (dim==1) {
             len_l = 1;
             len_r = bottom_len_l[batch_idx][0];
-        } else {
+          } else {
             len_l = bottom_len_l[batch_idx][0];
             len_r = bottom_len_r[batch_idx][0];
-        } 
+          } 
+		} else {
+          if (dim==1) {
+			len_l = 1;
+			len_r = bottom_len[batch_idx][0];
+		  } else {
+            len_l = bottom_len[batch_idx][0];
+			len_r = bottom_len[batch_idx][1];
+		  }
+		}
         pooling_one_matrix(bottom_data[batch_idx][channel_idx], top_data[batch_idx][channel_idx],
                            len_l, len_r,
                            row, col,
@@ -236,6 +262,8 @@ class DynamicPoolingLayer : public Layer<xpu>{
   mshadow::TensorContainer<xpu, 4, int> pos_row;
   mshadow::TensorContainer<xpu, 4, int> pos_col;
   int row, col, dim;
+
+  int nbottom;
 };
 }  // namespace layer
 }  // namespace textnet

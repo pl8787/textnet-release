@@ -82,7 +82,10 @@ struct Node {
 
   inline void PrintShape(std::string text) {
 	mshadow::Shape<4> s = data.shape_;
-	utils::Printf("\t%s Shape: %d x %d x %d x %d\n", text.c_str(), s[0], s[1], s[2], s[3]);
+	mshadow::Shape<2> len_s = length.shape_;
+	utils::Printf("\tNode:[%s](%s)", node_name.c_str(), text.c_str()); 
+	utils::Printf(" \tdata (%d x %d x %d x %d)", s[0], s[1], s[2], s[3]);
+	utils::Printf(" \tlen (%d x %d)\n", len_s[0], len_s[1]);
   }
 
   // Clear Data data 
@@ -142,13 +145,26 @@ struct Node {
     Resize(new_size, init);
   }
   
+  inline void Resize(int d1, int d2, int d3, int d4, int len_d1, int len_d2, bool init=false) {
+    utils::Check(!is_share, "Node: Share node does not manage memory.");
+    mshadow::Shape<4> new_size = mshadow::Shape4(d1, d2, d3, d4);
+	mshadow::Shape<2> len_new_size = mshadow::Shape2(len_d1, len_d2);
+    Resize(new_size, len_new_size, init);
+  }
+
   inline void Resize(mshadow::Shape<4> new_size, bool init=false) {
+    utils::Check(!is_share, "Node: Share node does not manage memory.");
+	mshadow::Shape<2> len_new_size = mshadow::Shape2(new_size[0], new_size[1]);
+    Resize(new_size, len_new_size, init);
+  }
+
+  inline void Resize(mshadow::Shape<4> new_size, mshadow::Shape<2> len_new_size, bool init=false) {
     utils::Check(!is_share, "Node: Share node does not manage memory.");
     if (4 == data.shape_.kDimension && new_size == data.shape_ && !init) {
       // do nothing
     } else if (init) {
       data.Resize(new_size, 0.0);
-      length.Resize(mshadow::Shape2(new_size[0], new_size[1]), -1.f);
+      length.Resize(mshadow::Shape2(len_new_size[0], len_new_size[1]), -1.f);
       inited_data = true;
       if (need_diff) {
         diff.Resize(new_size, 0.0);
@@ -156,7 +172,7 @@ struct Node {
       }
     } else {
       data.Resize(new_size);
-      length.Resize(mshadow::Shape2(new_size[0], new_size[1]));
+      length.Resize(mshadow::Shape2(len_new_size[0], len_new_size[1]));
       inited_data = true;
       if (need_diff) {
         diff.Resize(new_size);
