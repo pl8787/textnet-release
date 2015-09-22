@@ -50,7 +50,7 @@ class MatchTopKPoolingLayer : public Layer<xpu>{
     shape_out[3] = 1;
     top[0]->Resize(shape_out, true);
 
-    shape_out[3] = 2
+    shape_out[3] = 2;
     pos.Resize(shape_out, true);
 
     if (show_info) {
@@ -88,9 +88,16 @@ class MatchTopKPoolingLayer : public Layer<xpu>{
     }
   };
 
-  bool cmp_val(const ValidIdx &l, const ValidIdx &r) {
-    return l.val > r.val;
-  }
+  class CmpVal {
+    public:
+      bool operator() (const ValidIdx &l, const ValidIdx &r) const {
+         return l.val > r.val;
+      }
+  };
+          
+  // bool cmp_val(const ValidIdx &l, const ValidIdx &r) {
+  //   return l.val > r.val;
+  // }
 
   void pooling_one_matrix(Tensor2D t_in, Tensor2D t_out,
                           int input_row,  int input_col,
@@ -110,7 +117,7 @@ class MatchTopKPoolingLayer : public Layer<xpu>{
         all.push_back(val_idx);
       }
     }
-    std::sort(all.begin(), all.end(), cmp_val);
+    std::sort(all.begin(), all.end(), CmpVal());
         
     for (int i = 0; i < k; ++i) {
       t_out[i][0] = all[i].val;
@@ -131,7 +138,7 @@ class MatchTopKPoolingLayer : public Layer<xpu>{
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
-    mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
+    mshadow::Tensor<xpu, 4> bottom_data  = bottom[0]->data;
     mshadow::Tensor<xpu, 2> bottom_len_l = bottom[1]->length;
     mshadow::Tensor<xpu, 2> bottom_len_r = bottom[2]->length;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
@@ -139,8 +146,8 @@ class MatchTopKPoolingLayer : public Layer<xpu>{
     top_data = 0;
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       for (index_t channel_idx = 0; channel_idx < bottom_data.size(1); ++channel_idx) {
-        len_l = bottom_len_l[batch_idx][0];
-        len_r = bottom_len_r[batch_idx][0];
+        int len_l = bottom_len_l[batch_idx][0];
+        int len_r = bottom_len_r[batch_idx][0];
         pooling_one_matrix(bottom_data[batch_idx][channel_idx], top_data[batch_idx][channel_idx],
                            len_l, len_r, k, pos[batch_idx][channel_idx]);
       }

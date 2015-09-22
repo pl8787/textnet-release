@@ -15,9 +15,9 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     net = {}
 
     ds = DatasetCfg(dataset)
-    g_filler    = gen_uniform_filter_setting(init)
-    zero_filler = gen_zero_filter_setting()
-    t_updater   = gen_adagrad_setting(lr = t_lr, l2 = l2, batch_size = ds.train_batch_size)
+    g_filler    = gen_uniform_filler_setting(init)
+    zero_filler = gen_zero_filler_setting()
+    t_updater   = gen_adagrad_setting(lr = t_lr, l2 = t_l2, batch_size = ds.train_batch_size)
     g_updater   = gen_adagrad_setting(lr = lr, l2 = l2, batch_size = ds.train_batch_size)
     zero_l2_updater   = gen_adagrad_setting(lr = lr, batch_size = ds.train_batch_size)
     # g_updater   = gen_sgd_setting(lr = lr, l2 = l2, batch_size = ds.train_batch_size)
@@ -252,8 +252,8 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     setting['is_update_tensor'] = True
     setting['t_updater'] = t_updater
     setting['w_updater'] = t_updater
-    setting['t_filler'] = gen_uniform_filter_setting(init_t)
-    setting['w_filler'] = gen_uniform_filter_setting(init_t)
+    setting['t_filler'] = gen_uniform_filler_setting(init_t)
+    setting['w_filler'] = gen_uniform_filler_setting(init_t)
 
     layer = {}
     layers.append(layer) 
@@ -271,7 +271,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     layer['top_nodes'] = ['dpool_rep']
     layer['layer_name'] = 'dynamic_pooling'
     layer['layer_type'] = 43
-    layer['setting'] = {'row':5, 'col':5, 'interval':1}
+    layer['setting'] = {'row':3, 'col':3, 'interval':1}
 
     if is_use_mlp:
         layer = {}
@@ -353,11 +353,12 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
 
     return net
 
-run = 2
+run = 1
 l2 = 0.
 # for dataset in ['paper']:
 # for dataset in ['qa_balance']:
-for dataset in ['qa_50']:
+# for dataset in ['qa_50']:
+for dataset in ['qa_top1k_4']:
     for d_mem in [50]:
         idx = 0
         # for model_no in [0,1,2,3,4,5,6,7,8]:
@@ -373,9 +374,9 @@ for dataset in ['qa_50']:
                         # for t_l2_ in [0.0]:
                         # for t_lr_mul in [1, 0.3, 0.1]:
                         # for t_lr_mul in [1, 0.3]:
-                        for t_lr_mul in [0.3]:
+                        for t_lr_mul in [0.1]:
                             t_l2 = 0.0
-                            init_t = init
+                            init_t = init * 0.5
                             t_lr = t_lr_mul * lr
                             pretrain_run_no = 0 
                             lstm_norm2 = 100000 

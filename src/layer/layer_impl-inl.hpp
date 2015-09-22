@@ -48,6 +48,7 @@
 #include "./common/pos_pred_rep_layer-inl.hpp"
 #include "./common/nbp_gen_lstm_input_layer-inl.hpp"
 #include "./common/phrase_ave_rep_layer-inl.hpp"
+#include "./common/match_topk_pooling_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
 #include "./input/sequence_classification_data_layer-inl.hpp"
@@ -132,6 +133,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kMatchTensorFact: return new MatchTensorFactLayer<xpu>(type);
     case kMatchWeightedDot: return new MatchWeightedDotLayer<xpu>(type);
 	case kMatchMulti: return new MatchMultiLayer<xpu>(type);
+	case kMatchTopKPooling: return new MatchTopKPoolingLayer<xpu>(type);
     case kBatchCombine: return new BatchCombineLayer<xpu>(type);
     case kSwapAxis: return new SwapAxisLayer<xpu>(type);
     case kFlatten: return new FlattenLayer<xpu>(type);

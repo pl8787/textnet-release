@@ -557,7 +557,7 @@ l2 = 0.
 # for dataset in ['paper']:
 # for dataset in ['qa_balance']:
 # for dataset in ['qa_50']:
-for dataset in ['qa_top1k']:
+for dataset in ['qa_top1k_4']:
     for d_mem in [50]:
         idx = 0
         # for epoch_no in [0, 10000, 25000]

@@ -152,13 +152,13 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
 
     layer = {}
     layers.append(layer) 
-    layer['bottom_nodes'] = ['word_rep_seq', 'l_lstm_seq', 'r_lstm_seq']
+    layer['bottom_nodes'] = ['l_lstm_seq', 'r_lstm_seq']
     layer['top_nodes'] = ['bi_lstm_seq']
     layer['layer_name'] = 'concat'
     layer['layer_type'] = 18
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
-    setting['bottom_node_num'] = 3
+    setting['bottom_node_num'] = 2
     setting['concat_dim_index'] = 3
 
     layer = {}
@@ -176,8 +176,8 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     layer['top_nodes'] = ['dot_similarity']
     layer['layer_name'] = 'match'
     layer['layer_type'] = 23 
-    print "ORC: use COS operation for similarity"
-    layer['setting'] = {'op':'cos'}
+    print "ORC: use MUL operation for similarity"
+    layer['setting'] = {'op':'mul'}
 
     layer = {}
     layers.append(layer) 
@@ -185,7 +185,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     layer['top_nodes'] = ['dpool_rep']
     layer['layer_name'] = 'dynamic_pooling'
     layer['layer_type'] = 43
-    layer['setting'] = {'row':3, 'col':3}
+    layer['setting'] = {'row':2, 'col':2}
 
     if is_use_mlp:
         layer = {}
@@ -268,7 +268,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
 
     return net
 
-run = 2
+run = 8
 l2 = 0.
 # for dataset in ['paper']:
 # for dataset in ['qa']:
@@ -284,7 +284,7 @@ for dataset in ['qa_top1k_4']:
             for epoch_no in [0]:
                 # for init in [0.5, 0.3, 0.1]:
                 for init in [0.3, 0.1, 0.03]:
-                    for lr in [0.5, 0.3, 0.1, 0.05]:
+                    for lr in [0.3, 0.1, 0.03]:
                         # for l2 in [0.00001, 0.0001]:
                         for l2 in [0]:
                             pretrain_run_no = 18
