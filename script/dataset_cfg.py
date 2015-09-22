@@ -158,10 +158,124 @@ class DatasetCfg:
             self.train_max_iters = 5000
             self.valid_max_iters = self.n_valid/ self.valid_batch_size
             self.test_max_iters  = self.n_test / self.test_batch_size
+        elif dataset == 'qa_top1k':
+            self.train_data_file = '/home/wsx/data/qa_top1k/qa.neg.10.50.train'
+            self.valid_data_file = '/home/wsx/data/qa_top1k/qa.neg.10.50.valid'
+            self.test_data_file  = '/home/wsx/data/qa_top1k/qa.neg.10.50.test'
+            self.embedding_file  = '/home/wsx/data/qa_top1k/qa_embed'
+            # self.update_indication_file = '/home/wsx/data/msrp/wikicorp_num_50_msr_ind.txt'
+            self.max_doc_len = 50
+            self.min_doc_len = 5 
+            # self.vocab_size = 15586
+            # self.vocab_size = 219071
+            self.vocab_size = 130242
+
+            self.dp_rate = 0.0
+            self.num_class = 2
+            self.d_word_rep = 50
+            self.batch_size = 128
+            self.train_batch_size = 128
+            self.valid_batch_size = 128
+            self.test_batch_size  = 128
+            # self.n_train = 1082851
+            # self.n_valid = 135355
+            # self.n_test  = 135355
+            self.train_display_interval = 10
+            self.valid_display_interval = 10000000
+            self.test_display_interval  = 1000
+            self.train_max_iters = 20000
+            self.valid_max_iters =6056
+            self.test_max_iters  =6056
+
+        elif dataset == 'sentence':
+            self.train_data_file = '/home/wsx/data/sentence/train'
+            self.valid_data_file = '/home/wsx/data/sentence/test'
+            self.test_data_file  = '/home/wsx/data/sentence/test'
+            self.embedding_file  = '/home/wsx/data/sentence/sentence_embed'
+            # self.update_indication_file = '/home/wsx/data/msrp/wikicorp_num_50_msr_ind.txt'
+            self.max_doc_len = 28
+            self.min_doc_len = 4 
+            # self.vocab_size = 15586
+            # self.vocab_size = 219071
+            self.vocab_size = 127889
+
+            self.dp_rate = 0.0
+            self.num_class = 2
+            self.d_word_rep = 50
+            self.batch_size = 128
+            self.train_batch_size = 128
+            self.valid_batch_size = 128
+            self.test_batch_size  = 128
+            # self.n_train = 1082851
+            # self.n_valid = 135355
+            # self.n_test  = 135355
+            self.train_display_interval = 10
+            self.valid_display_interval = 10000000
+            self.test_display_interval  = 4000
+            self.train_max_iters = 40001
+            self.valid_max_iters = 50000
+            self.test_max_iters  = 50000
+        elif dataset == 'qa_50':
+            self.train_data_file = '/home/wsx/data/qa_50/qa.neg.10.50.train'
+            self.valid_data_file = '/home/wsx/data/qa_50/qa.neg.10.50.valid'
+            self.test_data_file  = '/home/wsx/data/qa_50/qa.neg.10.50.test'
+            self.embedding_file  = '/home/wsx/data/qa_50/qa_embed'
+            # self.update_indication_file = '/home/wsx/data/msrp/wikicorp_num_50_msr_ind.txt'
+            self.max_doc_len = 50
+            self.min_doc_len = 5 
+            # self.vocab_size = 15586
+            # self.vocab_size = 219071
+            self.vocab_size = 130242
+
+            self.dp_rate = 0.0
+            self.num_class = 2
+            self.d_word_rep = 50
+            self.batch_size = 128
+            self.train_batch_size = 128
+            self.valid_batch_size = 128
+            self.test_batch_size  = 128
+            # self.n_train = 1082851
+            # self.n_valid = 135355
+            # self.n_test  = 135355
+            self.train_display_interval = 10
+            self.valid_display_interval = 10000000
+            self.test_display_interval  = 2000
+            self.train_max_iters = 20001
+            self.valid_max_iters =6057
+            self.test_max_iters  =6057
+
         elif dataset == 'qa':
-            self.train_data_file = '/home/wsx/data/qa/qa.neg.xmore10.32.train.dat'
-            self.valid_data_file = '/home/wsx/data/qa/qa.neg.xmore10.32.valid.dat'
-            self.test_data_file  = '/home/wsx/data/qa/qa.neg.xmore10.32.test.dat'
+            self.train_data_file = '/home/wsx/data/qa/qa.neg.xrear10.3.32.train.dat'
+            self.valid_data_file = '/home/wsx/data/qa/qa.neg.xrear10.3.32.valid.dat'
+            self.test_data_file  = '/home/wsx/data/qa/qa.neg.xrear10.3.32.test.dat'
+            self.embedding_file  = '/home/wsx/data/qa/qa_embed'
+            # self.update_indication_file = '/home/wsx/data/msrp/wikicorp_num_50_msr_ind.txt'
+            self.max_doc_len = 33
+            self.min_doc_len = 1 
+            # self.vocab_size = 15586
+            # self.vocab_size = 219071
+            self.vocab_size = 120750
+
+            self.dp_rate = 0.0
+            self.num_class = 2
+            self.d_word_rep = 50
+            self.batch_size = 128
+            self.train_batch_size = 128
+            self.valid_batch_size = 128
+            self.test_batch_size  = 128
+            # self.n_train = 1082851
+            # self.n_valid = 135355
+            # self.n_test  = 135355
+            self.train_display_interval = 10
+            self.valid_display_interval = 10000000
+            self.test_display_interval  = 1000
+            self.train_max_iters = 40000
+            self.valid_max_iters =12303
+            self.test_max_iters  =12303
+        elif dataset == 'qa_candi':
+            self.train_data_file = '/home/wsx/data/qa/qa.xmore10.32.train.dat'
+            self.valid_data_file = '/home/wsx/data/qa/qa.xmore10.32.valid.dat'
+            self.test_data_file  = '/home/wsx/data/qa/qa.xmore10.32.test.dat'
             self.embedding_file  = '/home/wsx/data/qa/qa_embed'
             # self.update_indication_file = '/home/wsx/data/msrp/wikicorp_num_50_msr_ind.txt'
             self.max_doc_len = 33
@@ -182,9 +296,9 @@ class DatasetCfg:
             self.train_display_interval = 10
             self.valid_display_interval = 500
             self.test_display_interval  = 500
-            self.train_max_iters = 10000
-            self.valid_max_iters = self.n_valid/ 10 / self.valid_batch_size
-            self.test_max_iters  = self.n_test / 10 / self.test_batch_size
+            self.train_max_iters = 20000
+            self.valid_max_iters =12305
+            self.test_max_iters  =12305
         elif dataset == 'qa_balance':
             self.train_data_file = '/home/wsx/data/qa/qa.neg.xmore10.32.train.dat.balance'
             self.valid_data_file = '/home/wsx/data/qa/qa.neg.xmore10.32.valid.dat.balance'

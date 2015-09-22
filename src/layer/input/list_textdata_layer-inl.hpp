@@ -32,7 +32,7 @@ class ListTextDataLayer : public Layer<xpu>{
     // default value, just set the value you want
 	this->defaults["batch_size"] = SettingV(1);
     this->defaults["min_doc_len"] = SettingV(1);
-	this->defaults["speedup_list"] = SettingV(true);
+	this->defaults["speedup_list"] = SettingV(false);
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["data_file"] = SettingV();
@@ -120,6 +120,11 @@ class ListTextDataLayer : public Layer<xpu>{
 
     utils::Printf("Line count in file: %d\n", line_count);
     utils::Printf("Max list length: %d\n", max_list);
+	utils::Printf("List count: %d\n", list_set.size());
+	// for (int i = 0; i < list_set.size(); ++i) { 
+	//  utils::Printf("list: %d\n", list_set[i].size());
+	//}
+
   }
   
   void MakeLists(vector<int> &label_set, vector<vector<int> > &list_set) {
@@ -133,7 +138,8 @@ class ListTextDataLayer : public Layer<xpu>{
         list = vector<int>();
       }
 	  cur_class = label_set[i];
-      list.push_back(i);
+	  if (cur_class >=0)
+		list.push_back(i);
     }
     list_set.push_back(list);
     max_list = std::max(max_list, (int)list.size());

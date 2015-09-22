@@ -4,9 +4,11 @@ import json
 def gen_gaussion_filler_setting(mu, sigma):
     return {'init_type':3, 'mu':mu, 'sigma':sigma}
 
-def gen_zero_filter_setting():
+def gen_zero_filler_setting():
     return {'init_type':0, 'value':0}
-def gen_uniform_filter_setting(interval):
+def gen_constant_filler_setting(val):
+    return {'init_type':1, 'value':val}
+def gen_uniform_filler_setting(interval):
     return {'init_type':2, 'range':interval}
 
 def gen_sgd_setting(lr, l2 = None, batch_size = 1):

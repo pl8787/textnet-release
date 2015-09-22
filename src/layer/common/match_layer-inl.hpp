@@ -97,6 +97,7 @@ class MatchLayer : public Layer<xpu>{
 
     if (op == "cos") {
       m_norm.Resize(mshadow::Shape3(nbatch, 2, doc_len), 0.f);
+      pow_3_m_norm.Resize(mshadow::Shape3(nbatch, 2, doc_len), 0.f);
       m_dot.Resize(mshadow::Shape3(nbatch, doc_len, doc_len), 0.f);
     }
   }
@@ -129,6 +130,7 @@ class MatchLayer : public Layer<xpu>{
 
     top_data = 0.0f;
     m_norm = 0.0f;
+    pow_3_m_norm = 0.0f;
     m_dot = 0.0f;
     
     if (op == "cos") {
@@ -155,6 +157,7 @@ class MatchLayer : public Layer<xpu>{
         }
       }
       m_norm = F<op::square_root >(m_norm);
+      pow_3_m_norm = F<op::pow_3>(m_norm);
     }
 
     for (int i = 0; i < nbatch; i++) {
@@ -281,11 +284,11 @@ class MatchLayer : public Layer<xpu>{
             } else if (op == "cos") {
               if (this->prop_error[0])
                 bottom0_diff[i][0][j][m] += (bottom1_data[i][0][k][m] / (m_norm[i][0][j] * m_norm[i][1][k]) 
-                                             - bottom0_data[i][0][j][m] * m_dot[i][j][k] / (pow(m_norm[i][0][j], 3) * m_norm[i][1][k]))
+                                             - bottom0_data[i][0][j][m] * m_dot[i][j][k] / (pow_3_m_norm[i][0][j] * m_norm[i][1][k]))
                                             * top_diff[i][0][j][k];
               if (this->prop_error[1])
                 bottom1_diff[i][0][k][m] += (bottom0_data[i][0][j][m] / (m_norm[i][0][j] * m_norm[i][1][k]) 
-                                             - bottom1_data[i][0][k][m] * m_dot[i][j][k] / (m_norm[i][0][j] * pow(m_norm[i][1][k], 3)))
+                                             - bottom1_data[i][0][k][m] * m_dot[i][j][k] / (m_norm[i][0][j] * pow_3_m_norm[i][1][k]))
                                             * top_diff[i][0][j][k];
             } else if (op == "elemwise_product") {
               if (this->prop_error[0])
@@ -331,7 +334,7 @@ class MatchLayer : public Layer<xpu>{
   int interval;
   bool is_var_len;
   std::string op;
-  mshadow::TensorContainer<xpu, 3> m_norm;
+  mshadow::TensorContainer<xpu, 3> m_norm, pow_3_m_norm;
   mshadow::TensorContainer<xpu, 3> m_dot;
 
 };

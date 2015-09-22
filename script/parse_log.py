@@ -1,10 +1,10 @@
 #-*-coding:utf8-*-
 import os
 
-def parse_one_run(lines, tag):
+def parse_one_run(lines, tag, measure = 'acc'):
     output = []
     for line in lines:
-        if line[1:len(tag)+1] == tag and 'acc' in line:
+        if line[1:len(tag)+1] == tag and measure in line:
             output.append(float(line.strip().split()[-1]))
 
     return output
@@ -73,25 +73,37 @@ def parse_max_test(inFile):
     test = parse_one_run(lines, 'Test')
     print max(test)
 
-def parse_tvt(inFile):
+def parse_tvt(inFile, measure='acc'):
     print inFile
     if not os.path.exists(inFile):
         print "NOT FOUND"
         return
     lines = open(inFile).readlines()
-    valid = parse_one_run(lines, 'Valid')
-    test = parse_one_run(lines, 'Test')
+    valid = parse_one_run(lines, 'Valid', measure)
+    test = parse_one_run(lines, 'Test', measure)
     # print "Max test, not by valid."
     max_valid = max(valid)
+    print max(test)
     print max_valid, test[valid.index(max_valid)]
     # max_test = max(test)
     # print valid[test.index(max_test)], max_test
 
-dir = '/home/wsx/exp/match/qa_balance/bilstm_sim_dpool/run.2/'
+# dir = '/home/wsx/exp/match/qa_balance/bilstm_tensor_dpool/run.12/'
+# dir = '/home/wsx/exp/match/qa_balance/bilstm_sim_dpool/run.4/'
+# dir = '/home/wsx/exp/match/qa_balance/bilstm_sim_dpool/run.4/'
+# dir = '/home/wsx/exp/match/qa/bilstm_sim_dpool/run.3/'
+# dir = '/home/wsx/exp/match/qa/bilstm_tensor_dpool/run.1/'
+data_set = 'msrp'
+run = 50
+# dir = '/home/wsx/exp/match/{0}/bilstm_tensor_dpool/run.{1}/'.format(data_set, str(run))
+dir = '/home/wsx/exp/match/{0}/bilstm_sim_dpool/run.{1}/'.format(data_set, str(run))
+# dir = '/home/wsx/exp/match/qa_balance/mul_cnn_sim_dpool/run.1/'
 ## dir = '/home/wsx/exp/match/paper/bilstm_tensor_dpool/run.6/'
-for i in range(12):
+for i in range(20):
     try:
-        parse_tvt(dir + 'log.match.bilstm_sim_dpool.qa_balance.d20.run2.'+str(i))
+        parse_tvt(dir + 'log.match.bilstm_sim_dpool.{0}.d50.run{1}.{2}'.format(data_set, str(run), str(i)), 'acc')
+        # cparse_tvt(dir + 'log.match.bilstm_tensor_dpool.qa_balance.d50.run1.'+str(i), 'acc')
+        # parse_tvt(dir + 'log.match.bilstm_tensor_dpool.qa_balance.d40.run12.'+str(i))
     except:
         continue
 exit(0)

@@ -96,6 +96,11 @@ class ListwiseMeasureLayer : public Layer<xpu>{
 	list_size = nbatch / batch_size;
   }
 
+  inline float rank_log(float x) {
+    if (x == 1) return 1.0;
+	else return log2(x);
+  }
+
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
@@ -119,10 +124,11 @@ class ListwiseMeasureLayer : public Layer<xpu>{
 
       int score_list_len = score_list.size();
 
-	  if (method == "nDCG") {
+	  if (method == "nDCG@k") {
+		sort(score_list.begin(), score_list.end(), list_cmp_label);
         idcg = 0.0;
 		for (int i = 0; i < min(k, score_list_len); ++i) {
-          idcg += score_list[i].second / log(i+2);
+          idcg += score_list[i].second / rank_log(i+1);
 		}
 	  }
 
@@ -139,7 +145,8 @@ class ListwiseMeasureLayer : public Layer<xpu>{
 		  utils::Check(score_list[i].second == 0 || score_list[i].second == 1, 
 				  "Not a valid list for MRR, only 0 and 1.");
           if (score_list[i].second == 1) {
-            score += 1.0 / (i+1);
+            score = 1.0 / (i+1);
+			break;
 		  }
         }
       } else if (method == "P@k") {
@@ -169,12 +176,20 @@ class ListwiseMeasureLayer : public Layer<xpu>{
             score += 1.0;
 		  }
         }
-		score /= r;
+		if (r == 0) {
+			utils::Check(score==0.0, "P@R Error!");
+		} else {
+			score /= r;
+		}
       } else if (method == "nDCG@k") {
         for (int i = 0; i < min(k, score_list_len); ++i) {
-          score += score_list[i].second / log(i+2);
+          score += score_list[i].second / rank_log(i+1);
         }
-		score /= idcg;
+		if (idcg == 0) {
+			utils::Check(score==0.0, "P@R Error!");
+		} else {
+			score /= idcg;
+		}
       } else if (method == "MAP") {
 		int p_count = 0;
 		for (int i = 0; i < score_list_len; ++i) {

@@ -101,12 +101,14 @@ class PoolingLayer : public Layer<xpu> {
 
 	for (int i = 0; i < top_len.shape_[0]; ++i) {
 	  top_len[i][0] = (bottom_len[i][0] - kernel_x) / stride + 1;
-	  top_len[i][1] = (bottom_len[i][1] - kernel_y) / stride + 1;
 	  if (top_len[i][0] <= 0) {
 		top_len[i][0] = 1;
 	  }
-	  if (top_len[i][1] <= 0) {
-		top_len[i][1] = 1;
+	  if (bottom_len.shape_[1] == 2) {
+	    top_len[i][1] = (bottom_len[i][1] - kernel_y) / stride + 1;
+	    if (top_len[i][1] <= 0) {
+		  top_len[i][1] = 1;
+	    }
 	  }
 	}
 

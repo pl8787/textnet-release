@@ -199,22 +199,27 @@ void TestListwiseMeasureLayer(mshadow::Random<cpu>* prnd) {
   bottoms.push_back(&bottom1);
   tops.push_back(&top);
   
-  bottom0.Resize(Shape4(4,1,1,1));
-  bottom1.Resize(Shape4(4,1,1,1));
+  bottom0.Resize(Shape4(6,1,1,1));
+  bottom1.Resize(Shape4(6,1,1,1));
 
-  bottom0.data[0][0][0][0] = 0.2;
-  bottom0.data[1][0][0][0] = 0.3;
-  bottom0.data[2][0][0][0] = 1.5;
+  bottom0.data[0][0][0][0] = 2.2;
+  bottom0.data[1][0][0][0] = 1.3;
+  bottom0.data[2][0][0][0] = 1.0;
   bottom0.data[3][0][0][0] = -0.5;
+  bottom0.data[4][0][0][0] = -1.5;
+  bottom0.data[5][0][0][0] = -2.5;
 
-  bottom1.data[0][0][0][0] = 1;
-  bottom1.data[1][0][0][0] = 0;
-  bottom1.data[2][0][0][0] = 0;
+  bottom1.data[0][0][0][0] = 3;
+  bottom1.data[1][0][0][0] = 2;
+  bottom1.data[2][0][0][0] = 3;
   bottom1.data[3][0][0][0] = 0;
+  bottom1.data[4][0][0][0] = 1;
+  bottom1.data[5][0][0][0] = 2;
   
   map<string, SettingV> setting;
-  setting["k"] = SettingV(1);
-  setting["method"] = SettingV("MRR");
+  setting["k"] = SettingV(6);
+  setting["method"] = SettingV("nDCG@k");
+  // setting["method"] = SettingV("MRR");
   // setting["method"] = SettingV("P@k");
   
   /// Test Activation Layer
@@ -295,6 +300,89 @@ void TestMatchWeightedDotLayer(mshadow::Random<cpu>* prnd) {
   cout << "Check Error." << endl;
   cker->CheckError(layer_match, bottoms, tops);
 }
+
+void TestMatchTensorLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Match Tensor Layer." << endl;
+  Node<cpu> bottom1;
+  Node<cpu> bottom2;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+
+  bottoms.push_back(&bottom1);
+  bottoms.push_back(&bottom2);
+  tops.push_back(&top);
+
+  bottom1.Resize(2, 1, 5, 3);
+  bottom2.Resize(2, 1, 5, 3);
+
+  prnd->SampleUniform(&bottom1.data, -1.0, 1.0);
+  prnd->SampleUniform(&bottom2.data, -1.0, 1.0);
+
+  bottom1.length = 3;
+  bottom2.length = 4;
+
+  map<string, SettingV> setting;
+  {
+    setting["d_hidden"] = SettingV(2);
+    setting["d_factor"] = SettingV(2);
+    setting["is_use_linear"] = SettingV(true);
+    // setting["t_l2"] = SettingV(0);
+    // setting["is_init_as_I"] = SettingV(false);
+      
+    map<string, SettingV> &t_filler = *(new map<string, SettingV>());
+      t_filler["init_type"] = SettingV(initializer::kUniform);
+      t_filler["range"] = SettingV(0.01f);
+    setting["t_filler"] = SettingV(&t_filler);
+    setting["w_filler"] = SettingV(&t_filler);
+    setting["b_filler"] = SettingV(&t_filler);
+
+      
+    map<string, SettingV> &t_updater = *(new map<string, SettingV>());
+      t_updater["updater_type"] = SettingV(updater::kAdagrad);
+      t_updater["eps"] = SettingV(0.01f);
+      t_updater["batch_size"] = SettingV(1);
+      t_updater["max_iter"] = SettingV(10000);
+      t_updater["lr"] = SettingV(0.1f);
+    setting["t_updater"] = SettingV(&t_updater);
+    setting["w_updater"] = SettingV(&t_updater);
+    setting["b_updater"] = SettingV(&t_updater);
+  }
+
+  // Test Match Layer
+  Layer<cpu> * layer_match = CreateLayer<cpu>(kMatchTensor);
+  layer_match->PropAll();
+  layer_match->SetupLayer(setting, bottoms, tops, prnd);
+  layer_match->Reshape(bottoms, tops);
+
+  layer_match->Forward(bottoms, tops);
+  layer_match->Backprop(bottoms, tops);
+  layer_match->Forward(bottoms, tops);
+  layer_match->Backprop(bottoms, tops);
+  PrintTensor("t_data", layer_match->params[0].data);
+  PrintTensor("w_data", layer_match->params[1].data);
+  PrintTensor("bottom1", bottom1.data);
+  PrintTensor("bottom2", bottom2.data);
+  PrintTensor("top", top.data);
+  // exit(0);
+
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.001f);
+
+  cker->SetupChecker(setting_checker, prnd);
+
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_match, bottoms, tops);
+
+  cout << "Check Grad." << endl;
+  cker->CheckGrad(layer_match, bottoms, tops);
+}
+
+
 
 void TestMatchTensorFactLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Match Tensor Fact Layer." << endl;
@@ -1302,6 +1390,69 @@ void TestDiagRecurrentLayer(mshadow::Random<cpu>* prnd) {
   // PrintTensor("t_diff", tops[0]->diff);
   cout << "Done." << endl;
 }
+
+void TestDynamicKMaxPoolingLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Product Layer." << endl;
+  Node<cpu> bottom0;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom0);
+  bottoms.push_back(&bottom0);
+  tops.push_back(&top);
+  
+  bottom0.Resize(Shape4(2,2,6,3), true);
+  bottom0.length = 5;
+  prnd->SampleUniform(&bottom0.data, -0.1, 0.1);
+  
+  map<string, SettingV> setting;
+  {
+      setting["L"] = 2;
+      setting["l"] = 1;
+      setting["max_sentence_length"] = 6;
+      setting["min_rep_length"] = 3;
+  }
+
+  Layer<cpu> *layer = CreateLayer<cpu>(kDynamicKMaxPooling);
+  layer->PropAll();
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+  // layer->Forward(bottoms, tops);
+  // top.diff = 1.f; // bottom.data;
+  // PrintTensor("bottom0", bottom0.data);
+  // PrintTensor("bottom1", bottom1.data);
+  // PrintTensor("top", top.data);
+  // PrintTensor("top_diff", top.diff);
+  // PrintTensor("param_diff", layer->GetParams()[0].diff);
+  
+  // using namespace checker;
+  // Checker<cpu> * cker = CreateChecker<cpu>();
+  // map<string, SettingV> setting_checker;
+  // setting_checker["range_min"] = SettingV(-0.0001f);
+  // setting_checker["range_max"] = SettingV(0.0001f);
+  // setting_checker["delta"] = SettingV(0.0001f);
+  // cker->SetupChecker(setting_checker, prnd);
+  // cout << "Check Error." << endl;
+  // cker->CheckError(layer, bottoms, tops);
+  // PrintTensor("bottom0_diff", bottom0.diff);
+  // PrintTensor("bottom1_diff", bottom1.diff);
+
+  // cout << "Check Grad." << endl;
+  // cker->CheckGrad(layer, bottoms, tops);
+
+  layer->Forward(bottoms, tops);
+  top.diff = 1.f; // bottom.data;
+  layer->Backprop(bottoms, tops);
+  PrintTensor("b0_data", bottoms[0]->data);
+  PrintTensor("t_data",  tops[0]->data);
+  PrintTensor("b0_length", bottoms[0]->length);
+  PrintTensor("t_length", tops[0]->length);
+  PrintTensor("b0_diff", bottoms[0]->diff);
+  PrintTensor("t_diff", tops[0]->diff);
+  cout << "Done." << endl;
+}
+
 
 
 void TestDynamicPoolingLayer(mshadow::Random<cpu>* prnd) {
@@ -2808,16 +2959,17 @@ int main(int argc, char *argv[]) {
   // TestConvResultTransformLayer(&rnd);
   // TestConvolutionLayer(&rnd);
   // TestMatchLayer(&rnd);
-  // TestMatchTensorFactLayer(&rnd);
+  // TestMatchTensorLayer(&rnd);
   // TestMatchWeightedDotLayer(&rnd);
   // TestGruLayer(&rnd);
   // TestMatchMultiLayer(&rnd);
+  // TestDynamicKMaxPoolingLayer(&rnd);
   // TestBatchCombineLayer(&rnd);
   // TestBatchSelectLayer(&rnd);
   // TestBatchSplitLayer(&rnd);
   // TestBatchConcatLayer(&rnd);
   // TestBatchDuplicateLayer(&rnd);
-  TestPairTextDataLayer(&rnd);
+  // TestPairTextDataLayer(&rnd);
   // TestListTextDataLayer(&rnd);
   // TestGateLayer(&rnd);
   // TestDiagRecurrentLayer(&rnd);
@@ -2832,7 +2984,7 @@ int main(int argc, char *argv[]) {
   // TestSumLayer(&rnd);
   // TestTopkPoolingLayer(&rnd);
   // TestHingeLossLayer(&rnd);
-  // TestListwiseMeasureLayer(&rnd);
+  TestListwiseMeasureLayer(&rnd);
   // TestQATextDataLayer(&rnd);
   return 0;
 }

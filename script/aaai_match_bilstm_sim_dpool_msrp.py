@@ -4,8 +4,10 @@ import copy, os
 from gen_conf_file import *
 from dataset_cfg import *
 
-def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretrain_run_no, model_no, epoch_no):
+def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     # print "ORC: left & right lstm share parameters"
+    is_use_mlp = True
+    print "With using MLP."
     net = {}
 
     ds = DatasetCfg(dataset)
@@ -106,8 +108,8 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
     setting['embedding_file'] = ds.embedding_file
-    print "ORC: update all words"
-    # setting['update_indication_file'] = ds.update_indication_file
+    # print "ORC: update all words"
+    setting['update_indication_file'] = ds.update_indication_file
     setting['feat_size'] = ds.d_word_rep
     setting['word_count'] = ds.vocab_size
     print "ORC: not use l2 for embedding"
@@ -129,9 +131,6 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     setting['reverse'] = False
     setting['f_gate_bias_init'] = 0.
     setting['o_gate_bias_init'] = 0.
-    if is_pretrain:
-        setting['param_file'] = "/home/wsx/exp/match/wiki_lm/run.{0}/model/l_lstm.params.{1}.{2}".format(str(pretrain_run_no), str(model_no), str(epoch_no))
-        print setting['param_file']
 
     layer = {}
     layers.append(layer) 
@@ -149,24 +148,6 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     setting['max_norm2'] = 100
     setting['f_gate_bias_init'] = 0.
     setting['o_gate_bias_init'] = 0.
-    if is_pretrain:
-        setting['param_file'] = "/home/wsx/exp/match/wiki_lm/run.{0}/model/r_lstm.params.{1}.{2}".format(str(pretrain_run_no), str(model_no), str(epoch_no))
-        print setting['param_file']
-    # if is_share:
-    #     print "ORC: share parameters."
-    #     share_setting_w = {}
-    #     share_setting_w['param_id'] = 0
-    #     share_setting_w['source_layer_name'] = 'l_lstm'
-    #     share_setting_w['source_param_id'] = 0
-    #     share_setting_u = {}
-    #     share_setting_u['param_id'] = 1
-    #     share_setting_u['source_layer_name'] = 'l_lstm'
-    #     share_setting_u['source_param_id'] = 1
-    #     share_setting_b = {}
-    #     share_setting_b['param_id'] = 2
-    #     share_setting_b['source_layer_name'] = 'l_lstm'
-    #     share_setting_b['source_param_id'] = 2
-    #     setting['share'] = [share_setting_w, share_setting_u, share_setting_b]
 
     layer = {}
     layers.append(layer) 
@@ -194,8 +175,20 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     layer['top_nodes'] = ['dot_similarity']
     layer['layer_name'] = 'match'
     layer['layer_type'] = 23 
-    print "ORC: use MUL operation for similarity"
-    layer['setting'] = {'op':'mul'}
+    print "ORC: use COS operation for similarity"
+    layer['setting'] = {'op':'cos'}
+
+    # print "USE NON LINEAR ON DOT"
+    # layer = {}
+    # layers.append(layer) 
+    # layer['bottom_nodes'] = ['dot_similarity']
+    # layer['top_nodes'] = ['dot_similarity_nonlinear']
+    # layer['layer_name'] = 'dot_nonlinear'
+    # layer['layer_type'] = 3 
+    # setting = {}
+    # layer['setting'] = setting
+    #     
+
 
     layer = {}
     layers.append(layer) 
@@ -205,41 +198,32 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     layer['layer_type'] = 43
     layer['setting'] = {'row':5, 'col':5}
 
-    # layer = {}
-    # layers.append(layer) 
-    # layer['bottom_nodes'] = ['dpool_rep']
-    # layer['top_nodes'] = ['hidden_trans']
-    # layer['layer_name'] = 'mlp_hidden'
-    # layer['layer_type'] = 11 
-    # setting = copy.deepcopy(g_layer_setting)
-    # layer['setting'] = setting
-    # setting['num_hidden'] = d_mem * 4
+    if is_use_mlp:
+        layer = {}
+        layers.append(layer) 
+        layer['bottom_nodes'] = ['dpool_rep']
+        layer['top_nodes'] = ['hidden_trans']
+        layer['layer_name'] = 'mlp_hidden'
+        layer['layer_type'] = 11 
+        setting = copy.deepcopy(g_layer_setting)
+        layer['setting'] = setting
+        setting['num_hidden'] = d_mem * 4
 
-    # layer = {}
-    # layers.append(layer) 
-    # layer['bottom_nodes'] = ['hidden_trans']
-    # layer['top_nodes'] = ['hidden_rep']
-    # layer['layer_name'] = 'hidden_nonlinear'
-    # layer['layer_type'] = 1 
-    # setting = {}
-    # layer['setting'] = setting
-    # 
-    # layer = {}
-    # layers.append(layer) 
-    # layer['bottom_nodes'] = ['hidden_rep']
-    # layer['top_nodes'] = ['hidden_drop_rep']
-    # layer['layer_name'] = 'dropout'
-    # layer['layer_type'] =  13
-    # ds.dp_rate = 0.
-    # print "ORC, dp rate:", ds.dp_rate
-    # setting = {'rate':ds.dp_rate}
-    # layer['setting'] = setting
-
+        layer = {}
+        layers.append(layer) 
+        layer['bottom_nodes'] = ['hidden_trans']
+        layer['top_nodes'] = ['hidden_rep']
+        layer['layer_name'] = 'hidden_nonlinear'
+        layer['layer_type'] = 3 
+        setting = {}
+        layer['setting'] = setting
+        
     layer = {}
     layers.append(layer) 
-    # layer['bottom_nodes'] = ['hidden_drop_rep']
-    # layer['bottom_nodes'] = ['hidden_drop_rep']
-    layer['bottom_nodes'] = ['dpool_rep']
+    if is_use_mlp:
+        layer['bottom_nodes'] = ['hidden_rep']
+    else:
+        layer['bottom_nodes'] = ['dpool_rep']
     layer['top_nodes'] = ['softmax_prob']
     layer['layer_name'] = 'softmax_fullconnect'
     layer['layer_type'] = 11 
@@ -268,29 +252,20 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
     layer['setting'] = setting
     return net
 
-run = 4
+run = 50 
 l2 = 0.
-# for dataset in ['paper']:
-for dataset in ['qa_balance']:
-    for d_mem in [80]:
+for dataset in ['msrp']:
+    for d_mem in [50]:
         idx = 0
-        # for model_no in [0,1,2,3,4,5,6,7,8]:
-        #     for epoch_no in [20000, 40000, 80000]:
-        for model_no in [2]:
-            #  for epoch_no in [0, 10000, 25000]:
-            for epoch_no in [0]:
-                # for init in [0.5, 0.3, 0.1]:
-                for init in [0.1, 0.03, 0.01]:
-                    for lr in [0.3, 0.1, 0.03]:
-                        # for l2 in [0.00001, 0.0001]:
-                        for l2 in [0]:
-                            pretrain_run_no = 18
-                            lstm_norm2 = 10000 
-                            net = gen_match_lstm(d_mem=d_mem,init=init,lr=lr,dataset=dataset,l2=l2,lstm_norm2=lstm_norm2,  \
-                                                 is_pretrain=False,pretrain_run_no=pretrain_run_no,model_no=model_no,epoch_no=epoch_no)
-                            net['log'] = 'log.match.bilstm_sim_dpool.{0}.d{1}.run{2}.{3}'.format\
-                                         (dataset, str(d_mem), str(run), str(idx))
-                            gen_conf_file(net, '/home/wsx/exp/match/{0}/bilstm_sim_dpool/run.{1}/'.format(dataset,str(run)) + \
-                                               'model.match.bilstm_sim_dpool.{0}.d{1}.run{2}.{3}'.format\
-                                               (dataset, str(d_mem), str(run), str(idx)))
-                            idx += 1
+        for init in [0.5, 0.1, 0.03, 0.01]:
+            for lr in [0.3, 0.1, 0.03, 0.01]:
+                # for l2 in [0.00001, 0.0001]:
+                for l2 in [0]:
+                    lstm_norm2 = 10000 
+                    net = gen_match_lstm(d_mem=d_mem,init=init,lr=lr,dataset=dataset,l2=l2,lstm_norm2=lstm_norm2)
+                    net['log'] = 'log.match.bilstm_sim_dpool.{0}.d{1}.run{2}.{3}'.format\
+                                 (dataset, str(d_mem), str(run), str(idx))
+                    gen_conf_file(net, '/home/wsx/exp/match/{0}/bilstm_sim_dpool/run.{1}/'.format(dataset,str(run)) + \
+                                       'model.match.bilstm_sim_dpool.{0}.d{1}.run{2}.{3}'.format\
+                                       (dataset, str(d_mem), str(run), str(idx)))
+                    idx += 1

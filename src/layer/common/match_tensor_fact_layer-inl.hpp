@@ -28,7 +28,7 @@ class MatchTensorFactLayer : public Layer<xpu>{
     this->defaults["interval"] = SettingV(1); 
     this->defaults["is_var_len"] = SettingV(true); 
     this->defaults["is_use_linear"] = SettingV(true); 
-    this->defaults["is_init_as_I"] = SettingV(true);
+    this->defaults["is_init_as_I"] = SettingV(false);
     this->defaults["is_update_tensor"] = SettingV(true);
     
     // require value, set to SettingV(),
@@ -126,10 +126,10 @@ class MatchTensorFactLayer : public Layer<xpu>{
     batch_size = bottom[0]->data.size(0); 
     doc_len = bottom[0]->data.size(2);
                   
-    bottom_0_transform.Resize(batch_size, doc_len, d_hidden, d_factor);
-    bottom_1_transform.Resize(batch_size, doc_len, d_hidden, d_factor);
-    bottom_0_transform_linear.Resize(batch_size, 1, doc_len, d_hidden);
-    bottom_1_transform_linear.Resize(batch_size, 1, doc_len, d_hidden);
+    bottom_0_transform.Resize(batch_size, doc_len, d_hidden, d_factor, true);
+    bottom_1_transform.Resize(batch_size, doc_len, d_hidden, d_factor, true);
+    bottom_0_transform_linear.Resize(batch_size, 1, doc_len, d_hidden, true);
+    bottom_1_transform_linear.Resize(batch_size, 1, doc_len, d_hidden, true);
     top[0]->Resize(batch_size, d_hidden, doc_len, doc_len, true);
 
 	if (show_info) {

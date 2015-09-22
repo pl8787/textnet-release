@@ -28,8 +28,8 @@ class SwapAxisLayer : public Layer<xpu>{
 
     // require value, set to SettingV(),
     // it will force custom to set in config
-    this->defaults["axis1"] = SettingV();
-    this->defaults["axis2"] = SettingV();
+    this->defaults["axis1"] = SettingV(); // 0, 1, 2, 3
+    this->defaults["axis2"] = SettingV(); // 0, 1, 2, 3
     
     Layer<xpu>::Require();
   }

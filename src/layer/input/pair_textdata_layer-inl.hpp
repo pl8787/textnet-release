@@ -128,7 +128,8 @@ class PairTextDataLayer : public Layer<xpu>{
 	  }
 	  if (i == line_count) break;
 	  cur_class = label_set[i];
-	  class_set[cur_class].push_back(i);
+	  if (cur_class >= 0)
+		class_set[cur_class].push_back(i);
 	}
 	total_ins_count = pair_set.size();
 

@@ -69,7 +69,8 @@ const int kPrintBuffer = 1 << 12;
  * \param msg error message
  */
 inline void HandleAssertError(const char *msg) {
-  fprintf(stderr, "AssertError:%s\n", msg);
+  // fprintf(stderr, "AssertError:%s\n", msg);
+  fprintf(stderr, "\33[91mAssertError\33[0m:%s\n", msg);
   assert(false); // orc for looking stack
   exit(-1);
 }
@@ -78,7 +79,8 @@ inline void HandleAssertError(const char *msg) {
  * \param msg error message
  */
 inline void HandleCheckError(const char *msg) {
-  fprintf(stderr, "%s\n", msg);
+  // fprintf(stderr, "%s\n", msg);
+  fprintf(stderr, "\33[91m%s\33[0m\n", msg);
   assert(false); // orc for looking stack
   exit(-1);
 }

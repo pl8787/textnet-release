@@ -118,9 +118,12 @@ class EmbeddingLayer : public Layer<xpu>{
       iss.seekg(0, iss.beg);
       iss.str(lines[i]);
       iss >> w_idx;
-      for (int j = 0; j < feat_size; ++j) {
-        iss >> this->params[0].data[w_idx][j][0][0];
+      int j = 0;
+      while (!iss.eof()) {
+        utils::Check(j < feat_size, "EmbeddingLayer: init embedding error.");
+        iss >> this->params[0].data[w_idx][j++][0][0];
       }
+      utils::Check(j == feat_size, "EmbeddingLayer: init embedding error.");
     }
   }
   

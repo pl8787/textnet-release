@@ -83,6 +83,7 @@ const int kBatchSelect = 1007;
 const int kBatchSplit = 1008;
 const int kBatchConcat = 1009;
 const int kBatchDuplicate = 1010;
+const int kDynamicKMaxPooling = 10001;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;
