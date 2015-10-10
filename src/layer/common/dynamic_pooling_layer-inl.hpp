@@ -8,13 +8,23 @@
 namespace textnet {
 namespace layer {
 
+
+// This layer is dynamic pooling, not dynamic k max pooling
+// the key differences lies in that firstly, the output size is fixed in this layer while not fixed in dynamic k max pooling
+// and secondly, the pooling is conduct on a local region, not top k on the whole input
+// This layer can deal with 1D and 2D dynamic pooling
+// the example of 1D is using CNN for sentence representation
+// the example of 2D is using similarity matrix for semantic matching
+// NOTICE: for 1D, the input node size is (batch_size, channel, 1, max_length), we need only two bottom nodes since only one length
 template<typename xpu>
 class DynamicPoolingLayer : public Layer<xpu>{
  public:
   DynamicPoolingLayer(LayerType type) { this->layer_type = type; }
   virtual ~DynamicPoolingLayer(void) {}
   
-  virtual int BottomNodeNum() { return nbottom; } // matrix node, l_seq for length, r_seq for length
+  // if nbottom == 3, feature map node, l_seq for length, r_seq for length
+  // if nbottom == 1, the lengths are included in the feature map node
+  virtual int BottomNodeNum() { return nbottom; }
   virtual int TopNodeNum() { return 1; }
   virtual int ParamNodeNum() { return 0; }
   

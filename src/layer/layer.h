@@ -85,6 +85,7 @@ const int kBatchConcat = 1009;
 const int kBatchDuplicate = 1010;
 const int kDynamicKMaxPooling = 10001;
 const int kMatchTopKPooling = 10002;
+const int kSelectSubRepByToken = 10003;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;

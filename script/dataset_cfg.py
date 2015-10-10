@@ -243,6 +243,37 @@ class DatasetCfg:
             self.valid_max_iters =6056
             self.test_max_iters  =6056
 
+        elif dataset == 'ubuntu':
+            self.train_data_file = '/home/wsx/data/ubuntu/train.txt'
+            self.valid_data_file = '/home/wsx/data/ubuntu/valid.txt'
+            self.test_data_file  = '/home/wsx/data/ubuntu/test.txt'
+            # self.embedding_file  = '/home/wsx/data/dialogue/qa_embed'
+            # self.update_indication_file = '/home/wsx/data/msrp/wikicorp_num_50_msr_ind.txt'
+            self.max_doc_len = 2002
+            self.min_doc_len = 1 
+            # self.vocab_size = 15586
+            # self.vocab_size = 219071
+            self.vocab_size = 144953
+
+            self.dp_rate = 0.0
+            self.num_class = 2
+            self.d_word_rep = 50
+            self.batch_size = 128
+            self.train_batch_size = 128
+            self.valid_batch_size = 128
+            self.test_batch_size  = 128
+            self.n_train = 1000192
+            self.n_valid = 356096
+            self.n_test  = 355170 
+            self.train_display_interval = 10
+            self.valid_display_interval = 10000000
+            self.test_display_interval  = 1000
+            self.train_max_iters = 50000
+            self.valid_max_iters = 1000
+            self.test_max_iters = 1000
+            # self.valid_max_iters = self.n_valid/self.valid_batch_size
+            # self.test_max_iters  = self.n_test/self.test_batch_size 
+
         elif dataset == 'qa_top1k_4':
             self.train_data_file = '/home/wsx/data/qa_top1k_4/qa.neg.4.train'
             self.valid_data_file = '/home/wsx/data/qa_top1k_4/qa.neg.4.valid'
