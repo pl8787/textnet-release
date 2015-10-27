@@ -47,6 +47,7 @@ class ProductLayer : public Layer<xpu> {
     
     mshadow::Shape<4> shape0 = bottom[0]->data.shape_;
     mshadow::Shape<4> shape1 = bottom[1]->data.shape_;
+	mshadow::Shape<2> shape_len = bottom[0]->length.shape_;
 
     utils::Check(shape0[0] == shape1[0], "ProductLayer: bottom sizes does not match.");
     utils::Check(shape0[1] == shape1[1], "ProductLayer: bottom sizes does not match.");
@@ -57,7 +58,7 @@ class ProductLayer : public Layer<xpu> {
     utils::Check(size_0_3 == 1 || size_1_3 == 1 || size_0_3 == size_1_3, "ProductLayer: bottom sizes does not match.");
 
     int output_size = size_0_3 > size_1_3 ? size_0_3 : size_1_3;
-    top[0]->Resize(shape0[0], shape0[1], shape0[2], output_size, true);
+    top[0]->Resize(shape0[0], shape0[1], shape0[2], output_size, shape_len[0], shape_len[1], true);
 
 	if (show_info) {
 		bottom[0]->PrintShape("bottom0");

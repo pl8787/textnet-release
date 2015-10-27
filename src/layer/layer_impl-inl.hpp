@@ -53,6 +53,7 @@
 #include "./common/nbp_gen_lstm_input_layer-inl.hpp"
 #include "./common/phrase_ave_rep_layer-inl.hpp"
 #include "./common/match_topk_pooling_layer-inl.hpp"
+#include "./common/select_sub_rep_by_token_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
 #include "./input/sequence_classification_data_layer-inl.hpp"
@@ -72,6 +73,7 @@
 #include "./loss/word_class_softmax_loss_layer-inl.hpp"
 #include "./loss/lstm_autoencoder_softmax_loss_layer-inl.hpp"
 #include "./loss/listwise_measure_layer-inl.hpp"
+#include "./loss/logistic_layer-inl.hpp"
 
 namespace textnet {
 namespace layer {
@@ -151,6 +153,8 @@ Layer<xpu>* CreateLayer_(LayerType type) {
 	case kListTextData: return new ListTextDataLayer<xpu>(type);
 	case kListwiseMeasure: return new ListwiseMeasureLayer<xpu>(type);
 	case kQATextData: return new QATextDataLayer<xpu>(type);
+    case kSelectSubRepByToken: return new SelectSubRepByTokenLayer<xpu>(type);
+	case kLogistic: return new LogisticLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }

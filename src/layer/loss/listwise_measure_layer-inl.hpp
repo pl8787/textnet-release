@@ -65,8 +65,8 @@ class ListwiseMeasureLayer : public Layer<xpu>{
     col = setting["col"].iVal();
 	batch_size = setting["batch_size"].iVal();
     
-    utils::Check(method == "MRR" || method == "P@k" || method == "nDCG@k" || method == "MAP" || method == "P@R", 
-                  "Parameter [method] must be MRR or P@k or nDCG@k or MAP or P@R.");
+    utils::Check(method == "MRR" || method == "P@k" || method == "R@k" || method == "nDCG@k" || method == "MAP" || method == "P@R", 
+                  "Parameter [method] must be MRR or P@k or R@k or nDCG@k or MAP or P@R.");
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -109,6 +109,9 @@ class ListwiseMeasureLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 1> top_data = top[0]->data_d1();
     
 	top_data = 0.0;
+
+	utils::Check(col < bottom0_data.size(1) && col >=0,
+			"ListwiseMeasureLayer: col is not satisfied.");
 
 	for (int s = 0; s < batch_size; ++s) {
       vector< pair<float, float> > score_list;
@@ -160,6 +163,17 @@ class ListwiseMeasureLayer : public Layer<xpu>{
 		  }
         }
 		score /= k;
+      } else if (method == "R@k") {
+        for (int i = 0; i < min(k, score_list_len); ++i) {
+		  if (score_list[i].second > 0) 
+			  score_list[i].second = 1;
+		  utils::Check(score_list[i].second == 0 || score_list[i].second == 1, 
+				  "Not a valid list for P@k, only 0 and 1.");
+          if (score_list[i].second == 1) {
+            score = 1.0;
+			break;
+		  }
+        }
       } else if (method == "P@R") {
 		int r = 0;
         for (int i = 0; i < score_list_len; ++i) {

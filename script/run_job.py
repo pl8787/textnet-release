@@ -171,9 +171,9 @@ def get_nodes():
     n_thread = 4
     node_169 = Node('10.60.1.169', 'wsx', 3)
     node_168 = Node('10.60.1.168', 'wsx', 4)
-    node_52 = Node('10.60.0.52', 'wsx', 6)
-    node_59 = Node('10.60.0.59', 'wsx', 6)
-    node_53 = Node('10.60.0.53', 'wsx', 6)
+    node_52 = Node('10.60.0.52', 'wsx', 5)
+    node_59 = Node('10.60.0.59', 'wsx', 5)
+    # node_53 = Node('10.60.0.53', 'wsx', 6)
     # node_168 = Node('10.60.1.168', 'wsx', 8)
     # return [node_169]# , node_169]
     # return [node_52,node_53] # , node_52, node_59]
@@ -182,7 +182,7 @@ def get_nodes():
     # return [node_169]
     # return [node_52, node_59, node_169]
     # return [node_168, node_169]#, node_52, node_59]#, node_59]# , node_169]# , node_59]# , node_53]#, node_59]
-    return [node_52, node_53, node_59]#, node_59]#, node_52, node_59]#, node_59]# , node_169]# , node_59]# , node_53]#, node_59]
+    return [node_52, node_59]#, node_59]#, node_52, node_59]#, node_59]# , node_169]# , node_59]# , node_53]#, node_59]
 
 def main():
     run_nodes = get_nodes()
@@ -207,8 +207,8 @@ def main():
     # local_dir = '/home/wsx/exp/match/qa_top1k_4/arci/run.1/'
     # local_dir = '/home/wsx/exp/match/qa_top1k_4/bilstm_sim_dpool/run.9/'
     # local_dir = '/home/wsx/exp/match/qa_top1k_4/bilstm_tensor_dpool/run.3/'
-    local_dir = '/home/wsx/exp/match/qa_top1k_4/bilstm_concat/run.3/'
-    # local_dir = '/home/wsx/exp/match/qa_top1k_4/mul_cnn_tensor_dpool/run.1/'
+    # local_dir = '/home/wsx/exp/match/qa_top1k_4/bilstm_concat/run.3/'
+    local_dir = '/home/wsx/exp/match/qa_top1k_4/mul_cnn_tensor_dpool/run.2/'
 
     # local_dir = '/home/wsx/exp/match/qa_balance/bilstm_sim_dpool/run.5/'
     # local_dir = '/home/wsx/exp/nbp/tf/run.8/'

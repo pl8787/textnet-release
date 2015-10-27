@@ -552,7 +552,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
 
     return net
 
-run = 1
+run = 2
 l2 = 0.
 # for dataset in ['paper']:
 # for dataset in ['qa_balance']:

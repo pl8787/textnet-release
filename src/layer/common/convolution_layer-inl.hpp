@@ -171,12 +171,13 @@ class ConvolutionLayer : public Layer<xpu> {
       } else {
 		  top_len[i][0] = (bottom_len[i][0] + pad_x * 2 - kernel_x) / stride + 1;
 		  top_len[i][1] = (bottom_len[i][1] + pad_y * 2 - kernel_y) / stride + 1;
-		  if (top_len[i][0] <= 0) {
-			  top_len[i][0] = 1;
-		  }
-		  if (top_len[i][1] <= 0) {
-			  top_len[i][1] = 1;
-		  }
+          // comment by oracle
+		  // if (top_len[i][0] <= 0) {
+		  //     top_len[i][0] = 1;
+		  // }
+		  // if (top_len[i][1] <= 0) {
+		  //     top_len[i][1] = 1;
+		  // }
 		  utils::Check(top_len[i][0] > 0 && top_len[i][1] > 0, "top_len must positive.");
 	  }
       if (pad_x == 0 && pad_y == 0) {

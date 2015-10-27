@@ -6,6 +6,7 @@ NOTE: this requires pydot>=1.0.
 import json
 import pydot
 import argparse
+import re
 
 # Internal layer and blob styles.
 LAYER_STYLE_DEFAULT = {'shape': 'record', 'fillcolor': '#6495ED',
@@ -128,7 +129,10 @@ def parse_args():
 
 def get_layer_type_name(layer_name):
   if type(layer_name) == int:
-    return Layer2Name[layer_name]
+    if layer_name in Layer2Name:
+        return Layer2Name[layer_name]
+    else:
+        return str(layer_name)
   else:
     return str(layer_name)
 
@@ -183,6 +187,8 @@ def choose_color_by_layertype(layertype):
       color = '#CC33FF'
   elif layertype == 'MaxPooling' or layertype == 'AvgPooling' or layertype == 'DynamicPooling':
       color = '#66CC66'
+  elif layertype == 'Lstm' or layertype == 'Gru':
+      color = '#B5E61D'
   return color
 
 
@@ -248,7 +254,14 @@ def draw_net_to_file(text_net, filename, rankdir='LR', need_details=True):
 
 if __name__ == "__main__":
   args = parse_args()
-  text_net = json.loads(open(args.input_net_json_file).read())
+  json_file = open(args.input_net_json_file)
+  json_str = ''
+  # Remove json comment
+  comment_ptn = r"//.*"
+  for line in json_file:
+    line = re.sub(comment_ptn, '', line)
+    json_str += line
+  text_net = json.loads(json_str)
   print('Drawing net to %s' % args.output_image_file)
   need_details = True
   if args.details.lower() == 'true':

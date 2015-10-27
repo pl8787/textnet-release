@@ -127,6 +127,7 @@ class WholePoolingLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
     mshadow::Tensor<xpu, 2> bottom_len  = bottom[0]->length;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
+	mshadow::Tensor<xpu, 2> top_len = top[0]->length;
 
     // conv var len to static len, no need to forward length info
 
@@ -134,6 +135,7 @@ class WholePoolingLayer : public Layer<xpu>{
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
         int begin = 0, end = bottom_len[batch_idx][seq_idx]; 
+		top_len[batch_idx][seq_idx] = 1;
         utils::Assert(end >= 0 && begin <= end, "WholePoolingLayer: sequence length error.");
 
         if (pool_type == "max") {

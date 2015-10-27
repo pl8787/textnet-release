@@ -26,6 +26,7 @@ class SoftmaxFuncVarLenLayer : public Layer<xpu>{
   
   virtual void Require() {
     // default value, just set the value you want
+    this->defaults["crop"] = SettingV(0.00001f);
     
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -38,6 +39,8 @@ class SoftmaxFuncVarLenLayer : public Layer<xpu>{
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
+
+	crop = setting["crop"].fVal();
                             
     utils::Check(bottom.size() == BottomNodeNum(),
                  "SoftmaxFuncVarLenLayer:bottom size problem."); 
@@ -52,7 +55,11 @@ class SoftmaxFuncVarLenLayer : public Layer<xpu>{
                  "SoftmaxFuncVarLenLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                  "SoftmaxFuncVarLenLayer:top size problem.");
-    top[0]->Resize(bottom[0]->data.shape_, true);
+    top[0]->Resize(bottom[0]->data.shape_, bottom[0]->length.shape_, true);
+	if (show_info) {
+		bottom[0]->PrintShape("bottom0");
+		top[0]->PrintShape("top0");
+	}
   }
 
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
@@ -73,9 +80,9 @@ class SoftmaxFuncVarLenLayer : public Layer<xpu>{
         mshadow::Tensor<xpu,1> output =    top_data[batch_idx][seq_idx].Slice(0, length);
         mshadow::Softmax(output, input);
         for (int i = 0; i < output.size(0); ++i) {
-          if (output[i] < 0.00001f) {
+          if (output[i] < crop) {
             std::cout << "SoftmaxFuncVarLenLayer: WARNING, prob too small, crop." << std::endl;
-            output[i] = 0.00001f;
+            output[i] = crop;
           }
         }
       }
@@ -114,6 +121,7 @@ class SoftmaxFuncVarLenLayer : public Layer<xpu>{
     }
   }
  // protected:
+ float crop;
 };
 }  // namespace layer
 }  // namespace textnet

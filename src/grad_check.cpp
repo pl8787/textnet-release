@@ -1453,7 +1453,69 @@ void TestDynamicKMaxPoolingLayer(mshadow::Random<cpu>* prnd) {
   cout << "Done." << endl;
 }
 
+void TestSelectSubRepByTokenLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check SelectSubRepByTokenLayer." << endl;
+  Node<cpu> bottom0, bottom1;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom0);
+  bottoms.push_back(&bottom1);
+  tops.push_back(&top);
+  
+  bottom0.Resize(Shape4(2,1,1,4), true);
+  bottom1.Resize(Shape4(2,1,4,2), true);
+  bottom0.length = 3;
+  bottom1.length = 3;
+  bottom0.data = 1;
+  bottom0.data[0][0][0][0] = 0;
+  bottom0.data[0][0][0][2] = 0;
+  bottom0.data[1][0][0][1] = 0;
+  prnd->SampleUniform(&bottom1.data, -0.1, 0.1);
+  
+  map<string, SettingV> setting;
+  {
+    setting["token"] = 0;
+  }
 
+  Layer<cpu> *layer = CreateLayer<cpu>(kSelectSubRepByToken);
+  layer->PropAll();
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+  layer->Forward(bottoms, tops);
+  top.diff = 1.f; // bottom.data;
+  PrintTensor("bottom0", bottom0.data);
+  PrintTensor("bottom1", bottom1.data);
+  PrintTensor("top", top.data);
+  PrintTensor("top", top.length);
+  exit(0);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer, bottoms, tops);
+  // PrintTensor("bottom0_diff", bottom0.diff);
+  // PrintTensor("bottom1_diff", bottom1.diff);
+
+  // cout << "Check Grad." << endl;
+  // cker->CheckGrad(layer, bottoms, tops);
+
+  // layer->Forward(bottoms, tops);
+  // layer->Backprop(bottoms, tops);
+  // PrintTensor("b0_data", bottoms[0]->data);
+  // PrintTensor("t_data",  tops[0]->data);
+  // PrintTensor("b0_length", bottoms[0]->length);
+  // PrintTensor("t_length", tops[0]->length);
+  // PrintTensor("b0_diff", bottoms[0]->diff);
+  // PrintTensor("t_diff", tops[0]->diff);
+  cout << "Done." << endl;
+}
 void TestMatchTopKPoolingLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check MatchTopKPoolingLayer." << endl;
   Node<cpu> bottom0, bottom1, bottom2;
@@ -3021,7 +3083,8 @@ int main(int argc, char *argv[]) {
   // TestConvolutionLayer(&rnd);
   // TestMatchLayer(&rnd);
   // TestMatchTensorLayer(&rnd);
-  TestMatchTopKPoolingLayer(&rnd);
+  // TestMatchTopKPoolingLayer(&rnd);
+  TestSelectSubRepByTokenLayer(&rnd);
   // TestMatchWeightedDotLayer(&rnd);
   // TestGruLayer(&rnd);
   // TestMatchMultiLayer(&rnd);
@@ -3046,7 +3109,7 @@ int main(int argc, char *argv[]) {
   // TestSumLayer(&rnd);
   // TestTopkPoolingLayer(&rnd);
   // TestHingeLossLayer(&rnd);
-  TestListwiseMeasureLayer(&rnd);
+  // TestListwiseMeasureLayer(&rnd);
   // TestQATextDataLayer(&rnd);
   return 0;
 }
