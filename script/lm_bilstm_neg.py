@@ -46,7 +46,7 @@ def gen_lm_bilstm_mlp(d_mem, init, lr, dataset, l2, lstm_norm2, negative_num):
     layer['bottom_nodes'] = []
     layer['top_nodes'] = ['x', 'position', 'sample', 'y']
     layer['layer_name'] = 'train_data'
-    layer['layer_type'] = 74
+    layer['layer_type'] = 74 # negative sample input layer
     layer['tag'] = ['Train']
     setting = {}
     layer['setting'] = setting

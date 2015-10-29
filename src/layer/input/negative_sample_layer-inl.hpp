@@ -12,6 +12,9 @@
 namespace textnet {
 namespace layer {
 
+// this is a input layer for negative sampling based models, such as word2vec, nnlm
+// the layer output a sentence, the sampled positions for prediction, 
+// the words and the labels of the words (1,0,0,0,0, positive for the first, negative for others)
 template<typename xpu>
 class NegativeSampleLayer : public Layer<xpu>{
  public:

@@ -15,6 +15,9 @@ namespace layer {
 
 typedef float orc_real;
 
+// this is a two-level softmax layer for training a neural netword language model
+// each word is assigned to one class
+// the final word probability is the product of the word-class prob and the in-class prob
 template<typename xpu>
 class WordClassSoftmaxLossLayer : public Layer<xpu>{
  public:

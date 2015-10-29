@@ -58,12 +58,13 @@
 #include "./input/next_basket_data_layer-inl.hpp"
 #include "./input/sequence_classification_data_layer-inl.hpp"
 #include "./input/negative_sample_layer-inl.hpp"
-#include "./input/word_class_input_layer-inl.hpp"
+#include "./input/lm_input_layer-inl.hpp"
 #include "./input/label_feat_value_layer-inl.hpp"
 #include "./input/match_phrase_rep_layer-inl.hpp"
 #include "./input/pair_textdata_layer-inl.hpp"
 #include "./input/list_textdata_layer-inl.hpp"
 #include "./input/qa_textdata_layer-inl.hpp"
+#include "./input/word_rep_input_layer-inl.hpp"
 #include "./loss/hingeloss_layer-inl.hpp"
 #include "./loss/cross_entropy_loss_layer-inl.hpp"
 #include "./loss/pairhingeloss_layer-inl.hpp"
@@ -71,8 +72,9 @@
 #include "./loss/accuracy_layer-inl.hpp"
 #include "./loss/negative_sample_loss_layer-inl.hpp"
 #include "./loss/word_class_softmax_loss_layer-inl.hpp"
-#include "./loss/lstm_autoencoder_softmax_loss_layer-inl.hpp"
+#include "./loss/lm_softmax_loss_layer-inl.hpp"
 #include "./loss/listwise_measure_layer-inl.hpp"
+#include "./loss/euclid_distance_loss_layer-inl.hpp"
 
 namespace textnet {
 namespace layer {
@@ -128,8 +130,8 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kSoftmaxFuncVarLen: return new SoftmaxFuncVarLenLayer<xpu>(type);
     case kNegativeSampleLoss: return new NegativeSampleLossLayer<xpu>(type);
     case kWordClassSoftmaxLoss: return new WordClassSoftmaxLossLayer<xpu>(type);
-    case kLstmAutoencoderSoftmaxLoss: return new LstmAutoencoderSoftmaxLossLayer<xpu>(type);
-    case kWordClassInput: return new WordClassInputLayer<xpu>(type);
+    case kLmSoftmaxLoss: return new LmSoftmaxLossLayer<xpu>(type);
+    case kLmInput: return new LmInputLayer<xpu>(type);
     case kLabelFeatValue: return new LabelFeatValueLayer<xpu>(type);
     case kSumByAxis: return new SumLayer<xpu>(type);
     case kAccuracy: return new AccuracyLayer<xpu>(type);
@@ -153,6 +155,8 @@ Layer<xpu>* CreateLayer_(LayerType type) {
 	case kListwiseMeasure: return new ListwiseMeasureLayer<xpu>(type);
 	case kQATextData: return new QATextDataLayer<xpu>(type);
     case kSelectSubRepByToken: return new SelectSubRepByTokenLayer<xpu>(type);
+    case kWordRepInput: return new WordRepInputLayer<xpu>(type);
+    case kEuclidDistanceLoss: return new EuclidDistanceLossLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }

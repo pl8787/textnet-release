@@ -60,9 +60,9 @@ class ProductLayer : public Layer<xpu> {
     top[0]->Resize(shape0[0], shape0[1], shape0[2], output_size, true);
 
 	if (show_info) {
-		bottom[0]->PrintShape("bottom0");
-		bottom[1]->PrintShape("bottom1");
-		top[0]->PrintShape("top0");
+      bottom[0]->PrintShape("bottom0");
+      bottom[1]->PrintShape("bottom1");
+      top[0]->PrintShape("top0");
 	}
   }
   

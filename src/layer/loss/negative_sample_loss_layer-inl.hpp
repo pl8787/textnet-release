@@ -13,6 +13,10 @@
 namespace textnet {
 namespace layer {
 
+// this is the loss layer for negative sampling based models such as word2vec, NNLM
+// the inputs are pred_pred, word_rep and labels
+// the word_reps are sampled by negative sample input layer
+// the labels are (1,0,0,0,0, positive for the first, negative for the others)
 template<typename xpu>
 class NegativeSampleLossLayer : public Layer<xpu>{
  public:

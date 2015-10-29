@@ -224,7 +224,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2, is_pretrain, pretra
         layer['bottom_nodes'] = ['hidden_drop_rep']
     else:
         layer['bottom_nodes'] = ['dpool_rep']
-    layer['bottom_nodes'] = ['dpool_rep']
+    # layer['bottom_nodes'] = ['dpool_rep']
     layer['top_nodes'] = ['softmax_prob']
     layer['layer_name'] = 'softmax_fullconnect'
     layer['layer_type'] = 11 

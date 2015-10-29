@@ -97,21 +97,23 @@ const int kAccuracy = 56;
 const int kCrossEntropyLoss = 57;
 const int kNegativeSampleLoss = 58;
 const int kWordClassSoftmaxLoss = 59;
-const int kLstmAutoencoderSoftmaxLoss = 60;
+const int kLmSoftmaxLoss = 60;
 const int kListwiseMeasure = 61;
+const int kEuclidDistanceLoss = 62;
 
 // Input Layer 71-
 const int kTextData = 71;
 const int kSequenceClassificationData = 72;
 const int kNextBasketData = 73;
 const int kNegativeSample = 74;
-const int kWordClassInput = 75;
+const int kLmInput = 75;
 const int kLabelFeatValue = 76;
 const int kLstmAutoencoderInput = 77;
 const int kMatchPhraseRep = 78;
 const int kPairTextData = 79;
 const int kListTextData = 80;
 const int kQATextData = 81;
+const int kWordRepInput = 82;
 
 /*! \brief these are enumeration */
 const int kInit = -1;

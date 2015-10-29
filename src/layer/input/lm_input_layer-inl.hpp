@@ -1,5 +1,5 @@
-#ifndef TEXTNET_LAYER_WORD_CLASS_INPUT_LAYER_INL_HPP_
-#define TEXTNET_LAYER_WORD_CLASS_INPUT_LAYER_INL_HPP_
+#ifndef TEXTNET_LAYER_LM_INPUT_LAYER_INL_HPP_
+#define TEXTNET_LAYER_LM_INPUT_LAYER_INL_HPP_
 
 #include <iostream>
 #include <fstream>
@@ -12,14 +12,21 @@
 namespace textnet {
 namespace layer {
 
+// this layer is originally designed for pretrain LSTM
+// it reads a sentence, randomly select some positions for prediction
+// the label of a prediction positon is the word on the position
+// this layer also supports tranidional LSTM language model training
+// when position is set to exactly the max sentence length
+// this layer will predict all words except the first word
 template<typename xpu>
-class WordClassInputLayer : public Layer<xpu>{
+class LmInputLayer : public Layer<xpu>{
  public:
-  WordClassInputLayer(LayerType type) { this->layer_type = type; }
-  virtual ~WordClassInputLayer(void) {}
+  LmInputLayer(LayerType type) { this->layer_type = type; }
+  virtual ~LmInputLayer(void) {}
   
   virtual int BottomNodeNum() { return 0; }
-  virtual int TopNodeNum() { return 3; } // x, pos, y
+  // x (the original sentence), pos (the positions need to predict), y (the true label/word of the positions)
+  virtual int TopNodeNum() { return 3; }
   virtual int ParamNodeNum() { return 0; }
 
   virtual void Require() {
@@ -33,6 +40,7 @@ class WordClassInputLayer : public Layer<xpu>{
     this->defaults["max_doc_len"] = SettingV();
     this->defaults["position_num"] = SettingV();
     this->defaults["vocab_size"] = SettingV();
+    this->defaults["is_pred_first_word"] = SettingV(); // for tranditional LM, the first word is not predicted
     
     Layer<xpu>::Require();
   }
@@ -43,16 +51,15 @@ class WordClassInputLayer : public Layer<xpu>{
                           mshadow::Random<xpu> *prnd) {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
     
-    utils::Check(bottom.size() == BottomNodeNum(),
-                  "WordClassInputLayer:bottom size problem."); 
-    utils::Check(top.size() == TopNodeNum(),
-                  "WordClassInputLayer:top size problem.");
+    utils::Check(bottom.size() == BottomNodeNum(), "LmInputLayer:bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(), "LmInputLayer:top size problem.");
                   
-    data_file = setting["data_file"].s_val;
-    batch_size = setting["batch_size"].i_val;
-    max_doc_len = setting["max_doc_len"].i_val;
+    data_file    = setting["data_file"].s_val;
+    batch_size   = setting["batch_size"].i_val;
+    max_doc_len  = setting["max_doc_len"].i_val;
     position_num = setting["position_num"].i_val;
-    vocab_size = setting["vocab_size"].i_val;
+    vocab_size   = setting["vocab_size"].i_val;
+    is_pred_first_word   = setting["is_pred_first_word"].b_val;
 
     ReadSequenceData();
     
@@ -61,20 +68,26 @@ class WordClassInputLayer : public Layer<xpu>{
   }
 
   // return a list of prediction positions
+  // if the position count is bigger than sentence length, -1 is padded
+  // the sampled positions are un-ordered
   void position_sampler(int length, vector<int> &position_sample) {
     position_sample.clear();
     vector<int> shuffle_pos;
     for (int i = 0; i < length; ++i) {
+      if (!is_pred_first_word && i == 0) {
+        continue;
+      }
       shuffle_pos.push_back(i);
     } 
     this->sampler.Shuffle(shuffle_pos);
 
-    int end = length < position_num ? length : position_num;
+    int end = shuffle_pos.size() < position_num ? shuffle_pos.size() : position_num;
     position_sample = vector<int>(shuffle_pos.begin(), shuffle_pos.begin() + end);
-    for (int i = length; i < position_num; ++i) {
+    std::sort(position_sample.begin(), position_sample.end());
+    while (position_sample.size() < position_num) {
       position_sample.push_back(-1);
     }
-    utils::Check(position_sample.size() == position_num, "WordClassInputLayer: sampler error.");
+    utils::Check(position_sample.size() == position_num, "LmInputLayer: sampler error.");
   }
   
   void ReadSequenceData() {
@@ -101,14 +114,12 @@ class WordClassInputLayer : public Layer<xpu>{
       iss.clear();
 	  iss.seekg(0, iss.beg);
       iss.str(lines[i]);
-      // int label = -1;
-      // iss >> label; // not used
       int j = 0;
       while (!iss.eof()) {
         iss >> data_set[i][0][0][j++];
       }
       length[i] = j;
-      utils::Check(j <= max_doc_len, "WordClassInputLayer: doc length error.");
+      utils::Check(j <= max_doc_len, "LmInputLayer: doc length error.");
     }
 
     // gen example ids
@@ -120,17 +131,15 @@ class WordClassInputLayer : public Layer<xpu>{
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top,
 					   bool show_info = false) {
-    utils::Check(bottom.size() == BottomNodeNum(),
-                  "WordClassInputLayer:bottom size problem."); 
-    utils::Check(top.size() == TopNodeNum(),
-                  "WordClassInputLayer:top size problem.");
-    top[0]->Resize(batch_size, 1, 1, max_doc_len, true);                // x
-    top[1]->Resize(batch_size, position_num, 1, 1, true);               // pos
-    top[2]->Resize(batch_size, position_num, 1, 1, true);               // y
+    utils::Check(bottom.size() == BottomNodeNum(), "LmInputLayer:bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(), "LmInputLayer:top size problem.");
+    top[0]->Resize(batch_size, 1, 1, max_doc_len,  true);               // x
+    top[1]->Resize(batch_size, 1, position_num, 1, true);               // pos
+    top[2]->Resize(batch_size, 1, position_num, 1, true);               // y
 	if (show_info) {
-		top[0]->PrintShape("top0");
-		top[1]->PrintShape("top1");
-		top[2]->PrintShape("top2");
+      top[0]->PrintShape("top0");
+      top[1]->PrintShape("top1");
+      top[2]->PrintShape("top2");
 	}
   }
   
@@ -156,13 +165,13 @@ class WordClassInputLayer : public Layer<xpu>{
       
       position_sampler(length[example_id], position_sample);
       for (int pos_idx = 0; pos_idx < position_num; ++pos_idx) {
-        pos[batch_idx][pos_idx][0][0] = position_sample[pos_idx];
+        pos[batch_idx][0][pos_idx][0] = position_sample[pos_idx];
         if (position_sample[pos_idx] == -1) {
-          utils::Check(false, "WordClassInputLayer: position must >= 0");
+          // utils::Check(false, "LmInputLayer: position must >= 0"); // this is a constraint at present
           continue;
         }
         int word_idx = x[batch_idx][0][0][position_sample[pos_idx]];
-        y[batch_idx][pos_idx][0][0] = word_idx;
+        y[batch_idx][0][pos_idx][0] = word_idx;
       }
       
       line_ptr = (line_ptr + 1) % line_count;
@@ -181,6 +190,7 @@ class WordClassInputLayer : public Layer<xpu>{
   mshadow::TensorContainer<xpu, 1, int> length;
   std::vector<int> example_ids;
   int line_count, line_ptr, shuffle_seed;
+  bool is_pred_first_word;
   utils::RandomSampler sampler;
 };
 }  // namespace layer

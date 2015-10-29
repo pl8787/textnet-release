@@ -779,6 +779,57 @@ class DatasetCfg:
             self.train_max_iters = 5000
             self.valid_max_iters = self.n_valid/ self.valid_batch_size
             self.test_max_iters  = self.n_test / self.test_batch_size
+        elif dataset == 'char_lstm_w2v':
+            self.data_dir = '/home/wsx/data/char_lstm_w2v/dim300/'
+            self.train_data_file = self.data_dir + 'train'
+            self.valid_data_file = self.data_dir + 'valid'
+            self.test_data_file  = self.data_dir + 'test'
+            
+            self.max_word_len = 100
+
+            self.d_word_rep = 300
+            self.batch_size = 100
+            self.train_batch_size = 100
+            self.valid_batch_size = 100 
+            self.test_batch_size  = 100 
+            self.n_train = 50000
+            self.n_valid = 50000
+            self.n_test = 5000
+            self.train_display_interval = 10
+            self.valid_display_interval = 1000 
+            self.test_display_interval  = 1000 
+            # self.train_max_iters = (self.n_train/self.train_batch_size) * 5
+            # self.valid_max_iters = (self.n_valid/10)/self.valid_batch_size
+            # self.test_max_iters  = (self.n_test)/self.test_batch_size
+            self.train_max_iters = 40000
+            self.valid_max_iters = 500 
+            self.test_max_iters  = 50
+        elif dataset == 'sogou_im':
+            self.data_dir = '/home/wsx/data/sogou_im/'
+            self.train_data_file = self.data_dir + 'data.wid.split.nospace.train'
+            self.valid_data_file = self.data_dir + 'data.wid.split.nospace.valid'
+            self.test_data_file  = self.data_dir + 'data.wid.split.nospace.test'
+            
+            self.max_doc_len = 20
+            self.vocab_size = 5842
+
+            self.d_word_rep = 100
+            self.batch_size = 100
+            self.train_batch_size = 100
+            self.valid_batch_size = 100 
+            self.test_batch_size  = 100 
+            self.n_train = 50000
+            self.n_valid = 50000
+            self.n_test = 5000
+            self.train_display_interval = 10
+            self.valid_display_interval = 1000000
+            self.test_display_interval  = 200
+            # self.train_max_iters = (self.n_train/self.train_batch_size) * 5
+            # self.valid_max_iters = (self.n_valid/10)/self.valid_batch_size
+            # self.test_max_iters  = (self.n_test)/self.test_batch_size
+            self.train_max_iters = 40000
+            self.valid_max_iters = 50 
+            self.test_max_iters  = 50
         else:
             assert False
 

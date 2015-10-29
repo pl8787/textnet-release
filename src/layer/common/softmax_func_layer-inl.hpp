@@ -39,10 +39,8 @@ class SoftmaxFuncLayer : public Layer<xpu>{
                           mshadow::Random<xpu> *prnd) {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
                             
-    utils::Check(bottom.size() == BottomNodeNum(),
-                 "SoftmaxFuncLayer:bottom size problem."); 
-    utils::Check(top.size() == TopNodeNum(),
-                 "SoftmaxFuncLayer:top size problem.");
+    utils::Check(bottom.size() == BottomNodeNum(), "SoftmaxFuncLayer:bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(), "SoftmaxFuncLayer:top size problem.");
     axis = setting["axis"].iVal();
     utils::Check(0 < axis && axis < 4, "SoftmaxFuncLayer: axis error.");
       
@@ -51,20 +49,16 @@ class SoftmaxFuncLayer : public Layer<xpu>{
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top,
 					   bool show_info = false) {
-    utils::Check(bottom.size() == BottomNodeNum(),
-                 "SoftmaxFuncLayer:bottom size problem."); 
-    utils::Check(top.size() == TopNodeNum(),
-                 "SoftmaxFuncLayer:top size problem.");
-    // batch_size = bottom[0]->data.size(0);  
+    utils::Check(bottom.size() == BottomNodeNum(), "SoftmaxFuncLayer:bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(), "SoftmaxFuncLayer:top size problem.");
     top[0]->Resize(bottom[0]->data.shape_, true);
   }
 
   void checkNan(float *p, int l) {
-      for (int i = 0; i < l; ++i) {
-          assert(!isnan(p[i]));
-      }
+    for (int i = 0; i < l; ++i) {
+      assert(!isnan(p[i]));
+    }
   }
-
 
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
@@ -76,10 +70,10 @@ class SoftmaxFuncLayer : public Layer<xpu>{
     
     int row = 1, col = 1;
     for (int i = 0; i < axis; ++i) {
-        row *= int(bottom_shape[i]);
+      row *= int(bottom_shape[i]);
     }
     for (int i = axis; i < 4; ++i) {
-        col *= int(bottom_shape[i]);
+      col *= int(bottom_shape[i]);
     }
 
     mshadow::Tensor<xpu, 2> input(bottom_data.dptr_, mshadow::Shape2(row, col));
@@ -107,10 +101,10 @@ class SoftmaxFuncLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 4> top_diff    = top[0]->diff;
     int row = 1, col = 1;
     for (int i = 0; i < axis; ++i) {
-        row *= int(bottom_shape[i]);
+      row *= int(bottom_shape[i]);
     }
     for (int i = axis; i < 4; ++i) {
-        col *= int(bottom_shape[i]);
+      col *= int(bottom_shape[i]);
     }
     mshadow::Tensor<xpu, 2> output_data(top_data.dptr_,   mshadow::Shape2(row, col));
     mshadow::Tensor<xpu, 2> input_diff(bottom_diff.dptr_, mshadow::Shape2(row, col));
@@ -137,7 +131,6 @@ class SoftmaxFuncLayer : public Layer<xpu>{
   
  protected:
   int axis;
-
 };
 }  // namespace layer
 }  // namespace textnet
