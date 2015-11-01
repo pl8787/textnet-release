@@ -61,7 +61,6 @@ class LstmLayer : public Layer<xpu> {
     
     utils::Check(bottom.size() == BottomNodeNum(), "LstmLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "LstmLayer:top size problem.");
-    utils::Check(setting.count("d_mem"), "LstmLayer:setting problem.");
                   
     d_mem   = setting["d_mem"].iVal();
     d_input = bottom[0]->data.size(3);
