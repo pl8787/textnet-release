@@ -121,12 +121,18 @@ void run_cv(Json::Value &cfg_root, int netTagType, int cv_fold) {
   }
 }
 
+float *p_sigmoid_lookup_table;
+
 int main(int argc, char *argv[]) {
   string model_file = "model/matching.tvt.model";
   bool need_cross_valid = false;
   // bool need_param = false;
   if (argc > 1) {
     model_file = string(argv[1]);
+  }
+  p_sigmoid_lookup_table = new float[3000000];
+  for (int i = 0; i < 3000000; ++i) {
+    p_sigmoid_lookup_table[i] = 0;
   }
   /*
   for (int i = 2; i < argc; ++i) {

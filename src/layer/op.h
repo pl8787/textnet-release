@@ -4,6 +4,7 @@
 
 #include <mshadow/tensor.h>
 
+extern float *p_sigmoid_lookup_table;
 namespace textnet {
 /*! \brief operations for ActivationLayer */
 namespace op {
@@ -16,6 +17,21 @@ struct identity {
 struct identity_grad {
   MSHADOW_XINLINE static real_t Map(real_t a) {
     return 1.0f;
+  }
+};
+
+
+/*! \brief sigmoid unit */
+struct sigmoid_lookup {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    if (a > 100) {
+      a = 100;
+    } else if (a < -100) {
+      a = -100;
+    }
+    a += 100;
+    int pos = a * 10000;
+    return p_sigmoid_lookup_table[pos];
   }
 };
 

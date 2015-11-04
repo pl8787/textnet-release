@@ -87,6 +87,7 @@ const int kDynamicKMaxPooling = 10001;
 const int kMatchTopKPooling = 10002;
 const int kSelectSubRepByToken = 10003;
 const int kLstmD2 = 10004;
+const int kLstmD2Optimize = 10005;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;

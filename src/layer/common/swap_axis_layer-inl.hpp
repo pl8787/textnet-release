@@ -48,9 +48,9 @@ class SwapAxisLayer : public Layer<xpu>{
     axis1 = setting["axis1"].iVal();
     axis2 = setting["axis2"].iVal();
     if (axis1 > axis2) {
-        int temp = axis1;
-        axis1 = axis2;
-        axis2 = temp;
+      int temp = axis1;
+      axis1 = axis2;
+      axis2 = temp;
     }
     utils::Check(axis1 != axis2, "SwapAxisLayer: axis1 == axis2.");
   }
@@ -71,8 +71,8 @@ class SwapAxisLayer : public Layer<xpu>{
     top[0]->Resize(top_shape, bottom[0]->length.shape_, true);
 
     if (show_info) {
-        bottom[0]->PrintShape("bottom0");
-        top[0]->PrintShape("top0");
+      bottom[0]->PrintShape("bottom0");
+      top[0]->PrintShape("top0");
     }
   }
 
@@ -81,12 +81,12 @@ class SwapAxisLayer : public Layer<xpu>{
     // Check for reshape
     bool need_reshape = false;
     if (! (bottom[0]->data.shape_ == bottom_shape)) {
-        need_reshape = true;
+      need_reshape = true;
     }
 
     // Do reshape 
     if (need_reshape) {
-        this->Reshape(bottom, top);
+      this->Reshape(bottom, top);
     }
   }
   
@@ -168,8 +168,7 @@ class SwapAxisLayer : public Layer<xpu>{
   }
   
  protected:
-  int axis1;
-  int axis2;
+  int axis1, axis2;
 
   mshadow::Shape<4> top_shape;
   mshadow::Shape<4> bottom_shape;

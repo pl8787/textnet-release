@@ -1327,7 +1327,7 @@ void TestDiagRecurrentLayer(mshadow::Random<cpu>* prnd) {
   map<string, SettingV> setting;
   {
     setting["d_mem"] = 2;
-    setting["reverse"] = true;
+    setting["reverse"] = false;
     map<string, SettingV> &w_filler = *(new map<string, SettingV>());
       w_filler["init_type"] = SettingV(initializer::kUniform);
       w_filler["range"] = SettingV(1.f);
@@ -2250,20 +2250,22 @@ void TestLstmD2Layer(mshadow::Random<cpu>* prnd) {
   bottoms.push_back(&bottom);
   tops.push_back(&top);
   
-  bottom.Resize(Shape4(2,4,5,3), Shape2(2,2), true);
-  bottom.length = 2;
+  int batch_size = 2;
+  int max_len = 6;
+  int d_mem = 3;
+  bottom.Resize(Shape4(batch_size, max_len, max_len, d_mem), Shape2(batch_size,2), true);
+  bottom.length = 4;
   prnd->SampleUniform(&bottom.data, -1.0, 1.0);
   
   map<string, SettingV> setting;
   {
-    setting["d_input"] = SettingV(5);
-    setting["d_mem"] = SettingV(3);
+    setting["d_mem"] = SettingV(d_mem);
     setting["no_bias"] = SettingV(true);
-    setting["reverse"] = SettingV(true);
+    setting["reverse"] = SettingV(false);
       
     map<string, SettingV> &w_filler = *(new map<string, SettingV>());
       w_filler["init_type"] = SettingV(initializer::kUniform);
-      w_filler["range"] = SettingV(0.01f);
+      w_filler["range"] = SettingV(0.1f);
     setting["w_filler"] = SettingV(&w_filler);
 
     map<string, SettingV> &b_filler = *(new map<string, SettingV>());
@@ -2280,23 +2282,26 @@ void TestLstmD2Layer(mshadow::Random<cpu>* prnd) {
     setting["b_updater"] = SettingV(&w_updater);
   }
   /// Test Activation Layer
-  Layer<cpu> * layer_fc = CreateLayer<cpu>(kLstmD2);
+  Layer<cpu> * layer_fc = CreateLayer<cpu>(kLstmD2Optimize);
   layer_fc->PropAll();
   layer_fc->SetupLayer(setting, bottoms, tops, prnd);
   layer_fc->Reshape(bottoms, tops);
+  layer_fc->Forward(bottoms, tops);
+  PrintTensor("b0", bottoms[0]->data);
+  PrintTensor("t0", tops[0]->data);
   
-  using namespace checker;
-  Checker<cpu> * cker = CreateChecker<cpu>();
-  map<string, SettingV> setting_checker;
-  setting_checker["range_min"] = SettingV(-0.001f);
-  setting_checker["range_max"] = SettingV(0.001f);
-  setting_checker["delta"] = SettingV(0.0001f);
-  cker->SetupChecker(setting_checker, prnd);
-  cout << "Check Error." << endl;
-  cker->CheckError(layer_fc, bottoms, tops);
+  // using namespace checker;
+  // Checker<cpu> * cker = CreateChecker<cpu>();
+  // map<string, SettingV> setting_checker;
+  // setting_checker["range_min"] = SettingV(-0.001f);
+  // setting_checker["range_max"] = SettingV(0.001f);
+  // setting_checker["delta"] = SettingV(0.0001f);
+  // cker->SetupChecker(setting_checker, prnd);
+  // cout << "Check Error." << endl;
+  // cker->CheckError(layer_fc, bottoms, tops);
 
-  cout << "Check Grad." << endl;
-  cker->CheckGrad(layer_fc, bottoms, tops);
+  // cout << "Check Grad." << endl;
+  // cker->CheckGrad(layer_fc, bottoms, tops);
 }
 
 void TestLstmLayer(mshadow::Random<cpu>* prnd) {
@@ -3120,7 +3125,12 @@ void TestBatchDuplicateLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckError(layer_batch_duplicate, bottoms, tops);
 }
 
+float *p_sigmoid_lookup_table;
 int main(int argc, char *argv[]) {
+  p_sigmoid_lookup_table = new float[3000000];
+  for (int i = 0; i < 3000000; ++i) {
+    p_sigmoid_lookup_table[i] = 0;
+  }
   mshadow::Random<cpu> rnd(37);
   // TestActivationLayer(&rnd);
   // TestFcLayer(&rnd);

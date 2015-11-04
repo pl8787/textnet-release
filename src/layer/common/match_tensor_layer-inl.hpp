@@ -131,9 +131,9 @@ class MatchTensorLayer : public Layer<xpu>{
     top[0]->Resize(batch_size, d_hidden, doc_len, doc_len, batch_size, 2, true);
 
 	if (show_info) {
-		bottom[0]->PrintShape("bottom0");
-		bottom[1]->PrintShape("bottom1");
-		top[0]->PrintShape("top0");
+	  bottom[0]->PrintShape("bottom0");
+	  bottom[1]->PrintShape("bottom1");
+	  top[0]->PrintShape("top0");
 	}
   }
 
@@ -142,12 +142,12 @@ class MatchTensorLayer : public Layer<xpu>{
     // Check for reshape
     bool need_reshape = false;
     if (batch_size != bottom[0]->data.size(0)) {
-        need_reshape = true;
+      need_reshape = true;
     }
 
     // Do reshape 
     if (need_reshape) {
-        this->Reshape(bottom, top);
+      this->Reshape(bottom, top);
     }
   }
  

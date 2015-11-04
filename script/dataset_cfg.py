@@ -289,6 +289,7 @@ class DatasetCfg:
             self.dp_rate = 0.0
             self.num_class = 2
             self.d_word_rep = 50
+            # print "ORC: WARNING: BATCH SIZE IS SET TO 2 FOR DEBUG."
             self.batch_size = 128
             self.train_batch_size = 128
             self.valid_batch_size = 128

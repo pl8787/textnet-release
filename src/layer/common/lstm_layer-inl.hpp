@@ -150,8 +150,8 @@ class LstmLayer : public Layer<xpu> {
     g_er.Resize(shape_gate, 0.f);
 
 	if (show_info) {
-		bottom[0]->PrintShape("bottom0");
-		top[0]->PrintShape("top0");
+	  bottom[0]->PrintShape("bottom0");
+	  top[0]->PrintShape("top0");
 	}
   }
 

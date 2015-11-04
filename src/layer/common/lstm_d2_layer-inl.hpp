@@ -7,11 +7,15 @@
 #include "../layer.h"
 #include "../../utils/utils.h"
 #include "../../io/json/json.h"
+#include <ctime>
+#include <chrono>
 #include <cassert>
 
 namespace textnet {
 namespace layer {
 
+
+using namespace std::chrono;
 
 // this implement is different with (Graves 2009)
 // we add a diagonal connnection 
@@ -19,7 +23,7 @@ template<typename xpu>
 class LstmD2Layer : public Layer<xpu> {
  public:
   LstmD2Layer(LayerType type) { this->layer_type = type; }
-  virtual ~LstmD2Layer(void) {}
+  virtual ~LstmD2Layer(void) { }
   
   virtual int BottomNodeNum() { return 1; }
   virtual int TopNodeNum() { return 1; }
@@ -61,7 +65,7 @@ class LstmD2Layer : public Layer<xpu> {
     
     utils::Check(bottom.size() == BottomNodeNum(), "LstmD2Layer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "LstmD2Layer:top size problem.");
-                  
+
     d_mem   = setting["d_mem"].iVal();
     d_input = bottom[0]->data.size(3);
     no_bias = setting["no_bias"].bVal();
@@ -162,7 +166,7 @@ class LstmD2Layer : public Layer<xpu> {
     checkNan(w_diff.dptr_, w_diff.size());
   }
 
-  void concat_input(Tensor2D x, Tensor2D h_l, Tensor2D h_m, Tensor2D h_t, Tensor2D input) {
+  void concat_input(Tensor2D &x, Tensor2D &h_l, Tensor2D &h_m, Tensor2D &h_t, Tensor2D &input) {
     utils::Check(x.size(0)  ==1 && h_l.size(0)==1 && h_m.size(0)==1 &&
                  h_t.size(0)==1 && input.size(0)  ==1, "LstmD2Layer: size error.");
     utils::Check(x.size(1)+h_l.size(1)+h_m.size(1)+h_t.size(1) == input.size(1), "LstmD2Layer: size error.");
@@ -208,6 +212,7 @@ class LstmD2Layer : public Layer<xpu> {
         cur_g += b_data;
       }
 
+      high_resolution_clock::time_point b_time_2 = high_resolution_clock::now();
       Tensor2D i, f_l, f_m, f_t, o, cc;
       SplitGate(cur_g, i, f_l, f_m, f_t, o, cc);
       i   = mshadow::expr::F<op::sigmoid>(i);   // logi
@@ -216,6 +221,8 @@ class LstmD2Layer : public Layer<xpu> {
       f_t = mshadow::expr::F<op::sigmoid>(f_t); // logi
       o   = mshadow::expr::F<op::sigmoid>(o);   // logi
       cc  = mshadow::expr::F<op::tanh>(cc);     // tanh 
+      high_resolution_clock::time_point e_time_2 = high_resolution_clock::now();
+      time_2 += duration_cast<duration<double>>(e_time_2 - b_time_2);
 
       cur_c = f_l * pre_c_l + f_m * pre_c_m + f_t * pre_c_t + i * cc;
       // if (!no_out_tanh) {
@@ -223,6 +230,8 @@ class LstmD2Layer : public Layer<xpu> {
       // } else {
       //   cur_h = o * cur_c; 
       // }
+      high_resolution_clock::time_point e_time_3 = high_resolution_clock::now();
+      time_3 += duration_cast<duration<double>>(e_time_3 - e_time_2);
   }
 
   // x: (x_max_len, y_max_len, d_input)
@@ -329,6 +338,7 @@ class LstmD2Layer : public Layer<xpu> {
     top[0]->length = mshadow::expr::F<op::identity>(bottom[0]->length);
 
     top_data = 0.f; c = 0.f, g = 0.f; c_er = 0.f; g_er = 0.f;
+    high_resolution_clock::time_point b_time_1 = high_resolution_clock::now();
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       int x_len = bottom_len[batch_idx][0];
       int y_len = bottom_len[batch_idx][1];
@@ -347,13 +357,16 @@ class LstmD2Layer : public Layer<xpu> {
                                    top_data[batch_idx]);
       }
     }
+    high_resolution_clock::time_point e_time_1 = high_resolution_clock::now();
+    time_1 += duration_cast<duration<double>>(e_time_1 - b_time_1);
+	utils::Printf("\tLSTM D2 Time:%fs,%fs,%f\n", time_1.count(), time_2.count(), time_3.count()); 
 // #if DEBUG
 //     checkNanParams();
 // #endif
   }
 
   // too tricky, may bring errors
-  void SplitGate(Tensor2D g, 
+  void SplitGate(Tensor2D &g, 
                  Tensor2D &i, 
                  Tensor2D &f_l, Tensor2D &f_m, Tensor2D &f_t, 
                  Tensor2D &o, 
@@ -696,6 +709,8 @@ class LstmD2Layer : public Layer<xpu> {
   // string param_file;
   mshadow::TensorContainer<xpu, 4> c, g, c_er, g_er;
   mshadow::TensorContainer<xpu, 2> begin_h, begin_c, begin_c_er, begin_h_er;
+  // clock_t time_1, time_2, time_3, time_4;
+  duration<double> time_1, time_2, time_3, time_4;
 };
 }  // namespace layer
 }  // namespace textnet

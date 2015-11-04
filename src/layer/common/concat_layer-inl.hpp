@@ -66,7 +66,12 @@ class ConcatLayer : public Layer<xpu>{
     }
     mshadow::Shape<4> shape_out = shape_in_0;
     shape_out[concat_dim_index] = out_size;
-    top[0]->Resize(shape_out, true);
+    if (concat_dim_index >= 2) {
+      // this is a patch, length is set to the sampe with bottom 0
+      top[0]->Resize(shape_out, bottom[0]->length.shape_, true);
+    } else {
+      top[0]->Resize(shape_out, true);
+    }
 
 	if (show_info) {
       for (int i = 0; i < nBottomNode; ++i) {
