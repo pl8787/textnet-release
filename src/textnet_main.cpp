@@ -121,7 +121,13 @@ void run_cv(Json::Value &cfg_root, int netTagType, int cv_fold) {
   }
 }
 
+float SIGMOID_MAX_INPUT = 20;
+int SIGMOID_TABLE_SIZE = 1000000;
 float *p_sigmoid_lookup_table;
+
+float TANH_MAX_INPUT = 20;
+int TANH_TABLE_SIZE = 1000000;
+float *p_tanh_lookup_table;
 
 int main(int argc, char *argv[]) {
   string model_file = "model/matching.tvt.model";
@@ -130,10 +136,21 @@ int main(int argc, char *argv[]) {
   if (argc > 1) {
     model_file = string(argv[1]);
   }
-  p_sigmoid_lookup_table = new float[3000000];
-  for (int i = 0; i < 3000000; ++i) {
-    p_sigmoid_lookup_table[i] = 0;
+  float max = SIGMOID_MAX_INPUT;
+  int len = SIGMOID_TABLE_SIZE;
+  p_sigmoid_lookup_table = new float[len];
+  for (int i = 0; i < len; ++i) {
+    float exp_val = exp((float(i)*2*max)/len - max); // map position to value, frow small to large
+    p_sigmoid_lookup_table[i] = exp_val/(exp_val+1);
   }
+  max = TANH_MAX_INPUT;
+  len = TANH_TABLE_SIZE;
+  p_tanh_lookup_table = new float[len];
+  for (int i = 0; i < len; ++i) {
+    float exp_val = exp(2*((float(i)*2*max)/len - max)); // map position to value, frow small to large
+    p_tanh_lookup_table[i] = (exp_val-1)/(exp_val+1);
+  }
+
   /*
   for (int i = 2; i < argc; ++i) {
 	if (string(argv[i]) == "cpu") {
@@ -165,5 +182,7 @@ int main(int argc, char *argv[]) {
     int n_fold = net_root["cross_validation"].asInt();
     run_cv(net_root, netTagType, n_fold);
   }
+  delete [] p_sigmoid_lookup_table;
+  delete [] p_tanh_lookup_table;
 }
 

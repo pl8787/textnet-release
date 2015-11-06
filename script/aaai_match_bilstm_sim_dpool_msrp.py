@@ -80,7 +80,6 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['tag'] = ['Valid']
     setting = {}
     layer['setting'] = setting
-    setting['batch_size'] = ds.valid_batch_size
     setting['data_file'] = ds.valid_data_file
     setting['max_doc_len'] = ds.max_doc_len
     setting['min_doc_len'] = ds.min_doc_len
@@ -94,7 +93,6 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2, lstm_norm2):
     layer['tag'] = ['Test']
     setting = {}
     layer['setting'] = setting
-    setting['batch_size'] = ds.test_batch_size
     setting['data_file'] = ds.test_data_file
     setting['max_doc_len'] = ds.max_doc_len
     setting['min_doc_len'] = ds.min_doc_len

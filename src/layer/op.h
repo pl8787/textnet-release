@@ -4,7 +4,13 @@
 
 #include <mshadow/tensor.h>
 
+extern float SIGMOID_MAX_INPUT;
+extern int SIGMOID_TABLE_SIZE;
 extern float *p_sigmoid_lookup_table;
+extern float TANH_MAX_INPUT;
+extern int TANH_TABLE_SIZE;
+extern float *p_tanh_lookup_table;
+
 namespace textnet {
 /*! \brief operations for ActivationLayer */
 namespace op {
@@ -20,18 +26,44 @@ struct identity_grad {
   }
 };
 
-
 /*! \brief sigmoid unit */
 struct sigmoid_lookup {
   MSHADOW_XINLINE static real_t Map(real_t a) {
-    if (a > 100) {
-      a = 100;
-    } else if (a < -100) {
-      a = -100;
+    if (a >= SIGMOID_MAX_INPUT) {
+      return 0.999999f;
+    } else if (a <= -SIGMOID_MAX_INPUT) {
+      return 0.000001f;
     }
-    a += 100;
-    int pos = a * 10000;
+    
+    int pos = ((a+SIGMOID_MAX_INPUT)/(2*SIGMOID_MAX_INPUT))*SIGMOID_TABLE_SIZE;
+    if (pos >= SIGMOID_TABLE_SIZE) {
+      pos = SIGMOID_TABLE_SIZE-1;
+    }
+    if (pos < 0) {
+      pos = 0; 
+    }
     return p_sigmoid_lookup_table[pos];
+  }
+};
+
+/*! \brief sigmoid unit */
+struct tanh_lookup {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    if (a >= TANH_MAX_INPUT) {
+      return 0.999999f;
+    } else if (a <= -TANH_MAX_INPUT) {
+      return -0.999999f;
+    }
+    
+    // NOTICE: float accuracy may cause problem here
+    int pos = ((a+TANH_MAX_INPUT)/(2*TANH_MAX_INPUT))*TANH_TABLE_SIZE;
+    if (pos >= TANH_TABLE_SIZE) {
+      pos = TANH_TABLE_SIZE-1;
+    }
+    if (pos < 0) {
+      pos = 0; 
+    }
+    return p_tanh_lookup_table[pos];
   }
 };
 

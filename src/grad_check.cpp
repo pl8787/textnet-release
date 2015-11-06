@@ -2254,7 +2254,10 @@ void TestLstmD2Layer(mshadow::Random<cpu>* prnd) {
   int max_len = 6;
   int d_mem = 3;
   bottom.Resize(Shape4(batch_size, max_len, max_len, d_mem), Shape2(batch_size,2), true);
-  bottom.length = 4;
+  bottom.length[0][0] = 2;
+  bottom.length[0][1] = 4;
+  bottom.length[1][0] = 3;
+  bottom.length[1][1] = 1;
   prnd->SampleUniform(&bottom.data, -1.0, 1.0);
   
   map<string, SettingV> setting;
@@ -2282,13 +2285,34 @@ void TestLstmD2Layer(mshadow::Random<cpu>* prnd) {
     setting["b_updater"] = SettingV(&w_updater);
   }
   /// Test Activation Layer
-  Layer<cpu> * layer_fc = CreateLayer<cpu>(kLstmD2Optimize);
+  Layer<cpu> * layer_fc = CreateLayer<cpu>(kLstmD2);
   layer_fc->PropAll();
   layer_fc->SetupLayer(setting, bottoms, tops, prnd);
   layer_fc->Reshape(bottoms, tops);
   layer_fc->Forward(bottoms, tops);
-  PrintTensor("b0", bottoms[0]->data);
-  PrintTensor("t0", tops[0]->data);
+  prnd->SampleUniform(&top.diff, -1.0, 1.0);
+  bottom.diff = 0.f;
+  // PrintTensor("t0_diff", tops[0]->diff);
+  layer_fc->Backprop(bottoms, tops);
+  PrintTensor("b0_data", bottoms[0]->data);
+  PrintTensor("t0_data", tops[0]->data);
+  PrintTensor("b0_diff", bottoms[0]->diff);
+  PrintTensor("t0_diff", tops[0]->diff);
+  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+  layer_fc->Forward(bottoms, tops);
+  prnd->SampleUniform(&top.diff, -1.0, 1.0);
+  layer_fc->Backprop(bottoms, tops);
+  PrintTensor("b0_data", bottoms[0]->data);
+  PrintTensor("t0_data", tops[0]->data);
+  PrintTensor("b0_diff", bottoms[0]->diff);
+  PrintTensor("t0_diff", tops[0]->diff);
+  // PrintTensor("t0_diff", tops[0]->diff);
+  // PrintTensor("b0", bottoms[0]->data);
+  // PrintTensor("t0", tops[0]->data);
+  // PrintTensor("t0_diff", tops[0]->diff);
+  // PrintTensor("b0_diff", bottoms[0]->diff);
+  // PrintTensor("w_diff", layer_fc->params[0].diff);
+  // PrintTensor("b_diff", layer_fc->params[1].diff);
   
   // using namespace checker;
   // Checker<cpu> * cker = CreateChecker<cpu>();
@@ -3125,11 +3149,29 @@ void TestBatchDuplicateLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckError(layer_batch_duplicate, bottoms, tops);
 }
 
+float SIGMOID_MAX_INPUT = 20;
+int SIGMOID_TABLE_SIZE = 10000;
 float *p_sigmoid_lookup_table;
+
+float TANH_MAX_INPUT = 20;
+int TANH_TABLE_SIZE = 10000;
+float *p_tanh_lookup_table;
+
+
 int main(int argc, char *argv[]) {
-  p_sigmoid_lookup_table = new float[3000000];
-  for (int i = 0; i < 3000000; ++i) {
-    p_sigmoid_lookup_table[i] = 0;
+  float max = SIGMOID_MAX_INPUT;
+  int len = SIGMOID_TABLE_SIZE;
+  p_sigmoid_lookup_table = new float[len];
+  for (int i = 0; i < len; ++i) {
+    float exp_val = exp((float(i)*2*max)/len - max); // map position to value, frow small to large
+    p_sigmoid_lookup_table[i] = exp_val/(exp_val+1);
+  }
+  max = TANH_MAX_INPUT;
+  len = TANH_TABLE_SIZE;
+  p_tanh_lookup_table = new float[len];
+  for (int i = 0; i < len; ++i) {
+    float exp_val = exp(2*((float(i)*2*max)/len - max)); // map position to value, frow small to large
+    p_tanh_lookup_table[i] = (exp_val-1)/(exp_val+1);
   }
   mshadow::Random<cpu> rnd(37);
   // TestActivationLayer(&rnd);

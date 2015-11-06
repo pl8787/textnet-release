@@ -299,7 +299,7 @@ class DatasetCfg:
             # self.n_test  = 135355
             self.train_display_interval = 10
             self.valid_display_interval = 10000000
-            self.test_display_interval  = 1000
+            self.test_display_interval  = 3000
             self.train_max_iters = 20000
             self.valid_max_iters =6056
             self.test_max_iters  =6056

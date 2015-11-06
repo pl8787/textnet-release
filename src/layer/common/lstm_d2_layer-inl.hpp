@@ -635,6 +635,7 @@ class LstmD2Layer : public Layer<xpu> {
     mshadow::Tensor<xpu, 4> x_er = bottom[0]->diff;
     mshadow::Tensor<xpu, 2> len  = bottom[0]->length;
         
+    high_resolution_clock::time_point b_time_4 = high_resolution_clock::now();
     begin_c_er = 0.; begin_h_er = 0.; g_er = 0.; c_er = 0.;
     for (index_t batch_idx = 0; batch_idx < x.size(0); ++batch_idx) {
       int x_len = len[batch_idx][0];
@@ -662,6 +663,9 @@ class LstmD2Layer : public Layer<xpu> {
 
       }
     }
+    high_resolution_clock::time_point e_time_4 = high_resolution_clock::now();
+    time_4 += duration_cast<duration<double>>(e_time_4 - b_time_4);
+	utils::Printf("\tLSTM D2 BP Time:%fs\n", time_4.count()); 
     // this->params[0].CutOffGradient(grad_cut_off);
     // this->params[1].CutOffGradient(grad_cut_off);
     // this->params[2].CutOffGradient(grad_cut_off);
