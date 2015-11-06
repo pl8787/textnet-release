@@ -64,11 +64,14 @@ class LogisticLayer : public Layer<xpu>{
     for (int i = 0; i < batch_size; ++i) {
       int k = static_cast<int>(bottom1_data[i]);
 	  utils::Check(k==0 || k==1, "LogisticLayer: Only support binary class.");
+	  float prob = 0.0f;
       if (k == 0) {
-        top_data[0] += -log(1.0 - bottom0_data[i]);
+		prob = 1.0f - bottom0_data[i];
       } else if (k == 1) { 
-        top_data[0] += -log(bottom0_data[i]);
+		prob = bottom0_data[i];
       }
+	  prob = max(prob, 1e-20f);
+	  top_data[0] += -log(prob);
     }
 
     top_data[0] /= batch_size;
