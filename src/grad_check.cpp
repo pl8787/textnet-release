@@ -2264,7 +2264,7 @@ void TestLstmD2Layer(mshadow::Random<cpu>* prnd) {
   {
     setting["d_mem"] = SettingV(d_mem);
     setting["no_bias"] = SettingV(true);
-    setting["reverse"] = SettingV(false);
+    setting["reverse"] = SettingV(true);
       
     map<string, SettingV> &w_filler = *(new map<string, SettingV>());
       w_filler["init_type"] = SettingV(initializer::kUniform);
@@ -2285,7 +2285,7 @@ void TestLstmD2Layer(mshadow::Random<cpu>* prnd) {
     setting["b_updater"] = SettingV(&w_updater);
   }
   /// Test Activation Layer
-  Layer<cpu> * layer_fc = CreateLayer<cpu>(kLstmD2);
+  Layer<cpu> * layer_fc = CreateLayer<cpu>(kLstmD2Optimize);
   layer_fc->PropAll();
   layer_fc->SetupLayer(setting, bottoms, tops, prnd);
   layer_fc->Reshape(bottoms, tops);
