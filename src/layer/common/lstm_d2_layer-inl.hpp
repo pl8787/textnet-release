@@ -359,7 +359,7 @@ class LstmD2Layer : public Layer<xpu> {
     }
     high_resolution_clock::time_point e_time_1 = high_resolution_clock::now();
     time_1 += duration_cast<duration<double>>(e_time_1 - b_time_1);
-	utils::Printf("\tLSTM D2 Time:%fs,%fs,%f\n", time_1.count(), time_2.count(), time_3.count()); 
+	// utils::Printf("\tLSTM D2 Time:%fs,%fs,%f\n", time_1.count(), time_2.count(), time_3.count()); 
 // #if DEBUG
 //     checkNanParams();
 // #endif
@@ -665,7 +665,7 @@ class LstmD2Layer : public Layer<xpu> {
     }
     high_resolution_clock::time_point e_time_4 = high_resolution_clock::now();
     time_4 += duration_cast<duration<double>>(e_time_4 - b_time_4);
-	utils::Printf("\tLSTM D2 BP Time:%fs\n", time_4.count()); 
+	// utils::Printf("\tLSTM D2 BP Time:%fs\n", time_4.count()); 
     // this->params[0].CutOffGradient(grad_cut_off);
     // this->params[1].CutOffGradient(grad_cut_off);
     // this->params[2].CutOffGradient(grad_cut_off);

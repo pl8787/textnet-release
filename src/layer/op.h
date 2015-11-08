@@ -30,9 +30,9 @@ struct identity_grad {
 struct sigmoid_lookup {
   MSHADOW_XINLINE static real_t Map(real_t a) {
     if (a >= SIGMOID_MAX_INPUT) {
-      return 0.999999f;
+      return 1.f;
     } else if (a <= -SIGMOID_MAX_INPUT) {
-      return 0.000001f;
+      return 0.f;
     }
     
     int pos = ((a+SIGMOID_MAX_INPUT)/(2*SIGMOID_MAX_INPUT))*SIGMOID_TABLE_SIZE;
@@ -50,9 +50,9 @@ struct sigmoid_lookup {
 struct tanh_lookup {
   MSHADOW_XINLINE static real_t Map(real_t a) {
     if (a >= TANH_MAX_INPUT) {
-      return 0.999999f;
+      return 1.f;
     } else if (a <= -TANH_MAX_INPUT) {
-      return -0.999999f;
+      return -1.f;
     }
     
     // NOTICE: float accuracy may cause problem here

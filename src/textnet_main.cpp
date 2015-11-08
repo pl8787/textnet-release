@@ -121,13 +121,13 @@ void run_cv(Json::Value &cfg_root, int netTagType, int cv_fold) {
   }
 }
 
-float SIGMOID_MAX_INPUT = 20;
+float SIGMOID_MAX_INPUT = 20.f;
 int SIGMOID_TABLE_SIZE = 1000000;
-float *p_sigmoid_lookup_table;
+float *p_sigmoid_lookup_table = NULL;
 
-float TANH_MAX_INPUT = 20;
+float TANH_MAX_INPUT = 20.f;
 int TANH_TABLE_SIZE = 1000000;
-float *p_tanh_lookup_table;
+float *p_tanh_lookup_table = NULL;
 
 int main(int argc, char *argv[]) {
   string model_file = "model/matching.tvt.model";
@@ -141,14 +141,14 @@ int main(int argc, char *argv[]) {
   p_sigmoid_lookup_table = new float[len];
   for (int i = 0; i < len; ++i) {
     float exp_val = exp((float(i)*2*max)/len - max); // map position to value, frow small to large
-    p_sigmoid_lookup_table[i] = exp_val/(exp_val+1);
+    p_sigmoid_lookup_table[i] = exp_val/(exp_val+1.f);
   }
   max = TANH_MAX_INPUT;
   len = TANH_TABLE_SIZE;
   p_tanh_lookup_table = new float[len];
   for (int i = 0; i < len; ++i) {
-    float exp_val = exp(2*((float(i)*2*max)/len - max)); // map position to value, frow small to large
-    p_tanh_lookup_table[i] = (exp_val-1)/(exp_val+1);
+    float val = (float(i)*2.f*max)/len - max; // map position to value, frow small to large
+    p_tanh_lookup_table[i] = tanhf(val);
   }
 
   /*

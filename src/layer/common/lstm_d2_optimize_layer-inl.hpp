@@ -14,7 +14,6 @@
 namespace textnet {
 namespace layer {
 
-
 using namespace std::chrono;
 
 // this implement is different with (Graves 2009)
@@ -203,10 +202,16 @@ class LstmD2OptimizeLayer : public Layer<xpu> {
     run_pre_h_t_er.Resize(mshadow::Shape2(total_cnt, d_mem), 0.f);
   }
 
-  void checkNan(float *p, int l) {
+  bool is_nan(Tensor2D &t) {
+    return is_nan(t.dptr_, t.size(0)*t.size(1));
+  }
+
+  bool is_nan(float *p, int l) {
     for (int i = 0; i < l; ++i) {
-      assert(!isnan(p[i]));
+      if (isnan(p[i]))
+        return true;
     }
+    return false;
   }
 
   void checkNanParams() {
@@ -395,7 +400,7 @@ class LstmD2OptimizeLayer : public Layer<xpu> {
     cur_f_t = mshadow::expr::F<op::sigmoid_lookup>(cur_f_t); // logi
     cur_o   = mshadow::expr::F<op::sigmoid_lookup>(cur_o);   // logi
     cur_cc  = mshadow::expr::F<op::tanh_lookup>(cur_cc);     // tanh 
-
+    
     cur_c = cur_f_l * pre_c_l + cur_f_m * pre_c_m + cur_f_t * pre_c_t + cur_i * cur_cc;
     cur_tanh_c = mshadow::expr::F<op::tanh_lookup>(cur_c); // tanh
     cur_h = cur_o * cur_tanh_c;
