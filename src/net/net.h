@@ -192,7 +192,16 @@ class Net : public INet{
   
   virtual void InitNet(Json::Value &net_root) {
     root = net_root;
+
     setLogFile();
+
+	// Write original model file to stand output
+    Json::StyledWriter writer;
+    string json_file = writer.write(root);
+	std::cout << "======== Model File ========" << std::endl;
+	std::cout << json_file << std::endl;
+	std::cout << "======== Model File ========" << std::endl;
+	std::cout << std::endl;
 
     utils::Printf("[Process] Initial Network.\n");
 
@@ -520,6 +529,9 @@ class Net : public INet{
     utils::Printf("[Process] Reshape network.\n");
     for (int i = 0; i < nets[tag].size(); ++i) {
       int layer_idx = nets[tag][i]->layer_idx;
+#if DEBUG
+      utils::Printf("[layer] set layer %s\n", nets[tag][i]->layer_name.c_str());
+#endif 
       nets[tag][i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx], false);
     }
   }
@@ -687,9 +699,12 @@ class Net : public INet{
 
   virtual void TrainDisplay(string tag, int iter = 0) {
     for (int i = 0; i < out_nodes[tag].size(); ++i) {
-      cout << "[" << tag << ":kTrain]\tIter\t" << iter 
-           << ":\tOut[" << out_nodes[tag][i] << "] =\t" 
-           << nodes[out_nodes[tag][i]]->data_d1()[0] << endl; 
+	  utils::Printf("[%s:kTrain]\tIter\t%d:\tOut[%s] =\t%f\n", 
+			  tag.c_str(), iter, out_nodes[tag][i].c_str(), 
+			  nodes[out_nodes[tag][i]]->data_d1()[0]);
+      // cout << "[" << tag << ":kTrain]\tIter\t" << iter 
+      //      << ":\tOut[" << out_nodes[tag][i] << "] =\t" 
+      //      << nodes[out_nodes[tag][i]]->data_d1()[0] << endl; 
     }
   }
       
@@ -717,9 +732,11 @@ class Net : public INet{
       
       // Output
       for (int i = 0; i < out_nodes[tag].size(); ++i) {
-        cout << "[" << tag << ":kTest]\tIter\t" << iter 
-             << ":\tOut[" << out_nodes[tag][i] << "] =\t" 
-             << test_loss[i] << endl; 
+		utils::Printf("[%s:kTest]\tIter\t%d:\tOut[%s] =\t%f\n",
+				tag.c_str(), iter, out_nodes[tag][i].c_str(), test_loss[i]);
+        // cout << "[" << tag << ":kTest]\tIter\t" << iter 
+        //      << ":\tOut[" << out_nodes[tag][i] << "] =\t" 
+        //      << test_loss[i] << endl; 
       }
   }
 

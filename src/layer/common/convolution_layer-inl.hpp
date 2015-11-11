@@ -164,9 +164,8 @@ class ConvolutionLayer : public Layer<xpu> {
     for (index_t i = 0; i < nbatch; ++i) {
       if (d1_var_len) {
           top_len[i][0] = (bottom_len[i][0] + pad_y * 2 - kernel_y)/stride + 1; // all input channels shoud have the same length
-          // comment by oracle
 		  // if (top_len[i][0] <= 0) {
-		  //     top_len[i][0] = 1;
+		  //   top_len[i][0] = 1;
 		  // }
 		  utils::Check(top_len[i][0] > 0, "top_len must positive.");
       } else {

@@ -27,6 +27,7 @@ class MatchLayer : public Layer<xpu>{
     // default value, just set the value you want
     this->defaults["op"] = SettingV("xor"); 
     this->defaults["interval"] = SettingV(1); 
+    this->defaults["max_element"] = SettingV(0); 
     this->defaults["is_var_len"] = SettingV(true); 
     // xor: can not bp
     // mul: can bp
@@ -54,7 +55,8 @@ class MatchLayer : public Layer<xpu>{
     op = setting["op"].sVal();
     is_var_len = setting["is_var_len"].bVal();
     interval = setting["interval"].iVal();
-    if (interval != 1) {
+	max_element = setting["max_element"].iVal();
+    if (interval != 1 || max_element != 0) {
       utils::Check(op != "cos", "MatchLayer: does not support cos when interval is set");
     }
 
@@ -73,20 +75,22 @@ class MatchLayer : public Layer<xpu>{
                   
     nbatch = bottom[0]->data.size(0); 
     if (op == "xor") {
-      doc_len = bottom[0]->data.size(3);
+      doc0_len = bottom[0]->data.size(3);
+      doc1_len = bottom[1]->data.size(3);
     } else {
-      doc_len = bottom[0]->data.size(2);
+      doc0_len = bottom[0]->data.size(2);
+      doc1_len = bottom[1]->data.size(2);
       feat_size = bottom[0]->data.size(3);
     }        
                   
     if (op == "elemwise_product" || op == "elemwise_plus") {
-	  // Set data shape to (nbatch, feat_size, doc_len, doc_len)
+	  // Set data shape to (nbatch, feat_size, doc0_len, doc1_len)
 	  // Set length shape to (nbatch, 2)
-      top[0]->Resize(nbatch, feat_size, doc_len, doc_len, nbatch, 2, true);
+      top[0]->Resize(nbatch, feat_size, doc0_len, doc1_len, nbatch, 2, true);
     } else {
-	  // Set data shape to (nbatch, 1, doc_len, doc_len)
+	  // Set data shape to (nbatch, 1, doc0_len, doc1_len)
 	  // Set length shape to (nbatch, 2)
-      top[0]->Resize(nbatch, 1, doc_len, doc_len, nbatch, 2, true);
+      top[0]->Resize(nbatch, 1, doc0_len, doc1_len, nbatch, 2, true);
     }
 
     if (show_info) {
@@ -96,9 +100,9 @@ class MatchLayer : public Layer<xpu>{
     }
 
     if (op == "cos") {
-      m_norm.Resize(mshadow::Shape3(nbatch, 2, doc_len), 0.f);
-      pow_3_m_norm.Resize(mshadow::Shape3(nbatch, 2, doc_len), 0.f);
-      m_dot.Resize(mshadow::Shape3(nbatch, doc_len, doc_len), 0.f);
+      m_norm.Resize(mshadow::Shape3(nbatch, 2, max(doc0_len, doc1_len)), 0.f);
+      pow_3_m_norm.Resize(mshadow::Shape3(nbatch, 2, max(doc0_len, doc1_len)), 0.f);
+      m_dot.Resize(mshadow::Shape3(nbatch, doc0_len, doc1_len), 0.f);
     }
   }
   
@@ -127,24 +131,42 @@ class MatchLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 1> bottom1_len = bottom[1]->length_d1();
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
 	mshadow::Tensor<xpu, 2> top_len = top[0]->length;
+	int interval_0 = 1;
+	int interval_1 = 1;
 
     top_data = 0.0f;
     m_norm = 0.0f;
     pow_3_m_norm = 0.0f;
     m_dot = 0.0f;
-    
+
     if (op == "cos") {
       for (int i = 0; i < nbatch; i++) {
         int len_0 = -1, len_1 = -1;
         if (is_var_len) {
           len_0 = bottom0_len[i];
           len_1 = bottom1_len[i];
+		  if (max_element != 0) {
+			interval_0 = len_0 / max_element + 1;
+			interval_1 = len_1 / max_element + 1;
+		  } else if (interval != 1) {
+			interval_0 = interval;
+			interval_1 = interval;
+		  }
         } else {
-          len_0 = doc_len;
-          len_1 = doc_len;
+          len_0 = doc0_len;
+          len_1 = doc1_len;
+		  if (max_element != 0) {
+			interval_0 = len_0 / max_element + 1;
+			interval_1 = len_1 / max_element + 1;
+		  } else if (interval != 1) {
+			interval_0 = interval;
+			interval_1 = interval;
+		  }
         }
-        utils::Check(len_0 >= 0 && len_1 >= 0, "MatchLayer: length error.");
-        utils::Check(len_0 <= doc_len && len_1 <= doc_len, "MatchLayer: length error.");
+        utils::Check(len_0 >= 0 && len_1 >= 0, 
+				"MatchLayer: length error negative. len_0=%d, len_1=%d.", len_0, len_1);
+        utils::Check(len_0 <= doc0_len && len_1 <= doc1_len, 
+				"MatchLayer: length error large. len_0=%d, len_1=%d, max=%d, max=%d.", len_0, len_1, doc0_len, doc1_len);
         for (int j = 0; j < len_0; j++) {
           for (int m = 0; m < feat_size; ++m) {
             m_norm[i][0][j] += bottom0_data4[i][0][j][m] * bottom0_data4[i][0][j][m];
@@ -167,17 +189,34 @@ class MatchLayer : public Layer<xpu>{
         len_1 = bottom1_len[i];
 		top_len[i][0] = len_0;
 		top_len[i][1] = len_1;
+		if (max_element != 0) {
+		  interval_0 = len_0 / max_element + 1;
+		  interval_1 = len_1 / max_element + 1;
+		} else if (interval != 1) {
+		  interval_0 = interval;
+		  interval_1 = interval;
+		}
+		// utils::Printf("Mat: %d x %d, interval: %d x %d\n", len_0, len_1, interval_0, interval_1);
       } else {
-        len_0 = doc_len;
-        len_1 = doc_len;
+        len_0 = doc0_len;
+        len_1 = doc1_len;
+		if (max_element != 0) {
+		  interval_0 = len_0 / max_element + 1;
+		  interval_1 = len_1 / max_element + 1;
+		} else if (interval != 1) {
+		  interval_0 = interval;
+		  interval_1 = interval;
+		}
       }
-      utils::Check(len_0 >= 0 && len_1 >= 0, "MatchLayer: length error.");
-      utils::Check(len_0 <= doc_len && len_1 <= doc_len, "MatchLayer: length error.");
+      utils::Check(len_0 >= 0 && len_1 >= 0, 
+				"MatchLayer: length error negative. len_0=%d, len_1=%d.", len_0, len_1);
+      utils::Check(len_0 <= doc0_len && len_1 <= doc1_len, 
+				"MatchLayer: length error large. len_0=%d, len_1=%d, max=%d, max=%d.", len_0, len_1, doc0_len, doc1_len);
 
       // for (int j = 0; j < len_0; j++) {
       //   for (int k = 0; k < len_1; k++) {
-      for (int j = 0; j < len_0; j+=interval) {
-        for (int k = 0; k < len_1; k+=interval) {
+      for (int j = 0; j < len_0; j+=interval_0) {
+        for (int k = 0; k < len_1; k+=interval_1) {
           if (op == "xor") {
             utils::Check(bottom0_data2[i][j]!=-1 && bottom1_data2[i][k]!=-1, 
               "In Match Layer: please check length setting. (%d, %d, %d)", i, j, k);
@@ -242,6 +281,9 @@ class MatchLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 1> bottom0_len = bottom[0]->length_d1();
     mshadow::Tensor<xpu, 1> bottom1_len = bottom[1]->length_d1();
 
+	int interval_0 = 1;
+	int interval_1 = 1;
+
     if (op == "xor") {
       // do nothing
       return;
@@ -254,17 +296,33 @@ class MatchLayer : public Layer<xpu>{
       if (is_var_len) {
         len_0 = bottom0_len[i];
         len_1 = bottom1_len[i];
+		if (max_element != 0) {
+		  interval_0 = len_0 / max_element + 1;
+		  interval_1 = len_1 / max_element + 1;
+		} else if (interval != 1) {
+		  interval_0 = interval;
+		  interval_1 = interval;
+		}
       } else {
-        len_0 = doc_len;
-        len_1 = doc_len;
+        len_0 = doc0_len;
+        len_1 = doc1_len;
+		if (max_element != 0) {
+		  interval_0 = len_0 / max_element + 1;
+		  interval_1 = len_1 / max_element + 1;
+		} else if (interval != 1) {
+		  interval_0 = interval;
+		  interval_1 = interval;
+		}
       }
-      utils::Check(len_0 > 0 && len_1 > 0, "MatchLayer: length error.");
-      utils::Check(len_0 <= doc_len && len_1 <= doc_len, "MatchLayer: length error.");
+      utils::Check(len_0 >= 0 && len_1 >= 0, 
+				"MatchLayer: length error negative. len_0=%d, len_1=%d.", len_0, len_1);
+      utils::Check(len_0 <= doc0_len && len_1 <= doc1_len, 
+				"MatchLayer: length error large. len_0=%d, len_1=%d, max=%d, max=%d.", len_0, len_1, doc0_len, doc1_len);
 
       // for (int j = 0; j < len_0; ++j) {
       //   for (int k = 0; k < len_1; ++k) {
-      for (int j = 0; j < len_0; j+=interval) {
-        for (int k = 0; k < len_1; k+=interval) {
+      for (int j = 0; j < len_0; j+=interval_0) {
+        for (int k = 0; k < len_1; k+=interval_1) {
           for (int m = 0; m < feat_size; ++m) {
             if (op == "mul") {  
               if (this->prop_error[0])
@@ -328,10 +386,12 @@ class MatchLayer : public Layer<xpu>{
   }
   
  protected:
-  int doc_len;
+  int doc0_len;
+  int doc1_len;
   int feat_size;
   int nbatch;
   int interval;
+  int max_element;
   bool is_var_len;
   std::string op;
   mshadow::TensorContainer<xpu, 3> m_norm, pow_3_m_norm;

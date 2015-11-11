@@ -459,10 +459,10 @@ class LstmLayer : public Layer<xpu> {
     this->params[1].CutOffGradient(grad_cut_off);
     this->params[2].CutOffGradient(grad_cut_off);
 
+#if DEBUG
     this->params[0].PrintStatistic("LSTM W");
     this->params[1].PrintStatistic("LSTM U");
     this->params[2].PrintStatistic("LSTM b");
-#if DEBUG
     checkNanParams();
 #endif
   }

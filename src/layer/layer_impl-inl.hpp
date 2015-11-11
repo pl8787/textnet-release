@@ -4,6 +4,7 @@
 #include "./layer.h"
 #include "./common/activation_layer-inl.hpp"
 #include "./common/convolution_layer-inl.hpp"
+#include "./common/convolution_var_layer-inl.hpp"
 #include "./common/fullc_layer-inl.hpp"
 #include "./common/tensor_fullc_layer-inl.hpp"
 #include "./common/pooling_layer-inl.hpp"
@@ -77,6 +78,7 @@
 #include "./loss/lm_softmax_loss_layer-inl.hpp"
 #include "./loss/listwise_measure_layer-inl.hpp"
 #include "./loss/euclid_distance_loss_layer-inl.hpp"
+#include "./loss/logistic_layer-inl.hpp"
 
 namespace textnet {
 namespace layer {
@@ -87,6 +89,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kTanh: return new ActivationLayer<xpu, op::tanh, op::tanh_grad>(type);
     case kRectifiedLinear: return new ActivationLayer<xpu, op::relu, op::relu_grad>(type);
     case kConv: return new ConvolutionLayer<xpu>(type);
+    case kConvVar: return new ConvolutionVarLayer<xpu>(type);
     case kFullConnect: return new FullConnectLayer<xpu>(type);
     case kTensorFullConnect: return new TensorFullConnectLayer<xpu>(type);
     case kMaxPooling: return new PoolingLayer<mshadow::red::maximum, xpu>(type);
@@ -161,6 +164,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kSelectSubRepByToken: return new SelectSubRepByTokenLayer<xpu>(type);
     case kWordRepInput: return new WordRepInputLayer<xpu>(type);
     case kEuclidDistanceLoss: return new EuclidDistanceLossLayer<xpu>(type);
+	case kLogistic: return new LogisticLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }

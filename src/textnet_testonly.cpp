@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
   int max_iter = test_config["max_iter"].asInt();
   vector<string> node_names;
   Json::Value node_names_root = test_config["node_names"];
-  for (int i = 0; i < node_names_root.size(); i++) {
+  for (int i = 0; i < (int)node_names_root.size(); i++) {
 	node_names.push_back(node_names_root[i].asString());
   }
   string file_prefix = test_config["file_prefix"].asString();

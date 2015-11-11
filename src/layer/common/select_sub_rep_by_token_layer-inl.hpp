@@ -26,6 +26,7 @@ class SelectSubRepByTokenLayer : public Layer<xpu>{
   
   virtual void Require() {
     // default value, just set the value you want
+	this->defaults["max_length"] = SettingV(0);
     
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -49,6 +50,7 @@ class SelectSubRepByTokenLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(), "SelectSubRepByTokenLayer:top size problem.");
 
     token = setting["token"].iVal();
+	max_length = setting["max_length"].iVal();
     utils::Check(token >= 0, "SelectSubRepByTokenLayer: token setting error.");
   }
 
@@ -65,7 +67,12 @@ class SelectSubRepByTokenLayer : public Layer<xpu>{
     utils::Check(bottom[0]->data.size(1) == bottom[1]->data.size(1), "SelectSubRepByTokenLayer: input size problem.");
     utils::Check(bottom[0]->data.size(3) == bottom[1]->data.size(2), "SelectSubRepByTokenLayer: input size problem.");
                   
-    top[0]->Resize(bottom[1]->data.shape_, true);
+	if (max_length == 0) {
+	  doc_len = bottom[0]->data.size(3);
+	} else {
+      doc_len = max_length;
+	}
+    top[0]->Resize(bottom[1]->data.size(0), bottom[1]->data.size(1), doc_len, bottom[1]->data.size(3), true);
 
 	if (show_info) {
 	  bottom[0]->PrintShape("bottom0");
@@ -114,8 +121,10 @@ class SelectSubRepByTokenLayer : public Layer<xpu>{
             top_data[batch_idx][doc_idx][t_len++] = F<op::identity>(bottom1_data[batch_idx][doc_idx][i]);
           }
         }
-        utils::Check(t_len > 0, "SelectSubRepByTokenLayer: top doc length error.");
+        utils::Check(t_len > 0, "SelectSubRepByTokenLayer: no token in one sentence. t_len:%d", t_len);
+        utils::Check(t_len < doc_len, "SelectSubRepByTokenLayer: token more than max_length. t_len:%d", t_len);
         top_len[batch_idx][doc_idx] = t_len;
+		// utils::Printf("b %d d %d : len %d\n", batch_idx, doc_idx, t_len);
       }
     }
   }
@@ -140,13 +149,16 @@ class SelectSubRepByTokenLayer : public Layer<xpu>{
             bottom1_diff[batch_idx][doc_idx][i] += top_diff[batch_idx][doc_idx][t_len++];
           }
         }
-        utils::Check(t_len == top_len[batch_idx][doc_idx], "SelectSubRepByTokenLayer: top doc length error.");
+        utils::Check(t_len == top_len[batch_idx][doc_idx], "SelectSubRepByTokenLayer: token number not match. t_len:%d, top:%d", t_len, top_len[batch_idx][doc_idx]);
+        utils::Check(t_len < doc_len, "SelectSubRepByTokenLayer: token more than max_length. t_len:%s", t_len);
       }
     }
   }
   
  protected:
   int token;
+  int max_length;
+  int doc_len;
 };
 }  // namespace layer
 }  // namespace textnet

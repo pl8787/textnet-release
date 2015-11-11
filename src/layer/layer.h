@@ -83,6 +83,7 @@ const int kBatchSelect = 1007;
 const int kBatchSplit = 1008;
 const int kBatchConcat = 1009;
 const int kBatchDuplicate = 1010;
+const int kConvVar = 1011;
 const int kDynamicKMaxPooling = 10001;
 const int kMatchTopKPooling = 10002;
 const int kSelectSubRepByToken = 10003;
@@ -101,7 +102,8 @@ const int kNegativeSampleLoss = 58;
 const int kWordClassSoftmaxLoss = 59;
 const int kLmSoftmaxLoss = 60;
 const int kListwiseMeasure = 61;
-const int kEuclidDistanceLoss = 62;
+const int kLogistic = 62;
+const int kEuclidDistanceLoss = 63;
 
 // Input Layer 71-
 const int kTextData = 71;
