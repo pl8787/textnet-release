@@ -699,9 +699,12 @@ class Net : public INet{
 
   virtual void TrainDisplay(string tag, int iter = 0) {
     for (int i = 0; i < out_nodes[tag].size(); ++i) {
-      cout << "[" << tag << ":kTrain]\tIter\t" << iter 
-           << ":\tOut[" << out_nodes[tag][i] << "] =\t" 
-           << nodes[out_nodes[tag][i]]->data_d1()[0] << endl; 
+	  utils::Printf("[%s:kTrain]\tIter\t%d:\tOut[%s] =\t%f\n", 
+			  tag.c_str(), iter, out_nodes[tag][i].c_str(), 
+			  nodes[out_nodes[tag][i]]->data_d1()[0]);
+      // cout << "[" << tag << ":kTrain]\tIter\t" << iter 
+      //      << ":\tOut[" << out_nodes[tag][i] << "] =\t" 
+      //      << nodes[out_nodes[tag][i]]->data_d1()[0] << endl; 
     }
   }
       
@@ -729,9 +732,11 @@ class Net : public INet{
       
       // Output
       for (int i = 0; i < out_nodes[tag].size(); ++i) {
-        cout << "[" << tag << ":kTest]\tIter\t" << iter 
-             << ":\tOut[" << out_nodes[tag][i] << "] =\t" 
-             << test_loss[i] << endl; 
+		utils::Printf("[%s:kTest]\tIter\t%d:\tOut[%s] =\t%f\n",
+				tag.c_str(), iter, out_nodes[tag][i].c_str(), test_loss[i]);
+        // cout << "[" << tag << ":kTest]\tIter\t" << iter 
+        //      << ":\tOut[" << out_nodes[tag][i] << "] =\t" 
+        //      << test_loss[i] << endl; 
       }
   }
 
