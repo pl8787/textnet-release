@@ -4,6 +4,7 @@
 #include "./layer.h"
 #include "./common/activation_layer-inl.hpp"
 #include "./common/convolution_layer-inl.hpp"
+#include "./common/convolution_var_layer-inl.hpp"
 #include "./common/fullc_layer-inl.hpp"
 #include "./common/tensor_fullc_layer-inl.hpp"
 #include "./common/pooling_layer-inl.hpp"
@@ -84,6 +85,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kTanh: return new ActivationLayer<xpu, op::tanh, op::tanh_grad>(type);
     case kRectifiedLinear: return new ActivationLayer<xpu, op::relu, op::relu_grad>(type);
     case kConv: return new ConvolutionLayer<xpu>(type);
+    case kConvVar: return new ConvolutionVarLayer<xpu>(type);
     case kFullConnect: return new FullConnectLayer<xpu>(type);
     case kTensorFullConnect: return new TensorFullConnectLayer<xpu>(type);
     case kMaxPooling: return new PoolingLayer<mshadow::red::maximum, xpu>(type);

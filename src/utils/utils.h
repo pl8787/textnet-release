@@ -15,6 +15,7 @@
 #include <map>
 #include <cstdarg>
 #include <cassert> // orc
+#include <time.h>
 
 #if !defined(__GNUC__)
 #define fopen64 std::fopen
@@ -85,7 +86,10 @@ inline void HandleCheckError(const char *msg) {
   exit(-1);
 }
 inline void HandlePrint(const char *msg) {
-  printf("%s", msg);
+  char time_info[64];
+  time_t t = time(0);
+  strftime(time_info, sizeof(time_info), "%X", localtime(&t));
+  printf("[%s] %s", time_info, msg);
 }
 #else
 // include declarations, some one must implement this

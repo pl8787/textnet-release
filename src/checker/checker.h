@@ -134,8 +134,9 @@ class Checker {
         if (calculate_error[i].dptr_[j] - estimate_error[i].dptr_[j] < range_min*scale ||
             calculate_error[i].dptr_[j] - estimate_error[i].dptr_[j] > range_max*scale  ) {
           cout << "E [" << i << ", " << j << "] = " << calculate_error[i].dptr_[j] << " | " << estimate_error[i].dptr_[j] << endl;
-        }
-        cout << "I [" << i << ", " << j << "] = " << calculate_error[i].dptr_[j] << " | " << estimate_error[i].dptr_[j] << endl;
+        } else {
+          cout << "I [" << i << ", " << j << "] = " << calculate_error[i].dptr_[j] << " | " << estimate_error[i].dptr_[j] << endl;
+		}
       }
     }
 
@@ -200,14 +201,15 @@ class Checker {
     }
     
 	float scale = 0.0f;
-    for (int i = 0; i < bottoms.size(); ++i) {
+    for (int i = 0; i < params.size(); ++i) {
       for (int j = 0; j < calculate_grad[i].shape_.Size(); ++j) {
 		scale = max( max(fabs(calculate_grad[i].dptr_[j]), fabs(estimate_grad[i].dptr_[j])), 1.0f);
         if (calculate_grad[i].dptr_[j] - estimate_grad[i].dptr_[j] < range_min*scale ||
             calculate_grad[i].dptr_[j] - estimate_grad[i].dptr_[j] > range_max*scale  ) {
           cout << "E [" << i << ", " << j << "] = " << calculate_grad[i].dptr_[j] << " | " << estimate_grad[i].dptr_[j] << endl;
-        }
-        cout << "I [" << i << ", " << j << "] = " << calculate_grad[i].dptr_[j] << " | " << estimate_grad[i].dptr_[j] << endl;
+        } else {
+		  cout << "I [" << i << ", " << j << "] = " << calculate_grad[i].dptr_[j] << " | " << estimate_grad[i].dptr_[j] << endl;
+		}
       }
     }
 
