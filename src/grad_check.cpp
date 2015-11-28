@@ -727,6 +727,95 @@ void TestConvVarLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckGrad(layer_conv, bottoms, tops);
 
 }
+
+void TestLocalLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Local Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(1,1,5,5), true);
+
+  float bottom_data_[] = {1,1,1,1,1,
+						 1,1,1,1,1,
+						 1,1,1,1,1,
+						 1,1,1,1,1,
+						 1,1,1,1,1};
+  vector<float> bottom_data(bottom_data_, bottom_data_ + sizeof(bottom_data_) / sizeof(float));
+  FillTensor(bottom.data, bottom_data);
+  
+  float bottom_len_[] = {2,3};
+  vector<float> bottom_len(bottom_len_, bottom_len_ + sizeof(bottom_len_) / sizeof(float));
+  FillTensor(bottom.length, bottom_len);
+  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+  
+  map<string, SettingV> setting;
+  setting["kernel_x"] = SettingV(3);
+  setting["kernel_y"] = SettingV(3);
+  setting["pad_x"] = SettingV(1);
+  setting["pad_y"] = SettingV(1);
+  setting["stride_x"] = SettingV(1);
+  setting["stride_y"] = SettingV(1);
+  setting["channel_out"] = SettingV(2);
+  setting["dim"] = SettingV(2);
+  setting["no_bias"] = SettingV(false);
+    map<string, SettingV> w_setting;
+    w_setting["init_type"] = SettingV(initializer::kGaussian);
+    w_setting["mu"] = SettingV(0.0f);
+    w_setting["sigma"] = SettingV(1.0f);
+    //w_setting["init_type"] = SettingV(initializer::kConstant);
+    //w_setting["value"] = SettingV(0.1f);
+    map<string, SettingV> b_setting;
+    b_setting["init_type"] = SettingV(initializer::kConstant);
+	b_setting["value"] = SettingV(0.1f);
+  setting["w_filler"] = SettingV(&w_setting);
+  setting["b_filler"] = SettingV(&b_setting);
+    map<string, SettingV> w_updater;
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["eps"] = SettingV(0.01f);
+      w_updater["batch_size"] = SettingV(1);
+      w_updater["max_iter"] = SettingV(10000);
+      w_updater["lr"] = SettingV(0.1f);
+    map<string, SettingV> b_updater;
+      b_updater["updater_type"] = SettingV(updater::kAdagrad);
+      b_updater["eps"] = SettingV(0.01f);
+      b_updater["batch_size"] = SettingV(1);
+      b_updater["max_iter"] = SettingV(10000);
+      b_updater["lr"] = SettingV(0.1f);
+  setting["w_updater"] = SettingV(&w_updater);
+  setting["b_updater"] = SettingV(&b_updater);
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_conv = CreateLayer<cpu>(kLocal);
+  layer_conv->PropAll();
+  layer_conv->SetupLayer(setting, bottoms, tops, prnd);
+  layer_conv->Reshape(bottoms, tops, true);
+
+  layer_conv->Forward(bottoms, tops);
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("top", top.data);
+  PrintTensor("weight", layer_conv->params[0].data);
+  PrintTensor("bias", layer_conv->params[1].data);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.01f);
+  setting_checker["range_max"] = SettingV(0.01f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_conv, bottoms, tops);
+
+  cout << "Check Grad." << endl;
+  cker->CheckGrad(layer_conv, bottoms, tops);
+  
+}
+
 void TestPoolLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Pool Layer." << endl;
   Node<cpu> bottom;
@@ -3269,6 +3358,7 @@ int main(int argc, char *argv[]) {
   // TestFcLayer(&rnd);
   // TestConvLayer(&rnd);
   // TestConvVarLayer(&rnd);
+  TestLocalLayer(&rnd);
   // TestPoolLayer(&rnd);
   // TestCrossLayer(&rnd);
   // TestDropoutLayer(&rnd);
@@ -3286,7 +3376,7 @@ int main(int argc, char *argv[]) {
   // TestMatchLayer(&rnd);
   // TestMatchTensorLayer(&rnd);
   // TestMatchTopKPoolingLayer(&rnd);
-  TestLstmD2Layer(&rnd);
+  // TestLstmD2Layer(&rnd);
   // TestSelectSubRepByTokenLayer(&rnd);
   // TestMatchWeightedDotLayer(&rnd);
   // TestGruLayer(&rnd);
