@@ -48,6 +48,8 @@ class TrainValidTestNet : public Net<xpu>{
 			this->TrainDisplay("Train", iter);
 		}
 	}
+
+	this->SaveModel(this->max_iters["Train"], this->model_save_last);
   } 
 };
 }  // namespace net

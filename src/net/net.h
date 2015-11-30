@@ -61,7 +61,7 @@ class INet {
     virtual void LoadModel(Json::Value &net_root) = 0;
     // virtual void SaveModel(string tag, int iter) = 0;
     virtual void LoadModel(string model_file) = 0;
-    virtual void SaveModel(int cur_iter) = 0;
+    virtual void SaveModel(int cur_iter, bool model_save_last) = 0;
 	// virtual void SaveAllModels(int iter) = 0;
 
 	// For Statistic
@@ -77,6 +77,8 @@ class Net : public INet{
     need_reshape = false;
 	var_batch = false;
     model_save_interval = 0;
+	model_save_file_prefix = "";
+	model_save_last = false;
     InitSettingEngine();
   }
 
@@ -227,6 +229,11 @@ class Net : public INet{
 		utils::Printf("Set var_batch to %d\n", var_batch);
 	}
 
+	if (!root["model_save_last"].isNull()) {
+		model_save_last = root["model_save_last"].asBool();
+		utils::Printf("Set model_save_last to %d\n", model_save_last);
+	}
+
 	ReadNetConfig();
 	ReadLayers();
 	ReadNodes();
@@ -254,8 +261,6 @@ class Net : public INet{
       tags.push_back(tag);
       max_iters[tag] = one_net["max_iters"].asInt();
       display_interval[tag] = one_net["display_interval"].asInt();
-	  // save_interval[tag] = one_net["save_interval"].asInt();
-	  // save_name[tag] = one_net["save_name"].asString();
       out_nodes[tag] = vector<string>();
       for (int i = 0; i < one_net["out_nodes"].size(); ++i) {
         out_nodes[tag].push_back(one_net["out_nodes"][i].asString());
@@ -752,8 +757,8 @@ class Net : public INet{
     }
   }
 
-  virtual void SaveModel(int cur_iter) {
-    if (model_save_interval <= 0 || cur_iter % model_save_interval != 0) {
+  virtual void SaveModel(int cur_iter, bool last_iter = false) {
+    if (!last_iter && (model_save_interval <= 0 || cur_iter % model_save_interval != 0)) {
         return;
     }
     string file_name = model_save_file_prefix + "." + int2str(cur_iter);
@@ -931,6 +936,7 @@ class Net : public INet{
   int model_save_interval;
   string model_save_file_prefix;
   bool model_save_everything;
+  bool model_save_last;
   // is save best or not, output file is file_prefix + ".best" // to do
   // map<string, bool> save_best;
   // nets output nodes
