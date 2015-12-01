@@ -111,7 +111,7 @@ class MapTextDataLayer : public Layer<xpu>{
       iss >> s_len;
 
       // data_set[key] = vector<int>();
-	  if (!data_set.count(key))
+	  if (!data_set.count(key) || data_set[key].size() != 0)
 		  continue;
 
       while(!iss.eof()) {
