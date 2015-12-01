@@ -367,6 +367,9 @@ class MapTextDataLayer : public Layer<xpu>{
     
   }
   
+  static unordered_map<string, vector<int> > data1_set;
+  static unordered_map<string, vector<int> > data2_set;
+
  protected:
   string data1_file;
   string data2_file;
@@ -379,9 +382,6 @@ class MapTextDataLayer : public Layer<xpu>{
   bool shuffle;
   bool speedup_list;
   
-  unordered_map<string, vector<int> > data1_set;
-  unordered_map<string, vector<int> > data2_set;
-
   vector<vector<string> > rel_set;
   vector<int> label_set;
   vector<vector<int> > pair_set;
@@ -393,6 +393,8 @@ class MapTextDataLayer : public Layer<xpu>{
 
   int max_list;
 };
+template<typename xpu> unordered_map<string, vector<int> > MapTextDataLayer<xpu>::data1_set = unordered_map<string, vector<int> >();
+template<typename xpu> unordered_map<string, vector<int> > MapTextDataLayer<xpu>::data2_set = unordered_map<string, vector<int> >();
 }  // namespace layer
 }  // namespace textnet
 #endif  // LAYER_MAP_TEXTDATA_LAYER_INL_HPP_
