@@ -16,6 +16,8 @@
 #include <cstdarg>
 #include <cassert> // orc
 #include <time.h>
+#include <sys/resource.h>
+#include <string.h>
 
 #if !defined(__GNUC__)
 #define fopen64 std::fopen
@@ -175,6 +177,16 @@ inline std::FILE *FopenCheck(const char *fname, const char *flag) {
   Check(fp != NULL, "can not open file \"%s\"\n", fname);
   return fp;
 }
+
+inline void ShowMemoryUse() {
+  struct rusage ru;
+  memset(&ru, 0, sizeof(struct rusage));
+  getrusage(RUSAGE_SELF, &ru);
+  float total_memory = 1.0 * (ru.ru_maxrss + ru.ru_ixrss + ru.ru_idrss + ru.ru_isrss) / 1024.0;
+  printf("\033[33m[Memory] Total Memory Use: %.4f MB \t Resident: %ld Shared: %ld UnshareData: %ld UnshareStack: %ld \33[0m\n", 
+		 total_memory, ru.ru_maxrss, ru.ru_ixrss, ru.ru_idrss, ru.ru_isrss);
+}
+
 }  // namespace utils
 // easy utils that can be directly acessed in xgboost
 /*! \brief get the beginning address of a vector */

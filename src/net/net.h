@@ -193,6 +193,9 @@ class Net : public INet{
   }
   
   virtual void InitNet(Json::Value &net_root) {
+
+	utils::ShowMemoryUse();
+
     root = net_root;
 
     setLogFile();
@@ -527,6 +530,7 @@ class Net : public INet{
       nets[tag][i]->SetupLayer(layers_root[layer_idx], 
           bottom_vecs[layer_idx], top_vecs[layer_idx], prnd);
       nets[tag][i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx], true);
+	  utils::ShowMemoryUse();
     }
   }
 
