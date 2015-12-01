@@ -268,6 +268,8 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
     mshadow::Tensor<xpu, 2> top_len = top[0]->length;
     const index_t nbatch = bottom_data.size(0);
 	top_data = 0;
+
+	top_len = F<op::identity>(bottom_len);
 	
 	if (dim == 1) {
 	  top_len = top_len_y;
@@ -304,8 +306,6 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
     mshadow::Tensor<xpu, 3> weight_data = this->params[0].data_d3();
     mshadow::Tensor<xpu, 3> weight_diff = this->params[0].diff_d3();
     mshadow::Tensor<xpu, 2> bias_diff = this->params[1].diff_d2();
-    mshadow::Tensor<xpu, 2> bottom_len = bottom[0]->length;
-    mshadow::Tensor<xpu, 2> top_len = top[0]->length;
     const index_t nbatch = bottom_data.size(0);
         
     for (int i = 0; i < nbatch; ++i) {

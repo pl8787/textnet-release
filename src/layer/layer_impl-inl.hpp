@@ -69,6 +69,7 @@
 #include "./input/list_textdata_layer-inl.hpp"
 #include "./input/qa_textdata_layer-inl.hpp"
 #include "./input/word_rep_input_layer-inl.hpp"
+#include "./input/map_textdata_layer-inl.hpp"
 #include "./loss/hingeloss_layer-inl.hpp"
 #include "./loss/cross_entropy_loss_layer-inl.hpp"
 #include "./loss/pairhingeloss_layer-inl.hpp"
@@ -162,6 +163,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
 	case kListTextData: return new ListTextDataLayer<xpu>(type);
 	case kListwiseMeasure: return new ListwiseMeasureLayer<xpu>(type);
 	case kQATextData: return new QATextDataLayer<xpu>(type);
+	case kMapTextData: return new MapTextDataLayer<xpu>(type);
     case kSelectSubRepByToken: return new SelectSubRepByTokenLayer<xpu>(type);
     case kWordRepInput: return new WordRepInputLayer<xpu>(type);
     case kEuclidDistanceLoss: return new EuclidDistanceLossLayer<xpu>(type);

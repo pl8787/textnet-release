@@ -2989,6 +2989,38 @@ void TestListTextDataLayer(mshadow::Random<cpu>* prnd) {
   PrintTensor("top2", top2.data);
 }
 
+void TestMapTextDataLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check MapTextData Layer." << endl;
+  Node<cpu> top1;
+  Node<cpu> top2;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  tops.push_back(&top1);
+  tops.push_back(&top2);
+
+  map<string, SettingV> setting;
+  setting["data1_file"] = SettingV("data1.wid");
+  setting["data2_file"] = SettingV("data2.wid");
+  setting["rel_file"] = SettingV("rel.dat");
+  setting["batch_size"] = SettingV(5);
+  setting["max_doc_len"] = SettingV(3);
+  setting["min_doc_len"] = SettingV(3);
+  setting["mode"] = SettingV("batch");
+  setting["shuffle"] = SettingV("false");
+  
+  /// Test MapTextData Layer
+  Layer<cpu> * layer_map_textdata = CreateLayer<cpu>(kMapTextData);
+  layer_map_textdata->PropAll();
+  layer_map_textdata->SetupLayer(setting, bottoms, tops, prnd);
+  layer_map_textdata->Reshape(bottoms, tops);
+  layer_map_textdata->Forward(bottoms, tops);
+  layer_map_textdata->Backprop(bottoms, tops);
+
+  PrintTensor("top1", top1.data);
+  PrintTensor("top2", top2.data);
+}
+
 void TestQATextDataLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check QATextData Layer." << endl;
   Node<cpu> top1;
@@ -3358,7 +3390,7 @@ int main(int argc, char *argv[]) {
   // TestFcLayer(&rnd);
   // TestConvLayer(&rnd);
   // TestConvVarLayer(&rnd);
-  TestLocalLayer(&rnd);
+  // TestLocalLayer(&rnd);
   // TestPoolLayer(&rnd);
   // TestCrossLayer(&rnd);
   // TestDropoutLayer(&rnd);
@@ -3404,5 +3436,6 @@ int main(int argc, char *argv[]) {
   // TestHingeLossLayer(&rnd);
   // TestListwiseMeasureLayer(&rnd);
   // TestQATextDataLayer(&rnd);
+  TestMapTextDataLayer(&rnd);
   return 0;
 }
