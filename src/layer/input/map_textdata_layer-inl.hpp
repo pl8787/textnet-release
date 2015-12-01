@@ -75,10 +75,10 @@ class MapTextDataLayer : public Layer<xpu>{
     utils::Check(mode == "batch" || mode == "pair" || mode == "list",
                   "MapTextDataLayer: mode is one of batch, pair or list.");
 
+    ReadRelData(rel_file, rel_set, label_set, data1_set, data2_set);
+
     ReadTextData(data1_file, data1_set);
     ReadTextData(data2_file, data2_set);
-
-    ReadRelData(rel_file, rel_set, label_set);
 
     if (mode == "pair") {
       MakePairs(rel_set, label_set, pair_set);
@@ -109,7 +109,11 @@ class MapTextDataLayer : public Layer<xpu>{
       iss.str(s);
       iss >> key;
       iss >> s_len;
-      data_set[key] = vector<int>();
+
+      // data_set[key] = vector<int>();
+	  if (!data_set.count(key))
+		  continue;
+
       while(!iss.eof()) {
         iss >> value;
         data_set[key].push_back(value);
@@ -135,12 +139,13 @@ class MapTextDataLayer : public Layer<xpu>{
     utils::Printf("Line count in file: %d\n", data_set.size());
   }
   
-  void ReadRelData(string &data_file, vector<vector<string> > &data_set, vector<int> &label_set) {
-    utils::Printf("Open data file: %s\n", data_file.c_str());    
+  void ReadRelData(string &rel_file, vector<vector<string> > &rel_set, vector<int> &label_set, 
+                   unordered_map<string, vector<int> > &data1_set, unordered_map<string, vector<int> > &data2_set) {
+    utils::Printf("Open data file: %s\n", rel_file.c_str());    
 
 	max_label = 0;
 
-    std::ifstream fin(data_file.c_str());
+    std::ifstream fin(rel_file.c_str());
     std::string s;
     std::string value;
     int label;
@@ -158,23 +163,29 @@ class MapTextDataLayer : public Layer<xpu>{
       iss >> label;
 	  label_set.push_back(label);
       max_label = std::max(max_label, label);
-      data_set.push_back(vector<string>());
+      rel_set.push_back(vector<string>());
       while(!iss.eof()) {
         iss >> value;
-        data_set[line_count].push_back(value);
+        rel_set[line_count].push_back(value);
       }
+	  if (!data1_set.count(rel_set[line_count][0])) {
+        data1_set[rel_set[line_count][0]] = vector<int>();
+	  }
+	  if (!data2_set.count(rel_set[line_count][1])) {
+        data2_set[rel_set[line_count][1]] = vector<int>();
+	  }
       line_count += 1;
     }
     fin.close();
 
-    for (int i = 0; i < data_set[0].size(); ++i) {
-		std::cout << data_set[0][i].c_str() << " ";
+    for (int i = 0; i < rel_set[0].size(); ++i) {
+		std::cout << rel_set[0][i].c_str() << " ";
     }
 	std::cout << std::endl;
 
 	max_label += 1;
 
-    utils::Printf("Line count in file: %d\n", data_set.size());
+    utils::Printf("Line count in file: %d\n", rel_set.size());
 	utils::Printf("Max label: %d\n", max_label);
   }
 
@@ -252,13 +263,13 @@ class MapTextDataLayer : public Layer<xpu>{
     utils::Check(max_doc_len > 0, "MapTextDataLayer:max_doc_len <= 0");
 
     if (mode == "batch") {
-      top[0]->Resize(batch_size, 1, 2, max_doc_len, true);
+      top[0]->Resize(batch_size, 2, 1, max_doc_len, true);
       top[1]->Resize(batch_size, 1, 1, 1, true);
     } else if (mode == "pair") {
-      top[0]->Resize(2 * batch_size, 1, 2, max_doc_len, true);
+      top[0]->Resize(2 * batch_size, 2, 1, max_doc_len, true);
       top[1]->Resize(2 * batch_size, 1, 1, 1, true);
     } else if (mode == "list") {
-      top[0]->Resize(max_list * batch_size, 1, 2, max_doc_len, true);
+      top[0]->Resize(max_list * batch_size, 2, 1, max_doc_len, true);
       top[1]->Resize(max_list * batch_size, 1, 1, 1, true);
     }
     

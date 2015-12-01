@@ -3019,6 +3019,8 @@ void TestMapTextDataLayer(mshadow::Random<cpu>* prnd) {
 
   PrintTensor("top1", top1.data);
   PrintTensor("top2", top2.data);
+  PrintTensor("top1", top1.length);
+  PrintTensor("top2", top2.length);
 }
 
 void TestQATextDataLayer(mshadow::Random<cpu>* prnd) {
