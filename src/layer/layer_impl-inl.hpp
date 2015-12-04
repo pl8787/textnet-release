@@ -58,6 +58,7 @@
 #include "./common/match_topk_pooling_layer-inl.hpp"
 #include "./common/select_sub_rep_by_token_layer-inl.hpp"
 #include "./common/local_layer-inl.hpp"
+#include "./common/local_factor_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
 #include "./input/sequence_classification_data_layer-inl.hpp"
@@ -169,6 +170,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kEuclidDistanceLoss: return new EuclidDistanceLossLayer<xpu>(type);
 	case kLogistic: return new LogisticLayer<xpu>(type);
 	case kLocal: return new LocalLayer<xpu>(type);
+	case kLocalFactor: return new LocalFactorLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }

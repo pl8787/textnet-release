@@ -393,4 +393,4 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 };
 }  // namespace layer
 }  // namespace textnet
-#endif  // LAYER_CONVOLUTION_VAR_LAYER_INL_HPP_
+#endif  // LAYER_LOCAL_LAYER_INL_HPP_
