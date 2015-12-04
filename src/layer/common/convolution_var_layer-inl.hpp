@@ -49,9 +49,9 @@ class ConvolutionVarLayer : public Layer<xpu> {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);                        
     
     utils::Check(bottom.size() == BottomNodeNum(),
-                  "ConvolutionLayer:bottom size problem."); 
+                  "ConvolutionVarLayer: bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
-                  "ConvolutionLayer:top size problem.");
+                  "ConvolutionVarLayer: top size problem.");
                   
     kernel_x = setting["kernel_x"].iVal();
     kernel_y = setting["kernel_y"].iVal();
@@ -94,9 +94,9 @@ class ConvolutionVarLayer : public Layer<xpu> {
                        const std::vector<Node<xpu>*> &top,
                        bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(),
-                  "ConvolutionLayer:bottom size problem."); 
+                  "ConvolutionVarLayer: bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
-                  "ConvolutionLayer:top size problem.");
+                  "ConvolutionVarLayer: top size problem.");
     
     mshadow::Shape<4> shape_in = bottom[0]->data.shape_;
     mshadow::Shape<4> shape_out;
@@ -256,8 +256,8 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
     for (index_t i = 0; i < nbatch; ++i) {
       if (dim == 1) {
           top_len[i][0] = (bottom_len[i][0] + pad_y * 2 - kernel_y) / stride_y + 1; // all input channels shoud have the same length
-		  utils::Check(top_len[i][0] > 0, "top_len must positive.");
-		  utils::Check(pad_x == 0, "dim=1 pad_x!=0.");
+		  utils::Check(top_len[i][0] > 0, "ConvolutionVarLayer: top_len must positive. i=%d, bottom_len=%f, top_len=%f", i, bottom_len[i][0], top_len[i][0]);
+		  utils::Check(pad_x == 0, "ConvolutionVarLayer: dim=1 pad_x!=0.");
 		  top_len_x = 1;
 		  top_len_y = top_len[i][0];
 		  bottom_len_x = kernel_x;
@@ -265,7 +265,8 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 	  } else {
 		  top_len[i][0] = (bottom_len[i][0] + pad_x * 2 - kernel_x) / stride_x + 1;
 		  top_len[i][1] = (bottom_len[i][1] + pad_y * 2 - kernel_y) / stride_y + 1;
-		  utils::Check(top_len[i][0] > 0 && top_len[i][1] > 0, "top_len must positive.");
+		  utils::Check(top_len[i][0] > 0 && top_len[i][1] > 0, "ConvolutionVarLayer: top_len must positive. i=%d, bottom_len=(%f,%f), top_len=(%f,%f)",
+				  i, bottom_len[i][0], bottom_len[i][1], top_len[i][0], top_len[i][1]);
 		  top_len_x = top_len[i][0];
 		  top_len_y = top_len[i][1];
 		  bottom_len_x = bottom_len[i][0];

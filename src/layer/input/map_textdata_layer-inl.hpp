@@ -97,7 +97,7 @@ class MapTextDataLayer : public Layer<xpu>{
     std::string key;
     int s_len;
     int value;
-    utils::Check(fin, "Open data file problem.");
+    utils::Check(fin, "MapTextdataLayer: Open data file problem.");
 
     istringstream iss;
     while (!fin.eof()) {
@@ -126,7 +126,7 @@ class MapTextDataLayer : public Layer<xpu>{
 
 	  // Check sentence length
 	  utils::Check(data_set[key].size() >= min_doc_len, 
-			  "Doc length %d less than %d, on line %d.", data_set[key].size(), min_doc_len, data_set.size());
+			  "MapTextdataLayer: Doc length %d less than %d, on line %d.", data_set[key].size(), min_doc_len, data_set.size());
     }
     fin.close();
 
@@ -149,7 +149,7 @@ class MapTextDataLayer : public Layer<xpu>{
     std::string s;
     std::string value;
     int label;
-    utils::Check(fin, "Open data file problem.");
+    utils::Check(fin, "MapTextdataLayer: Open data file problem.");
     line_count = 0;
 
     istringstream iss;
@@ -298,6 +298,10 @@ class MapTextDataLayer : public Layer<xpu>{
 
   inline void FillData(mshadow::Tensor<xpu, 4> &top0_data, mshadow::Tensor<xpu, 2> &top0_length, 
                        int top_idx, int data_idx) {
+	  utils::Check(data1_set.count(rel_set[data_idx][0]), 
+			  "MapTextdataLayer: %s not in data1_set.", rel_set[data_idx][0].c_str());
+	  utils::Check(data2_set.count(rel_set[data_idx][1]), 
+			  "MapTextdataLayer: %s not in data2_set.", rel_set[data_idx][1].c_str());
       vector<int> &data1 = data1_set[rel_set[data_idx][0]];
 	  vector<int> &data2 = data2_set[rel_set[data_idx][1]];
 
