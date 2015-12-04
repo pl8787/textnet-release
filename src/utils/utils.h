@@ -18,6 +18,7 @@
 #include <time.h>
 #include <sys/resource.h>
 #include <string.h>
+#include "math.h"
 
 #if !defined(__GNUC__)
 #define fopen64 std::fopen
@@ -187,6 +188,14 @@ inline void ShowMemoryUse() {
 		 total_memory, ru.ru_maxrss, ru.ru_ixrss, ru.ru_idrss, ru.ru_isrss);
 }
 
+inline bool checkNan(float *p, int l) {
+  for (int i = 0; i < l; ++i) {
+    if ( isnan(p[i]) ) {
+      return true;
+	}
+  }
+  return false;
+}
 }  // namespace utils
 // easy utils that can be directly acessed in xgboost
 /*! \brief get the beginning address of a vector */
@@ -243,6 +252,7 @@ inline string float2str(float f){
   s << f;
   return s.str();
 }
+
 
 }  // namespace textnet
 #endif  // CXXNET_UTILS_UTILS_H_

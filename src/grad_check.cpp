@@ -738,9 +738,14 @@ void TestLocalLayer(mshadow::Random<cpu>* prnd) {
   bottoms.push_back(&bottom);
   tops.push_back(&top);
   
-  bottom.Resize(Shape4(1,1,5,5), true);
+  bottom.Resize(Shape4(2,1,5,5), true);
 
   float bottom_data_[] = {1,1,1,1,1,
+						 1,1,1,1,1,
+						 1,1,1,1,1,
+						 1,1,1,1,1,
+						 1,1,1,1,1,
+						 1,1,1,1,1,
 						 1,1,1,1,1,
 						 1,1,1,1,1,
 						 1,1,1,1,1,
@@ -748,7 +753,7 @@ void TestLocalLayer(mshadow::Random<cpu>* prnd) {
   vector<float> bottom_data(bottom_data_, bottom_data_ + sizeof(bottom_data_) / sizeof(float));
   FillTensor(bottom.data, bottom_data);
   
-  float bottom_len_[] = {2,3};
+  float bottom_len_[] = {2,3,2,3};
   vector<float> bottom_len(bottom_len_, bottom_len_ + sizeof(bottom_len_) / sizeof(float));
   FillTensor(bottom.length, bottom_len);
   prnd->SampleUniform(&bottom.data, -1.0, 1.0);
@@ -3392,7 +3397,7 @@ int main(int argc, char *argv[]) {
   // TestFcLayer(&rnd);
   // TestConvLayer(&rnd);
   // TestConvVarLayer(&rnd);
-  // TestLocalLayer(&rnd);
+  TestLocalLayer(&rnd);
   // TestPoolLayer(&rnd);
   // TestCrossLayer(&rnd);
   // TestDropoutLayer(&rnd);
@@ -3438,6 +3443,6 @@ int main(int argc, char *argv[]) {
   // TestHingeLossLayer(&rnd);
   // TestListwiseMeasureLayer(&rnd);
   // TestQATextDataLayer(&rnd);
-  TestMapTextDataLayer(&rnd);
+  // TestMapTextDataLayer(&rnd);
   return 0;
 }

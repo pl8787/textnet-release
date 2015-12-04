@@ -540,8 +540,10 @@ class Net : public INet{
       int layer_idx = nets[tag][i]->layer_idx;
 #if DEBUG
       utils::Printf("[layer] set layer %s\n", nets[tag][i]->layer_name.c_str());
-#endif 
+      nets[tag][i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx], true);
+#else 
       nets[tag][i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx], false);
+#endif
     }
   }
   
@@ -686,16 +688,28 @@ class Net : public INet{
       string name = node_list[k]->node_name; //it->first;
       cout << "Snapshot [" << name << "]" << endl;
       cout << "data : ";
+	  if (utils::checkNan(node_list[k]->data.dptr_, 
+				  node_list[k]->data.size(0)*node_list[k]->data.size(1)*node_list[k]->data.size(2)*node_list[k]->data.size(3))) {
+		  cout << "[Error] Contain NAN!" << endl;
+	  }
       for (int i = 0; i < 5; ++i) {
         cout << node_list[k]->data[0][0][0][i] << "\t";
       }
       cout << endl;
       cout << "diff : ";
+	  if (utils::checkNan(node_list[k]->diff.dptr_, 
+				  node_list[k]->diff.size(0)*node_list[k]->diff.size(1)*node_list[k]->diff.size(2)*node_list[k]->diff.size(3))) {
+		  cout << "[Error] Contain NAN!" << endl;
+	  }
       for (int i = 0; i < 5; ++i) {
         cout << node_list[k]->diff[0][0][0][i] << "\t";
       }
       cout << endl;
       cout << "length : ";
+	  if (utils::checkNan(node_list[k]->length.dptr_, 
+				  node_list[k]->length.size(0)*node_list[k]->length.size(1))) {
+		  cout << "[Error] Contain NAN!" << endl;
+	  }
       for (int i = 0; i < 5; ++i) {
         cout << node_list[k]->length[0][i] << "\t";
       }

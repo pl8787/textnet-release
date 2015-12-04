@@ -126,6 +126,17 @@ class LocalLayer : public Layer<xpu> {
     utils::Check(top.size() == TopNodeNum(),
                   "LocalLayer:top size problem.");
     
+    shape_in = bottom[0]->data.shape_;
+	if (dim == 1) {
+		shape_out = mshadow::Shape4(shape_in[0], channel_out,
+				(shape_in[2] + pad_y * 2 - kernel_y) / stride_y + 1,
+				1);
+	} else {
+		shape_out = mshadow::Shape4(shape_in[0], channel_out, 
+                (shape_in[2] + pad_y * 2 - kernel_y) / stride_y + 1,
+                (shape_in[3] + pad_x * 2 - kernel_x) / stride_x + 1);
+	}
+
 	mshadow::Shape<2> shape_len;
 	shape_len = bottom[0]->length.shape_;
 	top[0]->Resize(shape_out, shape_len);
@@ -276,6 +287,7 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 	}
 
     for (index_t i = 0; i < nbatch; ++i) {
+	  temp_col_ = 0.0f;
 	  if (dim != 1) {
 		top_len[i][0] = top_len_x;
 		top_len[i][1] = top_len_y;
@@ -292,9 +304,8 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 		}
 		top_data[i][ch] = reshape(temp_sumall_, mshadow::Shape2(shape_out[2], shape_out[3]));
 	  }
-	  // PrintTensor("temp_data_", temp_data_);
-
     }
+	// PrintTensor("top_data", top_data);
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
@@ -308,6 +319,9 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
     mshadow::Tensor<xpu, 2> bias_diff = this->params[1].diff_d2();
     const index_t nbatch = bottom_data.size(0);
         
+	// PrintTensor("top_diff", top_diff);
+	temp_dif_ = 0.0f;
+	// PrintTensor("begin_temp_dif_", temp_dif_);
     for (int i = 0; i < nbatch; ++i) {
 	  for (index_t ch = 0; ch < temp_diff_.size(0); ++ch) {
 	    for (index_t idx = 0; idx < temp_diff_.size(1); ++idx) {
@@ -350,6 +364,7 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
         pack_col2patch_var(bottom_diff[i], temp_dif_, bottom_len_y, bottom_len_x,
               kernel_y, kernel_x, stride_y, stride_x, pad_y, pad_x);
       }
+	  // PrintTensor("end_temp_dif_", temp_dif_);
       
     }
   }
