@@ -121,6 +121,7 @@ const int kListTextData = 80;
 const int kQATextData = 81;
 const int kWordRepInput = 82;
 const int kMapTextData = 83;
+const int kImage = 84;
 
 /*! \brief these are enumeration */
 const int kInit = -1;

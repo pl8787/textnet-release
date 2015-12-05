@@ -88,7 +88,7 @@ class FullConnectLayer : public Layer<xpu> {
 
     nbatch = bottom_data.size(0);
     
-    top[0]->Resize(nbatch, num_hidden, 1, 1, true);
+    top[0]->Resize(nbatch, num_hidden, 1, 1, nbatch, 1, true);
 
     if (show_info) {
         bottom[0]->PrintShape("bottom0");

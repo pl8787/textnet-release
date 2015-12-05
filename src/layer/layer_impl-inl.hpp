@@ -71,6 +71,7 @@
 #include "./input/qa_textdata_layer-inl.hpp"
 #include "./input/word_rep_input_layer-inl.hpp"
 #include "./input/map_textdata_layer-inl.hpp"
+#include "./input/image_layer-inl.hpp"
 #include "./loss/hingeloss_layer-inl.hpp"
 #include "./loss/cross_entropy_loss_layer-inl.hpp"
 #include "./loss/pairhingeloss_layer-inl.hpp"
@@ -171,6 +172,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
 	case kLogistic: return new LogisticLayer<xpu>(type);
 	case kLocal: return new LocalLayer<xpu>(type);
 	case kLocalFactor: return new LocalFactorLayer<xpu>(type);
+	case kImage: return new ImageLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }

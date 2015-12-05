@@ -320,7 +320,6 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
     const index_t nbatch = bottom_data.size(0);
         
 	// PrintTensor("top_diff", top_diff);
-	temp_dif_ = 0.0f;
 	// PrintTensor("begin_temp_dif_", temp_dif_);
     for (int i = 0; i < nbatch; ++i) {
 	  for (index_t ch = 0; ch < temp_diff_.size(0); ++ch) {
@@ -353,6 +352,7 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 	  }
 
       if (this->prop_error[0]) {
+	    temp_dif_ = 0.0f;
 	    for (index_t ch = 0; ch < channel_out; ++ch) {
 		  for (index_t m = 0; m < shape_out[2]*shape_out[3]; ++m) {
 			float temp_data_value = temp_diff_[ch][m];

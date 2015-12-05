@@ -35,9 +35,11 @@ class LocalFactorLayer : public Layer<xpu> {
     this->defaults["kernel_y"] = SettingV();
     this->defaults["channel_out"] = SettingV();
     this->defaults["factor"] = SettingV();
-    this->defaults["w_filler"] = SettingV();
+    this->defaults["u_filler"] = SettingV();
+    this->defaults["v_filler"] = SettingV();
     this->defaults["b_filler"] = SettingV();
-    this->defaults["w_updater"] = SettingV();
+    this->defaults["u_updater"] = SettingV();
+    this->defaults["v_updater"] = SettingV();
     this->defaults["b_updater"] = SettingV();
     
     Layer<xpu>::Require();
@@ -54,6 +56,7 @@ class LocalFactorLayer : public Layer<xpu> {
     utils::Check(top.size() == TopNodeNum(),
                   "LocalFactorLayer:top size problem.");
                   
+	std::cout << "Here" << std::endl;
     kernel_x = setting["kernel_x"].iVal();
     kernel_y = setting["kernel_y"].iVal();
     pad_x = setting["pad_x"].iVal();
@@ -94,9 +97,11 @@ class LocalFactorLayer : public Layer<xpu> {
 	    utils::Check(top_len_x > 0 && top_len_y > 0, "top_len must positive.");
 	}
 
-    this->params.resize(2);
+	weight_data.Resize(mshadow::Shape3(channel_out, shape_out[2] * shape_out[3], channel_in * kernel_x * kernel_y));
+
+    this->params.resize(3);
     this->params[0].Resize(channel_out, shape_out[2] * shape_out[3], factor, 1, true);
-    this->params[1].Resize(channel_out, factor, channel_in * kernel_x * kernel_y, 1, true);
+    this->params[1].Resize(channel_out, channel_in * kernel_x * kernel_y, factor, 1, true);
     this->params[2].Resize(channel_out, shape_out[2] * shape_out[3], 1, 1, true);
     
     std::map<std::string, SettingV> &u_setting = *setting["u_filler"].mVal();
@@ -105,10 +110,10 @@ class LocalFactorLayer : public Layer<xpu> {
     this->params[0].initializer_ = 
         initializer::CreateInitializer<xpu, 4>(u_setting["init_type"].iVal(),
           u_setting, this->prnd_);
-    this->params[0].initializer_ = 
+    this->params[1].initializer_ = 
         initializer::CreateInitializer<xpu, 4>(v_setting["init_type"].iVal(),
           v_setting, this->prnd_);
-    this->params[1].initializer_ = 
+    this->params[2].initializer_ = 
         initializer::CreateInitializer<xpu, 4>(b_setting["init_type"].iVal(), 
           b_setting, this->prnd_);
     this->params[0].Init();
@@ -127,7 +132,6 @@ class LocalFactorLayer : public Layer<xpu> {
     this->params[2].updater_ = 
         updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].iVal(),
           b_updater, this->prnd_);
-          
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -285,8 +289,9 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
-    mshadow::Tensor<xpu, 3> weight_data = this->params[0].data_d3();
-    mshadow::Tensor<xpu, 2> bias_data = this->params[1].data_d2();
+    mshadow::Tensor<xpu, 3> u_weight_data = this->params[0].data_d3();
+    mshadow::Tensor<xpu, 3> v_weight_data = this->params[1].data_d3();
+    mshadow::Tensor<xpu, 2> bias_data = this->params[2].data_d2();
     mshadow::Tensor<xpu, 2> bottom_len = bottom[0]->length;
     mshadow::Tensor<xpu, 2> top_len = top[0]->length;
     const index_t nbatch = bottom_data.size(0);
@@ -298,6 +303,10 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 	  top_len = top_len_y;
 	}
 
+	for (int ch = 0; ch < channel_out; ++ch) {
+      weight_data[ch] = dot(u_weight_data[ch], v_weight_data[ch].T());
+	}
+
     for (index_t i = 0; i < nbatch; ++i) {
 	  temp_col_ = 0.0f;
 	  if (dim != 1) {
@@ -307,7 +316,7 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
       unpack_patch2col_var(temp_col_, bottom_data[i], bottom_len_y, bottom_len_x,
 					   kernel_y, kernel_x, stride_y, stride_x, pad_y, pad_x);
 	  // PrintTensor("temp_col_", temp_col_);
-	  // PrintTensor("weight_data", weight_data);
+	  // PrintTensor("temp_weight_", temp_weight_);
 	  for (int ch = 0; ch < channel_out; ++ch) {
         temp_data_ = temp_col_ * weight_data[ch];
 		temp_sumall_ = sumall_except_dim<0>(temp_data_);
@@ -326,14 +335,13 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
     mshadow::Tensor<xpu, 4> top_diff = top[0]->diff;
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
     mshadow::Tensor<xpu, 4> bottom_diff = bottom[0]->diff;
-    mshadow::Tensor<xpu, 3> weight_data = this->params[0].data_d3();
-    mshadow::Tensor<xpu, 3> weight_diff = this->params[0].diff_d3();
-    mshadow::Tensor<xpu, 2> bias_diff = this->params[1].diff_d2();
+    mshadow::Tensor<xpu, 3> u_weight_data = this->params[0].data_d3();
+    mshadow::Tensor<xpu, 3> u_weight_diff = this->params[0].diff_d3();
+    mshadow::Tensor<xpu, 3> v_weight_data = this->params[1].data_d3();
+    mshadow::Tensor<xpu, 3> v_weight_diff = this->params[1].diff_d3();
+    mshadow::Tensor<xpu, 2> bias_diff = this->params[2].diff_d2();
     const index_t nbatch = bottom_data.size(0);
         
-	// PrintTensor("top_diff", top_diff);
-	temp_dif_ = 0.0f;
-	// PrintTensor("begin_temp_dif_", temp_dif_);
     for (int i = 0; i < nbatch; ++i) {
 	  for (index_t ch = 0; ch < temp_diff_.size(0); ++ch) {
 	    for (index_t idx = 0; idx < temp_diff_.size(1); ++idx) {
@@ -342,29 +350,28 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 		  temp_diff_[ch][idx] = top_diff[i][ch][row][col];
 		}
 	  }
-	  // PrintTensor("temp_diff_", temp_diff_);
 
       unpack_patch2col_var(temp_col_, bottom_data[i], bottom_len_y, bottom_len_x, 
 					   kernel_y, kernel_x, stride_y, stride_x, pad_y, pad_x);
-	  // PrintTensor("temp_col_", temp_col_);
 
-      if (this->prop_grad[0]) {
+      if (this->prop_grad[0] && this->prop_grad[1]) {
 	    for (index_t ch = 0; ch < channel_out; ++ch) {
 		  for (index_t m = 0; m < shape_out[2]*shape_out[3]; ++m) {
 			float temp_data_value = temp_diff_[ch][m];
 		    for (index_t k = 0; k < channel_in * kernel_x * kernel_y; ++k) {
-		      weight_diff[ch][m][k] += temp_data_value * temp_col_[m][k];
+		      u_weight_diff[ch][m] += temp_data_value * temp_col_[m][k] * v_weight_data[ch][k];
+		      v_weight_diff[ch][k] += temp_data_value * temp_col_[m][k] * u_weight_data[ch][m];
 		    }
 		  }
         }
-	    // PrintTensor("weight_diff", weight_diff);
 	  }
 
-	  if (!no_bias && this->prop_grad[1]) {
+	  if (!no_bias && this->prop_grad[2]) {
 		bias_diff += temp_diff_;
 	  }
 
       if (this->prop_error[0]) {
+	    temp_dif_ = 0.0f;
 	    for (index_t ch = 0; ch < channel_out; ++ch) {
 		  for (index_t m = 0; m < shape_out[2]*shape_out[3]; ++m) {
 			float temp_data_value = temp_diff_[ch][m];
@@ -376,7 +383,6 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
         pack_col2patch_var(bottom_diff[i], temp_dif_, bottom_len_y, bottom_len_x,
               kernel_y, kernel_x, stride_y, stride_x, pad_y, pad_x);
       }
-	  // PrintTensor("end_temp_dif_", temp_dif_);
       
     }
   }
@@ -398,6 +404,7 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
   mshadow::Shape<4> shape_in;
   mshadow::Shape<4> shape_out;
 
+  mshadow::TensorContainer<xpu, 3> weight_data;
   mshadow::TensorContainer<xpu, 2> temp_col_;
   mshadow::TensorContainer<xpu, 2> temp_dif_;
   mshadow::TensorContainer<xpu, 2> temp_data_;
