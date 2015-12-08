@@ -3502,8 +3502,8 @@ int main(int argc, char *argv[]) {
   // TestFcLayer(&rnd);
   // TestConvLayer(&rnd);
   // TestConvVarLayer(&rnd);
-  TestLocalLayer(&rnd);
-  // TestLocalFactorLayer(&rnd);
+  // TestLocalLayer(&rnd);
+  TestLocalFactorLayer(&rnd);
   // TestPoolLayer(&rnd);
   // TestCrossLayer(&rnd);
   // TestDropoutLayer(&rnd);
