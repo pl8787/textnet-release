@@ -83,12 +83,12 @@ class LstmD2OptimizeLayer : public Layer<xpu> {
         initializer::CreateInitializer<xpu, 4>(b_setting["init_type"].iVal(), b_setting, this->prnd_);
     this->params[0].Init();
     this->params[1].Init();
-    // if (f_gate_bias_init != 0.f) {
-    //     init_f_gate_bias(); // this must be after init()
-    // }
-    // if (o_gate_bias_init != 0.f) {
-    //     init_o_gate_bias(); // this must be after init()
-    // }
+    if (f_gate_bias_init != 0.f) {
+      init_f_gate_bias(); // this must be after init()
+    }
+    if (o_gate_bias_init != 0.f) {
+      init_o_gate_bias(); // this must be after init()
+    }
 
     // if (!param_file.empty()) {
     //   LoadParam();
@@ -104,17 +104,17 @@ class LstmD2OptimizeLayer : public Layer<xpu> {
   }
 
   // if want to capture long term dependency, should init as a positive value
-  // void init_f_gate_bias() {
-  //   Tensor1D bias_data = this->params[2].data_d1();
-  //   Tensor1D f_bias = Tensor1D(bias_data.dptr_ + 1*d_mem, mshadow::Shape1(d_mem));
-  //   f_bias = f_gate_bias_init;
-  // }
+  void init_f_gate_bias() {
+    Tensor1D bias_data = this->params[1].data_d1();
+    Tensor1D f_bias = Tensor1D(bias_data.dptr_ + 1*d_mem, mshadow::Shape1(d_mem*3));
+    f_bias = f_gate_bias_init;
+  }
 
-  // void init_o_gate_bias() {
-  //   Tensor1D bias_data = this->params[2].data_d1();
-  //   Tensor1D o_bias = Tensor1D(bias_data.dptr_ + 2*d_mem, mshadow::Shape1(d_mem));
-  //   o_bias = o_gate_bias_init;
-  // }
+  void init_o_gate_bias() {
+    Tensor1D bias_data = this->params[1].data_d1();
+    Tensor1D o_bias = Tensor1D(bias_data.dptr_ + 4*d_mem, mshadow::Shape1(d_mem));
+    o_bias = o_gate_bias_init;
+  }
   
   // bottom should be padded with only one zero on both sides
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -283,7 +283,6 @@ class LstmD2OptimizeLayer : public Layer<xpu> {
       memcpy(p_dst, p_src, h_t.size(1)*sizeof(float));
     }
   }
-
 
   // 以前的这个函数不支持batch，现在改成batch的版本
   void split_gate_batch(Tensor2D &g, 
