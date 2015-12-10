@@ -144,7 +144,8 @@ class WholePooling2dLayer : public Layer<xpu>{
     // utils::Check(out.size(0) == x_len && out.size(1) == y_len, "WholePooling2dLayer: length error");
     for (int i = 0; i < x_len; ++i) {
       for (int j = 0; j < y_len; ++j) {
-        out[i][j] += mshadow::expr::F<op::identity>(in[i][j]);
+        // out[i][j] += mshadow::expr::F<op::identity>(in[i][j]);
+        out[i][j] += in[i][j];
       }
     }
   }
@@ -158,7 +159,6 @@ class WholePooling2dLayer : public Layer<xpu>{
   //   }
   // }
 
-
   // bottom_data: (batch_size, x_len, y_len, d_hidden)
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
@@ -171,9 +171,11 @@ class WholePooling2dLayer : public Layer<xpu>{
 	mshadow::Tensor<xpu, 2> top_len  = top[0]->length;
 
     // conv var len to static len, no need to forward length info
+    
+    top_data = 0;
+    top_len = -1;
 
     int d_hidden = bottom_data.size(3);
-    top_data = 0;
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
 	  // top_len[batch_idx][seq_idx] = 1; // not forward length for a fixed length layer
       int x_len = bottom_len[batch_idx][0];
@@ -247,5 +249,5 @@ class WholePooling2dLayer : public Layer<xpu>{
 };
 }  // namespace layer
 }  // namespace textnet
-#endif  // LAYER_WHOLEPOOLING_LAYER_INL_HPP_
+#endif
 
