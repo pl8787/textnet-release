@@ -86,6 +86,7 @@ const int kBatchDuplicate = 1010;
 const int kConvVar = 1011;
 const int kLocal = 1012;
 const int kLocalFactor = 1013;
+const int kGaussianMask = 1014;
 const int kDynamicKMaxPooling = 10001;
 const int kMatchTopKPooling = 10002;
 const int kSelectSubRepByToken = 10003;

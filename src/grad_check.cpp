@@ -926,6 +926,70 @@ void TestLocalFactorLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckGrad(layer_conv, bottoms, tops);
   
 }
+void TestGaussianMaskLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Gaussian Mask Layer." << endl;
+  Node<cpu> bottom0;
+  Node<cpu> bottom1;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom0);
+  bottoms.push_back(&bottom1);
+  tops.push_back(&top);
+  
+  // bottom0.Resize(Shape4(2,2,1,1), true);
+  // bottom1.Resize(Shape4(2,2,1,1), true);
+
+  bottom0.Resize(Shape4(2,2,1,1), true);
+  bottom1.Resize(Shape4(2,4,1,1), true);
+
+  // bottom0.data[0][0][0][0] = 0.5;
+  // bottom1.data[0][0][0][0] = 5;
+  
+  bottom0.data[0][0][0][0] = 0.5;
+  bottom0.data[0][1][0][0] = 0.1;
+  bottom0.data[1][0][0][0] = 0.2;
+  bottom0.data[1][1][0][0] = 0.9;
+  bottom1.data[0][0][0][0] = 5;
+  bottom1.data[0][1][0][0] = 1;
+  bottom1.data[0][2][0][0] = 1;
+  bottom1.data[0][3][0][0] = 0.01;
+  bottom1.data[1][0][0][0] = 5;
+  bottom1.data[1][1][0][0] = 2;
+  bottom1.data[1][2][0][0] = 2;
+  bottom1.data[1][3][0][0] = 0.01;
+  // prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+  
+  map<string, SettingV> setting;
+  setting["channel"] = SettingV(1);
+  setting["is_norm"] = SettingV(true);
+  setting["is_symmetric"] = SettingV(false);
+  setting["dim"] = SettingV(2);
+  setting["n_size"] = SettingV("5 5");
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_conv = CreateLayer<cpu>(kGaussianMask);
+  layer_conv->PropAll();
+  layer_conv->SetupLayer(setting, bottoms, tops, prnd);
+  layer_conv->Reshape(bottoms, tops, true);
+
+  layer_conv->Forward(bottoms, tops);
+  PrintTensor("bottom0", bottom0.data);
+  PrintTensor("bottom1", bottom1.data);
+  PrintTensor("top", top.data);
+
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.01f);
+  setting_checker["range_max"] = SettingV(0.01f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_conv, bottoms, tops);
+}
+
 void TestPoolLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Pool Layer." << endl;
   Node<cpu> bottom;
@@ -3503,7 +3567,8 @@ int main(int argc, char *argv[]) {
   // TestConvLayer(&rnd);
   // TestConvVarLayer(&rnd);
   // TestLocalLayer(&rnd);
-  TestLocalFactorLayer(&rnd);
+  // TestLocalFactorLayer(&rnd);
+  TestGaussianMaskLayer(&rnd);
   // TestPoolLayer(&rnd);
   // TestCrossLayer(&rnd);
   // TestDropoutLayer(&rnd);

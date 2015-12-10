@@ -79,6 +79,8 @@ class Net : public INet{
     model_save_interval = 0;
 	model_save_file_prefix = "";
 	model_save_last = false;
+	model_save_initial = true;
+	model_test_initial = true;
     InitSettingEngine();
   }
 
@@ -235,6 +237,16 @@ class Net : public INet{
 	if (!root["model_save_last"].isNull()) {
 		model_save_last = root["model_save_last"].asBool();
 		utils::Printf("Set model_save_last to %d\n", model_save_last);
+	}
+
+	if (!root["model_save_initial"].isNull()) {
+		model_save_initial = root["model_save_initial"].asBool();
+		utils::Printf("Set model_save_initial to %d\n", model_save_initial);
+	}
+
+	if (!root["model_test_initial"].isNull()) {
+		model_test_initial = root["model_test_initial"].asBool();
+		utils::Printf("Set model_test_initial to %d\n", model_test_initial);
 	}
 
 	ReadNetConfig();
@@ -954,6 +966,8 @@ class Net : public INet{
   int model_save_interval;
   string model_save_file_prefix;
   bool model_save_everything;
+  bool model_save_initial;
+  bool model_test_initial;
   bool model_save_last;
   // is save best or not, output file is file_prefix + ".best" // to do
   // map<string, bool> save_best;

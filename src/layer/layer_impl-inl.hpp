@@ -59,6 +59,7 @@
 #include "./common/select_sub_rep_by_token_layer-inl.hpp"
 #include "./common/local_layer-inl.hpp"
 #include "./common/local_factor_layer-inl.hpp"
+#include "./common/gaussian_mask_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
 #include "./input/sequence_classification_data_layer-inl.hpp"
@@ -173,6 +174,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
 	case kLocal: return new LocalLayer<xpu>(type);
 	case kLocalFactor: return new LocalFactorLayer<xpu>(type);
 	case kImage: return new ImageLayer<xpu>(type);
+	case kGaussianMask: return new GaussianMaskLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }
