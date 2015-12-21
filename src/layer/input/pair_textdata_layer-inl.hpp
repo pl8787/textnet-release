@@ -26,6 +26,7 @@ class PairTextDataLayer : public Layer<xpu>{
   virtual void Require() {
     // default value, just set the value you want
     this->defaults["min_doc_len"] = SettingV(1);
+	this->defaults["reverse"] = SettingV(false);
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["data_file"] = SettingV();
@@ -52,6 +53,7 @@ class PairTextDataLayer : public Layer<xpu>{
     max_doc_len = setting["max_doc_len"].iVal();
     min_doc_len = setting["min_doc_len"].iVal();
     shuffle = setting["shuffle"].bVal();
+	reverse = setting["reverse"].bVal();
     
     ReadTextData();
 	MakePair();
@@ -166,14 +168,23 @@ class PairTextDataLayer : public Layer<xpu>{
     vector<int> s1 = s1_data_set[data_idx];
 	vector<int> s2 = s2_data_set[data_idx];
 	int label = label_set[data_idx];
-	for (int i = 0; i < s1.size(); ++i) {
-	  top0_data[top_idx][0][i] = s1[i];
+	if (!reverse) {
+	  for (int i = 0; i < min(max_doc_len, (int)s1.size()); ++i) {
+	    top0_data[top_idx][0][i] = s1[i];
+  	  }
+  	  for (int i = 0; i < min(max_doc_len, (int)s2.size()); ++i) {
+        top0_data[top_idx][1][i] = s2[i];
+	  }
+	} else {
+	  for (int i = 0; i < min(max_doc_len, (int)s1.size()); ++i) {
+	    top0_data[top_idx][0][i] = s1[(int)s1.size() - i - 1];
+  	  }
+  	  for (int i = 0; i < min(max_doc_len, (int)s2.size()); ++i) {
+        top0_data[top_idx][1][i] = s2[(int)s2.size() - i - 1];
+	  }
 	}
-	for (int i = 0; i < s2.size(); ++i) {
-      top0_data[top_idx][1][i] = s2[i];
-	}
-	top0_length[top_idx][0] = s1.size();
-	top0_length[top_idx][1] = s2.size();
+	top0_length[top_idx][0] = min(max_doc_len, (int)s1.size());
+	top0_length[top_idx][1] = min(max_doc_len, (int)s2.size());
 
 	top1_data[top_idx] = label;
   } 
@@ -211,6 +222,8 @@ class PairTextDataLayer : public Layer<xpu>{
   int max_doc_len;
   int min_doc_len;
   bool shuffle;
+  bool reverse;
+
   vector<vector<int> > s1_data_set;
   vector<vector<int> > s2_data_set;
   vector<int> label_set;

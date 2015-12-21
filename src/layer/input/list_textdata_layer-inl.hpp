@@ -33,6 +33,7 @@ class ListTextDataLayer : public Layer<xpu>{
 	this->defaults["batch_size"] = SettingV(1);
     this->defaults["min_doc_len"] = SettingV(1);
 	this->defaults["speedup_list"] = SettingV(false);
+	this->defaults["reverse"] = SettingV(false);
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["data_file"] = SettingV();
@@ -57,6 +58,7 @@ class ListTextDataLayer : public Layer<xpu>{
     max_doc_len = setting["max_doc_len"].iVal();
     min_doc_len = setting["min_doc_len"].iVal();
 	speedup_list = setting["speedup_list"].bVal();
+	reverse = setting["reverse"].bVal();
     
     ReadTextData();
     
@@ -198,14 +200,23 @@ class ListTextDataLayer : public Layer<xpu>{
       for (int i = 0; i < list_set[line_ptr].size(); ++i) {
 	    int idx = list_set[line_ptr][i];
 		int out_idx = s * list_set[line_ptr].size() + i;
-	    for (int j = 0; j < q_data_set[idx].size(); ++j) {
-	  	  top0_data[out_idx][0][j] = q_data_set[idx][j];
-	    }
-	    for (int j = 0; j < a_data_set[idx].size(); ++j) {
-	  	  top0_data[out_idx][1][j] = a_data_set[idx][j];
-	    }
-        top0_length[out_idx][0] = q_data_set[idx].size();
-	    top0_length[out_idx][1] = a_data_set[idx].size();
+		if (!reverse) {
+	      for (int j = 0; j < min(max_doc_len, (int)q_data_set[idx].size()); ++j) {
+	  	    top0_data[out_idx][0][j] = q_data_set[idx][j];
+	      }
+	      for (int j = 0; j < min(max_doc_len, (int)a_data_set[idx].size()); ++j) {
+	  	    top0_data[out_idx][1][j] = a_data_set[idx][j];
+	      }
+		} else {
+	      for (int j = 0; j < min(max_doc_len, (int)q_data_set[idx].size()); ++j) {
+	  	    top0_data[out_idx][0][j] = q_data_set[idx][(int)q_data_set[idx].size() - j - 1];
+	      }
+	      for (int j = 0; j < min(max_doc_len, (int)a_data_set[idx].size()); ++j) {
+	  	    top0_data[out_idx][1][j] = a_data_set[idx][(int)a_data_set[idx].size() - j - 1];
+	      }
+		}
+        top0_length[out_idx][0] = min(max_doc_len, (int)q_data_set[idx].size());
+	    top0_length[out_idx][1] = min(max_doc_len, (int)a_data_set[idx].size());
         top1_data[out_idx] = label_set[idx];
       }
       line_ptr = (line_ptr + 1) % list_set.size();
@@ -225,6 +236,7 @@ class ListTextDataLayer : public Layer<xpu>{
   int min_doc_len;
   bool shuffle;
   bool speedup_list;
+  bool reverse;
 
   vector<vector<int> > q_data_set;
   vector<vector<int> > a_data_set;

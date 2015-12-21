@@ -942,31 +942,43 @@ void TestGaussianMaskLayer(mshadow::Random<cpu>* prnd) {
   // bottom1.Resize(Shape4(2,2,1,1), true);
 
   bottom0.Resize(Shape4(2,2,1,1), true);
-  bottom1.Resize(Shape4(2,4,1,1), true);
+  bottom1.Resize(Shape4(2,3,1,1), true);
 
   // bottom0.data[0][0][0][0] = 0.5;
   // bottom1.data[0][0][0][0] = 5;
   
+  // bottom0.data[0][0][0][0] = 0.5;
+  // bottom0.data[0][1][0][0] = 0.5;
+  // bottom0.data[1][0][0][0] = 0.5;
+  // bottom0.data[1][1][0][0] = 0.5;
+  // bottom1.data[0][0][0][0] = 1;
+  // bottom1.data[0][1][0][0] = 1;
+  // bottom1.data[0][2][0][0] = 1;
+  // bottom1.data[0][3][0][0] = 5;
+  // bottom1.data[1][0][0][0] = 5;
+  // bottom1.data[1][1][0][0] = -1;
+  // bottom1.data[1][2][0][0] = -1;
+  // bottom1.data[1][3][0][0] = 1;
+
+
   bottom0.data[0][0][0][0] = 0.5;
-  bottom0.data[0][1][0][0] = 0.1;
-  bottom0.data[1][0][0][0] = 0.2;
-  bottom0.data[1][1][0][0] = 0.9;
-  bottom1.data[0][0][0][0] = 5;
+  bottom0.data[0][1][0][0] = 0.5;
+  bottom0.data[1][0][0][0] = 0.5;
+  bottom0.data[1][1][0][0] = 0.5;
+  bottom1.data[0][0][0][0] = 1;
   bottom1.data[0][1][0][0] = 1;
-  bottom1.data[0][2][0][0] = 1;
-  bottom1.data[0][3][0][0] = 0.01;
-  bottom1.data[1][0][0][0] = 5;
-  bottom1.data[1][1][0][0] = 2;
-  bottom1.data[1][2][0][0] = 2;
-  bottom1.data[1][3][0][0] = 0.01;
+  bottom1.data[0][2][0][0] = 2;
+  bottom1.data[1][0][0][0] = 2;
+  bottom1.data[1][1][0][0] = 1;
+  bottom1.data[1][2][0][0] = 1;
   // prnd->SampleUniform(&bottom.data, -1.0, 1.0);
   
   map<string, SettingV> setting;
   setting["channel"] = SettingV(1);
   setting["is_norm"] = SettingV(true);
-  setting["is_symmetric"] = SettingV(false);
+  setting["is_symmetric"] = SettingV(true);
   setting["dim"] = SettingV(2);
-  setting["n_size"] = SettingV("5 5");
+  setting["n_size"] = SettingV("10 10");
   
   /// Test Activation Layer
   Layer<cpu> * layer_conv = CreateLayer<cpu>(kGaussianMask);
@@ -3121,6 +3133,7 @@ void TestPairTextDataLayer(mshadow::Random<cpu>* prnd) {
   setting["max_doc_len"] = SettingV(32);
   setting["min_doc_len"] = SettingV(5);
   setting["shuffle"] = SettingV(false);
+  setting["reverse"] = SettingV(false);
   
   /// Test PairTextData Layer
   Layer<cpu> * layer_pair_textdata = CreateLayer<cpu>(kPairTextData);
@@ -3568,7 +3581,7 @@ int main(int argc, char *argv[]) {
   // TestConvVarLayer(&rnd);
   // TestLocalLayer(&rnd);
   // TestLocalFactorLayer(&rnd);
-  TestGaussianMaskLayer(&rnd);
+  // TestGaussianMaskLayer(&rnd);
   // TestPoolLayer(&rnd);
   // TestCrossLayer(&rnd);
   // TestDropoutLayer(&rnd);
@@ -3597,7 +3610,7 @@ int main(int argc, char *argv[]) {
   // TestBatchSplitLayer(&rnd);
   // TestBatchConcatLayer(&rnd);
   // TestBatchDuplicateLayer(&rnd);
-  // TestPairTextDataLayer(&rnd);
+  TestPairTextDataLayer(&rnd);
   // TestListTextDataLayer(&rnd);
   // TestGateLayer(&rnd);
   // TestDiagRecurrentLayer(&rnd);

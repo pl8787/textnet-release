@@ -79,6 +79,7 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
     // default value, just set the value you want
     this->defaults["is_norm"] = SettingV(true);
 	this->defaults["is_symmetric"] = SettingV(true);
+	this->defaults["is_factor"] = SettingV(true);
     
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -102,6 +103,7 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 
     is_norm = setting["is_norm"].bVal();
 	is_symmetric = setting["is_symmetric"].bVal();
+	is_factor = setting["is_factor"].bVal();
     dim = setting["dim"].iVal();
 	channel = setting["channel"].iVal();
     std::string n_size_str = setting["n_size"].sVal();
@@ -169,8 +171,6 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 	var_.Resize(mshadow::Shape2(dim, dim));
 	var_diff_.Resize(mshadow::Shape2(dim, dim));
 
-	PrintTensor("position", position_);
-
 	if (show_info) {
 	  bottom[0]->PrintShape("bottom0");
 	  bottom[1]->PrintShape("bottom1");
@@ -198,6 +198,11 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 	mshadow::Tensor<xpu, 2> bottom0_data = bottom[0]->data_d2();
 	mshadow::Tensor<xpu, 2> bottom1_data = bottom[1]->data_d2();
 	mshadow::Tensor<xpu, 3> top_data = top[0]->data_d3();
+
+	//PrintTensor("mean", bottom0_data);
+	//PrintTensor("var", bottom1_data);
+	//std::getchar();
+
 	for (int i = 0; i < batch_size; ++i) {
 	  for (int c = 0; c < channel; ++c) {
 		int c_start = 0; 
@@ -213,12 +218,21 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 		  }
 		} else if (dim == 2) {
           // Construct Var Matrix
-	      if (is_symmetric) {
+	      if (is_symmetric && !is_factor) {
 			c_start = c * (dim+1)*dim/2;
 			var_[0][0] = bottom1_data[i][c_start];
 			var_[0][1] = bottom1_data[i][c_start+1];
 			var_[1][0] = bottom1_data[i][c_start+1];
 			var_[1][1] = bottom1_data[i][c_start+2];
+		  } else if (is_factor) {
+			float a = bottom1_data[i][c_start];
+			float b = bottom1_data[i][c_start+2];
+			float c = bottom1_data[i][c_start+1];
+			c_start = c * (dim+1)*dim/2;
+			var_[0][0] = a*a + c*c;
+			var_[0][1] = (a+b)*c;
+			var_[1][0] = (a+b)*c;
+			var_[1][1] = b*b + c*c;
 	      } else {
 			c_start = c * dim*dim;
 			var_[0][0] = bottom1_data[i][c_start];
@@ -273,12 +287,21 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 		for (int c = 0; c < channel; ++c) {
 		  int c_start = 0; 
           // Construct Var Matrix
-	      if (is_symmetric) {
+	      if (is_symmetric && !is_factor) {
 			c_start = c * (dim+1)*dim/2;
 			var_[0][0] = bottom1_data[i][c_start];
 			var_[0][1] = bottom1_data[i][c_start+1];
 			var_[1][0] = bottom1_data[i][c_start+1];
 			var_[1][1] = bottom1_data[i][c_start+2];
+		  } else if (is_factor) {
+			c_start = c * (dim+1)*dim/2;
+			float a = bottom1_data[i][c_start];
+			float b = bottom1_data[i][c_start+2];
+			float c = bottom1_data[i][c_start+1];
+			var_[0][0] = a*a + c*c;
+			var_[0][1] = (a+b)*c;
+			var_[1][0] = (a+b)*c;
+			var_[1][1] = b*b + c*c;
 	      } else {
 			c_start = c * dim*dim;
 			var_[0][0] = bottom1_data[i][c_start];
@@ -296,11 +319,19 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 		    if (this->prop_error[1]) {
 			  var_diff_ = dot(centered_.Slice(k,k+1).T(), centered_.Slice(k,k+1));
 			  var_diff_ *= -top_diff[i][c][k];
-	          if (is_symmetric) {
+	          if (is_symmetric && !is_factor) {
 			    c_start = c * (dim+1)*dim/2;
 			    bottom1_diff[i][c_start] += var_diff_[0][0];
 			    bottom1_diff[i][c_start+1] += var_diff_[0][1] + var_diff_[1][0];
 			    bottom1_diff[i][c_start+2] += var_diff_[1][1];
+			  } else if (is_factor) {
+			    c_start = c * (dim+1)*dim/2;
+			    float a = bottom1_data[i][c_start];
+			    float b = bottom1_data[i][c_start+2];
+			    float c = bottom1_data[i][c_start+1];
+			    bottom1_diff[i][c_start] += 2*a*var_diff_[0][0] + c*(var_diff_[0][1]+var_diff_[1][0]);
+			    bottom1_diff[i][c_start+1] += 2*c*(var_diff_[0][0]+var_diff_[1][1]) + (a+b)*(var_diff_[0][1]+var_diff_[1][0]);
+			    bottom1_diff[i][c_start+2] += 2*b*var_diff_[1][1] + c*(var_diff_[0][1]+var_diff_[1][0]);
 	          } else {
 			    c_start = c * dim*dim;
 			    bottom1_diff[i][c_start] += var_diff_[0][0];
@@ -319,6 +350,7 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
   int batch_size;
   bool is_norm;
   bool is_symmetric;
+  bool is_factor;
   int dim;
   int channel;
   std::vector<int> n_size;

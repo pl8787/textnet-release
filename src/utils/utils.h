@@ -93,6 +93,7 @@ inline void HandlePrint(const char *msg) {
   time_t t = time(0);
   strftime(time_info, sizeof(time_info), "%X", localtime(&t));
   printf("[%s] %s", time_info, msg);
+  fflush(stdout);
 }
 #else
 // include declarations, some one must implement this
