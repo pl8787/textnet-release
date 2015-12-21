@@ -42,6 +42,7 @@ class LstmD2OptimizeLayer : public Layer<xpu> {
     this->defaults["no_bias"] = SettingV(false);
     this->defaults["o_gate_bias_init"] = SettingV(0.f);
     this->defaults["f_gate_bias_init"] = SettingV(0.f);
+    this->defaults["i_gate_bias_init"] = SettingV(0.f);
     
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -70,6 +71,7 @@ class LstmD2OptimizeLayer : public Layer<xpu> {
     reverse = setting["reverse"].bVal();
     o_gate_bias_init = setting["o_gate_bias_init"].fVal();
     f_gate_bias_init = setting["f_gate_bias_init"].fVal();
+    i_gate_bias_init = setting["i_gate_bias_init"].fVal();
 
     this->params.resize(2);
     this->params[0].Resize(1, 1, d_input+3*d_mem, 6*d_mem, true); // w and u is in one matrix
@@ -85,6 +87,9 @@ class LstmD2OptimizeLayer : public Layer<xpu> {
     this->params[1].Init();
     if (f_gate_bias_init != 0.f) {
       init_f_gate_bias(); // this must be after init()
+    }
+    if (i_gate_bias_init != 0.f) {
+      init_i_gate_bias(); // this must be after init()
     }
     if (o_gate_bias_init != 0.f) {
       init_o_gate_bias(); // this must be after init()
@@ -108,6 +113,13 @@ class LstmD2OptimizeLayer : public Layer<xpu> {
     Tensor1D bias_data = this->params[1].data_d1();
     Tensor1D f_bias = Tensor1D(bias_data.dptr_ + 1*d_mem, mshadow::Shape1(d_mem*3));
     f_bias = f_gate_bias_init;
+  }
+
+  // if want to capture long term dependency, should init as a positive value
+  void init_i_gate_bias() {
+    Tensor1D bias_data = this->params[1].data_d1();
+    Tensor1D i_bias = Tensor1D(bias_data.dptr_, mshadow::Shape1(d_mem));
+    i_bias = i_gate_bias_init;
   }
 
   void init_o_gate_bias() {
@@ -1392,6 +1404,7 @@ class LstmD2OptimizeLayer : public Layer<xpu> {
   bool no_bias, reverse;
   float o_gate_bias_init;
   float f_gate_bias_init;
+  float i_gate_bias_init;
 
   // 这些变量记录的都是计算当前位置的表达需要的东西，需要前一个的c和l，所以pre_c和pre_h中存放的都是拼接好的context
   TensorC2D run_x, run_x_er,\

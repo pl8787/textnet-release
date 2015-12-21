@@ -80,7 +80,7 @@ class WholePooling2dLayer : public Layer<xpu>{
     out[0] = sum_rows(in_d2);
   }
   // in (1, d), out (x, y, d)
-  void wholeUnSumPooling(Tensor2D in, Tensor2D out) {
+  void wholeUnSumPooling(Tensor2D in, Tensor3D out) {
     Tensor2D out_d2 = Tensor2D(out.dptr_, mshadow::Shape2(out.size(0)*out.size(1), out.size(2)));
     utils::Check(in.size(1) == out_d2.size(1) && in.size(0) == 1, "WholePooling2dLayer:pooling io size error");
     out_d2 += repmat(in[0], out_d2.size(0));
