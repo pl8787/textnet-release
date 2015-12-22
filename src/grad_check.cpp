@@ -1395,8 +1395,9 @@ void TestSoftmaxFuncLayer(mshadow::Random<cpu>* prnd) {
   bottom.length = 3;
   
   map<string, SettingV> setting;
+  setting["axis"] = 3;
 
-  Layer<cpu> * layer = CreateLayer<cpu>(kSoftmaxFuncVarLen);
+  Layer<cpu> * layer = CreateLayer<cpu>(kSoftmaxFunc);
   layer->PropAll();
   layer->SetupLayer(setting, bottoms, tops, prnd);
   layer->Reshape(bottoms, tops);
@@ -3610,7 +3611,7 @@ int main(int argc, char *argv[]) {
   // TestBatchSplitLayer(&rnd);
   // TestBatchConcatLayer(&rnd);
   // TestBatchDuplicateLayer(&rnd);
-  TestPairTextDataLayer(&rnd);
+  // TestPairTextDataLayer(&rnd);
   // TestListTextDataLayer(&rnd);
   // TestGateLayer(&rnd);
   // TestDiagRecurrentLayer(&rnd);
@@ -3618,7 +3619,7 @@ int main(int argc, char *argv[]) {
   // TestPosPredRepLayer(&rnd);
   // TestSwapAxisLayer(mshadow::Random<cpu>* prnd);
   // TestFlattenLayer(mshadow::Random<cpu>* prnd);
-  // TestSoftmaxFuncLayer(&rnd);
+  TestSoftmaxFuncLayer(&rnd);
   // TestWordClassSoftmaxLayer(&rnd);
   // TestGatingLayer(&rnd);
   // TestSoftmaxVarLenFuncLayer(&rnd);
