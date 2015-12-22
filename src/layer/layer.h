@@ -90,6 +90,7 @@ const int kSelectSubRepByToken = 10003;
 const int kLstmD2 = 10004;
 const int kLstmD2Optimize = 10005;
 const int kWholePooling2d = 10006;
+const int kGateWholePooling = 10007;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;

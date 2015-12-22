@@ -2634,6 +2634,60 @@ void TestWholePooling2DLayer(mshadow::Random<cpu>* prnd) {
   // cout << "Done." << endl;
 }
 
+void TestGateWholePoolingLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check GateWholePooling Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(2,2,6,3), true);
+  prnd->SampleUniform(&bottom.data, -0.1, 0.1);
+
+  // bottom.data[0][0].Slice(0, 2) = NAN; // padding
+  // bottom.data[0][0].Slice(4, 6) = NAN; // padding
+  // bottom.data[1][0].Slice(0, 1) = NAN; // padding
+  // bottom.data[1][0].Slice(4, 6) = NAN; // padding
+  
+  map<string, SettingV> setting;
+  {
+    setting["is_var_len"] = SettingV(false);
+  }
+
+  /// Test Activation Layer
+  Layer<cpu> * layer = CreateLayer<cpu>(kGateWholePooling);
+  layer->PropAll();
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+  prnd->SampleUniform(&top.diff, -0.1, 0.1);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.001f);
+  setting_checker["range_max"] = SettingV(0.001f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+
+  cout << "Check Error." << endl;
+  cker->CheckError(layer, bottoms, tops);
+
+  cout << "Check Grad." << endl;
+  cker->CheckGrad(layer, bottoms, tops);
+
+  // layer->Forward(bottoms, tops);
+  // layer->Backprop(bottoms, tops);
+  // PrintTensor("b_data", bottoms[0]->data);
+  // PrintTensor("t_data", tops[0]->data);
+  // PrintTensor("b_diff", bottoms[0]->diff);
+  // PrintTensor("t_diff", tops[0]->diff);
+  // cout << "Done." << endl;
+}
+
 void TestWholePoolingLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check WholePooling Layer." << endl;
   Node<cpu> bottom;
@@ -3344,7 +3398,8 @@ int main(int argc, char *argv[]) {
   // TestMatchTensorLayer(&rnd);
   // TestMatchTopKPoolingLayer(&rnd);
   // TestLstmD2Layer(&rnd);
-  TestWholePooling2DLayer(&rnd);
+  // TestWholePooling2DLayer(&rnd);
+  TestGateWholePoolingLayer(mshadow::Random<cpu>* prnd);
   // TestSelectSubRepByTokenLayer(&rnd);
   // TestMatchWeightedDotLayer(&rnd);
   // TestGruLayer(&rnd);

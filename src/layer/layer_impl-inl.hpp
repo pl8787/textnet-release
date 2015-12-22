@@ -39,6 +39,7 @@
 #include "./common/convolutional_lstm_layer-inl.hpp"
 #include "./common/whole_pooling_layer-inl.hpp"
 #include "./common/whole_pooling_2d_layer-inl.hpp"
+#include "./common/gate_whole_pooling_layer-inl.hpp"
 #include "./common/topk_pooling_layer-inl.hpp"
 #include "./common/concat_layer-inl.hpp"
 #include "./common/gate_layer-inl.hpp"
@@ -95,6 +96,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kTensorFullConnect: return new TensorFullConnectLayer<xpu>(type);
     case kMaxPooling: return new PoolingLayer<mshadow::red::maximum, xpu>(type);
     case kAvgPooling: return new PoolingLayer<mshadow::red::sum, xpu>(type);
+    case kGateWholePooling: return new GateWholePoolingLayer<xpu>(type);
     case kWholePooling: return new WholePoolingLayer<xpu>(type);
     case kWholePooling2d: return new WholePooling2dLayer<xpu>(type);
     case kTopkPooling: return new TopkPoolingLayer<xpu>(type);
