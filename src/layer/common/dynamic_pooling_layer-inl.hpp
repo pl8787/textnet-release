@@ -139,6 +139,11 @@ class DynamicPoolingLayer : public Layer<xpu>{
   //     }
   //   }
   // }
+
+  // this functions return the split spans of each dynamic window
+  // NOTE: if the input size is smaller than output size
+  // this functions will return split spans larger than input size
+  // and it is required to pad the input in other functions
   void dynamic_split(int input_row, int pool_row, vector<int> &pos) {
     pos.clear();
     int pad_input_row = input_row < pool_row ? pool_row : input_row;

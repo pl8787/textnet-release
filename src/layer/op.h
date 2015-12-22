@@ -20,9 +20,16 @@ struct identity {
     return a;
   }
 };
+
 struct identity_grad {
   MSHADOW_XINLINE static real_t Map(real_t a) {
     return 1.0f;
+  }
+};
+
+struct orc_exp {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return std::exp(a);
   }
 };
 
