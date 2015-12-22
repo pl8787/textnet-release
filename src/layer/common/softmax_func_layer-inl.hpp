@@ -119,6 +119,39 @@ class SoftmaxFuncLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 2> output_diff(top_diff.dptr_,   mshadow::Shape2(row, col));
 
     for (int row_idx = 0; row_idx < row; ++row_idx) {
+      float error_sum = 0.0f;
+      for (int col_idx = 0; col_idx < col; ++col_idx) {
+        error_sum += output_diff[row_idx][col_idx] * output_data[row_idx][col_idx];
+      }
+      for (int col_idx = 0; col_idx < col; ++col_idx) {
+        input_diff[row_idx][col_idx] += (output_diff[row_idx][col_idx] - error_sum) * output_data[row_idx][col_idx];
+      }
+    }
+#if DEBUG
+    checkNan(bottom[0]->diff.dptr_, bottom[0]->diff.shape_.Size());
+#endif
+  }
+
+  /*
+  virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
+                        const std::vector<Node<xpu>*> &top) {
+    using namespace mshadow::expr;
+    mshadow::Shape<4>       bottom_shape= bottom[0]->data.shape_;
+    mshadow::Tensor<xpu, 4> bottom_diff = bottom[0]->diff;
+    mshadow::Tensor<xpu, 4> top_data    = top[0]->data;
+    mshadow::Tensor<xpu, 4> top_diff    = top[0]->diff;
+    int row = 1, col = 1;
+    for (int i = 0; i < axis; ++i) {
+      row *= int(bottom_shape[i]);
+    }
+    for (int i = axis; i < 4; ++i) {
+      col *= int(bottom_shape[i]);
+    }
+    mshadow::Tensor<xpu, 2> output_data(top_data.dptr_,   mshadow::Shape2(row, col));
+    mshadow::Tensor<xpu, 2> input_diff(bottom_diff.dptr_, mshadow::Shape2(row, col));
+    mshadow::Tensor<xpu, 2> output_diff(top_diff.dptr_,   mshadow::Shape2(row, col));
+
+    for (int row_idx = 0; row_idx < row; ++row_idx) {
       for (int col_idx = 0; col_idx < col; ++col_idx) {
         for (int jacobi_row_idx = 0; jacobi_row_idx < col; ++jacobi_row_idx) {
           float top = output_diff[row_idx][jacobi_row_idx];
@@ -136,6 +169,7 @@ class SoftmaxFuncLayer : public Layer<xpu>{
     checkNan(bottom[0]->diff.dptr_, bottom[0]->diff.shape_.Size());
 #endif
   }
+  */
   
  protected:
   int axis;
