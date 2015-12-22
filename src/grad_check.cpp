@@ -2644,17 +2644,35 @@ void TestGateWholePoolingLayer(mshadow::Random<cpu>* prnd) {
   bottoms.push_back(&bottom);
   tops.push_back(&top);
   
-  bottom.Resize(Shape4(2,2,6,3), true);
+  bottom.Resize(Shape4(1,1,6,2), true);
+  bottom.length[0][0] = 3;
   prnd->SampleUniform(&bottom.data, -0.1, 0.1);
 
   // bottom.data[0][0].Slice(0, 2) = NAN; // padding
   // bottom.data[0][0].Slice(4, 6) = NAN; // padding
   // bottom.data[1][0].Slice(0, 1) = NAN; // padding
   // bottom.data[1][0].Slice(4, 6) = NAN; // padding
-  
+  //
   map<string, SettingV> setting;
   {
-    setting["is_var_len"] = SettingV(false);
+    setting["is_var_len"] = SettingV(true);
+    setting["no_bias"] = SettingV(false);
+      
+    map<string, SettingV> &w_filler = *(new map<string, SettingV>());
+      w_filler["init_type"] = SettingV(initializer::kUniform);
+      w_filler["range"] = SettingV(0.01f);
+    setting["w_filler"] = SettingV(&w_filler);
+    setting["b_filler"] = SettingV(&w_filler);
+
+      
+    map<string, SettingV> &w_updater = *(new map<string, SettingV>());
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["eps"] = SettingV(0.01f);
+      w_updater["batch_size"] = SettingV(1);
+      w_updater["max_iter"] = SettingV(10000);
+      w_updater["lr"] = SettingV(0.1f);
+    setting["w_updater"] = SettingV(&w_updater);
+    setting["b_updater"] = SettingV(&w_updater);
   }
 
   /// Test Activation Layer
@@ -2685,7 +2703,7 @@ void TestGateWholePoolingLayer(mshadow::Random<cpu>* prnd) {
   // PrintTensor("t_data", tops[0]->data);
   // PrintTensor("b_diff", bottoms[0]->diff);
   // PrintTensor("t_diff", tops[0]->diff);
-  // cout << "Done." << endl;
+  cout << "Done." << endl;
 }
 
 void TestWholePoolingLayer(mshadow::Random<cpu>* prnd) {
@@ -3399,7 +3417,7 @@ int main(int argc, char *argv[]) {
   // TestMatchTopKPoolingLayer(&rnd);
   // TestLstmD2Layer(&rnd);
   // TestWholePooling2DLayer(&rnd);
-  TestGateWholePoolingLayer(mshadow::Random<cpu>* prnd);
+  TestGateWholePoolingLayer(&rnd);
   // TestSelectSubRepByTokenLayer(&rnd);
   // TestMatchWeightedDotLayer(&rnd);
   // TestGruLayer(&rnd);

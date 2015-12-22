@@ -90,8 +90,8 @@ class GateWholePoolingLayer : public Layer<xpu> {
     int feat_size  = bottom[0]->data.size(3);
     
     top[0]->Resize(batch_size, num_seq, 1, feat_size, true);
-    gate_score.Resize(batch_size, num_seq, 1, max_length, true); 
-    gate_prob.Resize(batch_size, num_seq, 1, max_length, true); 
+    gate_score.Resize(batch_size, num_seq, max_length, 1, true); 
+    gate_prob.Resize(batch_size, num_seq, max_length, 1, true); 
 
 	if (show_info) {
 	  bottom[0]->PrintShape("bottom0");
@@ -131,9 +131,11 @@ class GateWholePoolingLayer : public Layer<xpu> {
         } else {
           utils::Check(bottom_len[i][j] == -1, "GateWholePoolingLayer:length should be unset.");
         }
-        mshadow::Tensor<xpu, 1> gate_score_seq = gate_score_data[i][j][0].Slice(0, len);
-        mshadow::Tensor<xpu, 1> gate_prob_seq  = gate_prob_data[i][j][0].Slice(0, len);
-        mshadow::Softmax(gate_score_seq, gate_prob_seq);
+        mshadow::Tensor<xpu, 2> gate_score_seq = gate_score_data[i][j].Slice(0, len);
+        mshadow::Tensor<xpu, 2> gate_prob_seq  = gate_prob_data[i][j].Slice(0, len);
+        mshadow::Tensor<xpu, 1> gate_score_seq_1d(gate_score_seq.dptr_, mshadow::Shape1(gate_score_seq.size(0)));
+        mshadow::Tensor<xpu, 1> gate_prob_seq_1d(gate_prob_seq.dptr_, mshadow::Shape1(gate_prob_seq.size(0)));
+        mshadow::Softmax(gate_prob_seq_1d, gate_score_seq_1d);
         // for (int i = 0; i < output.size(0); ++i) {
         //   if (output[i] < crop) {
         //     std::cout << "SoftmaxFuncVarLenLayer: WARNING, prob too small, crop." << std::endl;
@@ -143,7 +145,7 @@ class GateWholePoolingLayer : public Layer<xpu> {
 
         for (int m = 0; m < len; ++m) {
           for (int n = 0; n < dim_rep; ++n) {
-            top_data[i][j][0][n] += bottom_data[i][j][m][n] * gate_prob_seq[m];
+            top_data[i][j][0][n] += bottom_data[i][j][m][n] * gate_prob_seq[m][0];
           }
         }
       }
@@ -161,11 +163,13 @@ class GateWholePoolingLayer : public Layer<xpu> {
 
     mshadow::Tensor<xpu, 4> bottom_data    = bottom[0]->data;
     mshadow::Tensor<xpu, 4> bottom_diff    = bottom[0]->diff;
+    mshadow::Tensor<xpu, 2> bottom_len     = bottom[0]->length;
     mshadow::Tensor<xpu, 2> bottom_data_d2 = bottom[0]->data_d2_reverse();
+    mshadow::Tensor<xpu, 2> bottom_diff_d2 = bottom[0]->diff_d2_reverse();
 
     mshadow::Tensor<xpu, 2> w_data         = this->params[0].data_d2();
-    mshadow::Tensor<xpu, 2> w_diff         = this->params[0].data_d2();
-    mshadow::Tensor<xpu, 1> b_diff         = this->params[1].data_d1();
+    mshadow::Tensor<xpu, 2> w_diff         = this->params[0].diff_d2();
+    mshadow::Tensor<xpu, 1> b_diff         = this->params[1].diff_d1();
 
     gate_score_diff = 0.f, gate_prob_diff = 0.f;
 
@@ -177,25 +181,25 @@ class GateWholePoolingLayer : public Layer<xpu> {
         } 
         for (int m = 0; m < len; ++m) {
           for (int n = 0; n < dim_rep; ++n) {
-            bottom_diff[i][j][m][n] += top_diff[i][j][0][n] * gate_prob_data[i][j][0][m];
-            gate_prob_diff[i][j][0][m] += top_diff[i][j][0][n] * bottom_data[i][j][m][n];
+            bottom_diff[i][j][m][n] += top_diff[i][j][0][n] * gate_prob_data[i][j][m][0];
+            gate_prob_diff[i][j][m][0] += top_diff[i][j][0][n] * bottom_data[i][j][m][n];
           }
         }
         
         // diff softmax
-        mshadow::Tensor<xpu,1> sm_out_data = gate_prob_data[i][j][0].Slice(0, len);
-        mshadow::Tensor<xpu,1> sm_in_diff  = gate_score_diff[i][j][0].Slice(0, len);
-        mshadow::Tensor<xpu,1> sm_out_diff = gate_prob_diff[i][j][0].Slice(0, len);
+        mshadow::Tensor<xpu,2> sm_out_data = gate_prob_data[i][j].Slice(0, len);
+        mshadow::Tensor<xpu,2> sm_in_diff  = gate_score_diff[i][j].Slice(0, len);
+        mshadow::Tensor<xpu,2> sm_out_diff = gate_prob_diff[i][j].Slice(0, len);
         for (int col_idx = 0; col_idx < len; ++col_idx) {
           for (int jacobi_row_idx = 0; jacobi_row_idx < len; ++jacobi_row_idx) {
-            float top = sm_out_diff[jacobi_row_idx];
+            float top = sm_out_diff[jacobi_row_idx][0];
             if (top == 0.f) continue;
-            float p_0 = sm_out_data[col_idx];
-            float p_1 = sm_out_data[jacobi_row_idx];
+            float p_0 = sm_out_data[col_idx][0];
+            float p_1 = sm_out_data[jacobi_row_idx][0];
             if (jacobi_row_idx == col_idx) {
-              sm_in_diff[col_idx] += top * (-(p_0*p_0) + p_0);
+              sm_in_diff[col_idx][0] += top * (-(p_0*p_0) + p_0);
             } else {
-              sm_in_diff[col_idx] += top * (-(p_0*p_1));
+              sm_in_diff[col_idx][0] += top * (-(p_0*p_1));
             }
           }
         }
@@ -203,7 +207,7 @@ class GateWholePoolingLayer : public Layer<xpu> {
     }
 
     w_diff += dot(bottom_data_d2.T(), gate_score_diff_d2);
-    bottom_diff += dot(gate_score_diff_d2, w_data.T());
+    bottom_diff_d2 += dot(gate_score_diff_d2, w_data.T());
     if (!no_bias) {
       b_diff += sum_rows(gate_score_diff_d2);
     }
