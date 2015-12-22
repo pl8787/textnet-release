@@ -87,6 +87,8 @@ const int kConvVar = 1011;
 const int kLocal = 1012;
 const int kLocalFactor = 1013;
 const int kGaussianMask = 1014;
+const int kMemoryAttentionIn = 1015;
+const int kMemoryAttentionOut = 1016;
 const int kDynamicKMaxPooling = 10001;
 const int kMatchTopKPooling = 10002;
 const int kSelectSubRepByToken = 10003;
@@ -123,6 +125,7 @@ const int kQATextData = 81;
 const int kWordRepInput = 82;
 const int kMapTextData = 83;
 const int kImage = 84;
+const int kMemoryGlobal = 85;
 
 /*! \brief these are enumeration */
 const int kInit = -1;

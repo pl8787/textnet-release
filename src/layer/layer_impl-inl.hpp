@@ -60,6 +60,8 @@
 #include "./common/local_layer-inl.hpp"
 #include "./common/local_factor_layer-inl.hpp"
 #include "./common/gaussian_mask_layer-inl.hpp"
+#include "./common/memory_attention_in_layer-inl.hpp"
+#include "./common/memory_attention_out_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
 #include "./input/sequence_classification_data_layer-inl.hpp"
@@ -73,6 +75,7 @@
 #include "./input/word_rep_input_layer-inl.hpp"
 #include "./input/map_textdata_layer-inl.hpp"
 #include "./input/image_layer-inl.hpp"
+#include "./input/memory_global_layer-inl.hpp"
 #include "./loss/hingeloss_layer-inl.hpp"
 #include "./loss/cross_entropy_loss_layer-inl.hpp"
 #include "./loss/pairhingeloss_layer-inl.hpp"
@@ -175,6 +178,9 @@ Layer<xpu>* CreateLayer_(LayerType type) {
 	case kLocalFactor: return new LocalFactorLayer<xpu>(type);
 	case kImage: return new ImageLayer<xpu>(type);
 	case kGaussianMask: return new GaussianMaskLayer<xpu>(type);
+	case kMemoryGlobal: return new MemoryGlobalLayer<xpu>(type);
+	case kMemoryAttentionIn: return new MemoryAttentionInLayer<xpu>(type);
+	case kMemoryAttentionOut: return new MemoryAttentionOutLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }
