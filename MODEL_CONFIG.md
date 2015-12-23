@@ -108,6 +108,21 @@ In this section, we configure how to save intermediate models and node activatio
   - save_iter_num: the # of batches for saving
   - save_nodes: the node names for saving, default all nodes of the net.
   
+```json
+   "save_model": {
+      "file_prefix": "weight_mnist/model.1conv.attention",
+      "save_interval": 500
+   },
+   "save_activation": [
+    {   
+     "file_prefix": "weight_mnist/attention.1conv.act", 
+     "save_interval": 500, 
+     "save_iter_num": 1, 
+     "tag": "Test",
+     "save_nodes" : ["gaussian_mask", "conv1", "data_attention", "data", "label", "gaussian_mean", "gaussian_var", "fc2"]
+    } 
+   ]
+```
 
 Layers Section
 ====
