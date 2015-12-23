@@ -16,6 +16,9 @@
 #include <cstdarg>
 #include <cassert> // orc
 #include <time.h>
+#include <sys/resource.h>
+#include <string.h>
+#include "math.h"
 
 #if !defined(__GNUC__)
 #define fopen64 std::fopen
@@ -90,6 +93,7 @@ inline void HandlePrint(const char *msg) {
   time_t t = time(0);
   strftime(time_info, sizeof(time_info), "%X", localtime(&t));
   printf("[%s] %s", time_info, msg);
+  fflush(stdout);
 }
 #else
 // include declarations, some one must implement this
@@ -175,6 +179,24 @@ inline std::FILE *FopenCheck(const char *fname, const char *flag) {
   Check(fp != NULL, "can not open file \"%s\"\n", fname);
   return fp;
 }
+
+inline void ShowMemoryUse() {
+  struct rusage ru;
+  memset(&ru, 0, sizeof(struct rusage));
+  getrusage(RUSAGE_SELF, &ru);
+  float total_memory = 1.0 * (ru.ru_maxrss + ru.ru_ixrss + ru.ru_idrss + ru.ru_isrss) / 1024.0;
+  printf("\033[33m[Memory] Total Memory Use: %.4f MB \t Resident: %ld Shared: %ld UnshareData: %ld UnshareStack: %ld \33[0m\n", 
+		 total_memory, ru.ru_maxrss, ru.ru_ixrss, ru.ru_idrss, ru.ru_isrss);
+}
+
+inline bool checkNan(float *p, int l) {
+  for (int i = 0; i < l; ++i) {
+    if ( isnan(p[i]) ) {
+      return true;
+	}
+  }
+  return false;
+}
 }  // namespace utils
 // easy utils that can be directly acessed in xgboost
 /*! \brief get the beginning address of a vector */
@@ -231,6 +253,7 @@ inline string float2str(float f){
   s << f;
   return s.str();
 }
+
 
 }  // namespace textnet
 #endif  // CXXNET_UTILS_UTILS_H_

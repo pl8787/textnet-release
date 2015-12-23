@@ -27,6 +27,7 @@ class ConvolutionLayer : public Layer<xpu> {
     this->defaults["stride"] = SettingV(1);
     this->defaults["no_bias"] = SettingV(false);
     this->defaults["d1_var_len"] = SettingV(false);
+	this->defaults["ignore_len"] = SettingV(false);
     
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -61,6 +62,7 @@ class ConvolutionLayer : public Layer<xpu> {
     channel_out = setting["channel_out"].iVal();
     no_bias = setting["no_bias"].bVal();
     d1_var_len = setting["d1_var_len"].bVal();
+	ignore_len = setting["ignore_len"].bVal();
     
     this->params.resize(2);
     this->params[0].Resize(channel_out, channel_in * kernel_x * kernel_y, 1, 1, true);
@@ -164,20 +166,23 @@ class ConvolutionLayer : public Layer<xpu> {
     for (index_t i = 0; i < nbatch; ++i) {
       if (d1_var_len) {
           top_len[i][0] = (bottom_len[i][0] + pad_y * 2 - kernel_y)/stride + 1; // all input channels shoud have the same length
-		  // if (top_len[i][0] <= 0) {
-		  //   top_len[i][0] = 1;
-		  // }
+		  
+		  if (ignore_len && top_len[i][0] <= 0) {
+		     top_len[i][0] = 1;
+		  }
+
 		  utils::Check(top_len[i][0] > 0, "top_len must positive.");
       } else {
 		  top_len[i][0] = (bottom_len[i][0] + pad_x * 2 - kernel_x) / stride + 1;
 		  top_len[i][1] = (bottom_len[i][1] + pad_y * 2 - kernel_y) / stride + 1;
-          // comment by oracle
-		  // if (top_len[i][0] <= 0) {
-		  //     top_len[i][0] = 1;
-		  // }
-		  // if (top_len[i][1] <= 0) {
-		  //     top_len[i][1] = 1;
-		  // }
+
+		  if (ignore_len && top_len[i][0] <= 0) {
+		       top_len[i][0] = 1;
+		  }
+		  if (ignore_len && top_len[i][1] <= 0) {
+		       top_len[i][1] = 1;
+		  }
+
 		  utils::Check(top_len[i][0] > 0 && top_len[i][1] > 0, "top_len must positive.");
 	  }
       if (pad_x == 0 && pad_y == 0) {
@@ -248,7 +253,7 @@ class ConvolutionLayer : public Layer<xpu> {
   int stride;
   int channel_in;
   int channel_out;
-  bool no_bias, d1_var_len;
+  bool no_bias, d1_var_len, ignore_len;
   mshadow::TensorContainer<xpu, 2> temp_col_;
   mshadow::TensorContainer<xpu, 2> temp_dif_;
   mshadow::TensorContainer<xpu, 2> temp_data_;

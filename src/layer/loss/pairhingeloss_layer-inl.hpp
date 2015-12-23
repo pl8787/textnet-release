@@ -54,7 +54,7 @@ class PairHingeLossLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(),
                   "PairHingeLossLayer:top size problem.");
     nbatch = bottom[0]->data.size(0);    
-    utils::Check(nbatch % 2 == 0, "nBatch must be even.");              
+    utils::Check(nbatch % 2 == 0, "PairHingeLossLayer:nBatch must be even. Batch size: %d.", nbatch);              
     top[0]->Resize(1, 1, 1, 1, true);
 	if (show_info) {
 		top[0]->PrintShape("top0");

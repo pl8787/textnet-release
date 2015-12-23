@@ -83,9 +83,8 @@ struct Node {
   inline void PrintShape(std::string text) {
 	mshadow::Shape<4> s = data.shape_;
 	mshadow::Shape<2> len_s = length.shape_;
-	utils::Printf("\tNode:[%s](%s)", node_name.c_str(), text.c_str()); 
-	utils::Printf(" \tdata (%d x %d x %d x %d)", s[0], s[1], s[2], s[3]);
-	utils::Printf(" \tlen (%d x %d)\n", len_s[0], len_s[1]);
+	utils::Printf("\tNode:[%s](%s) \tdata (%d x %d x %d x %d) \tlen (%d x %d)\n", 
+			node_name.c_str(), text.c_str(), s[0], s[1], s[2], s[3], len_s[0], len_s[1]); 
   }
 
   // Clear Data data 

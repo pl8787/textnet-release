@@ -1,5 +1,5 @@
-#ifndef TEXTNET_LAYER_CONVOLUTION_VAR_LAYER_INL_HPP_
-#define TEXTNET_LAYER_CONVOLUTION_VAR_LAYER_INL_HPP_
+#ifndef TEXTNET_LAYER_LOCAL_FACTOR_LAYER_INL_HPP_
+#define TEXTNET_LAYER_LOCAL_FACTOR_LAYER_INL_HPP_
 
 #include <iostream>
 
@@ -11,14 +11,14 @@ namespace textnet {
 namespace layer {
 
 template<typename xpu>
-class ConvolutionVarLayer : public Layer<xpu> {
+class LocalFactorLayer : public Layer<xpu> {
  public:
-  ConvolutionVarLayer(LayerType type) { this->layer_type = type; }
-  virtual ~ConvolutionVarLayer(void) {}
+  LocalFactorLayer(LayerType type) { this->layer_type = type; }
+  virtual ~LocalFactorLayer(void) {}
   
   virtual int BottomNodeNum() { return 1; }
   virtual int TopNodeNum() { return 1; }
-  virtual int ParamNodeNum() { return 2; }
+  virtual int ParamNodeNum() { return 3; }
   
   virtual void Require() {
     // default value, just set the value you want
@@ -34,9 +34,12 @@ class ConvolutionVarLayer : public Layer<xpu> {
     this->defaults["kernel_x"] = SettingV();
     this->defaults["kernel_y"] = SettingV();
     this->defaults["channel_out"] = SettingV();
-    this->defaults["w_filler"] = SettingV();
+    this->defaults["factor"] = SettingV();
+    this->defaults["u_filler"] = SettingV();
+    this->defaults["v_filler"] = SettingV();
     this->defaults["b_filler"] = SettingV();
-    this->defaults["w_updater"] = SettingV();
+    this->defaults["u_updater"] = SettingV();
+    this->defaults["v_updater"] = SettingV();
     this->defaults["b_updater"] = SettingV();
     
     Layer<xpu>::Require();
@@ -49,10 +52,11 @@ class ConvolutionVarLayer : public Layer<xpu> {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);                        
     
     utils::Check(bottom.size() == BottomNodeNum(),
-                  "ConvolutionVarLayer: bottom size problem."); 
+                  "LocalFactorLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
-                  "ConvolutionVarLayer: top size problem.");
+                  "LocalFactorLayer:top size problem.");
                   
+	std::cout << "Here" << std::endl;
     kernel_x = setting["kernel_x"].iVal();
     kernel_y = setting["kernel_y"].iVal();
     pad_x = setting["pad_x"].iVal();
@@ -63,43 +67,9 @@ class ConvolutionVarLayer : public Layer<xpu> {
     channel_out = setting["channel_out"].iVal();
     no_bias = setting["no_bias"].bVal();
 	dim = setting["dim"].iVal();
+	factor = setting["factor"].iVal();
     
-    this->params.resize(2);
-    this->params[0].Resize(channel_out, channel_in * kernel_x * kernel_y, 1, 1, true);
-    this->params[1].Resize(channel_out, 1, 1, 1, true);
-    
-    std::map<std::string, SettingV> &w_setting = *setting["w_filler"].mVal();
-    std::map<std::string, SettingV> &b_setting = *setting["b_filler"].mVal();
-    this->params[0].initializer_ = 
-        initializer::CreateInitializer<xpu, 4>(w_setting["init_type"].iVal(),
-          w_setting, this->prnd_);
-    this->params[1].initializer_ = 
-        initializer::CreateInitializer<xpu, 4>(b_setting["init_type"].iVal(), 
-          b_setting, this->prnd_);
-    this->params[0].Init();
-    this->params[1].Init();
-    
-    std::map<std::string, SettingV> &w_updater = *setting["w_updater"].mVal();
-    std::map<std::string, SettingV> &b_updater = *setting["b_updater"].mVal();
-    this->params[0].updater_ = 
-        updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].iVal(),
-          w_updater, this->prnd_);
-    this->params[1].updater_ = 
-        updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].iVal(),
-          b_updater, this->prnd_);
-          
-  }
-  
-  virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
-                       const std::vector<Node<xpu>*> &top,
-                       bool show_info = false) {
-    utils::Check(bottom.size() == BottomNodeNum(),
-                  "ConvolutionVarLayer: bottom size problem."); 
-    utils::Check(top.size() == TopNodeNum(),
-                  "ConvolutionVarLayer: top size problem.");
-    
-    mshadow::Shape<4> shape_in = bottom[0]->data.shape_;
-    mshadow::Shape<4> shape_out;
+    shape_in = bottom[0]->data.shape_;
 	if (dim == 1) {
 		shape_out = mshadow::Shape4(shape_in[0], channel_out,
 				(shape_in[2] + pad_y * 2 - kernel_y) / stride_y + 1,
@@ -109,15 +79,91 @@ class ConvolutionVarLayer : public Layer<xpu> {
                 (shape_in[2] + pad_y * 2 - kernel_y) / stride_y + 1,
                 (shape_in[3] + pad_x * 2 - kernel_x) / stride_x + 1);
 	}
+
+	// Set Length
+	top_len_x = 0, top_len_y = 0, bottom_len_x = 0, bottom_len_y = 0;
+    if (dim == 1) {
+	    bottom_len_x = kernel_x;
+	    bottom_len_y = shape_in[2];
+	    top_len_x = 1;
+	    top_len_y = shape_out[2];
+	    utils::Check(top_len_y > 0, "top_len must positive.");
+	    utils::Check(pad_x == 0, "dim=1 pad_x!=0.");
+	} else {
+	    bottom_len_x = shape_in[2];
+	    bottom_len_y = shape_in[3];
+	    top_len_x = shape_out[2];
+	    top_len_y = shape_out[3];
+	    utils::Check(top_len_x > 0 && top_len_y > 0, "top_len must positive.");
+	}
+
+	weight_data.Resize(mshadow::Shape3(channel_out, shape_out[2] * shape_out[3], channel_in * kernel_x * kernel_y));
+
+    this->params.resize(3);
+    this->params[0].Resize(channel_out, shape_out[2] * shape_out[3], factor, 1, true);
+    this->params[1].Resize(channel_out, channel_in * kernel_x * kernel_y, factor, 1, true);
+    this->params[2].Resize(channel_out, shape_out[2] * shape_out[3], 1, 1, true);
+    
+    std::map<std::string, SettingV> &u_setting = *setting["u_filler"].mVal();
+    std::map<std::string, SettingV> &v_setting = *setting["v_filler"].mVal();
+    std::map<std::string, SettingV> &b_setting = *setting["b_filler"].mVal();
+    this->params[0].initializer_ = 
+        initializer::CreateInitializer<xpu, 4>(u_setting["init_type"].iVal(),
+          u_setting, this->prnd_);
+    this->params[1].initializer_ = 
+        initializer::CreateInitializer<xpu, 4>(v_setting["init_type"].iVal(),
+          v_setting, this->prnd_);
+    this->params[2].initializer_ = 
+        initializer::CreateInitializer<xpu, 4>(b_setting["init_type"].iVal(), 
+          b_setting, this->prnd_);
+    this->params[0].Init();
+    this->params[1].Init();
+    this->params[2].Init();
+    
+    std::map<std::string, SettingV> &u_updater = *setting["u_updater"].mVal();
+    std::map<std::string, SettingV> &v_updater = *setting["v_updater"].mVal();
+    std::map<std::string, SettingV> &b_updater = *setting["b_updater"].mVal();
+    this->params[0].updater_ = 
+        updater::CreateUpdater<xpu, 4>(u_updater["updater_type"].iVal(),
+          u_updater, this->prnd_);
+    this->params[1].updater_ = 
+        updater::CreateUpdater<xpu, 4>(v_updater["updater_type"].iVal(),
+          v_updater, this->prnd_);
+    this->params[2].updater_ = 
+        updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].iVal(),
+          b_updater, this->prnd_);
+  }
+  
+  virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
+                       const std::vector<Node<xpu>*> &top,
+                       bool show_info = false) {
+    utils::Check(bottom.size() == BottomNodeNum(),
+                  "LocalFactorLayer:bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(),
+                  "LocalFactorLayer:top size problem.");
+    
+    shape_in = bottom[0]->data.shape_;
+	if (dim == 1) {
+		shape_out = mshadow::Shape4(shape_in[0], channel_out,
+				(shape_in[2] + pad_y * 2 - kernel_y) / stride_y + 1,
+				1);
+	} else {
+		shape_out = mshadow::Shape4(shape_in[0], channel_out, 
+                (shape_in[2] + pad_y * 2 - kernel_y) / stride_y + 1,
+                (shape_in[3] + pad_x * 2 - kernel_x) / stride_x + 1);
+	}
+
 	mshadow::Shape<2> shape_len;
 	shape_len = bottom[0]->length.shape_;
 	top[0]->Resize(shape_out, shape_len);
 
-    temp_col_.Resize(mshadow::Shape2(shape_out[2]*shape_out[3], channel_in*kernel_x*kernel_y));
+    temp_col_.Resize(mshadow::Shape2(shape_out[2] * shape_out[3], channel_in * kernel_x * kernel_y));
     // Share the memory
     temp_dif_ = temp_col_;
 
-    temp_data_.Resize(mshadow::Shape2(shape_out[2]*shape_out[3], channel_out));
+    temp_data_.Resize(mshadow::Shape2(shape_out[2] * shape_out[3], channel_in * kernel_x * kernel_y));
+	temp_diff_.Resize(mshadow::Shape2(channel_out, shape_out[2] * shape_out[3]));
+	temp_sumall_.Resize(mshadow::Shape1(shape_out[2] * shape_out[3]));
     
     if (show_info) {
       bottom[0]->PrintShape("bottom0");
@@ -130,10 +176,7 @@ class ConvolutionVarLayer : public Layer<xpu> {
     // Check for reshape
     bool need_reshape = false;
     mshadow::Shape<4> shape_in = bottom[0]->data.shape_;
-    mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in[0], channel_out, 
-                   (shape_in[2] + pad_y * 2 - kernel_y) / stride_y + 1,
-                   (shape_in[3] + pad_x * 2 - kernel_x) / stride_x + 1);
-    if (! (shape_out == top[0]->data.shape_)) {
+    if (! (shape_in[0] == top[0]->data.shape_[0])) {
         need_reshape = true;
     }
 
@@ -246,50 +289,44 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
-    mshadow::Tensor<xpu, 2> weight_data = this->params[0].data_d2();
-    mshadow::Tensor<xpu, 1> bias_data = this->params[1].data_d1();
+    mshadow::Tensor<xpu, 3> u_weight_data = this->params[0].data_d3();
+    mshadow::Tensor<xpu, 3> v_weight_data = this->params[1].data_d3();
+    mshadow::Tensor<xpu, 2> bias_data = this->params[2].data_d2();
     mshadow::Tensor<xpu, 2> bottom_len = bottom[0]->length;
     mshadow::Tensor<xpu, 2> top_len = top[0]->length;
     const index_t nbatch = bottom_data.size(0);
 	top_data = 0;
-	int top_len_x = 0, top_len_y = 0, bottom_len_x = 0, bottom_len_y = 0;
+
+	top_len = F<op::identity>(bottom_len);
+	
+	if (dim == 1) {
+	  top_len = top_len_y;
+	}
+
+	for (int ch = 0; ch < channel_out; ++ch) {
+      weight_data[ch] = dot(u_weight_data[ch], v_weight_data[ch].T());
+	}
+
     for (index_t i = 0; i < nbatch; ++i) {
-      if (dim == 1) {
-          top_len[i][0] = (bottom_len[i][0] + pad_y * 2 - kernel_y) / stride_y + 1; // all input channels shoud have the same length
-		  utils::Check(top_len[i][0] > 0, "ConvolutionVarLayer: top_len must positive. i=%d, bottom_len=%f, top_len=%f", i, bottom_len[i][0], top_len[i][0]);
-		  utils::Check(pad_x == 0, "ConvolutionVarLayer: dim=1 pad_x!=0.");
-		  top_len_x = 1;
-		  top_len_y = top_len[i][0];
-		  bottom_len_x = kernel_x;
-		  bottom_len_y = bottom_len[i][0];
-	  } else {
-		  top_len[i][0] = (bottom_len[i][0] + pad_x * 2 - kernel_x) / stride_x + 1;
-		  top_len[i][1] = (bottom_len[i][1] + pad_y * 2 - kernel_y) / stride_y + 1;
-		  utils::Check(top_len[i][0] > 0 && top_len[i][1] > 0, "ConvolutionVarLayer: top_len must positive. i=%d, bottom_len=(%f,%f), top_len=(%f,%f)",
-				  i, bottom_len[i][0], bottom_len[i][1], top_len[i][0], top_len[i][1]);
-		  top_len_x = top_len[i][0];
-		  top_len_y = top_len[i][1];
-		  bottom_len_x = bottom_len[i][0];
-		  bottom_len_y = bottom_len[i][1];
+	  temp_col_ = 0.0f;
+	  if (dim != 1) {
+		top_len[i][0] = top_len_x;
+		top_len[i][1] = top_len_y;
 	  }
       unpack_patch2col_var(temp_col_, bottom_data[i], bottom_len_y, bottom_len_x,
 					   kernel_y, kernel_x, stride_y, stride_x, pad_y, pad_x);
-	  //PrintTensor("temp_col_", temp_col_);
-	  temp_data_.Resize(mshadow::Shape2(top_len_y * top_len_x, channel_out));
-      temp_data_ = dot(temp_col_.Slice(0, top_len_y * top_len_x), weight_data.T());
-	  //PrintTensor("temp_data_", temp_data_);
-	  for (index_t idx = 0; idx < temp_data_.size(0); ++idx) {
-		for (index_t ch = 0; ch < temp_data_.size(1); ++ch) {
-		  int row = idx / top_len_x;
-		  int col = idx % top_len_x;
-		  if (no_bias) {
-			top_data[i][ch][row][col] = temp_data_[idx][ch];
-		  } else {
-			top_data[i][ch][row][col] = temp_data_[idx][ch] + bias_data[ch];
-		  }
+	  // PrintTensor("temp_col_", temp_col_);
+	  // PrintTensor("temp_weight_", temp_weight_);
+	  for (int ch = 0; ch < channel_out; ++ch) {
+        temp_data_ = temp_col_ * weight_data[ch];
+		temp_sumall_ = sumall_except_dim<0>(temp_data_);
+		if (!no_bias) {
+			temp_sumall_ += bias_data[ch];
 		}
+		top_data[i][ch] = reshape(temp_sumall_, mshadow::Shape2(shape_out[2], shape_out[3]));
 	  }
     }
+	// PrintTensor("top_data", top_data);
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
@@ -298,57 +335,51 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
     mshadow::Tensor<xpu, 4> top_diff = top[0]->diff;
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
     mshadow::Tensor<xpu, 4> bottom_diff = bottom[0]->diff;
-    mshadow::Tensor<xpu, 2> weight_data = this->params[0].data_d2();
-    mshadow::Tensor<xpu, 2> weight_diff = this->params[0].diff_d2();
-    mshadow::Tensor<xpu, 1> bias_diff = this->params[1].diff_d1();
-    mshadow::Tensor<xpu, 2> bottom_len = bottom[0]->length;
-    mshadow::Tensor<xpu, 2> top_len = top[0]->length;
+    mshadow::Tensor<xpu, 3> u_weight_data = this->params[0].data_d3();
+    mshadow::Tensor<xpu, 3> u_weight_diff = this->params[0].diff_d3();
+    mshadow::Tensor<xpu, 3> v_weight_data = this->params[1].data_d3();
+    mshadow::Tensor<xpu, 3> v_weight_diff = this->params[1].diff_d3();
+    mshadow::Tensor<xpu, 2> bias_diff = this->params[2].diff_d2();
     const index_t nbatch = bottom_data.size(0);
-	int top_len_x = 0, top_len_y = 0, bottom_len_x = 0, bottom_len_y = 0;
         
     for (int i = 0; i < nbatch; ++i) {
-      if (dim == 1) {
-		  top_len_x = 1;
-		  top_len_y = top_len[i][0];
-		  bottom_len_x = kernel_x;
-		  bottom_len_y = bottom_len[i][0];
-	  } else {
-		  top_len_x = top_len[i][0];
-		  top_len_y = top_len[i][1];
-		  bottom_len_x = bottom_len[i][0];
-		  bottom_len_y = bottom_len[i][1];
-	  }
-
-	  temp_data_.Resize(mshadow::Shape2(top_len_y * top_len_x, channel_out));
-	  
-	  for (index_t idx = 0; idx < temp_data_.size(0); ++idx) {
-		for (index_t ch = 0; ch < temp_data_.size(1); ++ch) {
+	  for (index_t ch = 0; ch < temp_diff_.size(0); ++ch) {
+	    for (index_t idx = 0; idx < temp_diff_.size(1); ++idx) {
 		  int row = idx / top_len_x;
 		  int col = idx % top_len_x;
-		  temp_data_[idx][ch] = top_diff[i][ch][row][col];
+		  temp_diff_[ch][idx] = top_diff[i][ch][row][col];
 		}
 	  }
 
-	  //PrintTensor("temp_data_", temp_data_);
-
       unpack_patch2col_var(temp_col_, bottom_data[i], bottom_len_y, bottom_len_x, 
 					   kernel_y, kernel_x, stride_y, stride_x, pad_y, pad_x);
-      
-	  //PrintTensor("temp_col_", temp_col_);
 
-      if (this->prop_grad[0]) {
-        weight_diff += dot(temp_data_.T(), temp_col_.Slice(0, top_len_y * top_len_x));
-      }
+      if (this->prop_grad[0] && this->prop_grad[1]) {
+	    for (index_t ch = 0; ch < channel_out; ++ch) {
+		  for (index_t m = 0; m < shape_out[2]*shape_out[3]; ++m) {
+			float temp_data_value = temp_diff_[ch][m];
+		    for (index_t k = 0; k < channel_in * kernel_x * kernel_y; ++k) {
+		      u_weight_diff[ch][m] += temp_data_value * temp_col_[m][k] * v_weight_data[ch][k];
+		      v_weight_diff[ch][k] += temp_data_value * temp_col_[m][k] * u_weight_data[ch][m];
+		    }
+		  }
+        }
+	  }
 
-	  //PrintTensor("weight_diff", weight_diff);
-
-	  if (!no_bias && this->prop_grad[1]) {
-		bias_diff += sumall_except_dim<1>(temp_data_);
+	  if (!no_bias && this->prop_grad[2]) {
+		bias_diff += temp_diff_;
 	  }
 
       if (this->prop_error[0]) {
-		temp_dif_.Resize(mshadow::Shape2(top_len_y * top_len_x, channel_in * kernel_x * kernel_y));
-        temp_dif_ = dot(temp_data_, weight_data);
+	    temp_dif_ = 0.0f;
+	    for (index_t ch = 0; ch < channel_out; ++ch) {
+		  for (index_t m = 0; m < shape_out[2]*shape_out[3]; ++m) {
+			float temp_data_value = temp_diff_[ch][m];
+		    for (index_t k = 0; k < channel_in * kernel_x * kernel_y; ++k) {
+		      temp_dif_[m][k] += temp_data_value * weight_data[ch][m][k];
+		    }
+		  }
+        }
         pack_col2patch_var(bottom_diff[i], temp_dif_, bottom_len_y, bottom_len_x,
               kernel_y, kernel_x, stride_y, stride_x, pad_y, pad_x);
       }
@@ -366,11 +397,20 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
   int channel_in;
   int channel_out;
   int dim;
+  int factor;
   bool no_bias;
+  int top_len_x, top_len_y, bottom_len_x, bottom_len_y;
+
+  mshadow::Shape<4> shape_in;
+  mshadow::Shape<4> shape_out;
+
+  mshadow::TensorContainer<xpu, 3> weight_data;
   mshadow::TensorContainer<xpu, 2> temp_col_;
   mshadow::TensorContainer<xpu, 2> temp_dif_;
   mshadow::TensorContainer<xpu, 2> temp_data_;
+  mshadow::TensorContainer<xpu, 2> temp_diff_;
+  mshadow::TensorContainer<xpu, 1> temp_sumall_;
 };
 }  // namespace layer
 }  // namespace textnet
-#endif  // LAYER_CONVOLUTION_VAR_LAYER_INL_HPP_
+#endif  // LAYER_LOCAL_FACTOR_LAYER_INL_HPP_

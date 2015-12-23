@@ -185,7 +185,7 @@ class QATextDataLayer : public Layer<xpu>{
       iss.seekg(0, iss.beg);
       iss.str(s);
       iss >> label;
-      label_set.push_back(label);
+      data_set.push_back(label);
     }
     fin.close();
 

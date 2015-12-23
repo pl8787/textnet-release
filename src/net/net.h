@@ -61,7 +61,7 @@ class INet {
     virtual void LoadModel(Json::Value &net_root) = 0;
     // virtual void SaveModel(string tag, int iter) = 0;
     virtual void LoadModel(string model_file) = 0;
-    virtual void SaveModel(int cur_iter) = 0;
+    virtual void SaveModel(int cur_iter, bool model_save_last) = 0;
 	// virtual void SaveAllModels(int iter) = 0;
 
 	// For Statistic
@@ -77,6 +77,10 @@ class Net : public INet{
     need_reshape = false;
 	var_batch = false;
     model_save_interval = 0;
+	model_save_file_prefix = "";
+	model_save_last = false;
+	model_save_initial = true;
+	model_test_initial = true;
     InitSettingEngine();
   }
 
@@ -191,6 +195,9 @@ class Net : public INet{
   }
   
   virtual void InitNet(Json::Value &net_root) {
+
+	utils::ShowMemoryUse();
+
     root = net_root;
 
     setLogFile();
@@ -227,6 +234,21 @@ class Net : public INet{
 		utils::Printf("Set var_batch to %d\n", var_batch);
 	}
 
+	if (!root["model_save_last"].isNull()) {
+		model_save_last = root["model_save_last"].asBool();
+		utils::Printf("Set model_save_last to %d\n", model_save_last);
+	}
+
+	if (!root["model_save_initial"].isNull()) {
+		model_save_initial = root["model_save_initial"].asBool();
+		utils::Printf("Set model_save_initial to %d\n", model_save_initial);
+	}
+
+	if (!root["model_test_initial"].isNull()) {
+		model_test_initial = root["model_test_initial"].asBool();
+		utils::Printf("Set model_test_initial to %d\n", model_test_initial);
+	}
+
 	ReadNetConfig();
 	ReadLayers();
 	ReadNodes();
@@ -254,8 +276,6 @@ class Net : public INet{
       tags.push_back(tag);
       max_iters[tag] = one_net["max_iters"].asInt();
       display_interval[tag] = one_net["display_interval"].asInt();
-	  // save_interval[tag] = one_net["save_interval"].asInt();
-	  // save_name[tag] = one_net["save_name"].asString();
       out_nodes[tag] = vector<string>();
       for (int i = 0; i < one_net["out_nodes"].size(); ++i) {
         out_nodes[tag].push_back(one_net["out_nodes"][i].asString());
@@ -522,6 +542,7 @@ class Net : public INet{
       nets[tag][i]->SetupLayer(layers_root[layer_idx], 
           bottom_vecs[layer_idx], top_vecs[layer_idx], prnd);
       nets[tag][i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx], true);
+	  utils::ShowMemoryUse();
     }
   }
 
@@ -531,8 +552,10 @@ class Net : public INet{
       int layer_idx = nets[tag][i]->layer_idx;
 #if DEBUG
       utils::Printf("[layer] set layer %s\n", nets[tag][i]->layer_name.c_str());
-#endif 
+      nets[tag][i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx], true);
+#else 
       nets[tag][i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx], false);
+#endif
     }
   }
   
@@ -677,16 +700,28 @@ class Net : public INet{
       string name = node_list[k]->node_name; //it->first;
       cout << "Snapshot [" << name << "]" << endl;
       cout << "data : ";
+	  if (utils::checkNan(node_list[k]->data.dptr_, 
+				  node_list[k]->data.size(0)*node_list[k]->data.size(1)*node_list[k]->data.size(2)*node_list[k]->data.size(3))) {
+		  cout << "[Error] Contain NAN!" << endl;
+	  }
       for (int i = 0; i < 5; ++i) {
         cout << node_list[k]->data[0][0][0][i] << "\t";
       }
       cout << endl;
       cout << "diff : ";
+	  if (utils::checkNan(node_list[k]->diff.dptr_, 
+				  node_list[k]->diff.size(0)*node_list[k]->diff.size(1)*node_list[k]->diff.size(2)*node_list[k]->diff.size(3))) {
+		  cout << "[Error] Contain NAN!" << endl;
+	  }
       for (int i = 0; i < 5; ++i) {
         cout << node_list[k]->diff[0][0][0][i] << "\t";
       }
       cout << endl;
       cout << "length : ";
+	  if (utils::checkNan(node_list[k]->length.dptr_, 
+				  node_list[k]->length.size(0)*node_list[k]->length.size(1))) {
+		  cout << "[Error] Contain NAN!" << endl;
+	  }
       for (int i = 0; i < 5; ++i) {
         cout << node_list[k]->length[0][i] << "\t";
       }
@@ -752,8 +787,8 @@ class Net : public INet{
     }
   }
 
-  virtual void SaveModel(int cur_iter) {
-    if (model_save_interval <= 0 || cur_iter % model_save_interval != 0) {
+  virtual void SaveModel(int cur_iter, bool last_iter = false) {
+    if (!last_iter && (model_save_interval <= 0 || cur_iter % model_save_interval != 0)) {
         return;
     }
     string file_name = model_save_file_prefix + "." + int2str(cur_iter);
@@ -931,6 +966,9 @@ class Net : public INet{
   int model_save_interval;
   string model_save_file_prefix;
   bool model_save_everything;
+  bool model_save_initial;
+  bool model_test_initial;
+  bool model_save_last;
   // is save best or not, output file is file_prefix + ".best" // to do
   // map<string, bool> save_best;
   // nets output nodes

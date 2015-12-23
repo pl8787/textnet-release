@@ -61,6 +61,11 @@
 #include "./common/phrase_ave_rep_layer-inl.hpp"
 #include "./common/match_topk_pooling_layer-inl.hpp"
 #include "./common/select_sub_rep_by_token_layer-inl.hpp"
+#include "./common/local_layer-inl.hpp"
+#include "./common/local_factor_layer-inl.hpp"
+#include "./common/gaussian_mask_layer-inl.hpp"
+#include "./common/memory_attention_in_layer-inl.hpp"
+#include "./common/memory_attention_out_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
 #include "./input/sequence_classification_data_layer-inl.hpp"
@@ -72,6 +77,9 @@
 #include "./input/list_textdata_layer-inl.hpp"
 #include "./input/qa_textdata_layer-inl.hpp"
 #include "./input/word_rep_input_layer-inl.hpp"
+#include "./input/map_textdata_layer-inl.hpp"
+#include "./input/image_layer-inl.hpp"
+#include "./input/memory_global_layer-inl.hpp"
 #include "./loss/hingeloss_layer-inl.hpp"
 #include "./loss/cross_entropy_loss_layer-inl.hpp"
 #include "./loss/pairhingeloss_layer-inl.hpp"
@@ -169,10 +177,18 @@ Layer<xpu>* CreateLayer_(LayerType type) {
 	case kListTextData: return new ListTextDataLayer<xpu>(type);
 	case kListwiseMeasure: return new ListwiseMeasureLayer<xpu>(type);
 	case kQATextData: return new QATextDataLayer<xpu>(type);
+	case kMapTextData: return new MapTextDataLayer<xpu>(type);
     case kSelectSubRepByToken: return new SelectSubRepByTokenLayer<xpu>(type);
     case kWordRepInput: return new WordRepInputLayer<xpu>(type);
     case kEuclidDistanceLoss: return new EuclidDistanceLossLayer<xpu>(type);
 	case kLogistic: return new LogisticLayer<xpu>(type);
+	case kLocal: return new LocalLayer<xpu>(type);
+	case kLocalFactor: return new LocalFactorLayer<xpu>(type);
+	case kImage: return new ImageLayer<xpu>(type);
+	case kGaussianMask: return new GaussianMaskLayer<xpu>(type);
+	case kMemoryGlobal: return new MemoryGlobalLayer<xpu>(type);
+	case kMemoryAttentionIn: return new MemoryAttentionInLayer<xpu>(type);
+	case kMemoryAttentionOut: return new MemoryAttentionOutLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }
