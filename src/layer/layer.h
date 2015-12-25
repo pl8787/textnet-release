@@ -98,6 +98,8 @@ const int kWholePooling2d = 10006;
 const int kGateWholePooling = 10007;
 const int kGateWholePoolingD2 = 10008;
 const int kGateDynamicPoolingD2 = 10009;
+const int kGruD2 = 10010;
+const int kGruD2Optimize = 10011;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;

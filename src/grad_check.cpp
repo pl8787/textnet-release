@@ -2607,6 +2607,97 @@ void TestGruLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckGrad(layer_fc, bottoms, tops);
 }
 
+void TestGruD2Layer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Rru D2 Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  int batch_size = 2;
+  int max_len = 6;
+  int d_mem = 3;
+  bottom.Resize(Shape4(batch_size, max_len, max_len, d_mem), Shape2(batch_size,2), true);
+  bottom.length[0][0] = 2;
+  bottom.length[0][1] = 4;
+  bottom.length[1][0] = 3;
+  bottom.length[1][1] = 1;
+  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+  
+  map<string, SettingV> setting;
+  {
+    setting["d_mem"] = SettingV(d_mem);
+    setting["no_bias"] = SettingV(false);
+    setting["reverse"] = SettingV(true);
+      
+    map<string, SettingV> &w_filler = *(new map<string, SettingV>());
+      w_filler["init_type"] = SettingV(initializer::kUniform);
+      w_filler["range"] = SettingV(0.1f);
+    setting["w_g_filler"] = SettingV(&w_filler);
+    setting["w_c_filler"] = SettingV(&w_filler);
+
+    map<string, SettingV> &b_filler = *(new map<string, SettingV>());
+      b_filler["init_type"] = SettingV(initializer::kZero);
+    setting["b_g_filler"] = SettingV(&b_filler);
+    setting["b_c_filler"] = SettingV(&b_filler);
+      
+    map<string, SettingV> &w_updater = *(new map<string, SettingV>());
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["eps"] = SettingV(0.01f);
+      w_updater["batch_size"] = SettingV(1);
+      w_updater["max_iter"] = SettingV(10000);
+      w_updater["lr"] = SettingV(0.1f);
+    setting["w_g_updater"] = SettingV(&w_updater);
+    setting["b_g_updater"] = SettingV(&w_updater);
+    setting["w_c_updater"] = SettingV(&w_updater);
+    setting["b_c_updater"] = SettingV(&w_updater);
+  }
+  /// Test Activation Layer
+  Layer<cpu> * layer_fc = CreateLayer<cpu>(kGruD2);
+  layer_fc->PropAll();
+  layer_fc->SetupLayer(setting, bottoms, tops, prnd);
+  layer_fc->Reshape(bottoms, tops);
+  // layer_fc->Forward(bottoms, tops);
+  // prnd->SampleUniform(&top.diff, -1.0, 1.0);
+  // bottom.diff = 0.f;
+  // // PrintTensor("t0_diff", tops[0]->diff);
+  // layer_fc->Backprop(bottoms, tops);
+  // PrintTensor("b0_data", bottoms[0]->data);
+  // PrintTensor("t0_data", tops[0]->data);
+  // PrintTensor("b0_diff", bottoms[0]->diff);
+  // PrintTensor("t0_diff", tops[0]->diff);
+  // prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+  // layer_fc->Forward(bottoms, tops);
+  // prnd->SampleUniform(&top.diff, -1.0, 1.0);
+  // layer_fc->Backprop(bottoms, tops);
+  // PrintTensor("b0_data", bottoms[0]->data);
+  // PrintTensor("t0_data", tops[0]->data);
+  // PrintTensor("b0_diff", bottoms[0]->diff);
+  // PrintTensor("t0_diff", tops[0]->diff);
+  // PrintTensor("t0_diff", tops[0]->diff);
+  // PrintTensor("b0", bottoms[0]->data);
+  // PrintTensor("t0", tops[0]->data);
+  // PrintTensor("t0_diff", tops[0]->diff);
+  // PrintTensor("b0_diff", bottoms[0]->diff);
+  // PrintTensor("w_diff", layer_fc->params[0].diff);
+  // PrintTensor("b_diff", layer_fc->params[1].diff);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.001f);
+  setting_checker["range_max"] = SettingV(0.001f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_fc, bottoms, tops);
+
+  cout << "Check Grad." << endl;
+  cker->CheckGrad(layer_fc, bottoms, tops);
+}
 void TestLstmD2Layer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Lstm D2 Layer." << endl;
   Node<cpu> bottom;
@@ -3867,10 +3958,11 @@ int main(int argc, char *argv[]) {
   // TestMatchTensorLayer(&rnd);
   // TestMatchTopKPoolingLayer(&rnd);
   // TestLstmD2Layer(&rnd);
+  TestGruD2Layer(&rnd);
   // TestWholePooling2DLayer(&rnd);
   // TestGateWholePoolingLayer(&rnd);
   // TestGateWholePoolingD2Layer(&rnd);
-  TestGateDynamicPoolingD2Layer(&rnd);
+  // TestGateDynamicPoolingD2Layer(&rnd);
   // TestSelectSubRepByTokenLayer(&rnd);
   // TestMatchWeightedDotLayer(&rnd);
   // TestGruLayer(&rnd);
@@ -3889,7 +3981,7 @@ int main(int argc, char *argv[]) {
   // TestPosPredRepLayer(&rnd);
   // TestSwapAxisLayer(mshadow::Random<cpu>* prnd);
   // TestFlattenLayer(mshadow::Random<cpu>* prnd);
-  TestSoftmaxFuncLayer(&rnd);
+  // TestSoftmaxFuncLayer(&rnd);
   // TestWordClassSoftmaxLayer(&rnd);
   // TestGatingLayer(&rnd);
   // TestSoftmaxVarLenFuncLayer(&rnd);
