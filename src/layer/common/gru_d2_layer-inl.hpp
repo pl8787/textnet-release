@@ -83,9 +83,7 @@ class GruD2Layer : public Layer<xpu> {
     // max_norm2 = setting["max_norm2"].fVal();
 
     begin_h.Resize(mshadow::Shape2(1, d_mem), 0.f);
-    // begin_c.Resize(mshadow::Shape2(1, d_mem), 0.f);
     begin_h_er.Resize(mshadow::Shape2(1, d_mem), 0.f);
-    // begin_c_er.Resize(mshadow::Shape2(1, d_mem), 0.f);
 
     this->params.resize(4);
     this->params[0].Resize(1, 1, d_input+3*d_mem, 7*d_mem, true); // w and u is in one matrix, gate 
@@ -160,14 +158,14 @@ class GruD2Layer : public Layer<xpu> {
     mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in[0], shape_in[1], shape_in[2], d_mem);
     mshadow::Shape<4> shape_reset_h = mshadow::Shape4(shape_in[0], shape_in[1], shape_in[2], d_mem*3);
     // input, forget * 3, output, candidate
-    mshadow::Shape<4> shape_gate= mshadow::Shape4(shape_in[0], shape_in[1], shape_in[2], d_mem*7); 
+    mshadow::Shape<4> shape_gate = mshadow::Shape4(shape_in[0], shape_in[1], shape_in[2], d_mem*7); 
 
     top[0]->Resize(shape_out, mshadow::Shape2(shape_out[0],2), true);
     hi.Resize(shape_out, 0.f); // h input
-    g.Resize(shape_gate, 0.f);
-    reset_h.Resize(shape_reset_h, 0.f);
     hi_er.Resize(shape_out, 0.f);
+    g.Resize(shape_gate, 0.f);
     g_er.Resize(shape_gate, 0.f);
+    reset_h.Resize(shape_reset_h, 0.f);
     reset_h_er.Resize(shape_reset_h, 0.f);
 
 	if (show_info) {
@@ -189,6 +187,7 @@ class GruD2Layer : public Layer<xpu> {
     checkNan(w_diff.dptr_, w_diff.size());
   }
 
+  // this layer copy the input value to a continue memory
   void concat_input(Tensor2D x, Tensor2D h_l, Tensor2D h_m, Tensor2D h_t, Tensor2D input) {
     utils::Check(x.size(0)  ==1 && h_l.size(0)==1 && h_m.size(0)==1 &&
                  h_t.size(0)==1 && input.size(0)  ==1, "GruD2Layer: size error.");
@@ -205,6 +204,7 @@ class GruD2Layer : public Layer<xpu> {
   }
 
   // this is different with concat_input(), this re-use the same memory
+  // return several tensors with pointers to the inut tensor
   void split_input(Tensor2D t, Tensor2D &x, Tensor2D &h_l, Tensor2D &h_m, Tensor2D &h_t) {
     utils::Check(t.size(0)==1 && t.size(1)==(d_input+3*d_mem), "GruD2Layer: size error.");
 
@@ -221,15 +221,15 @@ class GruD2Layer : public Layer<xpu> {
     mshadow::TensorContainer<xpu, 2> z_l_er_tmp(mshadow::Shape2(1, len));
     mshadow::TensorContainer<xpu, 2> z_m_er_tmp(mshadow::Shape2(1, len));
     mshadow::TensorContainer<xpu, 2> z_t_er_tmp(mshadow::Shape2(1, len));
-    Tensor2D tmp_1 = z_i_er_tmp;
-    Tensor2D tmp_2 = z_l_er_tmp;
-    Tensor2D tmp_3 = z_m_er_tmp;
-    Tensor2D tmp_4 = z_t_er_tmp;
+    // Tensor2D tmp_1 = z_i_er_tmp;
+    // Tensor2D tmp_2 = z_l_er_tmp;
+    // Tensor2D tmp_3 = z_m_er_tmp;
+    // Tensor2D tmp_4 = z_t_er_tmp;
     // utils::Check(false, "tmp");
-    tmp_1 = mshadow::expr::F<op::identity>(z_i_er);
-    tmp_2 = mshadow::expr::F<op::identity>(z_l_er);
-    tmp_3 = mshadow::expr::F<op::identity>(z_m_er);
-    tmp_4 = mshadow::expr::F<op::identity>(z_t_er);
+    z_i_er_tmp = mshadow::expr::F<op::identity>(z_i_er);
+    z_l_er_tmp = mshadow::expr::F<op::identity>(z_l_er);
+    z_m_er_tmp = mshadow::expr::F<op::identity>(z_m_er);
+    z_t_er_tmp = mshadow::expr::F<op::identity>(z_t_er);
     for (int i = 0; i < len; ++i) {
       float error_sum = 0.f;
       error_sum += z_i_er_tmp[0][i] * z_i[0][i];
@@ -309,6 +309,7 @@ class GruD2Layer : public Layer<xpu> {
     if (!no_bias) {
       cur_hi += b_c_data;
     }
+    cur_hi = mshadow::expr::F<op::tanh>(cur_hi);
 
     // here we use a softmax layer for input and forget gate on each dimension
     // NOTE: on each dimension
@@ -408,7 +409,6 @@ class GruD2Layer : public Layer<xpu> {
                                   Tensor3D g, Tensor3D reset_h, 
                                   Tensor3D hi, Tensor3D h) {
     utils::Check(x_len > 0 && y_len > 0 && x_len <= x.size(0) && y_len <= x.size(1), "GruD2Layer: input size error.");
-    Tensor2D pre_c_l, pre_c_m, pre_c_t;
     Tensor2D pre_h_l, pre_h_m, pre_h_t;
     // not need any padding, begin h and c are set to 0
     for (index_t row_idx = 0; row_idx < x_len; ++row_idx) {
@@ -445,7 +445,6 @@ class GruD2Layer : public Layer<xpu> {
                                   Tensor3D g, Tensor3D reset_h,
                                   Tensor3D hi, Tensor3D h) {
     utils::Check(x_len > 0 && y_len > 0 && x_len <= x.size(0) && y_len <= x.size(1), "GruD2Layer: input size error.");
-    Tensor2D pre_c_l, pre_c_m, pre_c_t;
     Tensor2D pre_h_l, pre_h_m, pre_h_t;
     // not need any padding, begin h and c are set to 0
     for (int row_idx = x_len-1; row_idx >= 0; --row_idx) {
