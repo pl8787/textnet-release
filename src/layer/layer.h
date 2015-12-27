@@ -89,6 +89,7 @@ const int kLocalFactor = 1013;
 const int kGaussianMask = 1014;
 const int kMemoryAttentionIn = 1015;
 const int kMemoryAttentionOut = 1016;
+const int kChannelDuplicate = 1017;
 const int kDynamicKMaxPooling = 10001;
 const int kMatchTopKPooling = 10002;
 const int kSelectSubRepByToken = 10003;

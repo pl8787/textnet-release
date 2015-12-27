@@ -25,6 +25,7 @@
 #include "./common/batch_split_layer-inl.hpp"
 #include "./common/batch_concat_layer-inl.hpp"
 #include "./common/batch_duplicate_layer-inl.hpp"
+#include "./common/channel_duplicate_layer-inl.hpp"
 #include "./common/lstm_layer-inl.hpp"
 #include "./common/lstm_d2_layer-inl.hpp"
 #include "./common/lstm_d2_optimize_layer-inl.hpp"
@@ -169,6 +170,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kBatchSplit: return new BatchSplitLayer<xpu>(type);
     case kBatchConcat: return new BatchConcatLayer<xpu>(type);
     case kBatchDuplicate: return new BatchDuplicateLayer<xpu>(type);
+	case kChannelDuplicate: return new ChannelDuplicateLayer<xpu>(type);
     case kSwapAxis: return new SwapAxisLayer<xpu>(type);
     case kFlatten: return new FlattenLayer<xpu>(type);
     case kMatchPhraseRep: return new MatchPhraseRepLayer<xpu>(type);

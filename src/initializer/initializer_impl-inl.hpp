@@ -8,6 +8,7 @@
 #include "./gaussian_init-inl.hpp"
 #include "./unitball_init-inl.hpp"
 #include "./file_init-inl.hpp"
+#include "./var_init-inl.hpp"
 
 namespace textnet {
 namespace initializer {
@@ -26,6 +27,7 @@ Initializer<xpu, dim>* CreateInitializer_(
     case kXavier: return new UniformInitializer<xpu, dim>(setting, prnd);
     case kKaiming: return new GaussianInitializer<xpu, dim>(setting, prnd);
 	case kUnitball: return new UnitballInitializer<xpu, dim>(setting, prnd);
+	case kVar: return new VarInitializer<xpu, dim>(setting, prnd);
     default: utils::Error("unknown initializer type id : \"%d\"", type); return NULL;
   }
 }

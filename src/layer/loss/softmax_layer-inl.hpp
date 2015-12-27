@@ -87,7 +87,7 @@ class SoftmaxLayer : public Layer<xpu>{
     
     for (int i = 0; i < nbatch; ++i) {
       int k = static_cast<int>(bottom1_data[i]);
-      utils::Check(k < bottom0_data.size(1), "SoftmaxLayer: class label overflows.");
+      utils::Check(k < bottom0_data.size(1), "SoftmaxLayer: class label overflows. k=%d, max=%d", k, bottom0_data.size(1));
       if (bottom0_data[i][k] == 0.) {
         top_data[0] += 88; // by min float number
       } else { 

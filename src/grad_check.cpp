@@ -3817,6 +3817,45 @@ void TestBatchDuplicateLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckError(layer_batch_duplicate, bottoms, tops);
 }
 
+void TestChannelDuplicateLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Batch Duplicate Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+
+  bottom.Resize(2, 2, 3, 2);
+
+  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+
+  map<string, SettingV> setting;
+  setting["dup_count"] = SettingV(3);
+
+  // Test BatchCombine Layer
+  Layer<cpu> * layer_channel_duplicate = CreateLayer<cpu>(kChannelDuplicate);
+  layer_channel_duplicate->PropAll();
+  layer_channel_duplicate->SetupLayer(setting, bottoms, tops, prnd);
+  layer_channel_duplicate->Reshape(bottoms, tops);
+
+  layer_channel_duplicate->Forward(bottoms, tops);
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("top", top.data);
+
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.001f);
+  cker->SetupChecker(setting_checker, prnd);
+
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_channel_duplicate, bottoms, tops);
+}
+
 float SIGMOID_MAX_INPUT = 20;
 int SIGMOID_TABLE_SIZE = 10000;
 float *p_sigmoid_lookup_table;
@@ -3870,7 +3909,7 @@ int main(int argc, char *argv[]) {
   // TestWholePooling2DLayer(&rnd);
   // TestGateWholePoolingLayer(&rnd);
   // TestGateWholePoolingD2Layer(&rnd);
-  TestGateDynamicPoolingD2Layer(&rnd);
+  // TestGateDynamicPoolingD2Layer(&rnd);
   // TestSelectSubRepByTokenLayer(&rnd);
   // TestMatchWeightedDotLayer(&rnd);
   // TestGruLayer(&rnd);
@@ -3881,6 +3920,7 @@ int main(int argc, char *argv[]) {
   // TestBatchSplitLayer(&rnd);
   // TestBatchConcatLayer(&rnd);
   // TestBatchDuplicateLayer(&rnd);
+  TestChannelDuplicateLayer(&rnd);
   // TestPairTextDataLayer(&rnd);
   // TestListTextDataLayer(&rnd);
   // TestGateLayer(&rnd);
@@ -3889,7 +3929,7 @@ int main(int argc, char *argv[]) {
   // TestPosPredRepLayer(&rnd);
   // TestSwapAxisLayer(mshadow::Random<cpu>* prnd);
   // TestFlattenLayer(mshadow::Random<cpu>* prnd);
-  TestSoftmaxFuncLayer(&rnd);
+  // TestSoftmaxFuncLayer(&rnd);
   // TestWordClassSoftmaxLayer(&rnd);
   // TestGatingLayer(&rnd);
   // TestSoftmaxVarLenFuncLayer(&rnd);

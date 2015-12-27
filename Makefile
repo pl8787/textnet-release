@@ -60,7 +60,7 @@ endif
 # use cblas
 ifeq ($(BLAS), cblas)
     CXXFLAGS += -DMSHADOW_USE_CBLAS=1
-    LDFLAGS += -lblas
+    LDFLAGS += -lcblas
 else
     CXXFLAGS += -DMSHADOW_USE_CBLAS=0
 endif
