@@ -104,7 +104,7 @@ class SoftmaxLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 1> bottom1_data = bottom[1]->data_d1();
     mshadow::Tensor<xpu, 2> bottom0_diff = bottom[0]->diff_d2();
     
-    bottom0_diff = F<op::identity>(bottom0_data);
+    bottom0_diff += bottom0_data;
     
     if (this->prop_error[0]) {
       for (int i = 0; i < nbatch; ++i) {

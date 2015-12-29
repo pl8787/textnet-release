@@ -55,14 +55,12 @@ class INet {
     virtual void TrainDisplay(string tag, int iter) = 0;
     virtual void TestAll(string tag, int iter) = 0;
     virtual void Start() = 0;
-    // virtual void SaveModelActivation(string tag, string dir_path, vector<string> node_names, int num_iter) = 0;
-    virtual void SaveModelActivation(string tag, vector<string> node_names, int num_iter, string file_name) = 0;
-    // virtual void LoadModel(string tag, string model_name) = 0;
+    virtual void SaveModelActivation(string tag, vector<string> node_names, int num_iter, string file_name, bool save_diff) = 0;
+    virtual void SaveModelActivation(int cur_iter) = 0;
     virtual void LoadModel(Json::Value &net_root) = 0;
-    // virtual void SaveModel(string tag, int iter) = 0;
     virtual void LoadModel(string model_file) = 0;
     virtual void SaveModel(int cur_iter, bool model_save_last) = 0;
-	// virtual void SaveAllModels(int iter) = 0;
+    virtual void SaveModel(string file_name, bool save_diff) = 0;
 
 	// For Statistic
 	virtual Json::Value StatisticNode(Json::Value &req_root) = 0;
@@ -149,6 +147,8 @@ class Net : public INet{
     SettingV::SettingIntMap["Adagrad"] = kAdagrad;
     SettingV::SettingIntMap["Adam"] = kAdam;
     SettingV::SettingIntMap["SGDSparse"] = kSGDSparse;
+    SettingV::SettingIntMap["SGDStep"] = kSGDStep;
+
   }
   
   // expand global_settings to all layer local settings
@@ -496,6 +496,11 @@ class Net : public INet{
 	  } else {
 		model_save_everything = false;
 	  }
+	  if (!save_model_root["save_diff"].isNull()) {
+		model_save_diff = save_model_root["save_diff"].asBool();
+	  } else {
+		model_save_diff = false;
+	  }
     }
     Json::Value save_act_root = root["save_activation"];
     if (!save_act_root.isNull()) {
@@ -505,6 +510,11 @@ class Net : public INet{
         activation_save_file_prefix[tag] = tag_act_root["file_prefix"].asString();
         activation_save_interval[tag] = tag_act_root["save_interval"].asInt();
         activation_save_iter_num[tag] = tag_act_root["save_iter_num"].asInt();
+		if (!tag_act_root["save_diff"].isNull()) {
+			activation_save_diff[tag] = tag_act_root["save_diff"].asBool();
+		} else {
+			activation_save_diff[tag] = false;
+		}
         
         Json::Value save_nodes_root = tag_act_root["save_nodes"];
         vector<string> save_nodes;
@@ -783,7 +793,7 @@ class Net : public INet{
           continue;
       }
       string file_name = activation_save_file_prefix[tag] + "." + int2str(cur_iter);
-      SaveModelActivation(tag, activation_save_nodes[tag], activation_save_iter_num[tag], file_name);
+      SaveModelActivation(tag, activation_save_nodes[tag], activation_save_iter_num[tag], file_name, activation_save_diff[tag]);
     }
   }
 
@@ -792,10 +802,10 @@ class Net : public INet{
         return;
     }
     string file_name = model_save_file_prefix + "." + int2str(cur_iter);
-    SaveModel(file_name);
+    SaveModel(file_name, model_save_diff);
   }
  
-  virtual void SaveModelActivation(string tag, vector<string> node_names, int num_iter, string file_name) {
+  virtual void SaveModelActivation(string tag, vector<string> node_names, int num_iter, string file_name, bool save_diff = false) {
     utils::Printf("[Save] Save activation to %s.\n", file_name.c_str());
     SetPhrase(tag, kTest);
     Json::Value iters_root;
@@ -805,7 +815,7 @@ class Net : public INet{
       for (int i = 0; i < node_names.size(); ++i) {
         string name = node_names[i];
         Json::Value node_root;
-        nodes[name]->SaveNode(node_root, false);
+        nodes[name]->SaveNode(node_root, save_diff);
         nodes_root[name] = node_root;
       }
       iters_root.append(nodes_root);
@@ -818,7 +828,7 @@ class Net : public INet{
     ofs.close();
   }
   
-  virtual void SaveModel(string model_file) {
+  virtual void SaveModel(string model_file, bool save_diff = false) {
     utils::Printf("[Save] Save model to %s.\n", model_file.c_str());
     ofstream ofs(model_file.c_str());
     Json::StyledWriter writer;
@@ -841,7 +851,7 @@ class Net : public INet{
         }
         // save the content of the matrix
         Json::Value node_root;
-        layers[layer_idx]->params[param_idx].SaveNode(node_root, false);
+        layers[layer_idx]->params[param_idx].SaveNode(node_root, save_diff);
         layer_params_root.append(node_root);
       }
       layers_params_root.append(layer_params_root);
@@ -961,6 +971,8 @@ class Net : public INet{
   map<string, int> activation_save_iter_num;
   // save file prefix, subfixed by training iter num
   map<string, string> activation_save_file_prefix;
+  // save diff for nets
+  map<string, bool> activation_save_diff;
   // save nodes
   map<string, vector<string> > activation_save_nodes;
   int model_save_interval;
@@ -969,6 +981,7 @@ class Net : public INet{
   bool model_save_initial;
   bool model_test_initial;
   bool model_save_last;
+  bool model_save_diff;
   // is save best or not, output file is file_prefix + ".best" // to do
   // map<string, bool> save_best;
   // nets output nodes
