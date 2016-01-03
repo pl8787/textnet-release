@@ -2625,12 +2625,13 @@ void TestGruD2Layer(mshadow::Random<cpu>* prnd) {
   bottom.length[0][1] = 4;
   bottom.length[1][0] = 3;
   bottom.length[1][1] = 1;
-  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+  prnd->SampleUniform(&bottom.data, -2, 2);
   
   map<string, SettingV> setting;
   {
     setting["d_mem"] = SettingV(d_mem);
     setting["no_bias"] = SettingV(false);
+    setting["is_use_reset_gate"] = SettingV(false);
     setting["reverse"] = SettingV(true);
       
     map<string, SettingV> &w_filler = *(new map<string, SettingV>());
@@ -2656,7 +2657,7 @@ void TestGruD2Layer(mshadow::Random<cpu>* prnd) {
     setting["b_c_updater"] = SettingV(&w_updater);
   }
   /// Test Activation Layer
-  Layer<cpu> * layer_fc = CreateLayer<cpu>(kGruD2);
+  Layer<cpu> * layer_fc = CreateLayer<cpu>(kGruD2OneGate);
   layer_fc->PropAll();
   layer_fc->SetupLayer(setting, bottoms, tops, prnd);
   layer_fc->Reshape(bottoms, tops);

@@ -169,10 +169,10 @@ class SshWorker(Thread):
 
 def get_nodes():
     n_thread = 4
-    node_169 = Node('10.60.1.169', 'wsx', 3)
-    node_168 = Node('10.60.1.168', 'wsx', 6)
-    node_52 = Node('10.60.0.52', 'wsx', 4)
-    node_59 = Node('10.60.0.59', 'wsx', 4)
+    node_169 = Node('10.60.1.169', 'wsx', 0)
+    node_168 = Node('10.60.1.168', 'wsx', 4)
+    node_52 = Node('10.60.0.52', 'wsx', 6)
+    node_59 = Node('10.60.0.59', 'wsx', 6)
     # node_53 = Node('10.60.0.53', 'wsx', 6)
     # node_168 = Node('10.60.1.168', 'wsx', 8)
     # return [node_169]# , node_169]
@@ -182,14 +182,14 @@ def get_nodes():
     # return [node_169]
     # return [node_52, node_59, node_169]
     # return [node_168, node_169]#, node_52, node_59]#, node_59]# , node_169]# , node_59]# , node_53]#, node_59]
-    return [node_52, node_59]#, node_59]#, node_52, node_59]#, node_59]# , node_169]# , node_59]# , node_53]#, node_59]
+    return [node_52, node_59, node_169]#, node_59]#, node_52, node_59]#, node_59]# , node_169]# , node_59]# , node_53]#, node_59]
 
 def main():
     run_nodes = get_nodes()
-    # kill_job(run_nodes[0] , ['textnet'])
-    # kill_job(run_nodes[1] , ['textnet'])
+    kill_job(run_nodes[0] , ['textnet'])
+    kill_job(run_nodes[1] , ['textnet'])
     # kill_job(run_nodes[2] , ['textnet'])
-    # exit(0)
+    exit(0)
 
     # max_proc_num = sys.args[1]
     # bin = sys.args[2]
@@ -203,7 +203,7 @@ def main():
     # local_dir = '/home/wsx/exp/match/qa_top1k/mul_cnn_tensor_dpool/run.1/'
     # local_dir = '/home/wsx/exp/match/qa_top10/bilstm_sim_dpool/run.1/'
     # local_dir = '/home/wsx/exp/match/qa_top1k_4/bilstm_sim_dpool/run.2/'
-    local_dir = '/home/wsx/exp/match/qa_top1k_4/lstmd2/run.39/'
+    local_dir = '/home/wsx/exp/match/qa_top1k_4/lstmd2/run.45/'
     # local_dir = '/home/wsx/exp/match/qa_top1k_4/bilstm_lstmd2/run.3/'
     # local_dir = '/home/wsx/exp/match/qa_top1k_4/lstmd2/gate_dpool/run.2/'
     # local_dir = '/home/wsx/exp/match/msrp/lstmd2/run.4/'

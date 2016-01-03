@@ -1,5 +1,5 @@
-#ifndef TEXTNET_LAYER_GRU_D2_LAYER_INL_HPP_
-#define TEXTNET_LAYER_GRU_D2_LAYER_INL_HPP_
+#ifndef TEXTNET_LAYER_GRU_D2_ONE_GATE_LAYER_INL_HPP_
+#define TEXTNET_LAYER_GRU_D2_ONE_GATE_LAYER_INL_HPP_
 
 #include <iostream>
 
@@ -20,10 +20,10 @@ using namespace std::chrono;
 // this implement is different with (Graves 2009)
 // we add a diagonal connnection 
 template<typename xpu>
-class GruD2Layer : public Layer<xpu> {
+class GruD2OneGateLayer : public Layer<xpu> {
  public:
-  GruD2Layer(LayerType type) { this->layer_type = type; }
-  virtual ~GruD2Layer(void) { }
+  GruD2OneGateLayer(LayerType type) { this->layer_type = type; }
+  virtual ~GruD2OneGateLayer(void) { }
   
   virtual int BottomNodeNum() { return 1; }
   virtual int TopNodeNum() { return 1; }
@@ -68,8 +68,8 @@ class GruD2Layer : public Layer<xpu> {
                           mshadow::Random<xpu> *prnd) {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);                        
     
-    utils::Check(bottom.size() == BottomNodeNum(), "GruD2Layer:bottom size problem."); 
-    utils::Check(top.size() == TopNodeNum(), "GruD2Layer:top size problem.");
+    utils::Check(bottom.size() == BottomNodeNum(), "GruD2OneGateLayer:bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(), "GruD2OneGateLayer:top size problem.");
 
     d_mem   = setting["d_mem"].iVal();
     d_input = bottom[0]->data.size(3);
@@ -88,8 +88,8 @@ class GruD2Layer : public Layer<xpu> {
     begin_h_er.Resize(mshadow::Shape2(1, d_mem), 0.f);
 
     this->params.resize(4);
-    this->params[0].Resize(1, 1, d_input+3*d_mem, 7*d_mem, true); // w and u is in one matrix, gate 
-    this->params[1].Resize(1, 1, 1,               7*d_mem, true); // b, gate
+    this->params[0].Resize(1, 1, d_input+3*d_mem, 7, true); // w and u is in one matrix, gate 
+    this->params[1].Resize(1, 1, 1,               7, true); // b, gate
     this->params[2].Resize(1, 1, d_input+3*d_mem, 1*d_mem, true); // w and u is in one matrix, cc
     this->params[3].Resize(1, 1, 1,               1*d_mem, true); // b, cc
     
@@ -152,15 +152,15 @@ class GruD2Layer : public Layer<xpu> {
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top,
 					   bool show_info = false) {
-    utils::Check(bottom.size() == BottomNodeNum(), "GruD2Layer:bottom size problem."); 
-    utils::Check(top.size() == TopNodeNum(), "GruD2Layer:top size problem.");
+    utils::Check(bottom.size() == BottomNodeNum(), "GruD2OneGateLayer:bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(), "GruD2OneGateLayer:top size problem.");
     
     mshadow::Shape<4> shape_in  = bottom[0]->data.shape_;
     // (batch size, x_len, y_len, d_mem)
     mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in[0], shape_in[1], shape_in[2], d_mem);
     mshadow::Shape<4> shape_reset_h = mshadow::Shape4(shape_in[0], shape_in[1], shape_in[2], d_mem*3);
     // input, forget * 3, output, candidate
-    mshadow::Shape<4> shape_gate = mshadow::Shape4(shape_in[0], shape_in[1], shape_in[2], d_mem*7); 
+    mshadow::Shape<4> shape_gate = mshadow::Shape4(shape_in[0], shape_in[1], shape_in[2], 7); 
 
     top[0]->Resize(shape_out, mshadow::Shape2(shape_out[0],2), true);
     hi.Resize(shape_out, 0.f); // h input
@@ -192,8 +192,8 @@ class GruD2Layer : public Layer<xpu> {
   // this layer copy the input value to a continue memory
   void concat_input(Tensor2D x, Tensor2D h_l, Tensor2D h_m, Tensor2D h_t, Tensor2D input) {
     utils::Check(x.size(0)  ==1 && h_l.size(0)==1 && h_m.size(0)==1 &&
-                 h_t.size(0)==1 && input.size(0)  ==1, "GruD2Layer: size error.");
-    utils::Check(x.size(1)+h_l.size(1)+h_m.size(1)+h_t.size(1) == input.size(1), "GruD2Layer: size error.");
+                 h_t.size(0)==1 && input.size(0)  ==1, "GruD2OneGateLayer: size error.");
+    utils::Check(x.size(1)+h_l.size(1)+h_m.size(1)+h_t.size(1) == input.size(1), "GruD2OneGateLayer: size error.");
 
     int cnt = 0;
     input[0].Slice(cnt, cnt+x.size(1))   = mshadow::expr::F<op::identity>(x[0]);
@@ -208,7 +208,7 @@ class GruD2Layer : public Layer<xpu> {
   // this is different with concat_input(), this re-use the same memory
   // return several tensors with pointers to the inut tensor
   void split_input(Tensor2D t, Tensor2D &x, Tensor2D &h_l, Tensor2D &h_m, Tensor2D &h_t) {
-    utils::Check(t.size(0)==1 && t.size(1)==(d_input+3*d_mem), "GruD2Layer: size error.");
+    utils::Check(t.size(0)==1 && t.size(1)==(d_input+3*d_mem), "GruD2OneGateLayer: size error.");
 
     x   = Tensor2D(t.dptr_,                   mshadow::Shape2(1, d_input));
     h_l = Tensor2D(t.dptr_ + d_input,         mshadow::Shape2(1, d_mem));
@@ -275,7 +275,7 @@ class GruD2Layer : public Layer<xpu> {
                               Tensor2D reset_h, 
                               Tensor2D cur_hi,
                               Tensor2D cur_h) {
-    utils::Check(cur_x.size(0) == 1, "GruD2Layer: ForwardOneStep(): input size error.");
+    utils::Check(cur_x.size(0) == 1, "GruD2OneGateLayer: ForwardOneStep(): input size error.");
     Tensor2D w_g_data = this->params[0].data_d2_reverse();
     Tensor2D b_g_data = this->params[1].data_d2_reverse();
     Tensor2D w_c_data = this->params[2].data_d2_reverse();
@@ -299,9 +299,9 @@ class GruD2Layer : public Layer<xpu> {
     Tensor2D reset_h_m(reset_h.dptr_+d_mem,   mshadow::Shape2(1,d_mem));
     Tensor2D reset_h_t(reset_h.dptr_+d_mem*2, mshadow::Shape2(1,d_mem));
     if (is_use_reset_gate) {
-      reset_h_l = r_l * pre_h_l;
-      reset_h_m = r_m * pre_h_m;
-      reset_h_t = r_t * pre_h_t;
+      reset_h_l = r_l[0][0] * pre_h_l;
+      reset_h_m = r_m[0][0] * pre_h_m;
+      reset_h_t = r_t[0][0] * pre_h_t;
     } else {
       reset_h_l = mshadow::expr::F<op::identity>(pre_h_l);
       reset_h_m = mshadow::expr::F<op::identity>(pre_h_m);
@@ -323,7 +323,7 @@ class GruD2Layer : public Layer<xpu> {
     // NOTE: on each dimension
     softmax_z(z_i, z_l, z_m, z_t);
 
-    cur_h = cur_hi * z_i + pre_h_l * z_l + pre_h_m * z_m + pre_h_t * z_t;
+    cur_h = cur_hi * z_i[0][0] + pre_h_l * z_l[0][0] + pre_h_m * z_m[0][0] + pre_h_t * z_t[0][0];
   }
 
   void BpOneStep(Tensor2D cur_h_er,
@@ -351,15 +351,17 @@ class GruD2Layer : public Layer<xpu> {
     SplitGate(cur_g, r_l, r_m, r_t, z_i, z_l, z_m, z_t);
     SplitGate(cur_g_er, r_l_er, r_m_er, r_t_er, z_i_er, z_l_er, z_m_er, z_t_er);
     
-    z_i_er = cur_h_er * cur_hi; 
-    z_l_er = cur_h_er * pre_h_l; 
-    z_m_er = cur_h_er * pre_h_m; 
-    z_t_er = cur_h_er * pre_h_t; 
+    for (int i = 0; i < cur_h_er.size(1); ++i) {
+      z_i_er[0][0] += cur_h_er[0][i] * cur_hi[0][i]; 
+      z_l_er[0][0] += cur_h_er[0][i] * pre_h_l[0][i]; 
+      z_m_er[0][0] += cur_h_er[0][i] * pre_h_m[0][i]; 
+      z_t_er[0][0] += cur_h_er[0][i] * pre_h_t[0][i]; 
+    }
 
-    cur_hi_er  = mshadow::expr::F<op::tanh_grad>(cur_hi) * (cur_h_er * z_i);
-    pre_h_l_er += cur_h_er * z_l; // NOTE: += 
-    pre_h_m_er += cur_h_er * z_m; // NOTE: +=
-    pre_h_t_er += cur_h_er * z_t; // NOTE: +=
+    cur_hi_er  = mshadow::expr::F<op::tanh_grad>(cur_hi) * (cur_h_er * z_i[0][0]);
+    pre_h_l_er += cur_h_er * z_l[0][0]; // NOTE: += 
+    pre_h_m_er += cur_h_er * z_m[0][0]; // NOTE: +=
+    pre_h_t_er += cur_h_er * z_t[0][0]; // NOTE: +=
 
     diff_softmax_z(z_i, z_l, z_m, z_t, z_i_er, z_l_er, z_m_er, z_t_er);
 
@@ -388,12 +390,23 @@ class GruD2Layer : public Layer<xpu> {
 
 
     if (is_use_reset_gate) {
-      r_l_er = mshadow::expr::F<op::sigmoid_grad>(r_l) * (reset_h_l_er * pre_h_l);
-      r_m_er = mshadow::expr::F<op::sigmoid_grad>(r_m) * (reset_h_m_er * pre_h_m);
-      r_t_er = mshadow::expr::F<op::sigmoid_grad>(r_t) * (reset_h_t_er * pre_h_t);
-      pre_h_l_er += reset_h_l_er * r_l;
-      pre_h_m_er += reset_h_m_er * r_m;
-      pre_h_t_er += reset_h_t_er * r_t;
+      r_l_er = mshadow::expr::F<op::sigmoid_grad>(r_l);
+      r_m_er = mshadow::expr::F<op::sigmoid_grad>(r_m);
+      r_t_er = mshadow::expr::F<op::sigmoid_grad>(r_t);
+      float l = r_l_er[0][0];
+      float m = r_m_er[0][0];
+      float t = r_t_er[0][0];
+      for (int i = 0; i < cur_h_er.size(1); ++i) {
+        r_l_er[0][0] += reset_h_l_er[0][i] * pre_h_l[0][i];
+        r_m_er[0][0] += reset_h_m_er[0][i] * pre_h_m[0][i];
+        r_t_er[0][0] += reset_h_t_er[0][i] * pre_h_t[0][i];
+      }
+      r_l_er[0][0] *= l;
+      r_m_er[0][0] *= m;
+      r_t_er[0][0] *= t;
+      pre_h_l_er += reset_h_l_er * r_l[0][0];
+      pre_h_m_er += reset_h_m_er * r_m[0][0];
+      pre_h_t_er += reset_h_t_er * r_t[0][0];
     } else {
       pre_h_l_er += reset_h_l_er;
       pre_h_m_er += reset_h_m_er;
@@ -422,7 +435,7 @@ class GruD2Layer : public Layer<xpu> {
   void ForwardLeftTop2RightBottom(Tensor3D x, int x_len, int y_len, 
                                   Tensor3D g, Tensor3D reset_h, 
                                   Tensor3D hi, Tensor3D h) {
-    utils::Check(x_len > 0 && y_len > 0 && x_len <= x.size(0) && y_len <= x.size(1), "GruD2Layer: input size error.");
+    utils::Check(x_len > 0 && y_len > 0 && x_len <= x.size(0) && y_len <= x.size(1), "GruD2OneGateLayer: input size error.");
     Tensor2D pre_h_l, pre_h_m, pre_h_t;
     // not need any padding, begin h and c are set to 0
     for (index_t row_idx = 0; row_idx < x_len; ++row_idx) {
@@ -458,7 +471,7 @@ class GruD2Layer : public Layer<xpu> {
   void ForwardRightBottom2LeftTop(Tensor3D x, int x_len, int y_len, 
                                   Tensor3D g, Tensor3D reset_h,
                                   Tensor3D hi, Tensor3D h) {
-    utils::Check(x_len > 0 && y_len > 0 && x_len <= x.size(0) && y_len <= x.size(1), "GruD2Layer: input size error.");
+    utils::Check(x_len > 0 && y_len > 0 && x_len <= x.size(0) && y_len <= x.size(1), "GruD2OneGateLayer: input size error.");
     Tensor2D pre_h_l, pre_h_m, pre_h_t;
     // not need any padding, begin h and c are set to 0
     for (int row_idx = x_len-1; row_idx >= 0; --row_idx) {
@@ -501,7 +514,7 @@ class GruD2Layer : public Layer<xpu> {
     Tensor4D top_data    = top[0]->data;
 
     utils::Check(bottom_len.size(0) == bottom_data.size(0) && 
-                 bottom_len.size(1) == 2, "GruD2Layer: input length error.");
+                 bottom_len.size(1) == 2, "GruD2OneGateLayer: input length error.");
     top[0]->length = mshadow::expr::F<op::identity>(bottom[0]->length);
 
     top_data = 0.f; g = 0.f; reset_h = 0.f; hi = 0.f;
@@ -509,7 +522,7 @@ class GruD2Layer : public Layer<xpu> {
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       int x_len = bottom_len[batch_idx][0];
       int y_len = bottom_len[batch_idx][1];
-      utils::Assert(x_len >= 0 && y_len >= 0, "GruD2Layer: sequence length error.");
+      utils::Assert(x_len >= 0 && y_len >= 0, "GruD2OneGateLayer: sequence length error.");
       if (!reverse) {
         ForwardLeftTop2RightBottom(bottom_data[batch_idx],
                                    x_len, y_len,
@@ -543,15 +556,15 @@ class GruD2Layer : public Layer<xpu> {
                  Tensor2D &z_l, 
                  Tensor2D &z_m, 
                  Tensor2D &z_t) {
-    utils::Check(g.size(0) == 1, "GruD2Layer: gate problem."); 
+    utils::Check(g.size(0) == 1, "GruD2OneGateLayer: gate problem."); 
 
-    r_l = Tensor2D(g.dptr_,             mshadow::Shape2(1, d_mem));
-    r_m = Tensor2D(g.dptr_ + 1 * d_mem, mshadow::Shape2(1, d_mem));
-    r_t = Tensor2D(g.dptr_ + 2 * d_mem, mshadow::Shape2(1, d_mem));
-    z_i = Tensor2D(g.dptr_ + 3 * d_mem, mshadow::Shape2(1, d_mem));
-    z_l = Tensor2D(g.dptr_ + 4 * d_mem, mshadow::Shape2(1, d_mem));
-    z_m = Tensor2D(g.dptr_ + 5 * d_mem, mshadow::Shape2(1, d_mem));
-    z_t = Tensor2D(g.dptr_ + 6 * d_mem, mshadow::Shape2(1, d_mem));
+    r_l = Tensor2D(g.dptr_,     mshadow::Shape2(1, 1));
+    r_m = Tensor2D(g.dptr_ + 1, mshadow::Shape2(1, 1));
+    r_t = Tensor2D(g.dptr_ + 2, mshadow::Shape2(1, 1));
+    z_i = Tensor2D(g.dptr_ + 3, mshadow::Shape2(1, 1));
+    z_l = Tensor2D(g.dptr_ + 4, mshadow::Shape2(1, 1));
+    z_m = Tensor2D(g.dptr_ + 5, mshadow::Shape2(1, 1));
+    z_t = Tensor2D(g.dptr_ + 6, mshadow::Shape2(1, 1));
   }
 
   float norm2(Tensor2D t) {
