@@ -26,6 +26,7 @@ class SGDStepUpdater : public Updater<xpu, dim>{
     this->defaults["momentum"] = SettingV(0.9f);
     this->defaults["l2"] = SettingV(0.0f);
     this->defaults["steps"] = SettingV("");
+	this->defaults["steps_lr"] = SettingV("");
 
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -43,13 +44,20 @@ class SGDStepUpdater : public Updater<xpu, dim>{
     momentum = setting["momentum"].fVal();
     l2 = setting["l2"].fVal();
 	steps_str = setting["steps"].sVal();
+	steps_lr_str = setting["steps_lr"].sVal();
 
     int s = 0;
 	istringstream iss;
 	iss.str(steps_str);
-	while (!iss.eof()) {
-      iss >> s;
+	while (iss >> s) {
 	  steps.push_back(s);
+	}
+
+	float f = 0;
+	istringstream iss_lr;
+	iss_lr.str(steps_lr_str);
+	while (iss_lr >> f) {
+	  steps_lr.push_back(f);
 	}
 
 	cur_step = 0;
@@ -111,8 +119,13 @@ class SGDStepUpdater : public Updater<xpu, dim>{
   virtual void AdaptLearningRate() {
 	if (cur_step >= steps.size()) return;
 	if (iteration == steps[cur_step]) {
-	  lr *= decay;
-	  ++cur_step;
+	  if (steps_lr.size() == 0) {
+	    lr *= decay;
+	    ++cur_step;
+	  } else {
+		lr = steps_lr[cur_step];
+		++cur_step;
+	  }
 	}
   }
   
@@ -125,8 +138,10 @@ class SGDStepUpdater : public Updater<xpu, dim>{
   float decay;
   float l2;
   vector<int> steps;
+  vector<float> steps_lr;
   int cur_step;
   string steps_str;
+  string steps_lr_str;
 };
 }  // namespace updater
 }  // namespace textnet

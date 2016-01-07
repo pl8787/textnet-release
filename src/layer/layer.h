@@ -90,6 +90,7 @@ const int kGaussianMask = 1014;
 const int kMemoryAttentionIn = 1015;
 const int kMemoryAttentionOut = 1016;
 const int kChannelDuplicate = 1017;
+const int kAugmentation = 1018;
 const int kDynamicKMaxPooling = 10001;
 const int kMatchTopKPooling = 10002;
 const int kSelectSubRepByToken = 10003;
@@ -114,6 +115,7 @@ const int kLmSoftmaxLoss = 60;
 const int kListwiseMeasure = 61;
 const int kLogistic = 62;
 const int kEuclidDistanceLoss = 63;
+const int kActivationNormLoss = 64;
 
 // Input Layer 71-
 const int kTextData = 71;

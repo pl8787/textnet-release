@@ -67,6 +67,7 @@
 #include "./common/gaussian_mask_layer-inl.hpp"
 #include "./common/memory_attention_in_layer-inl.hpp"
 #include "./common/memory_attention_out_layer-inl.hpp"
+#include "./common/augmentation_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
 #include "./input/sequence_classification_data_layer-inl.hpp"
@@ -92,6 +93,7 @@
 #include "./loss/listwise_measure_layer-inl.hpp"
 #include "./loss/euclid_distance_loss_layer-inl.hpp"
 #include "./loss/logistic_layer-inl.hpp"
+#include "./loss/activation_norm_loss_layer-inl.hpp"
 
 namespace textnet {
 namespace layer {
@@ -184,6 +186,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kWordRepInput: return new WordRepInputLayer<xpu>(type);
     case kEuclidDistanceLoss: return new EuclidDistanceLossLayer<xpu>(type);
 	case kLogistic: return new LogisticLayer<xpu>(type);
+	case kActivationNormLoss: return new ActivationNormLossLayer<xpu>(type);
 	case kLocal: return new LocalLayer<xpu>(type);
 	case kLocalFactor: return new LocalFactorLayer<xpu>(type);
 	case kImage: return new ImageLayer<xpu>(type);
@@ -191,6 +194,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
 	case kMemoryGlobal: return new MemoryGlobalLayer<xpu>(type);
 	case kMemoryAttentionIn: return new MemoryAttentionInLayer<xpu>(type);
 	case kMemoryAttentionOut: return new MemoryAttentionOutLayer<xpu>(type);
+	case kAugmentation: return new AugmentationLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }

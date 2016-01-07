@@ -2021,11 +2021,14 @@ void TestProductLayer(mshadow::Random<cpu>* prnd) {
   tops.push_back(&top);
   
   bottom0.Resize(Shape4(2,2,3,5), true);
-  bottom1.Resize(Shape4(2,2,3,1), true);
+  bottom1.Resize(Shape4(2,2,3,5), true);
   prnd->SampleUniform(&bottom0.data, -0.1, 0.1);
   prnd->SampleUniform(&bottom1.data, -0.1, 0.1);
   
   map<string, SettingV> setting;
+
+  setting["mu1"] = 0.01f;
+  setting["mu2"] = 0.01f;
 
   Layer<cpu> *layer = CreateLayer<cpu>(kProduct);
   layer->PropAll();
@@ -2046,7 +2049,7 @@ void TestProductLayer(mshadow::Random<cpu>* prnd) {
   map<string, SettingV> setting_checker;
   setting_checker["range_min"] = SettingV(-0.000001f);
   setting_checker["range_max"] = SettingV(0.000001f);
-  setting_checker["delta"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.00001f);
   cker->SetupChecker(setting_checker, prnd);
   cout << "Check Error." << endl;
   cker->CheckError(layer, bottoms, tops);
@@ -3920,7 +3923,8 @@ int main(int argc, char *argv[]) {
   // TestBatchSplitLayer(&rnd);
   // TestBatchConcatLayer(&rnd);
   // TestBatchDuplicateLayer(&rnd);
-  TestChannelDuplicateLayer(&rnd);
+  // TestChannelDuplicateLayer(&rnd);
+  TestProductLayer(&rnd);
   // TestPairTextDataLayer(&rnd);
   // TestListTextDataLayer(&rnd);
   // TestGateLayer(&rnd);
