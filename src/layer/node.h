@@ -223,7 +223,7 @@ struct Node {
     std::vector<std::string> lines; 
     std::ifstream fin(data_file); 
     std::string s; 
-    utils::Check(fin, "Open data file problem."); 
+    utils::Check(fin.is_open(), "Open data file problem."); 
     while (!fin.eof()) { 
       std::getline(fin, s);
       if (s.empty()) break;

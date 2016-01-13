@@ -978,7 +978,7 @@ void TestGaussianMaskLayer(mshadow::Random<cpu>* prnd) {
   setting["is_norm"] = SettingV(true);
   setting["is_symmetric"] = SettingV(true);
   setting["dim"] = SettingV(2);
-  setting["n_size"] = SettingV("10 10");
+  setting["n_size"] = SettingV("5 5");
   
   /// Test Activation Layer
   Layer<cpu> * layer_conv = CreateLayer<cpu>(kGaussianMask);
@@ -994,8 +994,8 @@ void TestGaussianMaskLayer(mshadow::Random<cpu>* prnd) {
   using namespace checker;
   Checker<cpu> * cker = CreateChecker<cpu>();
   map<string, SettingV> setting_checker;
-  setting_checker["range_min"] = SettingV(-0.01f);
-  setting_checker["range_max"] = SettingV(0.01f);
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
   setting_checker["delta"] = SettingV(0.0001f);
   cker->SetupChecker(setting_checker, prnd);
   cout << "Check Error." << endl;
@@ -2021,11 +2021,14 @@ void TestProductLayer(mshadow::Random<cpu>* prnd) {
   tops.push_back(&top);
   
   bottom0.Resize(Shape4(2,2,3,5), true);
-  bottom1.Resize(Shape4(2,2,3,1), true);
+  bottom1.Resize(Shape4(2,2,3,5), true);
   prnd->SampleUniform(&bottom0.data, -0.1, 0.1);
   prnd->SampleUniform(&bottom1.data, -0.1, 0.1);
   
   map<string, SettingV> setting;
+
+  setting["mu1"] = 0.01f;
+  setting["mu2"] = 0.01f;
 
   Layer<cpu> *layer = CreateLayer<cpu>(kProduct);
   layer->PropAll();
@@ -2046,7 +2049,7 @@ void TestProductLayer(mshadow::Random<cpu>* prnd) {
   map<string, SettingV> setting_checker;
   setting_checker["range_min"] = SettingV(-0.000001f);
   setting_checker["range_max"] = SettingV(0.000001f);
-  setting_checker["delta"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.00001f);
   cker->SetupChecker(setting_checker, prnd);
   cout << "Check Error." << endl;
   cker->CheckError(layer, bottoms, tops);
@@ -3908,6 +3911,45 @@ void TestBatchDuplicateLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckError(layer_batch_duplicate, bottoms, tops);
 }
 
+void TestChannelDuplicateLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Batch Duplicate Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+
+  bottom.Resize(2, 2, 3, 2);
+
+  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+
+  map<string, SettingV> setting;
+  setting["dup_count"] = SettingV(3);
+
+  // Test BatchCombine Layer
+  Layer<cpu> * layer_channel_duplicate = CreateLayer<cpu>(kChannelDuplicate);
+  layer_channel_duplicate->PropAll();
+  layer_channel_duplicate->SetupLayer(setting, bottoms, tops, prnd);
+  layer_channel_duplicate->Reshape(bottoms, tops);
+
+  layer_channel_duplicate->Forward(bottoms, tops);
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("top", top.data);
+
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.001f);
+  cker->SetupChecker(setting_checker, prnd);
+
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_channel_duplicate, bottoms, tops);
+}
+
 float SIGMOID_MAX_INPUT = 20;
 int SIGMOID_TABLE_SIZE = 10000;
 float *p_sigmoid_lookup_table;
@@ -3939,7 +3981,7 @@ int main(int argc, char *argv[]) {
   // TestConvVarLayer(&rnd);
   // TestLocalLayer(&rnd);
   // TestLocalFactorLayer(&rnd);
-  // TestGaussianMaskLayer(&rnd);
+  TestGaussianMaskLayer(&rnd);
   // TestPoolLayer(&rnd);
   // TestCrossLayer(&rnd);
   // TestDropoutLayer(&rnd);
@@ -3973,6 +4015,8 @@ int main(int argc, char *argv[]) {
   // TestBatchSplitLayer(&rnd);
   // TestBatchConcatLayer(&rnd);
   // TestBatchDuplicateLayer(&rnd);
+  // TestChannelDuplicateLayer(&rnd);
+  // TestProductLayer(&rnd);
   // TestPairTextDataLayer(&rnd);
   // TestListTextDataLayer(&rnd);
   // TestGateLayer(&rnd);

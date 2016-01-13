@@ -38,13 +38,12 @@ class FileInitializer : public Initializer<xpu, dim>{
   virtual void DoInitialize(mshadow::Tensor<xpu, dim> data) {
     std::ifstream ifs(file_path.c_str());
     vector<float> vals;
-    while (!ifs.eof()) {
-        float s = 0;
-        ifs >> s;
+    float s = 0;
+    while (ifs >> s) {
         vals.push_back(s);
     }
     ifs.close();
-    utils::Check(vals.size() == data.shape_.Size(), "FileInitializer: parameter file error.");
+    utils::Check(vals.size() == data.shape_.Size(), "FileInitializer: parameter file error. %d params in file, but we need %d params.", vals.size(), data.shape_.Size());
 
     mshadow::Tensor<xpu, 2, float> mat = data.FlatTo2D();
     index_t idx = 0;

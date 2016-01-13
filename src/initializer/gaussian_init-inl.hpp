@@ -47,6 +47,7 @@ class GaussianInitializer : public Initializer<xpu, dim>{
 		for (int i = 1; i < dim; ++i)
 			node_size *= data.shape_[i];
 		this->sigma = sqrt(2.0 / node_size);
+		cout << "MSRA INITIAL: " << this->sigma << endl;
 	}
     this->prnd_->SampleGaussian(&data, mu, sigma);
   }

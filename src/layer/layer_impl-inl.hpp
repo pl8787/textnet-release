@@ -25,6 +25,7 @@
 #include "./common/batch_split_layer-inl.hpp"
 #include "./common/batch_concat_layer-inl.hpp"
 #include "./common/batch_duplicate_layer-inl.hpp"
+#include "./common/channel_duplicate_layer-inl.hpp"
 #include "./common/lstm_layer-inl.hpp"
 #include "./common/lstm_d2_layer-inl.hpp"
 #include "./common/lstm_d2_optimize_layer-inl.hpp"
@@ -68,6 +69,7 @@
 #include "./common/gaussian_mask_layer-inl.hpp"
 #include "./common/memory_attention_in_layer-inl.hpp"
 #include "./common/memory_attention_out_layer-inl.hpp"
+#include "./common/augmentation_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
 #include "./input/sequence_classification_data_layer-inl.hpp"
@@ -93,6 +95,7 @@
 #include "./loss/listwise_measure_layer-inl.hpp"
 #include "./loss/euclid_distance_loss_layer-inl.hpp"
 #include "./loss/logistic_layer-inl.hpp"
+#include "./loss/activation_norm_loss_layer-inl.hpp"
 
 namespace textnet {
 namespace layer {
@@ -173,6 +176,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kBatchSplit: return new BatchSplitLayer<xpu>(type);
     case kBatchConcat: return new BatchConcatLayer<xpu>(type);
     case kBatchDuplicate: return new BatchDuplicateLayer<xpu>(type);
+	case kChannelDuplicate: return new ChannelDuplicateLayer<xpu>(type);
     case kSwapAxis: return new SwapAxisLayer<xpu>(type);
     case kFlatten: return new FlattenLayer<xpu>(type);
     case kMatchPhraseRep: return new MatchPhraseRepLayer<xpu>(type);
@@ -186,6 +190,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kWordRepInput: return new WordRepInputLayer<xpu>(type);
     case kEuclidDistanceLoss: return new EuclidDistanceLossLayer<xpu>(type);
 	case kLogistic: return new LogisticLayer<xpu>(type);
+	case kActivationNormLoss: return new ActivationNormLossLayer<xpu>(type);
 	case kLocal: return new LocalLayer<xpu>(type);
 	case kLocalFactor: return new LocalFactorLayer<xpu>(type);
 	case kImage: return new ImageLayer<xpu>(type);
@@ -193,6 +198,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
 	case kMemoryGlobal: return new MemoryGlobalLayer<xpu>(type);
 	case kMemoryAttentionIn: return new MemoryAttentionInLayer<xpu>(type);
 	case kMemoryAttentionOut: return new MemoryAttentionOutLayer<xpu>(type);
+	case kAugmentation: return new AugmentationLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }
