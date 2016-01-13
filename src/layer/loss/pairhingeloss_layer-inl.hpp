@@ -92,10 +92,11 @@ class PairHingeLossLayer : public Layer<xpu>{
     if (this->prop_error[0]) {
       for (int i = 0; i < nbatch; i+=2) {
         float gate = (delta + bottom0_data[i+1] - bottom0_data[i]) > 0 ? 1 : 0;
-        bottom0_diff[i] = -gate;
-        bottom0_diff[i+1] = gate;
+        bottom0_diff[i] += -gate / nbatch;
+        bottom0_diff[i+1] += gate / nbatch;
       }
     }
+
   }
   
  protected:

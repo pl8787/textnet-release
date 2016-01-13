@@ -84,7 +84,7 @@ class EmbeddingLayer : public Layer<xpu>{
   void ReadUpdateIndicationFile() {
     utils::Printf("EmbeddingLayer: Open indication file: %s\n", update_indication_file.c_str());
     std::ifstream ifs(update_indication_file.c_str());
-    utils::Check(ifs, "EmbeddingLayer: Open indication file problem.");
+    utils::Check(ifs.is_open(), "EmbeddingLayer: Open indication file problem.");
     int word_idx, indication;
     while (!ifs.eof()) {
       ifs >> word_idx >> indication;
@@ -100,7 +100,7 @@ class EmbeddingLayer : public Layer<xpu>{
     std::vector<std::string> lines;
     std::ifstream fin(embedding_file.c_str());
     std::string s;
-    utils::Check(fin, "Open embedding file problem.");
+    utils::Check(fin.is_open(), "Open embedding file problem.");
     while (!fin.eof()) {
       std::getline(fin, s);
       if (s.empty()) break;

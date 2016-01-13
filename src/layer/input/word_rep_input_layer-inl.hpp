@@ -61,7 +61,7 @@ class WordRepInputLayer : public Layer<xpu>{
   void ReadWordRepData() {
     utils::Printf("Open data file: %s\n", data_file.c_str());	
     std::ifstream fin(data_file.c_str());
-    utils::Check(fin, "Open data file problem.");
+    utils::Check(fin.is_open(), "Open data file problem.");
     std::vector<std::string> lines;
     std::string s;
     while (!fin.eof()) {

@@ -978,7 +978,7 @@ void TestGaussianMaskLayer(mshadow::Random<cpu>* prnd) {
   setting["is_norm"] = SettingV(true);
   setting["is_symmetric"] = SettingV(true);
   setting["dim"] = SettingV(2);
-  setting["n_size"] = SettingV("10 10");
+  setting["n_size"] = SettingV("5 5");
   
   /// Test Activation Layer
   Layer<cpu> * layer_conv = CreateLayer<cpu>(kGaussianMask);
@@ -994,8 +994,8 @@ void TestGaussianMaskLayer(mshadow::Random<cpu>* prnd) {
   using namespace checker;
   Checker<cpu> * cker = CreateChecker<cpu>();
   map<string, SettingV> setting_checker;
-  setting_checker["range_min"] = SettingV(-0.01f);
-  setting_checker["range_max"] = SettingV(0.01f);
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
   setting_checker["delta"] = SettingV(0.0001f);
   cker->SetupChecker(setting_checker, prnd);
   cout << "Check Error." << endl;
@@ -3890,7 +3890,7 @@ int main(int argc, char *argv[]) {
   // TestConvVarLayer(&rnd);
   // TestLocalLayer(&rnd);
   // TestLocalFactorLayer(&rnd);
-  // TestGaussianMaskLayer(&rnd);
+  TestGaussianMaskLayer(&rnd);
   // TestPoolLayer(&rnd);
   // TestCrossLayer(&rnd);
   // TestDropoutLayer(&rnd);
@@ -3924,7 +3924,7 @@ int main(int argc, char *argv[]) {
   // TestBatchConcatLayer(&rnd);
   // TestBatchDuplicateLayer(&rnd);
   // TestChannelDuplicateLayer(&rnd);
-  TestProductLayer(&rnd);
+  // TestProductLayer(&rnd);
   // TestPairTextDataLayer(&rnd);
   // TestListTextDataLayer(&rnd);
   // TestGateLayer(&rnd);

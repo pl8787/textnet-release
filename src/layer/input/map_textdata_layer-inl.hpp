@@ -97,7 +97,7 @@ class MapTextDataLayer : public Layer<xpu>{
     std::string key;
     int s_len;
     int value;
-    utils::Check(fin, "MapTextdataLayer: Open data file problem.");
+    utils::Check(fin.is_open(), "MapTextdataLayer: Open data file problem.");
 
     istringstream iss;
     while (!fin.eof()) {
