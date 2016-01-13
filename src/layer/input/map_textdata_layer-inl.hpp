@@ -149,7 +149,7 @@ class MapTextDataLayer : public Layer<xpu>{
     std::string s;
     std::string value;
     int label;
-    utils::Check(fin, "MapTextdataLayer: Open data file problem.");
+    utils::Check(fin.is_open(), "MapTextdataLayer: Open data file problem.");
     line_count = 0;
 
     istringstream iss;
