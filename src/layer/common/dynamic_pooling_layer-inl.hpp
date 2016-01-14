@@ -55,6 +55,58 @@ class DynamicPoolingLayer : public Layer<xpu>{
     }
   }
   
+void PrintTensor(const char * name, mshadow::Tensor<xpu, 1> x) {
+	mshadow::Shape<1> s = x.shape_;
+    cout << name << " shape " << s[0] << endl;
+    for (unsigned int d1 = 0; d1 < s[0]; ++d1) {
+      cout << x[d1] << " ";
+    }
+    cout << endl;
+}
+
+void PrintTensor(const char * name, mshadow::Tensor<xpu, 2> x) {
+    mshadow::Shape<2> s = x.shape_;
+    cout << name << " shape " << s[0] << "x" << s[1] << endl;
+    for (unsigned int d1 = 0; d1 < s[0]; ++d1) {
+      for (unsigned int d2 = 0; d2 < s[1]; ++d2) {
+        cout << x[d1][d2] << " ";
+      }
+      cout << endl;
+    }
+    cout << endl;
+}
+
+void PrintTensor(const char * name, mshadow::Tensor<xpu, 3> x) {
+    mshadow::Shape<3> s = x.shape_;
+    cout << name << " shape " << s[0] << "x" << s[1] << "x" << s[2] << endl;
+    for (unsigned int d1 = 0; d1 < s[0]; ++d1) {
+        for (unsigned int d2 = 0; d2 < s[1]; ++d2) {
+            for (unsigned int d3 = 0; d3 < s[2]; ++d3) {
+                    cout << x[d1][d2][d3] << " ";
+            }
+            cout << ";";
+        }
+        cout << endl;
+    }
+}
+
+void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
+    mshadow::Shape<4> s = x.shape_;
+    cout << name << " shape " << s[0] << "x" << s[1] << "x" << s[2] << "x" << s[3] << endl;
+    for (unsigned int d1 = 0; d1 < s[0]; ++d1) {
+        for (unsigned int d2 = 0; d2 < s[1]; ++d2) {
+            for (unsigned int d3 = 0; d3 < s[2]; ++d3) {
+                for (unsigned int d4 = 0; d4 < s[3]; ++d4) {
+                    cout << x[d1][d2][d3][d4] << " ";
+                }
+                cout << "|";
+            }
+            cout << ";";
+        }
+        cout << endl;
+    }
+}
+
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top,
                        bool show_info = false) {
@@ -217,6 +269,9 @@ class DynamicPoolingLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 2> bottom_len_r;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
 	mshadow::Tensor<xpu, 2> top_len = top[0]->length;
+
+    // PrintTensor("bottom_data", bottom[0]->data);
+    // PrintTensor("bottom_len", bottom[0]->length);
 
 	if (nbottom == 1) {
 	  bottom_len = bottom[0]->length;
