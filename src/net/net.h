@@ -527,6 +527,8 @@ class Net : public INet{
           }
         } else {
           for (int name_idx = 0; name_idx < save_nodes_root.size(); ++name_idx) {
+            utils::Check(nodes.count(save_nodes_root[name_idx].asString()), 
+				"save_node [%s] not in nodes.", save_nodes_root[name_idx].asString().c_str());
             save_nodes.push_back(save_nodes_root[name_idx].asString());
           }
         }
