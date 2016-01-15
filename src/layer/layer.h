@@ -133,6 +133,7 @@ const int kWordRepInput = 82;
 const int kMapTextData = 83;
 const int kImage = 84;
 const int kMemoryGlobal = 85;
+const int kLcsToyData = 86;
 
 /*! \brief these are enumeration */
 const int kInit = -1;

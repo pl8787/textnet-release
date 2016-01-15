@@ -37,7 +37,6 @@ class GruD2OneGateLayer : public Layer<xpu> {
   virtual void Require() {
     // default value, just set the value you want
     this->defaults["no_bias"] = SettingV(false);
-    this->defaults["is_use_reset_gate"] = SettingV(true);
     // this->defaults["no_out_tanh"] = SettingV(false);
     // this->defaults["param_file"] = SettingV("");
     // this->defaults["o_gate_bias_init"] = SettingV(0.f);
@@ -47,6 +46,7 @@ class GruD2OneGateLayer : public Layer<xpu> {
     // it will force custom to set in config
     // this->defaults["max_norm2"] = SettingV();
     // this->defaults["grad_norm2"] = SettingV();
+    this->defaults["is_use_reset_gate"] = SettingV();
     this->defaults["d_mem"] = SettingV();
     this->defaults["w_g_filler"] = SettingV();
     this->defaults["b_g_filler"] = SettingV();

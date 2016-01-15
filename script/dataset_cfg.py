@@ -273,7 +273,26 @@ class DatasetCfg:
             self.test_max_iters = 1000
             # self.valid_max_iters = self.n_valid/self.valid_batch_size
             # self.test_max_iters  = self.n_test/self.test_batch_size 
+        elif dataset == 'lcs_toy':
+            self.train_data_file = '/home/wsx/data/lcs_toy/train'
+            self.valid_data_file = '/home/wsx/data/lcs_toy/valid'
+            self.test_data_file  = '/home/wsx/data/lcs_toy/test'
+            self.max_doc_len = 5
+            self.min_doc_len = 5 
+            self.vocab_size = 10
 
+            self.dp_rate = 0.0
+            self.batch_size = 1
+            self.train_batch_size = 1
+            self.valid_batch_size = 100
+            self.test_batch_size  = 100
+
+            self.train_display_interval = 1
+            self.valid_display_interval = 10000000
+            self.test_display_interval  = 100
+            self.train_max_iters = 10000
+            self.valid_max_iters = 1
+            self.test_max_iters  = 1
         elif dataset == 'qa_top1k_4':
             self.train_data_file = '/home/wsx/data/qa_top1k_4/qa.neg.4.train'
             self.valid_data_file = '/home/wsx/data/qa_top1k_4/qa.neg.4.valid'

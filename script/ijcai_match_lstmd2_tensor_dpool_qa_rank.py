@@ -52,7 +52,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2):
     net_cfg_train, net_cfg_valid, net_cfg_test = {}, {}, {}
     net['net_config'] = [net_cfg_train, net_cfg_valid, net_cfg_test]
     net_cfg_train["tag"] = "Train"
-    net_cfg_train["max_iters"] = ds.train_max_iters * 3
+    net_cfg_train["max_iters"] = ds.train_max_iters * 2
     net_cfg_train["display_interval"] = ds.train_display_interval
     net_cfg_train["out_nodes"] = ['loss']
     net_cfg_valid["tag"] = "Valid"
@@ -140,8 +140,8 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2):
     layer['layer_type'] = 1001
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
-    print 'ORC: tensor dim:', 10
-    setting['d_hidden'] = 10
+    print 'ORC: tensor dim:', d_mem
+    setting['d_hidden'] = d_mem 
     setting['t_l2'] = t_l2
     setting['is_use_linear'] = True
     setting['t_updater'] = t_updater
@@ -355,6 +355,15 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2):
     layer['layer_name'] = 'dynamic_pooling'
     layer['layer_type'] = 43
     layer['setting'] = {'row':5, 'col':5, 'interval':1}
+    # layer = {}
+    # layers.append(layer) 
+    # layer['bottom_nodes'] = ['match_matrix_lt2br']
+    # layer['top_nodes'] = ['pool_rep_last']
+    # layer['layer_name'] = 'last_pooling'
+    # layer['layer_type'] = 10006 
+    # layer['setting'] = {'type':'last'}
+
+
 
     # layer = {}
     # layers.append(layer) 
@@ -401,6 +410,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2):
         layer['bottom_nodes'] = ['hidden_drop_rep']
     else:
         layer['bottom_nodes'] = ['dpool_rep']
+        # layer['bottom_nodes'] = ['pool_rep_last']
     layer['top_nodes'] = ['softmax_prob']
     layer['layer_name'] = 'softmax_fullconnect'
     layer['layer_type'] = 11
@@ -444,13 +454,13 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2):
 
     return net
 
-run = 46
+run = 51
 l2 = 0.
 # for dataset in ['paper']:
 # for dataset in ['qa_balance']:
 # for dataset in ['qa_50']:
 for dataset in ['qa_top1k_4']:
-    for d_mem in [20]:
+    for d_mem in [2, 5]:
         idx = 0
         # for model_no in [0,1,2,3,4,5,6,7,8]:
         #     for epoch_no in [20000, 40000, 80000]:
@@ -462,7 +472,7 @@ for dataset in ['qa_top1k_4']:
                 # for init in [0.3, 0.1, 0.03]:
                 for t_init_mul in [0.3]:
                     for init in [0.1, 0.03, 0.01]:
-                        for lr in [0.4, 0.2, 0.1, 0.05]:
+                        for lr in [0.3, 0.2, 0.1, 0.05]:
                         # for l2 in [0.00001, 0.0001]:
                         # for l2 in [0.00001, 0.0001, 0.001]:
                         # for t_l2_ in [0.0]:

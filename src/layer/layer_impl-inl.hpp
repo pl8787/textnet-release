@@ -70,6 +70,7 @@
 #include "./common/memory_attention_in_layer-inl.hpp"
 #include "./common/memory_attention_out_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
+#include "./input/lcs_toy_data_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
 #include "./input/sequence_classification_data_layer-inl.hpp"
 #include "./input/negative_sample_layer-inl.hpp"
@@ -151,6 +152,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kPairHingeLoss: return new PairHingeLossLayer<xpu>(type);
     case kCrossEntropyLoss: return new CrossEntropyLossLayer<xpu>(type);
     case kTextData: return new TextDataLayer<xpu>(type);
+    case kLcsToyData: return new LcsToyDataLayer<xpu>(type);
     case kNextBasketData: return new NextBasketDataLayer<xpu>(type);
     case kSequenceClassificationData: return new SequenceClassificationDataLayer<xpu>(type);
     case kNegativeSample: return new NegativeSampleLayer<xpu>(type);

@@ -23,7 +23,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2):
     t_updater   = gen_adagrad_setting(lr = t_lr, l2 = t_l2, batch_size = ds.train_batch_size)
     g_updater   = gen_adagrad_setting(lr = lr, l2 = l2, batch_size = ds.train_batch_size)
     print "ORC: using small learning rate for embedding"
-    zero_l2_updater   = gen_adagrad_setting(lr = lr*0.1, batch_size = ds.train_batch_size)
+    embed_updater   = gen_adagrad_setting(lr = lr*0.1, batch_size = ds.train_batch_size)
     # g_updater   = gen_sgd_setting(lr = lr, l2 = l2, batch_size = ds.train_batch_size)
     # zero_l2_updater   = gen_sgd_setting(lr = lr, batch_size = ds.train_batch_size)
 
@@ -33,9 +33,17 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2):
     g_layer_setting['t_filler'] = g_filler 
     g_layer_setting['w_filler'] = g_filler 
     g_layer_setting['b_filler'] = zero_filler
+    g_layer_setting['w_g_filler'] = g_filler 
+    g_layer_setting['w_c_filler'] = g_filler 
+    g_layer_setting['b_g_filler'] = zero_filler 
+    g_layer_setting['b_c_filler'] = zero_filler 
     g_layer_setting['t_updater'] = t_updater
     g_layer_setting['w_updater'] = g_updater
     g_layer_setting['b_updater'] = g_updater
+    g_layer_setting['w_g_updater'] = g_updater
+    g_layer_setting['w_c_updater'] = g_updater
+    g_layer_setting['b_g_updater'] = g_updater
+    g_layer_setting['b_c_updater'] = g_updater
 
     net['net_name'] = 'match_lstmd2_tensor_dpool'
     net['need_reshape'] = False
@@ -114,7 +122,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2):
     setting['word_count'] = ds.vocab_size
     print "ORC: not use l2 for embedding"
     setting['w_filler'] = embed_filler
-    setting['w_updater'] = zero_l2_updater
+    setting['w_updater'] = embed_updater
 
     layer = {}
     layers.append(layer)
@@ -184,30 +192,32 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2):
     layer['bottom_nodes'] = ['lstm_d2_input']
     layer['top_nodes'] = ['match_matrix_lt2br'] # left top to bottom right
     layer['layer_name'] = 'lstm_d2_lt2br'
-    layer['layer_type'] = 10005
+    layer['layer_type'] = 10010
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
     print "ORC: LSTM dim:", d_mem
     setting['d_mem'] = d_mem
     setting['reverse'] = False
-    setting['f_gate_bias_init'] = f_gate_bias_init
+    # setting['f_gate_bias_init'] = f_gate_bias_init
     # print "ORC: LSTM output gate:", 1.
-    setting['o_gate_bias_init'] = 0.
+    # setting['o_gate_bias_init'] = 0.
+    setting['is_use_reset_gate'] = True
 
     layer = {}
     layers.append(layer) 
     layer['bottom_nodes'] = ['lstm_d2_input']
     layer['top_nodes'] = ['match_matrix_br2lt'] # left top to bottom right
     layer['layer_name'] = 'lstm_d2_br2lt'
-    layer['layer_type'] = 10005
+    layer['layer_type'] = 10010
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
     print "ORC: LSTM dim:", d_mem
     setting['d_mem'] = d_mem
     setting['reverse'] = True
-    setting['f_gate_bias_init'] = f_gate_bias_init
+    # setting['f_gate_bias_init'] = f_gate_bias_init
     # print "ORC: LSTM output gate:", 1.
-    setting['o_gate_bias_init'] = 0.
+    # setting['o_gate_bias_init'] = 0.
+    setting['is_use_reset_gate'] = True
 
     layer = {}
     layers.append(layer) 
@@ -341,39 +351,38 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2):
 
     return net
 
-run = 8 
+run = 9
 l2 = 0.
 for dataset in ['paper']:
-    for d_mem in [20]:
+    for d_mem in [10]:
         idx = 0
         for embedding_lr_mul in [1.0]:
             for gate_bias_init in [-0.4]:
                 f_gate_bias_init = gate_bias_init
-                for init in [0.15, 0.05]:
-                    for lr in [0.3, 0.1, 0.05]:
+                for t_lr_mul in [1, 0.3, 0.1]:
+                    for init in [0.15, 0.05]:
+                        for lr in [0.3, 0.1, 0.05]:
                         # for t_l2_ in [0.0]:
-                        # for t_lr_mul in [1, 0.3, 0.1]:
-                        for t_init_mul in [1]:
-                            t_lr_mul = 1
-                            t_l2 = 0.0
-                            init_t = init * t_init_mul
-                            t_lr = t_lr_mul * lr
-                            net = gen_match_lstm(d_mem=d_mem,init=init,lr=lr,dataset=dataset,l2=l2)
-                            net['log'] = 'log.match.lstmd2.{0}.d{1}.run{2}.{3}'.format\
-                                         (dataset, str(d_mem), str(run), str(idx))
-                            # net["save_model"] = {"file_prefix": "./model/model."+str(idx),"save_interval": 1000}
-                            # net["save_activation"] = [{"tag":"Test","file_prefix": \
-                            #                            "./model/test."+str(idx), \
-                            #                            "save_interval": 1000, \
-                            #                            "save_nodes":["x","y","word_rep_seq","l_sentence",\
-                            #                                          "r_sentence","interaction_rep", \
-                            #                                          "interaction_rep_nonlinear",\
-                            #                                          "match_matrix",\
-                            #                                          "dpool_rep","softmax_prob"], \
-                            #                            "save_iter_num":1}]
+                            for t_init_mul in [1]:
+                                t_l2 = 0.0
+                                init_t = init * t_init_mul
+                                t_lr = t_lr_mul * lr
+                                net = gen_match_lstm(d_mem=d_mem,init=init,lr=lr,dataset=dataset,l2=l2)
+                                net['log'] = 'log.match.lstmd2.{0}.d{1}.run{2}.{3}'.format\
+                                             (dataset, str(d_mem), str(run), str(idx))
+                                # net["save_model"] = {"file_prefix": "./model/model."+str(idx),"save_interval": 1000}
+                                # net["save_activation"] = [{"tag":"Test","file_prefix": \
+                                #                            "./model/test."+str(idx), \
+                                #                            "save_interval": 1000, \
+                                #                            "save_nodes":["x","y","word_rep_seq","l_sentence",\
+                                #                                          "r_sentence","interaction_rep", \
+                                #                                          "interaction_rep_nonlinear",\
+                                #                                          "match_matrix",\
+                                #                                          "dpool_rep","softmax_prob"], \
+                                #                            "save_iter_num":1}]
 
 
-                            gen_conf_file(net, '/home/wsx/exp/match/{0}/lstmd2/run.{1}/'.format(dataset,str(run)) + \
-                                               'model.match.lstmd2.{0}.d{1}.run{2}.{3}'.format\
-                                               (dataset, str(d_mem), str(run), str(idx)))
-                            idx += 1
+                                gen_conf_file(net, '/home/wsx/exp/match/{0}/lstmd2/run.{1}/'.format(dataset,str(run)) + \
+                                                   'model.match.lstmd2.{0}.d{1}.run{2}.{3}'.format\
+                                                   (dataset, str(d_mem), str(run), str(idx)))
+                                idx += 1
