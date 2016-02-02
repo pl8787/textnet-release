@@ -769,9 +769,10 @@ void TestLocalLayer(mshadow::Random<cpu>* prnd) {
   setting["dim"] = SettingV(2);
   setting["no_bias"] = SettingV(false);
     map<string, SettingV> w_setting;
-    w_setting["init_type"] = SettingV(initializer::kGaussian);
+    w_setting["init_type"] = SettingV(initializer::kRowGaussian);
     w_setting["mu"] = SettingV(0.0f);
     w_setting["sigma"] = SettingV(0.1f);
+    w_setting["count"] = SettingV(9);
     //w_setting["init_type"] = SettingV(initializer::kConstant);
     //w_setting["value"] = SettingV(0.1f);
     map<string, SettingV> b_setting;
@@ -965,17 +966,17 @@ void TestGaussianMaskLayer(mshadow::Random<cpu>* prnd) {
   bottom0.data[0][1][0][0] = 0.5;
   bottom0.data[1][0][0][0] = 0.5;
   bottom0.data[1][1][0][0] = 0.5;
-  bottom1.data[0][0][0][0] = 1;
-  bottom1.data[0][1][0][0] = 1;
-  bottom1.data[0][2][0][0] = 2;
-  bottom1.data[1][0][0][0] = 2;
-  bottom1.data[1][1][0][0] = 1;
-  bottom1.data[1][2][0][0] = 1;
+  bottom1.data[0][0][0][0] = 3;
+  bottom1.data[0][1][0][0] = -8;
+  bottom1.data[0][2][0][0] = 4;
+  bottom1.data[1][0][0][0] = 3;
+  bottom1.data[1][1][0][0] = -4;
+  bottom1.data[1][2][0][0] = 4;
   // prnd->SampleUniform(&bottom.data, -1.0, 1.0);
   
   map<string, SettingV> setting;
   setting["channel"] = SettingV(1);
-  setting["is_norm"] = SettingV(true);
+  setting["is_norm"] = SettingV(false);
   setting["is_symmetric"] = SettingV(true);
   setting["dim"] = SettingV(2);
   setting["n_size"] = SettingV("5 5");
@@ -3859,6 +3860,223 @@ void TestChannelDuplicateLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckError(layer_channel_duplicate, bottoms, tops);
 }
 
+void TestConvolutionAndLocalFactorLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Local Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(2,1,5,5), true);
+
+  float bottom_data_[] = {1,1,1,1,1,
+						 1,1,1,1,1,
+						 1,1,1,1,1,
+						 1,1,1,1,1,
+						 1,1,1,1,1,
+						 1,1,1,1,1,
+						 1,1,1,1,1,
+						 1,1,1,1,1,
+						 1,1,1,1,1,
+						 1,1,1,1,1};
+  vector<float> bottom_data(bottom_data_, bottom_data_ + sizeof(bottom_data_) / sizeof(float));
+  FillTensor(bottom.data, bottom_data);
+  
+  float bottom_len_[] = {5,5,5,5};
+  vector<float> bottom_len(bottom_len_, bottom_len_ + sizeof(bottom_len_) / sizeof(float));
+  FillTensor(bottom.length, bottom_len);
+  // prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+  
+  map<string, SettingV> setting;
+  setting["kernel_x"] = SettingV(3);
+  setting["kernel_y"] = SettingV(3);
+  setting["pad_x"] = SettingV(1);
+  setting["pad_y"] = SettingV(1);
+  setting["stride_x"] = SettingV(1);
+  setting["stride_y"] = SettingV(1);
+  setting["channel_out"] = SettingV(2);
+  setting["dim"] = SettingV(2);
+  setting["no_bias"] = SettingV(false);
+  setting["factor"] = SettingV(1);
+    map<string, SettingV> u_setting;
+    u_setting["init_type"] = SettingV(initializer::kConstant);
+    u_setting["value"] = SettingV(1.0f);
+    map<string, SettingV> v_setting;
+    v_setting["init_type"] = SettingV(initializer::kConstant);
+	v_setting["value"] = SettingV(0.1f);
+    map<string, SettingV> w_setting;
+    w_setting["init_type"] = SettingV(initializer::kConstant);
+	w_setting["value"] = SettingV(0.1f);
+    map<string, SettingV> b_setting;
+    b_setting["init_type"] = SettingV(initializer::kConstant);
+	b_setting["value"] = SettingV(0.1f);
+  setting["u_filler"] = SettingV(&u_setting);
+  setting["v_filler"] = SettingV(&v_setting);
+  setting["b_filler"] = SettingV(&b_setting);
+  setting["w_filler"] = SettingV(&w_setting);
+    map<string, SettingV> u_updater;
+      u_updater["updater_type"] = SettingV(updater::kAdagrad);
+      u_updater["eps"] = SettingV(0.01f);
+      u_updater["batch_size"] = SettingV(1);
+      u_updater["max_iter"] = SettingV(10000);
+      u_updater["lr"] = SettingV(0.1f);
+    map<string, SettingV> v_updater;
+      v_updater["updater_type"] = SettingV(updater::kAdagrad);
+      v_updater["eps"] = SettingV(0.01f);
+      v_updater["batch_size"] = SettingV(1);
+      v_updater["max_iter"] = SettingV(10000);
+      v_updater["lr"] = SettingV(0.1f);
+    map<string, SettingV> w_updater;
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["eps"] = SettingV(0.01f);
+      w_updater["batch_size"] = SettingV(1);
+      w_updater["max_iter"] = SettingV(10000);
+      w_updater["lr"] = SettingV(0.1f);
+    map<string, SettingV> b_updater;
+      b_updater["updater_type"] = SettingV(updater::kAdagrad);
+      b_updater["eps"] = SettingV(0.01f);
+      b_updater["batch_size"] = SettingV(1);
+      b_updater["max_iter"] = SettingV(10000);
+      b_updater["lr"] = SettingV(0.1f);
+  setting["u_updater"] = SettingV(&u_updater);
+  setting["v_updater"] = SettingV(&v_updater);
+  setting["b_updater"] = SettingV(&b_updater);
+  setting["w_updater"] = SettingV(&w_updater);
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_local = CreateLayer<cpu>(kLocalFactor);
+  layer_local->PropAll();
+  layer_local->SetupLayer(setting, bottoms, tops, prnd);
+  layer_local->Reshape(bottoms, tops, true);
+
+  layer_local->Forward(bottoms, tops);
+  PrintTensor("bottom_data", bottom.data);
+  PrintTensor("top_data", top.data);
+  PrintTensor("weight1", layer_local->params[0].data);
+  PrintTensor("weight2", layer_local->params[1].data);
+  PrintTensor("bias", layer_local->params[2].data);
+  
+  bottom.diff = 0.0f;
+  top.diff = 0.2f;
+  layer_local->Backprop(bottoms, tops);
+  PrintTensor("bottom_diff", bottom.diff);
+  PrintTensor("top_diff", top.diff);
+  PrintTensor("weight1", layer_local->params[0].diff);
+  PrintTensor("weight2", layer_local->params[1].diff);
+  PrintTensor("bias", layer_local->params[2].diff);
+  /// Test Activation Layer
+  Layer<cpu> * layer_conv = CreateLayer<cpu>(kConvVar);
+  layer_conv->PropAll();
+  layer_conv->SetupLayer(setting, bottoms, tops, prnd);
+  layer_conv->Reshape(bottoms, tops, true);
+
+  layer_conv->Forward(bottoms, tops);
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("top", top.data);
+  PrintTensor("weight", layer_conv->params[0].data);
+  PrintTensor("bias", layer_conv->params[1].data);
+  
+  bottom.diff = 0.0f;
+  top.diff = 0.2f;
+  layer_conv->Backprop(bottoms, tops);
+  PrintTensor("bottom_diff", bottom.diff);
+  PrintTensor("top_diff", top.diff);
+  PrintTensor("weight", layer_conv->params[0].diff);
+  PrintTensor("bias", layer_conv->params[1].diff);
+}
+
+void TestElementOpLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Element Op Layer." << endl;
+  Node<cpu> bottom0, bottom1;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom0);
+  bottoms.push_back(&bottom1);
+  tops.push_back(&top);
+  
+  bottom0.Resize(Shape4(2,2,3,5), true);
+  bottom1.Resize(Shape4(2,2,3,5), true);
+  prnd->SampleUniform(&bottom0.data, -0.1, 0.1);
+  prnd->SampleUniform(&bottom1.data, -0.1, 0.1);
+  
+  map<string, SettingV> setting;
+  setting["op"] = "product";
+
+  Layer<cpu> *layer = CreateLayer<cpu>(kElementOp);
+  layer->PropAll();
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+
+  layer->Forward(bottoms, tops);
+
+  PrintTensor("bottom0", bottom0.data);
+  PrintTensor("bottom1", bottom1.data);
+  PrintTensor("top", top.data);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.00001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer, bottoms, tops);
+}
+
+void TestParameterLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Parameter Layer." << endl;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  tops.push_back(&top);
+  
+  map<string, SettingV> setting;
+  {
+    setting["d0"] = 5;
+    setting["d1"] = 5;
+    setting["d2"] = 1;
+    setting["batch_size"] = 2;
+    map<string, SettingV> &w_filler = *(new map<string, SettingV>());
+      w_filler["init_type"] = SettingV(initializer::kUniform);
+      w_filler["range"] = SettingV(0.01f);
+    setting["w_filler"] = SettingV(&w_filler);
+
+    map<string, SettingV> &w_updater = *(new map<string, SettingV>());
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["eps"] = SettingV(0.01f);
+      w_updater["batch_size"] = SettingV(1);
+      w_updater["max_iter"] = SettingV(10000);
+      w_updater["lr"] = SettingV(0.1f);
+    setting["w_updater"] = SettingV(&w_updater);
+  }
+
+  Layer<cpu> *layer = CreateLayer<cpu>(kParameter);
+  layer->PropAll();
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+
+  layer->Forward(bottoms, tops);
+
+  PrintTensor("top", top.data);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.00001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Grad." << endl;
+  cker->CheckGrad(layer, bottoms, tops);
+}
+
 float SIGMOID_MAX_INPUT = 20;
 int SIGMOID_TABLE_SIZE = 10000;
 float *p_sigmoid_lookup_table;
@@ -3890,7 +4108,7 @@ int main(int argc, char *argv[]) {
   // TestConvVarLayer(&rnd);
   // TestLocalLayer(&rnd);
   // TestLocalFactorLayer(&rnd);
-  TestGaussianMaskLayer(&rnd);
+  // TestGaussianMaskLayer(&rnd);
   // TestPoolLayer(&rnd);
   // TestCrossLayer(&rnd);
   // TestDropoutLayer(&rnd);
@@ -3943,5 +4161,8 @@ int main(int argc, char *argv[]) {
   // TestListwiseMeasureLayer(&rnd);
   // TestQATextDataLayer(&rnd);
   // TestMapTextDataLayer(&rnd);
+  // TestConvolutionAndLocalFactorLayer(&rnd);
+  // TestElementOpLayer(&rnd);
+  TestParameterLayer(&rnd);
   return 0;
 }

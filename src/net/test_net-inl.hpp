@@ -17,37 +17,39 @@ class TestNet : public Net<xpu>{
 	  need_activation = false;
   }
 
-  TestNet(int batch_size_, int max_iter_, vector<string> node_names_, string file_prefix_) {
+  TestNet(int per_file_iter_, int max_iter_, vector<string> node_names_, string file_prefix_, string tag_) {
 	  this->net_type = kTestOnly;
 	  need_activation = true;
-	  batch_size = batch_size_;
+	  per_file_iter = per_file_iter_;
 	  max_iter = max_iter_;
 	  node_names = node_names_;
 	  file_prefix = file_prefix_;
+      tag = tag_;
   }
 
   virtual ~TestNet(void) {}
   
   virtual void Start() {
 
-	utils::Check(this->nets.count("Test"),
-			"No [Test] tag in config.");
+	utils::Check(this->nets.count(tag),
+			"No [%s] tag in config.", tag.c_str());
     if (!need_activation) {
-		this->TestAll("Test", 0);
+		this->TestAll(tag, 0);
 	} else {
 		for (int test_iter = 0; test_iter < max_iter; ++test_iter) {
 			string file_name = file_prefix + "." + int2str(test_iter);
-			this->SaveModelActivation("Test", node_names, batch_size, file_name);
+			this->SaveModelActivation(tag, node_names, per_file_iter, file_name);
 		}
 	}	
 
   } 
 
   bool need_activation;
-  int batch_size;
+  int per_file_iter;
   int max_iter;
   vector<string> node_names;
   string file_prefix;
+  string tag;
 };
 }  // namespace net
 }  // namespace textnet

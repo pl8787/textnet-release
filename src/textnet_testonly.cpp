@@ -77,6 +77,14 @@ void PrintTensor(const char * name, Tensor<cpu, 4> x) {
     cout << endl;
 }
 
+float SIGMOID_MAX_INPUT = 20.f;
+int SIGMOID_TABLE_SIZE = 1000000;
+float *p_sigmoid_lookup_table = NULL;
+
+float TANH_MAX_INPUT = 20.f;
+int TANH_TABLE_SIZE = 1000000;
+float *p_tanh_lookup_table = NULL;
+
 int main(int argc, char *argv[]) {
   string model_file = "";
   string test_config_file = "";
@@ -91,7 +99,7 @@ int main(int argc, char *argv[]) {
   _if >> test_config;
   _if.close();
 
-  int batch_size = test_config["batch_size"].asInt();
+  int per_file_iter = test_config["per_file_iter"].asInt();
   int max_iter = test_config["max_iter"].asInt();
   vector<string> node_names;
   Json::Value node_names_root = test_config["node_names"];
@@ -99,8 +107,9 @@ int main(int argc, char *argv[]) {
 	node_names.push_back(node_names_root[i].asString());
   }
   string file_prefix = test_config["file_prefix"].asString();
+  string tag = test_config["tag"].asString();
  
-  TestNet<cpu> net = TestNet<cpu>(batch_size, max_iter, node_names, file_prefix);
+  TestNet<cpu> net = TestNet<cpu>(per_file_iter, max_iter, node_names, file_prefix, tag);
   net.LoadModel(model_file);
   net.Start();
 

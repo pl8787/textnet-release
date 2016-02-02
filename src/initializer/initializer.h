@@ -29,6 +29,7 @@ const int kUnitball = 6;
 const int kUniformRange = 7;
 const int kFileInit = 8;
 const int kVar = 9;
+const int kRowGaussian = 10;
 
 template<typename xpu, int dim>
 class Initializer {

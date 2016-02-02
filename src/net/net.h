@@ -34,6 +34,7 @@ const int kTrainValid = 0;
 const int kTrainValidTest = 1;
 const int kCrossValid = 2;
 const int kTestOnly = 3;
+const int kMultiTrainValidTest = 4;
 
 typedef int DeviceType;
 const int CPU_DEVICE = 0;

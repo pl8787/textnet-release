@@ -68,6 +68,8 @@
 #include "./common/memory_attention_in_layer-inl.hpp"
 #include "./common/memory_attention_out_layer-inl.hpp"
 #include "./common/augmentation_layer-inl.hpp"
+#include "./common/element_op_layer-inl.hpp"
+#include "./common/parameter_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
 #include "./input/sequence_classification_data_layer-inl.hpp"
@@ -195,6 +197,8 @@ Layer<xpu>* CreateLayer_(LayerType type) {
 	case kMemoryAttentionIn: return new MemoryAttentionInLayer<xpu>(type);
 	case kMemoryAttentionOut: return new MemoryAttentionOutLayer<xpu>(type);
 	case kAugmentation: return new AugmentationLayer<xpu>(type);
+    case kElementOp: return new ElementOpLayer<xpu>(type);
+    case kParameter: return new ParameterLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }
