@@ -1,5 +1,5 @@
-#ifndef TEXTNET_LAYER_MAP_TEXTDATA_LAYER_INL_HPP_
-#define TEXTNET_LAYER_MAP_TEXTDATA_LAYER_INL_HPP_
+#ifndef TEXTNET_LAYER_MAP_2_TEXTDATA_LAYER_INL_HPP_
+#define TEXTNET_LAYER_MAP_2_TEXTDATA_LAYER_INL_HPP_
 
 #include <iostream>
 #include <fstream>
@@ -20,18 +20,14 @@ using namespace std;
 namespace textnet {
 namespace layer {
 
-bool map_list_size_cmp(const vector<int> &x1, const vector<int> &x2) {
-  return x1.size() < x2.size(); // sort increase
-}
-
 template<typename xpu>
-class MapTextDataLayer : public Layer<xpu>{
+class Map2TextDataLayer : public Layer<xpu>{
  public:
-  MapTextDataLayer(LayerType type) { this->layer_type = type; }
-  virtual ~MapTextDataLayer(void) {}
+  Map2TextDataLayer(LayerType type) { this->layer_type = type; }
+  virtual ~Map2TextDataLayer(void) {}
   
   virtual int BottomNodeNum() { return 0; }
-  virtual int TopNodeNum() { return 2; }
+  virtual int TopNodeNum() { return 3; }
   virtual int ParamNodeNum() { return 0; }
   
   virtual void Require() {
@@ -40,13 +36,15 @@ class MapTextDataLayer : public Layer<xpu>{
     this->defaults["mode"] = SettingV("batch"); // batch, pair, list    
     this->defaults["shuffle"] = SettingV(false);
     this->defaults["speedup_list"] = SettingV(false); // only when list
-    this->defaults["min_doc_len"] = SettingV(1);
+    this->defaults["min_doc1_len"] = SettingV(1);
+    this->defaults["min_doc2_len"] = SettingV(1);
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["data1_file"] = SettingV();
     this->defaults["data2_file"] = SettingV();
     this->defaults["rel_file"] = SettingV();
-    this->defaults["max_doc_len"] = SettingV();
+    this->defaults["max_doc1_len"] = SettingV();
+    this->defaults["max_doc2_len"] = SettingV();
 
     Layer<xpu>::Require();
   }
@@ -58,27 +56,29 @@ class MapTextDataLayer : public Layer<xpu>{
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
     
     utils::Check(bottom.size() == BottomNodeNum(),
-                  "MapTextDataLayer:bottom size problem."); 
+                  "Map2TextDataLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
-                  "MapTextDataLayer:top size problem.");
+                  "Map2TextDataLayer:top size problem.");
 
     data1_file = setting["data1_file"].sVal();
     data2_file = setting["data2_file"].sVal();
     rel_file = setting["rel_file"].sVal();
     batch_size = setting["batch_size"].iVal();
-    max_doc_len = setting["max_doc_len"].iVal();
-    min_doc_len = setting["min_doc_len"].iVal();
+    max_doc1_len = setting["max_doc1_len"].iVal();
+    min_doc1_len = setting["min_doc1_len"].iVal();
+    max_doc2_len = setting["max_doc2_len"].iVal();
+    min_doc2_len = setting["min_doc2_len"].iVal();
     mode = setting["mode"].sVal();
     shuffle = setting["shuffle"].bVal();
     speedup_list = setting["speedup_list"].bVal();
     
     utils::Check(mode == "batch" || mode == "pair" || mode == "list",
-                  "MapTextDataLayer: mode is one of batch, pair or list.");
+                  "Map2TextDataLayer: mode is one of batch, pair or list.");
 
     ReadRelData(rel_file, rel_set, label_set, data1_set, data2_set);
 
-    ReadTextData(data1_file, data1_set);
-    ReadTextData(data2_file, data2_set);
+    ReadTextData(data1_file, data1_set, max_doc1_len, min_doc1_len);
+    ReadTextData(data2_file, data2_set, max_doc2_len, min_doc2_len);
 
     if (mode == "pair") {
       MakePairs(rel_set, label_set, pair_set);
@@ -89,7 +89,8 @@ class MapTextDataLayer : public Layer<xpu>{
     line_ptr = 0;
   }
   
-  void ReadTextData(string &data_file, unordered_map<string, vector<int> > &data_set) {
+  void ReadTextData(string &data_file, unordered_map<string, vector<int> > &data_set, 
+          int max_doc_len, int min_doc_len) {
     utils::Printf("Open data file: %s\n", data_file.c_str());    
 
     std::ifstream fin(data_file.c_str());
@@ -97,7 +98,7 @@ class MapTextDataLayer : public Layer<xpu>{
     std::string key;
     int s_len;
     int value;
-    utils::Check(fin.is_open(), "MapTextdataLayer: Open data file problem.");
+    utils::Check(fin.is_open(), "Map2TextDataLayer: Open data file problem.");
 
     istringstream iss;
     while (!fin.eof()) {
@@ -126,7 +127,7 @@ class MapTextDataLayer : public Layer<xpu>{
 
       // Check sentence length
       utils::Check(data_set[key].size() >= min_doc_len, 
-              "MapTextdataLayer: Doc length %d less than %d, on line %d.", data_set[key].size(), min_doc_len, data_set.size());
+              "Map2TextDataLayer: Doc length %d less than %d, on line %d.", data_set[key].size(), min_doc_len, data_set.size());
     }
     fin.close();
 
@@ -255,27 +256,32 @@ class MapTextDataLayer : public Layer<xpu>{
                        const std::vector<Node<xpu>*> &top,
                        bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(),
-                  "MapTextDataLayer:bottom size problem."); 
+                  "Map2TextDataLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
-                  "MapTextDataLayer:top size problem.");
+                  "Map2TextDataLayer:top size problem.");
     
-    utils::Check(batch_size > 0, "MapTextDataLayer:batch_size <= 0");
-    utils::Check(max_doc_len > 0, "MapTextDataLayer:max_doc_len <= 0");
+    utils::Check(batch_size > 0, "Map2TextDataLayer:batch_size <= 0");
+    utils::Check(max_doc1_len > 0, "Map2TextDataLayer:max_doc1_len <= 0");
+    utils::Check(max_doc2_len > 0, "Map2TextDataLayer:max_doc2_len <= 0");
 
     if (mode == "batch") {
-      top[0]->Resize(batch_size, 2, 1, max_doc_len, true);
-      top[1]->Resize(batch_size, 1, 1, 1, true);
+      top[0]->Resize(batch_size, 1, 1, max_doc1_len, true);
+      top[1]->Resize(batch_size, 1, 1, max_doc2_len, true);
+      top[2]->Resize(batch_size, 1, 1, 1, true);
     } else if (mode == "pair") {
-      top[0]->Resize(2 * batch_size, 2, 1, max_doc_len, true);
-      top[1]->Resize(2 * batch_size, 1, 1, 1, true);
+      top[0]->Resize(2 * batch_size, 1, 1, max_doc1_len, true);
+      top[1]->Resize(2 * batch_size, 1, 1, max_doc2_len, true);
+      top[2]->Resize(2 * batch_size, 1, 1, 1, true);
     } else if (mode == "list") {
-      top[0]->Resize(max_list * batch_size, 2, 1, max_doc_len, true);
-      top[1]->Resize(max_list * batch_size, 1, 1, 1, true);
+      top[0]->Resize(max_list * batch_size, 1, 1, max_doc1_len, true);
+      top[1]->Resize(max_list * batch_size, 1, 1, max_doc2_len, true);
+      top[2]->Resize(max_list * batch_size, 1, 1, 1, true);
     }
     
     if (show_info) {
         top[0]->PrintShape("top0");
         top[1]->PrintShape("top1");
+        top[2]->PrintShape("top2");
     }
   }
 
@@ -296,7 +302,8 @@ class MapTextDataLayer : public Layer<xpu>{
     }
   }
 
-  inline void FillData(mshadow::Tensor<xpu, 4> &top0_data, mshadow::Tensor<xpu, 2> &top0_length, 
+  inline void FillData(mshadow::Tensor<xpu, 4> &top0_data, mshadow::Tensor<xpu, 2> &top0_length,
+                       mshadow::Tensor<xpu, 4> &top1_data, mshadow::Tensor<xpu, 2> &top1_length, 
                        int top_idx, int data_idx) {
       utils::Check(data1_set.count(rel_set[data_idx][0]), 
               "MapTextdataLayer: %s not in data1_set.", rel_set[data_idx][0].c_str());
@@ -311,9 +318,9 @@ class MapTextDataLayer : public Layer<xpu>{
       top0_length[top_idx][0] = data1.size();
 
       for (int k = 0; k < data2.size(); ++k) {
-          top0_data[top_idx][0][1][k] = data2[k];
+          top1_data[top_idx][0][0][k] = data2[k];
       }
-      top0_length[top_idx][1] = data2.size();
+      top1_length[top_idx][0] = data2.size();
   } 
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
@@ -321,19 +328,23 @@ class MapTextDataLayer : public Layer<xpu>{
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 4> top0_data = top[0]->data;
     mshadow::Tensor<xpu, 2> top0_length = top[0]->length;
-    mshadow::Tensor<xpu, 1> top1_data = top[1]->data_d1();
+    mshadow::Tensor<xpu, 4> top1_data = top[1]->data;
+    mshadow::Tensor<xpu, 2> top1_length = top[1]->length;
+    mshadow::Tensor<xpu, 1> top2_data = top[2]->data_d1();
 
     top0_data = -1;
     top0_length = 0;
     top1_data = -1;
+    top1_length = 0;
+    top2_data = -1;
 
     if (mode == "batch") {
       for (int i = 0; i < batch_size; ++i) {
         if (shuffle) {
           line_ptr = rand() % line_count;
         } 
-        FillData(top0_data, top0_length, i, line_ptr);
-        top1_data[i] = label_set[line_ptr];
+        FillData(top0_data, top0_length, top1_data, top1_length, i, line_ptr);
+        top2_data[i] = label_set[line_ptr];
         line_ptr = (line_ptr + 1) % line_count;
       }
     } else if (mode == "pair") {
@@ -345,11 +356,11 @@ class MapTextDataLayer : public Layer<xpu>{
         int pos_idx = pair_set[line_ptr][0];
         int neg_idx = pair_set[line_ptr][1];
 
-        FillData(top0_data, top0_length, 2*i, pos_idx);
-        FillData(top0_data, top0_length, 2*i+1, neg_idx);
+        FillData(top0_data, top0_length, top1_data, top1_length, 2*i, pos_idx);
+        FillData(top0_data, top0_length, top1_data, top1_length, 2*i+1, neg_idx);
 
-        top1_data[2*i] = 1;
-        top1_data[2*i+1] = 0;
+        top2_data[2*i] = 1;
+        top2_data[2*i+1] = 0;
         line_ptr = (line_ptr + 1) % pair_set.size();
       }
     } else if (mode == "list") {
@@ -357,8 +368,8 @@ class MapTextDataLayer : public Layer<xpu>{
         for (int i = 0; i < list_set[line_ptr].size(); ++i) {
           int idx = list_set[line_ptr][i];
           int out_idx = s * max_list + i;
-          FillData(top0_data, top0_length, out_idx, idx);
-          top1_data[out_idx] = label_set[idx];
+          FillData(top0_data, top0_length, top1_data, top1_length, out_idx, idx);
+          top2_data[out_idx] = label_set[idx];
         }
         line_ptr = (line_ptr + 1) % list_set.size();
       }
@@ -380,8 +391,10 @@ class MapTextDataLayer : public Layer<xpu>{
   string rel_file;
 
   int batch_size;
-  int min_doc_len;
-  int max_doc_len;
+  int min_doc1_len;
+  int max_doc1_len;
+  int min_doc2_len;
+  int max_doc2_len;
   string mode;
   bool shuffle;
   bool speedup_list;
@@ -397,9 +410,9 @@ class MapTextDataLayer : public Layer<xpu>{
 
   int max_list;
 };
-template<typename xpu> unordered_map<string, vector<int> > MapTextDataLayer<xpu>::data1_set = unordered_map<string, vector<int> >();
-template<typename xpu> unordered_map<string, vector<int> > MapTextDataLayer<xpu>::data2_set = unordered_map<string, vector<int> >();
+template<typename xpu> unordered_map<string, vector<int> > Map2TextDataLayer<xpu>::data1_set = unordered_map<string, vector<int> >();
+template<typename xpu> unordered_map<string, vector<int> > Map2TextDataLayer<xpu>::data2_set = unordered_map<string, vector<int> >();
 }  // namespace layer
 }  // namespace textnet
-#endif  // LAYER_MAP_TEXTDATA_LAYER_INL_HPP_
+#endif  // LAYER_MAP_2_TEXTDATA_LAYER_INL_HPP_
 
