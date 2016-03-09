@@ -218,15 +218,17 @@ void TestListwiseMeasureLayer(mshadow::Random<cpu>* prnd) {
 
   bottom1.data[0][0][0][0] = 3;
   bottom1.data[1][0][0][0] = 2;
-  bottom1.data[2][0][0][0] = 3;
+  bottom1.data[2][0][0][0] = 0;
   bottom1.data[3][0][0][0] = 0;
   bottom1.data[4][0][0][0] = 1;
-  bottom1.data[5][0][0][0] = 2;
+  bottom1.data[5][0][0][0] = 0;
   
   map<string, SettingV> setting;
-  setting["k"] = SettingV(6);
-  setting["method"] = SettingV("nDCG@k");
-  // setting["method"] = SettingV("MRR");
+  setting["k"] = SettingV(4);
+  // setting["method"] = SettingV("MAP");
+  setting["pos_count_file"] = SettingV("/home/pangliang/pos_count.tmp");
+  // setting["method"] = SettingV("nDCG@k");
+  setting["method"] = SettingV("MRR");
   // setting["method"] = SettingV("P@k");
   
   /// Test Activation Layer
@@ -4158,11 +4160,11 @@ int main(int argc, char *argv[]) {
   // TestSumLayer(&rnd);
   // TestTopkPoolingLayer(&rnd);
   // TestHingeLossLayer(&rnd);
-  // TestListwiseMeasureLayer(&rnd);
+  TestListwiseMeasureLayer(&rnd);
   // TestQATextDataLayer(&rnd);
   // TestMapTextDataLayer(&rnd);
   // TestConvolutionAndLocalFactorLayer(&rnd);
   // TestElementOpLayer(&rnd);
-  TestParameterLayer(&rnd);
+  // TestParameterLayer(&rnd);
   return 0;
 }
