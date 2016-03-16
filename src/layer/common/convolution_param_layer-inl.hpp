@@ -288,18 +288,18 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 		  top_len[i][1] = (bottom_len[i][1] + pad_x * 2 - kernel_x) / stride_x + 1;
 		  utils::Check(top_len[i][0] > 0 && top_len[i][1] > 0, "ConvolutionParamLayer: top_len must positive. i=%d, bottom_len=(%f,%f), top_len=(%f,%f)",
 				  i, bottom_len[i][0], bottom_len[i][1], top_len[i][0], top_len[i][1]);
-		  top_len_x = top_len[i][0];
-		  top_len_y = top_len[i][1];
-		  bottom_len_x = bottom_len[i][0];
-		  bottom_len_y = bottom_len[i][1];
+		  top_len_y = top_len[i][0];
+		  top_len_x = top_len[i][1];
+		  bottom_len_y = bottom_len[i][0];
+		  bottom_len_x = bottom_len[i][1];
 	  }
 
       cout << "kernel: " << kernel_x << ", " << kernel_y << endl;
       cout << "bottom: " << bottom_len_x << ", " << bottom_len_y << endl;
       cout << "top: " << top_len_x << ", " << top_len_y << endl;
 
-      unpack_patch2col_var(temp_col_, bottom_data[i], bottom_len_x, bottom_len_y,
-					   kernel_x, kernel_y, stride_x, stride_y, pad_x, pad_y);
+      unpack_patch2col_var(temp_col_, bottom_data[i], bottom_len_y, bottom_len_x,
+					   kernel_y, kernel_x, stride_y, stride_x, pad_y, pad_x);
 	  PrintTensor("temp_col_", temp_col_);
 	  temp_data_.Resize(mshadow::Shape2(top_len_y * top_len_x, channel_out));
       temp_data_ = dot(temp_col_.Slice(0, top_len_y * top_len_x), weight_data.T());
@@ -358,10 +358,10 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 		  bottom_len_x = kernel_x;
 		  bottom_len_y = bottom_len[i][0];
 	  } else {
-		  top_len_x = top_len[i][0];
-		  top_len_y = top_len[i][1];
-		  bottom_len_x = bottom_len[i][0];
-		  bottom_len_y = bottom_len[i][1];
+		  top_len_y = top_len[i][0];
+		  top_len_x = top_len[i][1];
+		  bottom_len_y = bottom_len[i][0];
+		  bottom_len_x = bottom_len[i][1];
 	  }
 
       temp_col_.Resize(mshadow::Shape2(top_len_y*top_len_x, channel_in*kernel_x*kernel_y));
@@ -379,8 +379,8 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 
 	  //PrintTensor("temp_data_", temp_data_);
 
-      unpack_patch2col_var(temp_col_, bottom_data[i], bottom_len_x, bottom_len_y, 
-					   kernel_x, kernel_y, stride_x, stride_y, pad_x, pad_y);
+      unpack_patch2col_var(temp_col_, bottom_data[i], bottom_len_y, bottom_len_x, 
+					   kernel_y, kernel_x, stride_y, stride_x, pad_y, pad_x);
       
 	  //PrintTensor("temp_col_", temp_col_);
 
@@ -402,8 +402,8 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
       if (this->prop_error[0]) {
 		temp_dif_.Resize(mshadow::Shape2(top_len_y * top_len_x, channel_in * kernel_x * kernel_y));
         temp_dif_ = dot(temp_data_, weight_data);
-        pack_col2patch_var(bottom_diff[i], temp_dif_, bottom_len_x, bottom_len_y,
-              kernel_x, kernel_y, stride_x, stride_y, pad_x, pad_y);
+        pack_col2patch_var(bottom_diff[i], temp_dif_, bottom_len_y, bottom_len_x,
+              kernel_y, kernel_x, stride_y, stride_x, pad_y, pad_x);
       }
       
     }
