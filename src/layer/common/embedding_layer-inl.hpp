@@ -28,6 +28,7 @@ class EmbeddingLayer : public Layer<xpu>{
     this->defaults["pad_value"] = SettingV(0.f);
     this->defaults["embedding_file"] = SettingV("");
     this->defaults["update_indication_file"] = SettingV(""); // id (0 or 1), 1 is for update, 0 is for un update
+    this->defaults["length_mode"] = SettingV("embedding"); // embedding or kernel
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["feat_size"] = SettingV();
@@ -54,6 +55,10 @@ class EmbeddingLayer : public Layer<xpu>{
     feat_size = setting["feat_size"].iVal();
     word_count = setting["word_count"].iVal();
     pad_value = setting["pad_value"].fVal();
+    length_mode = setting["length_mode"].sVal();
+
+    utils::Check(length_mode == "embedding" || length_mode == "kernel",
+                 "EmbeddingLayer: error value of length_mode");
 
     this->params.resize(1);
     // No need allocate diff memory
@@ -139,7 +144,11 @@ class EmbeddingLayer : public Layer<xpu>{
     doc_count = bottom[0]->data.size(1);
     nbatch = bottom[0]->data.size(0);
                   
-    top[0]->Resize(nbatch, doc_count, max_doc_len, feat_size, true);
+    if (length_mode == "embedding") {
+      top[0]->Resize(nbatch, doc_count, max_doc_len, feat_size, true);
+    } else if (length_mode == "kernel") {
+      top[0]->Resize(nbatch, doc_count, max_doc_len, feat_size, nbatch, 3, true);
+    }
 
     if (show_info) {
         bottom[0]->PrintShape("bottom0");
@@ -172,7 +181,14 @@ class EmbeddingLayer : public Layer<xpu>{
     
     // fill all top data to pad_value
     top_data = pad_value;
-    top_len = F<op::identity>(bottom_len);
+    if (length_mode == "embedding") {
+      top_len = F<op::identity>(bottom_len);
+    } else if (length_mode == "kernel") {
+      top_len = 1;
+      for (int i = 0; i < bottom_len.size(0); ++i) {
+        top_len[i][1] = bottom_len[i][0];
+      }
+    }
 
     int w_idx = -1;
     for (int i = 0; i < nbatch; ++i) {
@@ -254,6 +270,7 @@ class EmbeddingLayer : public Layer<xpu>{
   int line_count;
   float pad_value;
   std::set<int> unupdate_words;
+  string length_mode;
 };
 }  // namespace layer
 }  // namespace textnet

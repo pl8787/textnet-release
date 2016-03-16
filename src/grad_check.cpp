@@ -730,6 +730,134 @@ void TestConvVarLayer(mshadow::Random<cpu>* prnd) {
 
 }
 
+void TestConvParamLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check ConvParam Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> bottom_k;
+  Node<cpu> bottom_b;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  bottoms.push_back(&bottom_k);
+  bottoms.push_back(&bottom_b);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(2,1,5,5), Shape2(2,2), true);
+
+  float bottom_data_[] = {2,1,1,1,1,
+						 3,2,1,1,1,
+						 1,1,2,1,1,
+						 1,1,1,2,1,
+						 1,1,1,1,2,
+						 1,1,1,1,1,
+						 1,1,1,1,1,
+						 1,1,1,1,1,
+						 1,1,1,1,1,
+						 1,1,1,1,1};
+  vector<float> bottom_data(bottom_data_, bottom_data_ + sizeof(bottom_data_) / sizeof(float));
+  FillTensor(bottom.data, bottom_data);
+  bottom.data *= 0.1;
+
+  bottom_k.Resize(Shape4(2,2,5,1), Shape2(2,3), true);
+  float bottom_k_data_[] = {1,1,1,1,1,
+                            2,1,2,1,2,
+                            1,1,1,1,1,
+                            1,1,1,1,1};
+  vector<float> bottom_k_data(bottom_k_data_, bottom_k_data_ + sizeof(bottom_k_data_) / sizeof(float));
+  FillTensor(bottom_k.data, bottom_k_data);
+  bottom_k.data *= 0.2;
+
+  bottom_b.Resize(Shape4(2,2,1,1), Shape2(2,1), true);
+  float bottom_b_data_[] = {0, 0, 0, 0};
+  vector<float> bottom_b_data(bottom_b_data_, bottom_b_data_ + sizeof(bottom_b_data_) / sizeof(float));
+  FillTensor(bottom_b.data, bottom_b_data);
+
+  float bottom_len_[] = {5,5,5,5};
+  vector<float> bottom_len(bottom_len_, bottom_len_ + sizeof(bottom_len_) / sizeof(float));
+  FillTensor(bottom.length, bottom_len);
+
+  float bottom_k_len_[] = {1, 5, 1,
+                           1, 5, 1};
+  vector<float> bottom_k_len(bottom_k_len_, bottom_k_len_ + sizeof(bottom_k_len_) / sizeof(float));
+  FillTensor(bottom_k.length, bottom_k_len);
+  //prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+  
+  PrintTensor("bottom_k_len", bottom_k.length);
+  map<string, SettingV> setting;
+  setting["pad_x"] = SettingV(0);
+  setting["pad_y"] = SettingV(0);
+  setting["stride_x"] = SettingV(1);
+  setting["stride_y"] = SettingV(1);
+  setting["dim"] = SettingV(2);
+  setting["no_bias"] = SettingV(false);
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_conv = CreateLayer<cpu>(kConvParam);
+  layer_conv->PropAll();
+  layer_conv->SetupLayer(setting, bottoms, tops, prnd);
+  layer_conv->Reshape(bottoms, tops, true);
+
+  layer_conv->Forward(bottoms, tops);
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("bottom_len", bottom.length);
+  PrintTensor("bottom_k", bottom_k.data);
+  PrintTensor("bottom_k_len", bottom_k.length);
+  PrintTensor("bottom_b", bottom_b.data);
+  PrintTensor("top", top.data);
+  PrintTensor("top_len", top.length);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.01f);
+  setting_checker["range_max"] = SettingV(0.01f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_conv, bottoms, tops);
+
+}
+
+void TestGenKernelLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check GenKernel Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(2,1,3,1), Shape2(2,3), true);
+  float bottom_data_[] = {1,2,3,4,5,6};
+  vector<float> bottom_data(bottom_data_, bottom_data_ + sizeof(bottom_data_) / sizeof(float));
+  FillTensor(bottom.data, bottom_data);
+  bottom.data *= 0.1;
+
+  float bottom_len_[] = {1, 3, 1,
+                         1, 2, 1};
+  vector<float> bottom_len(bottom_len_, bottom_len_ + sizeof(bottom_len_) / sizeof(float));
+  FillTensor(bottom.length, bottom_len);
+  
+  PrintTensor("bottom_len", bottom.length);
+  map<string, SettingV> setting;
+  setting["kernel_mode"] = SettingV("permutation");
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_conv = CreateLayer<cpu>(kGenKernel);
+  layer_conv->PropAll();
+  layer_conv->SetupLayer(setting, bottoms, tops, prnd);
+  layer_conv->Reshape(bottoms, tops, true);
+
+  layer_conv->Forward(bottoms, tops);
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("bottom_len", bottom.length);
+  PrintTensor("top", top.data);
+  PrintTensor("top_len", top.length);
+}
+
 void TestLocalLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Local Layer." << endl;
   Node<cpu> bottom;
@@ -4108,6 +4236,7 @@ int main(int argc, char *argv[]) {
   // TestFcLayer(&rnd);
   // TestConvLayer(&rnd);
   // TestConvVarLayer(&rnd);
+  TestConvParamLayer(&rnd);
   // TestLocalLayer(&rnd);
   // TestLocalFactorLayer(&rnd);
   // TestGaussianMaskLayer(&rnd);
@@ -4160,11 +4289,12 @@ int main(int argc, char *argv[]) {
   // TestSumLayer(&rnd);
   // TestTopkPoolingLayer(&rnd);
   // TestHingeLossLayer(&rnd);
-  TestListwiseMeasureLayer(&rnd);
+  // TestListwiseMeasureLayer(&rnd);
   // TestQATextDataLayer(&rnd);
   // TestMapTextDataLayer(&rnd);
   // TestConvolutionAndLocalFactorLayer(&rnd);
   // TestElementOpLayer(&rnd);
   // TestParameterLayer(&rnd);
+  // TestGenKernelLayer(&rnd);
   return 0;
 }

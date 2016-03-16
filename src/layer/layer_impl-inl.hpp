@@ -5,6 +5,8 @@
 #include "./common/activation_layer-inl.hpp"
 #include "./common/convolution_layer-inl.hpp"
 #include "./common/convolution_var_layer-inl.hpp"
+#include "./common/convolution_param_layer-inl.hpp"
+#include "./common/gen_kernel_layer-inl.hpp"
 #include "./common/fullc_layer-inl.hpp"
 #include "./common/tensor_fullc_layer-inl.hpp"
 #include "./common/pooling_layer-inl.hpp"
@@ -108,10 +110,12 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kRectifiedLinear: return new ActivationLayer<xpu, op::relu, op::relu_grad>(type);
     case kConv: return new ConvolutionLayer<xpu>(type);
     case kConvVar: return new ConvolutionVarLayer<xpu>(type);
+    case kConvParam: return new ConvolutionParamLayer<xpu>(type);
     case kFullConnect: return new FullConnectLayer<xpu>(type);
     case kTensorFullConnect: return new TensorFullConnectLayer<xpu>(type);
     case kMaxPooling: return new PoolingLayer<mshadow::red::maximum, xpu>(type);
     case kAvgPooling: return new PoolingLayer<mshadow::red::sum, xpu>(type);
+    case kSumPooling: return new PoolingLayer<mshadow::red::sum, xpu>(type);
     case kGateWholePooling: return new GateWholePoolingLayer<xpu>(type);
     case kGateWholePoolingD2: return new GateWholePoolingD2Layer<xpu>(type);
     case kGateDynamicPoolingD2: return new GateDynamicPoolingD2Layer<xpu>(type);
@@ -201,6 +205,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
 	case kAugmentation: return new AugmentationLayer<xpu>(type);
     case kElementOp: return new ElementOpLayer<xpu>(type);
     case kParameter: return new ParameterLayer<xpu>(type);
+    case kGenKernel: return new GenKernelLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }

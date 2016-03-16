@@ -222,9 +222,9 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
                           int input_row,  int input_col,
                           int pool_row,   int pool_col,
                           Tensor2DInt row_pos, Tensor2DInt col_pos) {
-    utils::Check(t_out.size(0) == pool_row && t_out.size(1) == pool_col, "DynamicPoolingLayer: size error.");
-    utils::Check(t_in.size(0) >= input_row && t_in.size(1) >= input_col, "DynamicPoolingLayer: size error.");
-    utils::Check(t_in.size(0) >= pool_row  && t_in.size(1) >= pool_col, "DynamicPoolingLayer: size error.");
+    utils::Check(t_out.size(0) == pool_row && t_out.size(1) == pool_col, "DynamicPoolingLayer: size error. C1 %d, %d, %d, %d", t_out.size(0), pool_row, t_out.size(1), pool_col);
+    utils::Check(t_in.size(0) >= input_row && t_in.size(1) >= input_col, "DynamicPoolingLayer: size error. C2 %d, %d, %d, %d", t_in.size(0), input_row, t_in.size(1), input_col);
+    utils::Check(t_in.size(0) >= pool_row  && t_in.size(1) >= pool_col, "DynamicPoolingLayer: size error. C3 %d, %d, %d, %d", t_in.size(0), pool_row, t_in.size(1), pool_col);
 
     vector<int> begin_pos_row, begin_pos_col;
     dynamic_split(input_row, pool_row, begin_pos_row);

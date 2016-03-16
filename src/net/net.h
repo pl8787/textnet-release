@@ -591,6 +591,18 @@ class Net : public INet{
 		if (var_batch)
 			nets[tag][i]->CheckReshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
         nets[tag][i]->Forward(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+#if LENGTH_DEBUG
+        for (int j = 0; j < top_vecs[layer_idx].size(); ++j) {
+          cout << top_vecs[layer_idx][j]->node_name << endl;
+          for (int d1 = 0; d1 < top_vecs[layer_idx][j]->length.size(0); ++d1) {
+            for (int d2 = 0; d2 < top_vecs[layer_idx][j]->length.size(1); ++d2) {
+              cout << top_vecs[layer_idx][j]->length[d1][d2] << " ";    
+            }
+            cout << endl;
+          } 
+          cout << endl;
+        }
+#endif
 #if DEBUG
         cout << "Feed " ;
         for (int j = 0; j < bottom_vecs[layer_idx].size(); ++j)
