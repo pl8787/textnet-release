@@ -744,18 +744,18 @@ void TestConvParamLayer(mshadow::Random<cpu>* prnd) {
   bottoms.push_back(&bottom_b);
   tops.push_back(&top);
   
-  bottom.Resize(Shape4(2,1,5,5), Shape2(2,2), true);
+  bottom.Resize(Shape4(2,1,5,3), Shape2(2,2), true);
 
-  float bottom_data_[] = {2,1,1,1,1,
-						 3,2,1,1,1,
-						 1,1,2,1,1,
-						 1,1,1,2,1,
-						 1,1,1,1,2,
-						 1,1,1,1,1,
-						 1,1,1,1,1,
-						 1,1,1,1,1,
-						 1,1,1,1,1,
-						 1,1,1,1,1};
+  float bottom_data_[] = {2,1,1,
+						  3,2,1,
+						  1,1,1,
+						  1,1,1,
+						  1,1,2,
+						  1,1,1,
+						  1,1,1,
+						  1,1,1,
+						  1,1,1,
+						  1,1,1};
   vector<float> bottom_data(bottom_data_, bottom_data_ + sizeof(bottom_data_) / sizeof(float));
   FillTensor(bottom.data, bottom_data);
   bottom.data *= 0.1;
@@ -774,7 +774,7 @@ void TestConvParamLayer(mshadow::Random<cpu>* prnd) {
   vector<float> bottom_b_data(bottom_b_data_, bottom_b_data_ + sizeof(bottom_b_data_) / sizeof(float));
   FillTensor(bottom_b.data, bottom_b_data);
 
-  float bottom_len_[] = {5,5,5,5};
+  float bottom_len_[] = {5,3,5,3};
   vector<float> bottom_len(bottom_len_, bottom_len_ + sizeof(bottom_len_) / sizeof(float));
   FillTensor(bottom.length, bottom_len);
 

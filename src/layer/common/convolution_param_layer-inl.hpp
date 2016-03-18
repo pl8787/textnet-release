@@ -102,12 +102,12 @@ class ConvolutionParamLayer : public Layer<xpu> {
     channel_out = bottom[1]->data.size(1);
 	if (dim == 1) {
 		shape_out = mshadow::Shape4(shape_in[0], channel_out,
-				(shape_in[2] + pad_y * 2) / stride_y + 1,
+				(shape_in[2] + pad_y * 2 - 1) / stride_y + 1,
 				1);
 	} else {
 		shape_out = mshadow::Shape4(shape_in[0], channel_out, 
-                (shape_in[2] + pad_y * 2) / stride_y + 1,
-                (shape_in[3] + pad_x * 2) / stride_x + 1);
+                (shape_in[2] + pad_y * 2 - 1) / stride_y + 1,
+                (shape_in[3] + pad_x * 2 - 1) / stride_x + 1);
 	}
 	mshadow::Shape<2> shape_len;
 	shape_len = bottom[0]->length.shape_;
@@ -294,20 +294,20 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 		  bottom_len_x = bottom_len[i][1];
 	  }
 
-      cout << "kernel: " << kernel_x << ", " << kernel_y << endl;
-      cout << "bottom: " << bottom_len_x << ", " << bottom_len_y << endl;
-      cout << "top: " << top_len_x << ", " << top_len_y << endl;
+      // cout << "kernel: " << kernel_x << ", " << kernel_y << endl;
+      // cout << "bottom: " << bottom_len_x << ", " << bottom_len_y << endl;
+      // cout << "top: " << top_len_x << ", " << top_len_y << endl;
 
       unpack_patch2col_var(temp_col_, bottom_data[i], bottom_len_y, bottom_len_x,
 					   kernel_y, kernel_x, stride_y, stride_x, pad_y, pad_x);
-	  PrintTensor("temp_col_", temp_col_);
+	  // PrintTensor("temp_col_", temp_col_);
 	  temp_data_.Resize(mshadow::Shape2(top_len_y * top_len_x, channel_out));
       temp_data_ = dot(temp_col_.Slice(0, top_len_y * top_len_x), weight_data.T());
-	  PrintTensor("temp_data_", temp_data_);
+	  // PrintTensor("temp_data_", temp_data_);
 	  for (index_t idx = 0; idx < temp_data_.size(0); ++idx) {
 		for (index_t ch = 0; ch < temp_data_.size(1); ++ch) {
-		  int row = idx / top_len_y;
-		  int col = idx % top_len_y;
+		  int row = idx / top_len_x;
+		  int col = idx % top_len_x;
 		  if (no_bias) {
 			top_data[i][ch][row][col] = temp_data_[idx][ch];
 		  } else {
@@ -371,8 +371,8 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
     
 	  for (index_t idx = 0; idx < temp_data_.size(0); ++idx) {
 		for (index_t ch = 0; ch < temp_data_.size(1); ++ch) {
-		  int row = idx / top_len_y;
-		  int col = idx % top_len_y;
+		  int row = idx / top_len_x;
+		  int col = idx % top_len_x;
 		  temp_data_[idx][ch] = top_diff[i][ch][row][col];
 		}
 	  }
