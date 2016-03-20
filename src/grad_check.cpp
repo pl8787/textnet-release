@@ -830,8 +830,9 @@ void TestGenKernelLayer(mshadow::Random<cpu>* prnd) {
   bottoms.push_back(&bottom);
   tops.push_back(&top);
   
-  bottom.Resize(Shape4(2,1,3,1), Shape2(2,3), true);
-  float bottom_data_[] = {1,2,3,4,5,6};
+  bottom.Resize(Shape4(2,2,3,1), Shape2(2,3), true);
+  float bottom_data_[] = {1,2,3,4,5,6,
+                          6,5,4,3,2,1};
   vector<float> bottom_data(bottom_data_, bottom_data_ + sizeof(bottom_data_) / sizeof(float));
   FillTensor(bottom.data, bottom_data);
   bottom.data *= 0.1;
@@ -843,7 +844,7 @@ void TestGenKernelLayer(mshadow::Random<cpu>* prnd) {
   
   PrintTensor("bottom_len", bottom.length);
   map<string, SettingV> setting;
-  setting["kernel_mode"] = SettingV("permutation");
+  setting["kernel_mode"] = SettingV("single");
   
   /// Test Activation Layer
   Layer<cpu> * layer_conv = CreateLayer<cpu>(kGenKernel);
@@ -856,6 +857,16 @@ void TestGenKernelLayer(mshadow::Random<cpu>* prnd) {
   PrintTensor("bottom_len", bottom.length);
   PrintTensor("top", top.data);
   PrintTensor("top_len", top.length);
+
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.01f);
+  setting_checker["range_max"] = SettingV(0.01f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_conv, bottoms, tops);
 }
 
 void TestLocalLayer(mshadow::Random<cpu>* prnd) {
@@ -4236,7 +4247,7 @@ int main(int argc, char *argv[]) {
   // TestFcLayer(&rnd);
   // TestConvLayer(&rnd);
   // TestConvVarLayer(&rnd);
-  TestConvParamLayer(&rnd);
+  // TestConvParamLayer(&rnd);
   // TestLocalLayer(&rnd);
   // TestLocalFactorLayer(&rnd);
   // TestGaussianMaskLayer(&rnd);
@@ -4295,6 +4306,6 @@ int main(int argc, char *argv[]) {
   // TestConvolutionAndLocalFactorLayer(&rnd);
   // TestElementOpLayer(&rnd);
   // TestParameterLayer(&rnd);
-  // TestGenKernelLayer(&rnd);
+  TestGenKernelLayer(&rnd);
   return 0;
 }

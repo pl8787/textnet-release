@@ -28,7 +28,7 @@ class EmbeddingLayer : public Layer<xpu>{
     this->defaults["pad_value"] = SettingV(0.f);
     this->defaults["embedding_file"] = SettingV("");
     this->defaults["update_indication_file"] = SettingV(""); // id (0 or 1), 1 is for update, 0 is for un update
-    this->defaults["length_mode"] = SettingV("embedding"); // embedding or kernel
+    this->defaults["length_mode"] = SettingV("embedding"); // embedding or kernel or featmap
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["feat_size"] = SettingV();
@@ -57,7 +57,7 @@ class EmbeddingLayer : public Layer<xpu>{
     pad_value = setting["pad_value"].fVal();
     length_mode = setting["length_mode"].sVal();
 
-    utils::Check(length_mode == "embedding" || length_mode == "kernel",
+    utils::Check(length_mode == "embedding" || length_mode == "kernel" || length_mode == "featmap",
                  "EmbeddingLayer: error value of length_mode");
 
     this->params.resize(1);
@@ -144,10 +144,15 @@ class EmbeddingLayer : public Layer<xpu>{
     doc_count = bottom[0]->data.size(1);
     nbatch = bottom[0]->data.size(0);
                   
+    // For one dimention length, such as sentence length
     if (length_mode == "embedding") {
       top[0]->Resize(nbatch, doc_count, max_doc_len, feat_size, true);
+    // For three dimention length, (channel_in=1, kernel_y=sentence length, kernel_x=1)
     } else if (length_mode == "kernel") {
       top[0]->Resize(nbatch, doc_count, max_doc_len, feat_size, nbatch, 3, true);
+    // For two dimention length, (kernel_y=sentence length, kernel_x=feat size)
+    } else if (length_mode == "featmap") {
+      top[0]->Resize(nbatch, doc_count, max_doc_len, feat_size, nbatch, 2, true);
     }
 
     if (show_info) {
@@ -187,6 +192,11 @@ class EmbeddingLayer : public Layer<xpu>{
       top_len = 1;
       for (int i = 0; i < bottom_len.size(0); ++i) {
         top_len[i][1] = bottom_len[i][0];
+      }
+    } else if (length_mode == "featmap") {
+      for (int i = 0; i < bottom_len.size(0); ++i) {
+        top_len[i][0] = bottom_len[i][0];
+        top_len[i][1] = feat_size;
       }
     }
 
