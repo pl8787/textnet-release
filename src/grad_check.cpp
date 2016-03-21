@@ -1192,6 +1192,93 @@ void TestPoolLayer(mshadow::Random<cpu>* prnd) {
 
 }
 
+void TestPoolVarLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Pool Var Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(2,1,5,5), Shape2(2,2), true);
+  bottom.length = 5;
+  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+  
+  map<string, SettingV> setting;
+  setting["kernel_x"] = SettingV(2);
+  setting["kernel_y"] = SettingV(2);
+  setting["stride_x"] = SettingV(2);
+  setting["stride_y"] = SettingV(2);
+  
+  /// Test PoolingVar Layer
+  Layer<cpu> * layer_pool = CreateLayer<cpu>(kPoolingVar);
+  layer_pool->PropAll();
+  layer_pool->SetupLayer(setting, bottoms, tops, prnd);
+  layer_pool->Reshape(bottoms, tops, true);
+  layer_pool->Forward(bottoms, tops);
+  
+  PrintTensor("bottom data", bottom.data);
+  PrintTensor("bottom_len", bottom.length);
+  PrintTensor("top data", top.data);
+  PrintTensor("top_len", top.length);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.01f);
+  setting_checker["range_max"] = SettingV(0.01f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_pool, bottoms, tops);
+  
+}
+
+void TestPadLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Pad Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(2,1,5,5), Shape2(2,2), true);
+  bottom.length = 5;
+  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+  
+  map<string, SettingV> setting;
+  setting["pad_x1"] = SettingV(2);
+  setting["pad_x2"] = SettingV(1);
+  setting["pad_y1"] = SettingV(1);
+  setting["pad_y2"] = SettingV(2);
+  
+  /// Test PoolingVar Layer
+  Layer<cpu> * layer_pool = CreateLayer<cpu>(kPad);
+  layer_pool->PropAll();
+  layer_pool->SetupLayer(setting, bottoms, tops, prnd);
+  layer_pool->Reshape(bottoms, tops, true);
+  layer_pool->Forward(bottoms, tops);
+  
+  PrintTensor("bottom data", bottom.data);
+  PrintTensor("bottom_len", bottom.length);
+  PrintTensor("top data", top.data);
+  PrintTensor("top_len", top.length);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.01f);
+  setting_checker["range_max"] = SettingV(0.01f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_pool, bottoms, tops);
+}
+
 void TestSequenceDimReductionLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Sequence Dim Reduction Layer." << endl;
   Node<cpu> bottom;
@@ -4306,6 +4393,8 @@ int main(int argc, char *argv[]) {
   // TestConvolutionAndLocalFactorLayer(&rnd);
   // TestElementOpLayer(&rnd);
   // TestParameterLayer(&rnd);
-  TestGenKernelLayer(&rnd);
+  // TestGenKernelLayer(&rnd);
+  TestPoolVarLayer(&rnd);
+  TestPadLayer(&rnd);
   return 0;
 }

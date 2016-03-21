@@ -10,6 +10,8 @@
 #include "./common/fullc_layer-inl.hpp"
 #include "./common/tensor_fullc_layer-inl.hpp"
 #include "./common/pooling_layer-inl.hpp"
+#include "./common/pooling_var_layer-inl.hpp"
+#include "./common/pad_layer-inl.hpp"
 #include "./common/embedding_layer-inl.hpp"
 #include "./common/one_hot_layer-inl.hpp"
 #include "./common/cross_layer-inl.hpp"
@@ -111,6 +113,8 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kConv: return new ConvolutionLayer<xpu>(type);
     case kConvVar: return new ConvolutionVarLayer<xpu>(type);
     case kConvParam: return new ConvolutionParamLayer<xpu>(type);
+    case kPoolingVar: return new PoolingVarLayer<xpu>(type);
+    case kPad: return new PadLayer<xpu>(type);
     case kFullConnect: return new FullConnectLayer<xpu>(type);
     case kTensorFullConnect: return new TensorFullConnectLayer<xpu>(type);
     case kMaxPooling: return new PoolingLayer<mshadow::red::maximum, xpu>(type);
