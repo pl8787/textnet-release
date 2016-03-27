@@ -470,6 +470,7 @@ struct Node {
   }
   
   inline void Init(bool init_diff = false) { 
+    if (!initializer_) return;
     if (!is_share) {
       initializer_->DoInitialize(data);
       if (init_diff) {
@@ -479,6 +480,7 @@ struct Node {
   }
   
   inline void Update() {
+    if (!updater_) return;
     if (!is_share) {
       if (is_sparse) {
         updater_->UpdateSparse(data, diff, idx);

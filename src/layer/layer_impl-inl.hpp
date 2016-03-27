@@ -29,6 +29,7 @@
 #include "./common/batch_split_layer-inl.hpp"
 #include "./common/batch_concat_layer-inl.hpp"
 #include "./common/batch_duplicate_layer-inl.hpp"
+#include "./common/batch_norm_layer-inl.hpp"
 #include "./common/channel_duplicate_layer-inl.hpp"
 #include "./common/lstm_layer-inl.hpp"
 #include "./common/lstm_d2_layer-inl.hpp"
@@ -210,6 +211,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kElementOp: return new ElementOpLayer<xpu>(type);
     case kParameter: return new ParameterLayer<xpu>(type);
     case kGenKernel: return new GenKernelLayer<xpu>(type);
+    case kBatchNorm: return new BatchNormLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }

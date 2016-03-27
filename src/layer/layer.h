@@ -97,6 +97,7 @@ const int kConvParam = 1021;
 const int kGenKernel = 1022;
 const int kPoolingVar = 1023;
 const int kPad = 1024;
+const int kBatchNorm = 1025;
 const int kDynamicKMaxPooling = 10001;
 const int kMatchTopKPooling = 10002;
 const int kSelectSubRepByToken = 10003;
