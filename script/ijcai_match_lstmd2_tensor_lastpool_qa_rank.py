@@ -8,10 +8,12 @@ t_l2 = 0.
 t_lr = 0.
 init_t = 0.0
 f_gate_bias = 0.0
+i_gate_bias = 0.0
 
 def gen_match_lstm(d_mem, init, lr, dataset, l2):
-    is_use_mlp   = True
-    print "ORC: using MLP"
+    is_use_mlp = True
+    use_gru = False
+    # is_deep   = False 
 
     # print "ORC: left & right lstm share parameters"
     net = {}
@@ -21,7 +23,8 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2):
     zero_filler = gen_zero_filler_setting()
     t_updater   = gen_adagrad_setting(lr = t_lr, l2 = t_l2, batch_size = ds.train_batch_size)
     g_updater   = gen_adagrad_setting(lr = lr, l2 = l2, batch_size = ds.train_batch_size)
-    zero_l2_updater   = gen_adagrad_setting(lr = lr, batch_size = ds.train_batch_size)
+    print "ORC: word embedding learning rate rescale."
+    zero_l2_updater   = gen_adagrad_setting(lr = lr*0.3, batch_size = ds.train_batch_size)
     # g_updater   = gen_sgd_setting(lr = lr, l2 = l2, batch_size = ds.train_batch_size)
     # zero_l2_updater   = gen_sgd_setting(lr = lr, batch_size = ds.train_batch_size)
 
@@ -31,9 +34,17 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2):
     g_layer_setting['t_filler'] = g_filler 
     g_layer_setting['w_filler'] = g_filler 
     g_layer_setting['b_filler'] = zero_filler
+    g_layer_setting['w_g_filler'] = g_filler 
+    g_layer_setting['b_g_filler'] = zero_filler
+    g_layer_setting['w_c_filler'] = g_filler 
+    g_layer_setting['b_c_filler'] = zero_filler
     g_layer_setting['t_updater'] = t_updater
     g_layer_setting['w_updater'] = g_updater
     g_layer_setting['b_updater'] = g_updater
+    g_layer_setting['w_g_updater'] = g_updater
+    g_layer_setting['b_g_updater'] = g_updater
+    g_layer_setting['w_c_updater'] = g_updater
+    g_layer_setting['b_c_updater'] = g_updater
 
     net['net_name'] = 'match_lstmd2_tensor_dpool'
     net['need_reshape'] = True
@@ -128,8 +139,8 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2):
     layer['layer_type'] = 1001
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
-    print 'ORC: tensor dim:', d_mem 
-    setting['d_hidden'] = d_mem
+    print 'ORC: tensor dim:', d_mem
+    setting['d_hidden'] = d_mem 
     setting['t_l2'] = t_l2
     setting['is_use_linear'] = True
     setting['t_updater'] = t_updater
@@ -164,52 +175,74 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2):
     setting = {'axis1':2, 'axis2':3}
     layer['setting'] = setting
 
-    layer = {}
-    layers.append(layer) 
-    layer['bottom_nodes'] = ['lstm_d2_input']
-    layer['top_nodes'] = ['match_matrix_lt2br'] # left top to bottom right
-    layer['layer_name'] = 'lstm_d2_lt2br'
-    layer['layer_type'] = 10005
-    setting = copy.deepcopy(g_layer_setting)
-    layer['setting'] = setting
-    print "ORC: LSTM dim:", d_mem
-    setting['d_mem'] = d_mem
-    setting['reverse'] = False
-    setting['f_gate_bias_init'] = f_gate_bias
-    setting['o_gate_bias_init'] = 0.0
+    if not use_gru:
+        layer = {}
+        layers.append(layer) 
+        layer['bottom_nodes'] = ['lstm_d2_input']
+        layer['top_nodes'] = ['match_matrix_lt2br'] # left top to bottom right
+        layer['layer_name'] = 'lstm_d2_lt2br'
+        layer['layer_type'] = 10005
+        setting = copy.deepcopy(g_layer_setting)
+        layer['setting'] = setting
+        print "ORC: LSTM dim:", d_mem 
+        setting['d_mem'] = d_mem
+        setting['reverse'] = False
+        setting['f_gate_bias_init'] = f_gate_bias
+        setting['o_gate_bias_init'] = 0.0
+        setting['i_gate_bias_init'] = i_gate_bias 
 
-    layer = {}
-    layers.append(layer) 
-    layer['bottom_nodes'] = ['lstm_d2_input']
-    layer['top_nodes'] = ['match_matrix_br2lt'] # left top to bottom right
-    layer['layer_name'] = 'lstm_d2_br2lt'
-    layer['layer_type'] = 10005
-    setting = copy.deepcopy(g_layer_setting)
-    layer['setting'] = setting
-    print "ORC: LSTM dim:", d_mem
-    setting['d_mem'] = d_mem
-    setting['reverse'] = True
-    setting['f_gate_bias_init'] = f_gate_bias
-    setting['o_gate_bias_init'] = 0.0
+        layer = {}
+        layers.append(layer) 
+        layer['bottom_nodes'] = ['lstm_d2_input']
+        layer['top_nodes'] = ['match_matrix_br2lt']
+        layer['layer_name'] = 'lstm_d2_br2lt'
+        layer['layer_type'] = 10005
+        setting = copy.deepcopy(g_layer_setting)
+        layer['setting'] = setting
+        print "ORC: LSTM dim:", d_mem
+        setting['d_mem'] = d_mem
+        setting['reverse'] = True
+        setting['f_gate_bias_init'] = f_gate_bias
+        setting['o_gate_bias_init'] = 0.0
+        setting['i_gate_bias_init'] = i_gate_bias 
+    else:
+        layer = {}
+        layers.append(layer) 
+        layer['bottom_nodes'] = ['lstm_d2_input']
+        layer['top_nodes'] = ['match_matrix_lt2br'] # left top to bottom right
+        layer['layer_name'] = 'lstm_d2_lt2br'
+        # print "Use One Gate GRU."
+        layer['layer_type'] = 10010
+        setting = copy.deepcopy(g_layer_setting)
+        layer['setting'] = setting
+        print "ORC: LSTM dim:", d_mem 
+        setting['d_mem'] = d_mem
+        setting['reverse'] = False
+        setting['is_diag_connection'] = True
+        # print "Unuse reset gate"
+        setting['is_use_reset_gate'] = True
+        setting['f_gate_bias_init'] = f_gate_bias
+        setting['o_gate_bias_init'] = 0.0
+        setting['i_gate_bias_init'] = i_gate_bias 
 
-    # 要把轴再换过来，因为dynamic poolin的时候，轴对不上
-    # layer = {}
-    # layers.append(layer) 
-    # layer['bottom_nodes'] = ['match_matrix_lt2br']
-    # layer['top_nodes'] = ['match_matrix_swap_lt2br']
-    # layer['layer_name'] = 'swap_4_dpool_1_1'
-    # layer['layer_type'] = 42 
-    # setting = {'axis1':3, 'axis2':2}
-    # layer['setting'] = setting
-
-    # layer = {}
-    # layers.append(layer) 
-    # layer['bottom_nodes'] = ['match_matrix_swap_lt2br']
-    # layer['top_nodes'] = ['match_matrix_output_lt2br']
-    # layer['layer_name'] = 'swap_4_dpool_1_2'
-    # layer['layer_type'] = 42
-    # setting = {'axis1':2, 'axis2':1}
-    # layer['setting'] = setting
+        layer = {}
+        layers.append(layer) 
+        layer['bottom_nodes'] = ['lstm_d2_input']
+        layer['top_nodes'] = ['match_matrix_br2lt']
+        layer['layer_name'] = 'lstm_d2_br2lt'
+        # print "Use One Gate GRU."
+        layer['layer_type'] = 10010
+        setting = copy.deepcopy(g_layer_setting)
+        layer['setting'] = setting
+        print "ORC: LSTM dim:", d_mem
+        setting['d_mem'] = d_mem
+        setting['reverse'] = True
+        # print "Unuse reset gate"
+        setting['is_use_reset_gate'] = True
+        setting['is_diag_connection'] = True
+        setting['f_gate_bias_init'] = f_gate_bias
+        setting['o_gate_bias_init'] = 0.0
+        setting['i_gate_bias_init'] = i_gate_bias 
 
     layer = {}
     layers.append(layer) 
@@ -217,25 +250,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2):
     layer['top_nodes'] = ['pool_rep_last']
     layer['layer_name'] = 'last_pooling'
     layer['layer_type'] = 10006 
-    layer['setting'] = {'type':'last'}
-
-    # layer = {}
-    # layers.append(layer) 
-    # layer['bottom_nodes'] = ['match_matrix_br2lt']
-    # layer['top_nodes'] = ['match_matrix_swap_br2lt']
-    # layer['layer_name'] = 'swap_4_dpool_2_1'
-    # layer['layer_type'] = 42 
-    # setting = {'axis1':3, 'axis2':2}
-    # layer['setting'] = setting
-
-    # layer = {}
-    # layers.append(layer) 
-    # layer['bottom_nodes'] = ['match_matrix_swap_br2lt']
-    # layer['top_nodes'] = ['match_matrix_output_br2lt']
-    # layer['layer_name'] = 'swap_4_dpool_2_2'
-    # layer['layer_type'] = 42
-    # setting = {'axis1':2, 'axis2':1}
-    # layer['setting'] = setting
+    layer['setting'] = {'pool_type':'last'}
 
     layer = {}
     layers.append(layer) 
@@ -243,7 +258,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2):
     layer['top_nodes'] = ['pool_rep_first']
     layer['layer_name'] = 'first_pooling'
     layer['layer_type'] = 10006 
-    layer['setting'] = {'type':'first'}
+    layer['setting'] = {'pool_type':'first'}
 
     layer = {}
     layers.append(layer) 
@@ -255,26 +270,17 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2):
     layer['setting'] = setting
     setting['bottom_node_num'] = 2
     setting['concat_dim_index'] = 3
-    
-    # layer = {}
-    # layers.append(layer) 
-    # layer['bottom_nodes'] = ['match_matrix_output', 'l_sentence', 'r_sentence']
-    # layer['top_nodes'] = ['dpool_rep']
-    # layer['layer_name'] = 'top_k_pooling'
-    # layer['layer_type'] = 10002
-    # layer['setting'] = {'k':5}
 
     if is_use_mlp:
         layer = {}
         layers.append(layer) 
-        # layer['bottom_nodes'] = ['dpool_rep']
         layer['bottom_nodes'] = ['pool_rep']
         layer['top_nodes'] = ['hidden_trans']
         layer['layer_name'] = 'mlp_hidden'
         layer['layer_type'] = 11 
         setting = copy.deepcopy(g_layer_setting)
         layer['setting'] = setting
-        setting['num_hidden'] = 128
+        setting['num_hidden'] = d_mem * 4
 
         layer = {}
         layers.append(layer) 
@@ -301,22 +307,21 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2):
     if is_use_mlp:
         layer['bottom_nodes'] = ['hidden_drop_rep']
     else:
-        # layer['bottom_nodes'] = ['dpool_rep']
         layer['bottom_nodes'] = ['pool_rep']
+    # print "ORC: USE ONE DIRECTION"
+    # layer['bottom_nodes'] = ['pool_rep_last']
     layer['top_nodes'] = ['softmax_prob']
     layer['layer_name'] = 'softmax_fullconnect'
     layer['layer_type'] = 11
     setting = copy.deepcopy(g_layer_setting)
     layer['setting'] = setting
     setting['num_hidden'] = 1
-    # setting['no_bias'] = True
     setting['w_filler'] = zero_filler
 
     layer = {}
     layers.append(layer) 
     layer['bottom_nodes'] = ['softmax_prob', 'y']
     layer['top_nodes'] = ['loss']
-    # layer['layer_name'] = 'softmax_activation'
     layer['layer_name'] = 'pair_hinge'
     layer['layer_type'] = 55
     layer['tag'] = ['Train'] 
@@ -346,32 +351,29 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2):
 
     return net
 
-run = 30
+run = 64 
 l2 = 0.
-# for dataset in ['paper']:
-# for dataset in ['qa_balance']:
-# for dataset in ['qa_50']:
 for dataset in ['qa_top1k_4']:
     for d_mem in [10]:
         idx = 0
-        # for model_no in [0,1,2,3,4,5,6,7,8]:
-        #     for epoch_no in [20000, 40000, 80000]:
         for model_no in [2]:
-            # for epoch_no in [0, 10000, 25000]:
-            for gate_bias in [-0.2, 0.15, 0.3]:
-                # for init in [0.3, 0.1, 0.03]:
-                for init in [0.15, 0.05]:
-                    # for lr in [0.1, 0.05, 0.03]:
-                    for lr in [0.1, 0.05, 0.03]:
+            for gate_bias in [-0.2]:
+                i_gate_bias = -0.1
+                f_gate_bias = gate_bias
+                # for t_init_mul in [1.0, 0.3]:
+                for t_lr in [1.0]:
+                    # for init in [0.5, 0.3, 0.2]:
+                    for init in [0.15, 0.1, 0.05]:
+                        for lr in [0.3, 0.2, 0.1, 0.05]:
                         # for l2 in [0.00001, 0.0001]:
                         # for l2 in [0.00001, 0.0001, 0.001]:
                         # for t_l2_ in [0.0]:
                         # for t_lr_mul in [1, 0.3, 0.1]:
                         # for t_lr_mul in [1, 0.3]:
-                        f_gate_bias = gate_bias
-                        for t_init_mul in [1]:
-                            t_lr_mul = 1
+                            t_lr_mul = t_lr
+                            t_init_mul = 0.3
                             t_l2 = 0.0
+
                             init_t = init * t_init_mul
                             t_lr = t_lr_mul * lr
                             net = gen_match_lstm(d_mem=d_mem,init=init,lr=lr,dataset=dataset,l2=l2)

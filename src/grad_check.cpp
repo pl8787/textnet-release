@@ -2633,6 +2633,7 @@ void TestGruD2Layer(mshadow::Random<cpu>* prnd) {
     setting["no_bias"] = SettingV(false);
     setting["is_use_reset_gate"] = SettingV(false);
     setting["reverse"] = SettingV(true);
+    setting["is_diag_connection"] = SettingV(false);
       
     map<string, SettingV> &w_filler = *(new map<string, SettingV>());
       w_filler["init_type"] = SettingV(initializer::kUniform);

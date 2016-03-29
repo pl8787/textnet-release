@@ -20,10 +20,10 @@ class WholePooling2dLayer : public Layer<xpu>{
   
   virtual void Require() {
     // default value, just set the value you want
-    this->defaults["pool_type"] = SettingV("last"); // last, ave, sum, first
 
     // require value, set to SettingV(),
     // it will force custom to set in config
+    this->defaults["pool_type"] = SettingV(); // last, ave, sum, first
 
     Layer<xpu>::Require();
   }

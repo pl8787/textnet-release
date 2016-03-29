@@ -9,9 +9,10 @@ t_lr = 0.
 init_t = 0.0
 f_gate_bias = 0.0
 i_gate_bias = 0.0
+dpool_size = 5
 
 def gen_match_lstm(d_mem, init, lr, dataset, l2):
-    is_use_mlp= False
+    is_use_mlp= True
     use_gru = True
     is_deep   = False 
     print "ORC: using MLP"
@@ -221,6 +222,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2):
         setting['reverse'] = False
         # print "Unuse reset gate"
         setting['is_use_reset_gate'] = True
+        setting['is_diag_connection'] = True
         setting['f_gate_bias_init'] = f_gate_bias
         setting['o_gate_bias_init'] = 0.0
         setting['i_gate_bias_init'] = i_gate_bias 
@@ -237,6 +239,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2):
         print "ORC: LSTM dim:", d_mem
         setting['d_mem'] = d_mem
         setting['reverse'] = True
+        setting['is_diag_connection'] = True
         # print "Unuse reset gate"
         setting['is_use_reset_gate'] = True
         setting['f_gate_bias_init'] = f_gate_bias
@@ -354,7 +357,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2):
     layer['top_nodes'] = ['dpool_rep']
     layer['layer_name'] = 'dynamic_pooling'
     layer['layer_type'] = 43
-    layer['setting'] = {'row':5, 'col':5, 'interval':1}
+    layer['setting'] = {'row':dpool_size, 'col':dpool_size, 'interval':1}
     # layer = {}
     # layers.append(layer) 
     # layer['bottom_nodes'] = ['match_matrix_lt2br']
@@ -382,7 +385,7 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2):
         layer['layer_type'] = 11 
         setting = copy.deepcopy(g_layer_setting)
         layer['setting'] = setting
-        setting['num_hidden'] = 128
+        setting['num_hidden'] = d_mem * 4
 
         layer = {}
         layers.append(layer) 
@@ -454,13 +457,14 @@ def gen_match_lstm(d_mem, init, lr, dataset, l2):
 
     return net
 
-run = 51
+run = 63
 l2 = 0.
 # for dataset in ['paper']:
 # for dataset in ['qa_balance']:
 # for dataset in ['qa_50']:
 for dataset in ['qa_top1k_4']:
-    for d_mem in [2, 5]:
+    # for d_mem in [2, 5]:
+    for d_mem in [10]:
         idx = 0
         # for model_no in [0,1,2,3,4,5,6,7,8]:
         #     for epoch_no in [20000, 40000, 80000]:
@@ -470,8 +474,9 @@ for dataset in ['qa_top1k_4']:
                 i_gate_bias = -0.1
                 f_gate_bias = gate_bias
                 # for init in [0.3, 0.1, 0.03]:
-                for t_init_mul in [0.3]:
-                    for init in [0.1, 0.03, 0.01]:
+                for dp_size in [5]:
+                    dpool_size = dp_size
+                    for init in [0.1, 0.03]:
                         for lr in [0.3, 0.2, 0.1, 0.05]:
                         # for l2 in [0.00001, 0.0001]:
                         # for l2 in [0.00001, 0.0001, 0.001]:
@@ -479,7 +484,9 @@ for dataset in ['qa_top1k_4']:
                         # for t_lr_mul in [1, 0.3, 0.1]:
                         # for t_lr_mul in [1, 0.3]:
                             t_lr_mul = 1
+                            t_init_mul = 0.3
                             t_l2 = 0.0
+
                             init_t = init * t_init_mul
                             t_lr = t_lr_mul * lr
                             net = gen_match_lstm(d_mem=d_mem,init=init,lr=lr,dataset=dataset,l2=l2)

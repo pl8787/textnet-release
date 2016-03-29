@@ -48,6 +48,7 @@ class GruD2Layer : public Layer<xpu> {
     // this->defaults["max_norm2"] = SettingV();
     // this->defaults["grad_norm2"] = SettingV();
     this->defaults["d_mem"] = SettingV();
+    this->defaults["is_diag_connection"] = SettingV();
     this->defaults["w_g_filler"] = SettingV();
     this->defaults["b_g_filler"] = SettingV();
     this->defaults["w_g_updater"] = SettingV();
@@ -77,6 +78,7 @@ class GruD2Layer : public Layer<xpu> {
     is_use_reset_gate = setting["is_use_reset_gate"].bVal();
     // no_out_tanh = setting["no_out_tanh"].bVal();
     reverse = setting["reverse"].bVal();
+    is_diag_connection = setting["is_diag_connection"].bVal();
     // grad_norm2 = setting["grad_norm2"].fVal();
     // param_file = setting["param_file"].sVal();
     // o_gate_bias_init = setting["o_gate_bias_init"].fVal();
@@ -216,6 +218,58 @@ class GruD2Layer : public Layer<xpu> {
     h_t = Tensor2D(t.dptr_ + d_input+2*d_mem, mshadow::Shape2(1, d_mem));
   }
 
+  void diff_softmax_z_no_diag(Tensor2D z_i,    Tensor2D z_l,    Tensor2D z_t, 
+                              Tensor2D z_i_er, Tensor2D z_l_er, Tensor2D z_t_er) {
+    int len = z_i_er.size(1);
+    mshadow::TensorContainer<xpu, 2> z_i_er_tmp(mshadow::Shape2(1, len));
+    mshadow::TensorContainer<xpu, 2> z_l_er_tmp(mshadow::Shape2(1, len));
+    // mshadow::TensorContainer<xpu, 2> z_m_er_tmp(mshadow::Shape2(1, len));
+    mshadow::TensorContainer<xpu, 2> z_t_er_tmp(mshadow::Shape2(1, len));
+    // Tensor2D tmp_1 = z_i_er_tmp;
+    // Tensor2D tmp_2 = z_l_er_tmp;
+    // Tensor2D tmp_3 = z_m_er_tmp;
+    // Tensor2D tmp_4 = z_t_er_tmp;
+    // utils::Check(false, "tmp");
+    z_i_er_tmp = mshadow::expr::F<op::identity>(z_i_er);
+    z_l_er_tmp = mshadow::expr::F<op::identity>(z_l_er);
+    // z_m_er_tmp = mshadow::expr::F<op::identity>(z_m_er);
+    z_t_er_tmp = mshadow::expr::F<op::identity>(z_t_er);
+    for (int i = 0; i < len; ++i) {
+      float error_sum = 0.f;
+      error_sum += z_i_er_tmp[0][i] * z_i[0][i];
+      error_sum += z_l_er_tmp[0][i] * z_l[0][i];
+      // error_sum += z_m_er_tmp[0][i] * z_m[0][i];
+      error_sum += z_t_er_tmp[0][i] * z_t[0][i];
+
+      z_i_er[0][i] = (z_i_er_tmp[0][i] - error_sum) * z_i[0][i];
+      z_l_er[0][i] = (z_l_er_tmp[0][i] - error_sum) * z_l[0][i];
+      // z_m_er[0][i] = (z_m_er_tmp[0][i] - error_sum) * z_m[0][i];
+      z_t_er[0][i] = (z_t_er_tmp[0][i] - error_sum) * z_t[0][i];
+    }
+  }
+  
+  void softmax_z_no_diag(Tensor2D z_i, Tensor2D z_l, Tensor2D z_t) {
+    z_i = mshadow::expr::F<op::orc_exp>(z_i);
+    z_l = mshadow::expr::F<op::orc_exp>(z_l);
+    // z_m = mshadow::expr::F<op::orc_exp>(z_m);
+    z_t = mshadow::expr::F<op::orc_exp>(z_t);
+
+    // normalize by col
+    for (int i = 0; i < z_i.size(1); ++i) {
+      float sum = 0.f;
+      sum += z_i[0][i];
+      sum += z_l[0][i];
+      // sum += z_m[0][i];
+      sum += z_t[0][i];
+
+      z_i[0][i] /= sum;
+      z_l[0][i] /= sum;
+      // z_m[0][i] /= sum;
+      z_t[0][i] /= sum;
+    }
+  }
+
+
   void diff_softmax_z(Tensor2D z_i, Tensor2D z_l, Tensor2D z_m, Tensor2D z_t, 
                       Tensor2D z_i_er, Tensor2D z_l_er, Tensor2D z_m_er, Tensor2D z_t_er) {
     int len = z_i_er.size(1);
@@ -321,9 +375,13 @@ class GruD2Layer : public Layer<xpu> {
 
     // here we use a softmax layer for input and forget gate on each dimension
     // NOTE: on each dimension
-    softmax_z(z_i, z_l, z_m, z_t);
-
-    cur_h = cur_hi * z_i + pre_h_l * z_l + pre_h_m * z_m + pre_h_t * z_t;
+    if (is_diag_connection) {
+      softmax_z(z_i, z_l, z_m, z_t);
+      cur_h = cur_hi * z_i + pre_h_l * z_l + pre_h_m * z_m + pre_h_t * z_t;
+    } else {
+      softmax_z_no_diag(z_i, z_l, z_t);
+      cur_h = cur_hi * z_i + pre_h_l * z_l + pre_h_t * z_t;
+    }
   }
 
   void BpOneStep(Tensor2D cur_h_er,
@@ -353,15 +411,23 @@ class GruD2Layer : public Layer<xpu> {
     
     z_i_er = cur_h_er * cur_hi; 
     z_l_er = cur_h_er * pre_h_l; 
+    if (is_diag_connection) {
     z_m_er = cur_h_er * pre_h_m; 
+    }
     z_t_er = cur_h_er * pre_h_t; 
 
     cur_hi_er  = mshadow::expr::F<op::tanh_grad>(cur_hi) * (cur_h_er * z_i);
     pre_h_l_er += cur_h_er * z_l; // NOTE: += 
+    if (is_diag_connection) {
     pre_h_m_er += cur_h_er * z_m; // NOTE: +=
+    }
     pre_h_t_er += cur_h_er * z_t; // NOTE: +=
 
-    diff_softmax_z(z_i, z_l, z_m, z_t, z_i_er, z_l_er, z_m_er, z_t_er);
+    if (is_diag_connection) {
+      diff_softmax_z(z_i, z_l, z_m, z_t, z_i_er, z_l_er, z_m_er, z_t_er);
+    } else {
+      diff_softmax_z_no_diag(z_i, z_l, z_t, z_i_er, z_l_er, z_t_er);
+    }
 
     mshadow::TensorContainer<xpu, 2> input(mshadow::Shape2(1, d_input + 3*d_mem));
     mshadow::TensorContainer<xpu, 2> input_er(mshadow::Shape2(1, d_input + 3*d_mem));
@@ -375,7 +441,9 @@ class GruD2Layer : public Layer<xpu> {
                  input);
 
     w_c_er += dot(input.T(), cur_hi_er);
-    b_c_er += cur_hi_er;
+    if (!no_bias) {
+      b_c_er += cur_hi_er;
+    }
     input_er = dot(cur_hi_er, w_c_data.T());
     Tensor2D cur_x_er_tmp, reset_h_l_er, reset_h_m_er, reset_h_t_er;
     split_input(input_er,
@@ -403,7 +471,9 @@ class GruD2Layer : public Layer<xpu> {
     concat_input(cur_x, pre_h_l, pre_h_m, pre_h_t, input);
 
     w_g_er += dot(input.T(), cur_g_er);
-    b_g_er += cur_g_er;
+    if (!no_bias) {
+      b_g_er += cur_g_er;
+    }
     input_er = dot(cur_g_er, w_g_data.T());
     Tensor2D pre_h_l_er_tmp, pre_h_m_er_tmp, pre_h_t_er_tmp;
     split_input(input_er, 
@@ -749,7 +819,7 @@ class GruD2Layer : public Layer<xpu> {
 // protected:
   // float max_norm2;
   int d_mem, d_input;
-  bool no_bias, reverse, is_use_reset_gate; //, no_out_tanh; 
+  bool no_bias, reverse, is_use_reset_gate, is_diag_connection; //, no_out_tanh; 
   // float grad_norm2;
   // float o_gate_bias_init;
   // float f_gate_bias_init;
