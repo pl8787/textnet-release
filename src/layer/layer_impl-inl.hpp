@@ -31,6 +31,8 @@
 #include "./common/lstm_layer-inl.hpp"
 #include "./common/lstm_d2_layer-inl.hpp"
 #include "./common/lstm_d2_optimize_layer-inl.hpp"
+#include "./common/gru_d2_layer-inl.hpp"
+// #include "./common/gru_d2_optimize_layer-inl.hpp"
 #include "./common/gru_layer-inl.hpp"
 #include "./common/lstm_autoencoder_layer-inl.hpp"
 #include "./input/lstm_autoencoder_input_layer-inl.hpp"
@@ -137,6 +139,8 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kLstm: return new LstmLayer<xpu>(type);
     case kLstmD2: return new LstmD2Layer<xpu>(type);
     case kLstmD2Optimize: return new LstmD2OptimizeLayer<xpu>(type);
+    case kGruD2: return new GruD2Layer<xpu>(type);
+    // case kGruD2Optimize: return new GruD2OptimizeLayer<xpu>(type);
     case kLstmAutoencoder: return new LstmAutoencoderLayer<xpu>(type);
     case kLstmAutoencoderInput: return new LstmAutoencoderInputLayer<xpu>(type);
     case kNbpGenLstmInput: return new NbpGenLstmInputLayer<xpu>(type);
