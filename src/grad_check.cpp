@@ -1361,6 +1361,86 @@ void TestPadLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckError(layer_pool, bottoms, tops);
 }
 
+void TestFillCurveXY2DLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check FillCurveXY2D Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(2,1,4,4), Shape2(2,2), true);
+  bottom.length = 4;
+  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+  
+  map<string, SettingV> setting;
+  setting["curve_type"] = SettingV("Hilbert");
+  
+  /// Test PoolingVar Layer
+  Layer<cpu> * layer_curve = CreateLayer<cpu>(kFillCurveXY2D);
+  layer_curve->PropAll();
+  layer_curve->SetupLayer(setting, bottoms, tops, prnd);
+  layer_curve->Reshape(bottoms, tops, true);
+  layer_curve->Forward(bottoms, tops);
+  
+  PrintTensor("bottom data", bottom.data);
+  PrintTensor("bottom_len", bottom.length);
+  PrintTensor("top data", top.data);
+  PrintTensor("top_len", top.length);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.01f);
+  setting_checker["range_max"] = SettingV(0.01f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_curve, bottoms, tops);
+}
+
+void TestFillCurveD2XYLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check FillCurveD2XY Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(2,1,16,1), Shape2(2,1), true);
+  bottom.length = 16;
+  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+  
+  map<string, SettingV> setting;
+  setting["curve_type"] = SettingV("Hilbert");
+  
+  /// Test PoolingVar Layer
+  Layer<cpu> * layer_curve = CreateLayer<cpu>(kFillCurveD2XY);
+  layer_curve->PropAll();
+  layer_curve->SetupLayer(setting, bottoms, tops, prnd);
+  layer_curve->Reshape(bottoms, tops, true);
+  layer_curve->Forward(bottoms, tops);
+  
+  PrintTensor("bottom data", bottom.data);
+  PrintTensor("bottom_len", bottom.length);
+  PrintTensor("top data", top.data);
+  PrintTensor("top_len", top.length);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.01f);
+  setting_checker["range_max"] = SettingV(0.01f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_curve, bottoms, tops);
+}
+
 void TestSequenceDimReductionLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Sequence Dim Reduction Layer." << endl;
   Node<cpu> bottom;
@@ -4478,6 +4558,8 @@ int main(int argc, char *argv[]) {
   // TestGenKernelLayer(&rnd);
   // TestPoolVarLayer(&rnd);
   // TestPadLayer(&rnd);
-  TestBatchNormLayer(&rnd);
+  // TestBatchNormLayer(&rnd);
+  TestFillCurveXY2DLayer(&rnd);
+  TestFillCurveD2XYLayer(&rnd);
   return 0;
 }

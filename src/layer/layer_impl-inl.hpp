@@ -75,6 +75,8 @@
 #include "./common/augmentation_layer-inl.hpp"
 #include "./common/element_op_layer-inl.hpp"
 #include "./common/parameter_layer-inl.hpp"
+#include "./common/fill_curve_xy2d_layer-inl.hpp"
+#include "./common/fill_curve_d2xy_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
 #include "./input/sequence_classification_data_layer-inl.hpp"
@@ -212,6 +214,8 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kParameter: return new ParameterLayer<xpu>(type);
     case kGenKernel: return new GenKernelLayer<xpu>(type);
     case kBatchNorm: return new BatchNormLayer<xpu>(type);
+    case kFillCurveXY2D: return new FillCurveXY2DLayer<xpu>(type);
+    case kFillCurveD2XY: return new FillCurveD2XYLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }
