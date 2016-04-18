@@ -147,7 +147,7 @@ class FillCurveD2XYLayer : public Layer<xpu>{
       for (int y = 0; y < n; ++y) {
         for (int x = 0; x < n; ++x) {
           int d = xy2d(n, x, y);
-          for (int c = 0; c < bottom_shape[1]; ++c) {
+          for (int c = 0; c < top_shape[1]; ++c) {
             top_data[i][c][y][x] = bottom_data[i][0][d][c];
           } 
         }
@@ -170,7 +170,7 @@ class FillCurveD2XYLayer : public Layer<xpu>{
       for (int y = 0; y < n; ++y) {
         for (int x = 0; x < n; ++x) {
           int d = xy2d(n, x, y);
-          for (int c = 0; c < bottom_shape[1]; ++c) {
+          for (int c = 0; c < top_shape[1]; ++c) {
             bottom_diff[i][0][d][c] += top_diff[i][c][y][x];
           } 
         }

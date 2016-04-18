@@ -1411,7 +1411,7 @@ void TestFillCurveD2XYLayer(mshadow::Random<cpu>* prnd) {
   bottoms.push_back(&bottom);
   tops.push_back(&top);
   
-  bottom.Resize(Shape4(2,1,16,1), Shape2(2,1), true);
+  bottom.Resize(Shape4(2,1,16,2), Shape2(2,1), true);
   bottom.length = 16;
   prnd->SampleUniform(&bottom.data, -1.0, 1.0);
   
