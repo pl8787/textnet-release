@@ -57,19 +57,20 @@ class GenKernelLayer : public Layer<xpu> {
     
     mshadow::Shape<4> shape_in = bottom[0]->data.shape_;
     nbatch = shape_in[0];
+    kernel_count = shape_in[1];
     max_kernel_size = shape_in[2];
     
-	utils::Check(shape_in[1] == 1, "GenKernelLayer: kernel out must be 1.");
+	// utils::Check(shape_in[1] == 1, "GenKernelLayer: kernel out must be 1.");
 	utils::Check(shape_in[3] == 1, "GenKernelLayer: last dimension must be 1.");
     
 	if (kernel_mode == "single") {
-      channel_out = max_kernel_size;
+      channel_out = max_kernel_size * kernel_count;
       top[0]->Resize(nbatch, channel_out, max_kernel_size, 1, nbatch, 3, true);
     } else if (kernel_mode == "diag") {
-      channel_out = 1;
+      channel_out = kernel_count;
       top[0]->Resize(nbatch, channel_out, max_kernel_size * max_kernel_size, 1, nbatch, 3, true);
     } else if (kernel_mode == "permutation") {
-      channel_out = 1;
+      channel_out = kernel_count;
       for (int i = 2; i <= max_kernel_size; ++i) {
         channel_out *= i;
       }
@@ -105,20 +106,39 @@ class GenKernelLayer : public Layer<xpu> {
     mshadow::Tensor<xpu, 2> top_len = top[0]->length;
 	
 	top_data = 0.0;
-    top_len = F<op::identity>(bottom_len);
+    // top_len = F<op::identity>(bottom_len);
+
+    int length_idx = 1;
+    int length_mode = bottom_len.size(1);
+    if (length_mode == 1) {
+      length_idx = 0;
+    } else if (length_mode == 2) {
+      length_idx = 0;
+    } else if (length_mode == 3) {
+      length_idx = 1;
+    }
 
 	if (kernel_mode == "single") {
       for (int i = 0; i < nbatch; ++i) {
-        for (int j = 0; j < max_kernel_size; ++j) {
-          top_data[i][j][j] = bottom_data[i][0][j];
+        for (int k = 0; k < kernel_count; ++k) {
+          for (int j = 0; j < max_kernel_size; ++j) {
+            top_data[i][k*max_kernel_size+j][j] = bottom_data[i][k][j];
+          }
         }
+        top_len[i][0] = 1;
+        top_len[i][1] = bottom_len[i][length_idx];
+        top_len[i][2] = 1;
       }
 	} else if (kernel_mode == "diag") {
       for (int i = 0; i < nbatch; ++i) {
-        for (int j = 0; j < max_kernel_size; ++j) {
-          top_data[i][0][j*max_kernel_size+j] = bottom_data[i][0][j];
+        for (int k = 0; k < kernel_count; ++k) {
+          for (int j = 0; j < max_kernel_size; ++j) {
+            top_data[i][k][j*max_kernel_size+j] = bottom_data[i][k][j];
+          }
         }
-        top_len[i][2] = bottom_len[i][1];
+        top_len[i][0] = 1;
+        top_len[i][1] = bottom_len[i][length_idx];
+        top_len[i][2] = bottom_len[i][length_idx];
       }
     } else if (kernel_mode == "permutation") {
       vector<int> cur_idx(max_kernel_size);
@@ -128,13 +148,17 @@ class GenKernelLayer : public Layer<xpu> {
         }
         int cur_channel = 0;
         do {
-          for (int j = 0; j < max_kernel_size; ++j) {
-            int k = cur_idx[max_kernel_size - j - 1];
-            top_data[i][cur_channel][k*max_kernel_size+j] = bottom_data[i][0][j];
+          for (int k = 0; k < kernel_count; ++k) {
+            for (int j = 0; j < max_kernel_size; ++j) {
+              int s = cur_idx[max_kernel_size - j - 1];
+              top_data[i][cur_channel][s*max_kernel_size+j] = bottom_data[i][k][j];
+            }
+            cur_channel += 1;
           }
-          cur_channel += 1;
         } while ( std::prev_permutation(cur_idx.begin(), cur_idx.end()) );
-        top_len[i][2] = bottom_len[i][1];
+        top_len[i][0] = 1;
+        top_len[i][1] = bottom_len[i][length_idx];
+        top_len[i][2] = bottom_len[i][length_idx];
       }
     }
 
@@ -143,6 +167,45 @@ class GenKernelLayer : public Layer<xpu> {
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
                         const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
+    mshadow::Tensor<xpu, 3> bottom_data = bottom[0]->data_d3();
+    mshadow::Tensor<xpu, 3> top_data = top[0]->data_d3();
+    mshadow::Tensor<xpu, 3> bottom_diff = bottom[0]->diff_d3();
+    mshadow::Tensor<xpu, 3> top_diff = top[0]->diff_d3();
+
+	if (kernel_mode == "single") {
+      for (int i = 0; i < nbatch; ++i) {
+        for (int k = 0; k < kernel_count; ++k) {
+          for (int j = 0; j < max_kernel_size; ++j) {
+            bottom_diff[i][k][j] += top_diff[i][k*max_kernel_size+j][j];
+          }
+        }
+      }
+	} else if (kernel_mode == "diag") {
+      for (int i = 0; i < nbatch; ++i) {
+        for (int k = 0; k < kernel_count; ++k) {
+          for (int j = 0; j < max_kernel_size; ++j) {
+            bottom_diff[i][k][j] += top_diff[i][k][j*max_kernel_size+j];
+          }
+        }
+      }
+    } else if (kernel_mode == "permutation") {
+      vector<int> cur_idx(max_kernel_size);
+      for (int i = 0; i < nbatch; ++i) {
+        for (int j = 0; j < max_kernel_size; ++j) {
+          cur_idx[j] = max_kernel_size - j - 1;
+        }
+        int cur_channel = 0;
+        do {
+          for (int k = 0; k < kernel_count; ++k) {
+            for (int j = 0; j < max_kernel_size; ++j) {
+              int s = cur_idx[max_kernel_size - j - 1];
+              bottom_diff[i][k][j] += top_diff[i][cur_channel][s*max_kernel_size+j];
+            }
+            cur_channel += 1;
+          }
+        } while ( std::prev_permutation(cur_idx.begin(), cur_idx.end()) );
+      }
+    }
 
   }
 
@@ -151,6 +214,7 @@ class GenKernelLayer : public Layer<xpu> {
   int nbatch;
   int max_kernel_size;
   int channel_out;
+  int kernel_count;
   string kernel_mode;
 
 };

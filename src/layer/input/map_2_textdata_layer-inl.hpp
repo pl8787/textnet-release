@@ -96,6 +96,7 @@ class Map2TextDataLayer : public Layer<xpu>{
     std::ifstream fin(data_file.c_str());
     std::string s;
     std::string key;
+    std::string last_key;
     int s_len;
     int value;
     utils::Check(fin.is_open(), "Map2TextDataLayer: Open data file problem.");
@@ -115,6 +116,7 @@ class Map2TextDataLayer : public Layer<xpu>{
       if (!data_set.count(key) || data_set[key].size() != 0)
           continue;
 
+      last_key = key;
       while(!iss.eof()) {
         iss >> value;
         data_set[key].push_back(value);
@@ -131,9 +133,9 @@ class Map2TextDataLayer : public Layer<xpu>{
     }
     fin.close();
 
-    std::cout << key.c_str() << " ";
-    for (int i = 0; i < data_set[key].size(); ++i) {
-        std::cout << data_set[key][i] << " ";
+    std::cout << last_key.c_str() << " ";
+    for (int i = 0; i < data_set[last_key].size(); ++i) {
+        std::cout << data_set[last_key][i] << " ";
     }
     std::cout << std::endl;
 

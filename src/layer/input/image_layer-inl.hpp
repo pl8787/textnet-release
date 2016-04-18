@@ -87,8 +87,8 @@ class ImageLayer : public Layer<xpu>{
         iss.seekg(0, iss.beg);
       iss.str(lines[i]);
       iss >> label_set[i];
-	  length_set[i][0] = width;
-	  length_set[i][1] = height;
+	  length_set[i][1] = width;
+	  length_set[i][2] = height;
       for (int j = 0; j < height; ++j) {
 		for (int k = 0; k < width; ++k) {
 		  iss >> data_set[i][j][k];

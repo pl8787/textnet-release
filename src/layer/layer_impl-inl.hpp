@@ -10,6 +10,8 @@
 #include "./common/fullc_layer-inl.hpp"
 #include "./common/tensor_fullc_layer-inl.hpp"
 #include "./common/pooling_layer-inl.hpp"
+#include "./common/pooling_var_layer-inl.hpp"
+#include "./common/pad_layer-inl.hpp"
 #include "./common/embedding_layer-inl.hpp"
 #include "./common/one_hot_layer-inl.hpp"
 #include "./common/cross_layer-inl.hpp"
@@ -27,6 +29,7 @@
 #include "./common/batch_split_layer-inl.hpp"
 #include "./common/batch_concat_layer-inl.hpp"
 #include "./common/batch_duplicate_layer-inl.hpp"
+#include "./common/batch_norm_layer-inl.hpp"
 #include "./common/channel_duplicate_layer-inl.hpp"
 #include "./common/lstm_layer-inl.hpp"
 #include "./common/lstm_d2_layer-inl.hpp"
@@ -74,6 +77,8 @@
 #include "./common/augmentation_layer-inl.hpp"
 #include "./common/element_op_layer-inl.hpp"
 #include "./common/parameter_layer-inl.hpp"
+#include "./common/fill_curve_xy2d_layer-inl.hpp"
+#include "./common/fill_curve_d2xy_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
 #include "./input/sequence_classification_data_layer-inl.hpp"
@@ -113,6 +118,8 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kConv: return new ConvolutionLayer<xpu>(type);
     case kConvVar: return new ConvolutionVarLayer<xpu>(type);
     case kConvParam: return new ConvolutionParamLayer<xpu>(type);
+    case kPoolingVar: return new PoolingVarLayer<xpu>(type);
+    case kPad: return new PadLayer<xpu>(type);
     case kFullConnect: return new FullConnectLayer<xpu>(type);
     case kTensorFullConnect: return new TensorFullConnectLayer<xpu>(type);
     case kMaxPooling: return new PoolingLayer<mshadow::red::maximum, xpu>(type);
@@ -210,6 +217,9 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kElementOp: return new ElementOpLayer<xpu>(type);
     case kParameter: return new ParameterLayer<xpu>(type);
     case kGenKernel: return new GenKernelLayer<xpu>(type);
+    case kBatchNorm: return new BatchNormLayer<xpu>(type);
+    case kFillCurveXY2D: return new FillCurveXY2DLayer<xpu>(type);
+    case kFillCurveD2XY: return new FillCurveD2XYLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }

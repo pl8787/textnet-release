@@ -25,6 +25,9 @@ class ParameterLayer : public Layer<xpu> {
     this->defaults["d0"] = SettingV(1);  
     this->defaults["d1"] = SettingV(1);  
     this->defaults["d2"] = SettingV(1);  
+    this->defaults["l0"] = SettingV(1);
+    this->defaults["l1"] = SettingV(1);
+    this->defaults["l_val"] = SettingV("0");
     
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -44,10 +47,21 @@ class ParameterLayer : public Layer<xpu> {
     d0 = setting["d0"].iVal();
     d1 = setting["d1"].iVal();
     d2 = setting["d2"].iVal();
+    l0 = setting["l0"].iVal();
+    l1 = setting["l1"].iVal();
+    l_val = setting["l_val"].sVal();
     batch_size = setting["batch_size"].iVal();
     
     utils::Check(bottom.size() == BottomNodeNum(), "ParameterLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "ParameterLayer:top size problem.");
+
+    int s = 0;
+    istringstream iss;
+    iss.str(l_val);
+    for (int i = 0; i < l1; ++i) {
+      iss >> s;
+      len_val.push_back(s);
+    }
 
     this->params.resize(1);
     this->params[0].Resize(d0, d1, d2, 1, 1, 1, true);
@@ -70,7 +84,7 @@ class ParameterLayer : public Layer<xpu> {
     utils::Check(bottom.size() == BottomNodeNum(), "ParameterLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "ParameterLayer:top size problem.");
     
-    top[0]->Resize(batch_size, d0, d1, d2, 1, 1, true);
+    top[0]->Resize(batch_size, d0, d1, d2, l0, l1, true);
 
 	if (show_info) {
       top[0]->PrintShape("top0");
@@ -85,9 +99,13 @@ class ParameterLayer : public Layer<xpu> {
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
+    mshadow::Tensor<xpu, 2> top_len = top[0]->length;
     mshadow::Tensor<xpu, 3> param_data = this->params[0].data_d3();
 
     for (int i = 0; i < batch_size; ++i) {
+      for (int j = 0; j < l1; ++j) {
+        top_len[i][j] = len_val[j];
+      }
       top_data[i] = F<op::identity>(param_data);
     }
   }
@@ -105,6 +123,9 @@ class ParameterLayer : public Layer<xpu> {
 
  protected:
   int d0, d1, d2;
+  int l0, l1;
+  string l_val;
+  vector<int> len_val;
   int batch_size;
 
 };
