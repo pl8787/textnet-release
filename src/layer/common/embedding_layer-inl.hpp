@@ -16,7 +16,7 @@ namespace layer {
 template<typename xpu>
 class EmbeddingLayer : public Layer<xpu>{
  public:
-  EmbeddingLayer(LayerType type) { this->layer_type = type; }
+  EmbeddingLayer(LayerType type) { this->layer_type = type; read_embed_done = false; }
   virtual ~EmbeddingLayer(void) {}
   
   virtual int BottomNodeNum() { return 1; }
@@ -60,30 +60,39 @@ class EmbeddingLayer : public Layer<xpu>{
     utils::Check(length_mode == "embedding" || length_mode == "kernel" || length_mode == "featmap",
                  "EmbeddingLayer: error value of length_mode");
 
-    this->params.resize(1);
-    // No need allocate diff memory
-    this->params[0].need_diff = false;
-    this->params[0].is_sparse = true;
-    this->params[0].Resize(word_count, feat_size, 1, 1);
+    // shared layer only read one embedding files
+    // saving running time 
+    if (!read_embed_done) {
+      this->params.resize(1);
+      // No need allocate diff memory
+      this->params[0].need_diff = false;
+      this->params[0].is_sparse = true;
+      this->params[0].Resize(word_count, feat_size, 1, 1);
     
-    std::map<std::string, SettingV> w_setting = *setting["w_filler"].mVal();
-    this->params[0].initializer_ = 
-        initializer::CreateInitializer<xpu, 4>(w_setting["init_type"].iVal(),
-          w_setting, this->prnd_);
-    this->params[0].Init();   
+      std::map<std::string, SettingV> w_setting = *setting["w_filler"].mVal();
+      this->params[0].initializer_ = 
+          initializer::CreateInitializer<xpu, 4>(w_setting["init_type"].iVal(),
+            w_setting, this->prnd_);
+      this->params[0].Init();   
+  
+      std::map<std::string, SettingV> &w_updater = *setting["w_updater"].mVal();
+      this->params[0].updater_ = 
+          updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].iVal(),
+            w_updater, this->prnd_);
 
-    std::map<std::string, SettingV> &w_updater = *setting["w_updater"].mVal();
-    this->params[0].updater_ = 
-        updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].iVal(),
-          w_updater, this->prnd_);
-    
-    // Check if embedding file is empty
-    if(!embedding_file.empty()) {
-      ReadInitEmbedding();
+      // Check if embedding file is empty
+      if(!embedding_file.empty()) {
+        read_embed_done = true;
+        ReadInitEmbedding();
+      }
+    } else {
+      utils::Printf("EmbeddingLayer: Read Embeddings done, skip.");
     }
+
     if(!update_indication_file.empty()) {
       ReadUpdateIndicationFile();
     }
+
   }
 
   void ReadUpdateIndicationFile() {
@@ -279,6 +288,7 @@ class EmbeddingLayer : public Layer<xpu>{
   int nbatch;
   int line_count;
   float pad_value;
+  bool read_embed_done;
   std::set<int> unupdate_words;
   string length_mode;
 };
