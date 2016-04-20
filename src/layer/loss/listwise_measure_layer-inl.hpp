@@ -69,8 +69,8 @@ class ListwiseMeasureLayer : public Layer<xpu>{
     batch_size = setting["batch_size"].iVal();
     pos_count_file = setting["pos_count_file"].sVal();
     
-    utils::Check(method == "MRR" || method == "P@k" || method == "R@k" || method == "nDCG@k" || method == "MAP" || method == "P@R", 
-                  "Parameter [method] must be MRR or P@k or R@k or nDCG@k or MAP or P@R.");
+    utils::Check(method == "MRR" || method == "P@k" || method == "R@k" || method == "nDCG@k" || method == "MAP" || method == "P@R" || method == "Rank", 
+                  "Parameter [method] must be MRR or P@k or R@k or nDCG@k or MAP or P@R or Rank.");
     
     list_ptr = 0;
     if (pos_count_file.size() != 0) {
@@ -201,6 +201,17 @@ class ListwiseMeasureLayer : public Layer<xpu>{
             break;
           }
         }
+      } else if (method == "Rank") {
+        for (int i = 0; i < score_list_len; ++i) {
+          if (score_list[i].second > 0) 
+              score_list[i].second = 1;
+          utils::Check(score_list[i].second == 0 || score_list[i].second == 1, 
+                  "Not a valid list for Rank, only 0 and 1. List ID: %s.", list_id[list_ptr].c_str());
+          if (score_list[i].second == 1) {
+            score = i+1;
+            break;
+          }
+        }
       } else if (method == "P@k") {
         for (int i = 0; i < min(k, score_list_len); ++i) {
           if (score_list[i].second > 0) 
@@ -213,15 +224,25 @@ class ListwiseMeasureLayer : public Layer<xpu>{
         }
         score /= k;
       } else if (method == "R@k") {
-        for (int i = 0; i < min(k, score_list_len); ++i) {
+        float r = 0.0;
+        for (int i = 0; i < score_list_len; ++i) {
           if (score_list[i].second > 0) 
               score_list[i].second = 1;
+          if (score_list[i].second == 1) {
+            r += 1;
+          }
+        }
+        for (int i = 0; i < min(k, score_list_len); ++i) {
           utils::Check(score_list[i].second == 0 || score_list[i].second == 1, 
                   "Not a valid list for P@k, only 0 and 1. List ID: %s.", list_id[list_ptr].c_str());
           if (score_list[i].second == 1) {
-            score = 1.0;
-            break;
+            score += 1.0;
           }
+        }
+        if (r == 0) {
+            utils::Check(score==0.0, "P@R Error! List ID: %s.", list_id[list_ptr].c_str());
+        } else {
+            score /= r;
         }
       } else if (method == "P@R") {
         int r = 0;

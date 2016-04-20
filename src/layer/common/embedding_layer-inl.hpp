@@ -134,7 +134,7 @@ class EmbeddingLayer : public Layer<xpu>{
       iss >> w_idx;
       int j = 0;
       while (!iss.eof()) {
-		utils::Check(j < feat_size, "EmbeddingLayer: init embedding error. More %d. %d.", i, j);
+	utils::Check(j < feat_size, "EmbeddingLayer: init embedding error. More %d. %d.", i, j);
         iss >> this->params[0].data[w_idx][j++][0][0];
       }
       utils::Check(j == feat_size, "EmbeddingLayer: init embedding error. Less %d. %d.", i, j);

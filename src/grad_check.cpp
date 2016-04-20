@@ -226,10 +226,11 @@ void TestListwiseMeasureLayer(mshadow::Random<cpu>* prnd) {
   map<string, SettingV> setting;
   setting["k"] = SettingV(4);
   // setting["method"] = SettingV("MAP");
-  setting["pos_count_file"] = SettingV("/home/pangliang/pos_count.tmp");
+  // setting["pos_count_file"] = SettingV("/home/pangliang/pos_count.tmp");
   // setting["method"] = SettingV("nDCG@k");
-  setting["method"] = SettingV("MRR");
+  // setting["method"] = SettingV("MRR");
   // setting["method"] = SettingV("P@k");
+  setting["method"] = SettingV("R@k");
   
   /// Test Activation Layer
   Layer<cpu> * layer_listwise = CreateLayer<cpu>(kListwiseMeasure);
@@ -4609,7 +4610,7 @@ int main(int argc, char *argv[]) {
   // TestMatchTensorLayer(&rnd);
   // TestMatchTopKPoolingLayer(&rnd);
   // TestLstmD2Layer(&rnd);
-  TestGruD2Layer(&rnd);
+  // TestGruD2Layer(&rnd);
   // TestWholePooling2DLayer(&rnd);
   // TestGateWholePoolingLayer(&rnd);
   // TestGateWholePoolingD2Layer(&rnd);
@@ -4641,7 +4642,7 @@ int main(int argc, char *argv[]) {
   // TestSumLayer(&rnd);
   // TestTopkPoolingLayer(&rnd);
   // TestHingeLossLayer(&rnd);
-  // TestListwiseMeasureLayer(&rnd);
+  TestListwiseMeasureLayer(&rnd);
   // TestQATextDataLayer(&rnd);
   // TestMapTextDataLayer(&rnd);
   // TestConvolutionAndLocalFactorLayer(&rnd);
@@ -4651,7 +4652,7 @@ int main(int argc, char *argv[]) {
   // TestPoolVarLayer(&rnd);
   // TestPadLayer(&rnd);
   // TestBatchNormLayer(&rnd);
-  TestFillCurveXY2DLayer(&rnd);
-  TestFillCurveD2XYLayer(&rnd);
+  // TestFillCurveXY2DLayer(&rnd);
+  // TestFillCurveD2XYLayer(&rnd);
   return 0;
 }

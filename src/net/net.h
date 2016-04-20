@@ -277,9 +277,19 @@ class Net : public INet{
       tags.push_back(tag);
       max_iters[tag] = one_net["max_iters"].asInt();
       display_interval[tag] = one_net["display_interval"].asInt();
+      
       out_nodes[tag] = vector<string>();
       for (int i = 0; i < one_net["out_nodes"].size(); ++i) {
         out_nodes[tag].push_back(one_net["out_nodes"][i].asString());
+      }
+      
+      out_nodes_type[tag] = vector<string>();
+      for (int i = 0; i < one_net["out_nodes"].size(); ++i) {
+        if (!one_net["out_nodes_type"].isNull() && i < one_net["out_nodes_type"].size()) {
+          out_nodes_type[tag].push_back(one_net["out_nodes_type"][i].asString());
+        } else {
+          out_nodes_type[tag].push_back("avg");
+        }
       }
 
       // Initial nets vector
@@ -779,27 +789,46 @@ class Net : public INet{
 
       // Initial test loss
       vector<float> test_loss;
+      vector< vector<float> > test_loss_list;
       for (int i = 0; i < out_nodes[tag].size(); ++i) {
         test_loss.push_back(0.0f);
+        test_loss_list.push_back(vector<float>());
       }
       
       for (int test_iter = 0; test_iter < max_iters[tag]; ++test_iter) {
         Forward(tag);
         for (int i = 0; i < out_nodes[tag].size(); ++i) {
-          test_loss[i] += nodes[out_nodes[tag][i]]->data_d1()[0];
+          test_loss_list[i].push_back(nodes[out_nodes[tag][i]]->data_d1()[0]);
         }
         // orc_tmp
         // cout << "test loss:" << nodes[test_out[0]]->data_d1()[0] << endl;
       }
-      
+
+      // Reduce to one output
       for (int i = 0; i < out_nodes[tag].size(); ++i) {
-        test_loss[i] /= max_iters[tag];
+        if (out_nodes_type[tag][i] == "avg") {
+          test_loss[i] = accumulate(test_loss_list[i].begin(), test_loss_list[i].end(), 0.0f);
+          test_loss[i] /= test_loss_list[i].size();
+        } else if (out_nodes_type[tag][i] == "sum") {
+          test_loss[i] = accumulate(test_loss_list[i].begin(), test_loss_list[i].end(), 0.0f);
+        } else if (out_nodes_type[tag][i] == "median") {
+          int med_idx = test_loss_list[i].size() / 2;
+          partial_sort( test_loss_list[i].begin(), 
+                        test_loss_list[i].begin() + med_idx + 1, 
+                        test_loss_list[i].end() );
+
+          if (med_idx % 2 == 0) {
+            test_loss[i] = test_loss_list[i][med_idx];
+          } else {
+            test_loss[i] = (test_loss_list[i][med_idx-1] + test_loss_list[i][med_idx]) * 0.5;
+          }
+        }
       }
       
       // Output
       for (int i = 0; i < out_nodes[tag].size(); ++i) {
-        utils::Printf("[%s:kTest]\tIter\t%d:\tOut[%s] =\t%f\n",
-            tag.c_str(), iter, out_nodes[tag][i].c_str(), test_loss[i]);
+        utils::Printf("[%s:kTest]\tIter\t%d:\tOut[%s]#%s =\t%f\n",
+            tag.c_str(), iter, out_nodes[tag][i].c_str(), out_nodes_type[tag][i].c_str(), test_loss[i]);
         // cout << "[" << tag << ":kTest]\tIter\t" << iter 
         //      << ":\tOut[" << out_nodes[tag][i] << "] =\t" 
         //      << test_loss[i] << endl; 
@@ -1010,6 +1039,8 @@ class Net : public INet{
   // map<string, bool> save_best;
   // nets output nodes
   map<string, vector<string> > out_nodes;
+  // nets output nodes reduce type
+  map<string, vector<string> > out_nodes_type;
   // All layers
   vector<Layer<xpu>*> layers;
   // Add tags to name search, 
