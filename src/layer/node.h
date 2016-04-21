@@ -223,7 +223,7 @@ struct Node {
     std::vector<std::string> lines; 
     std::ifstream fin(data_file); 
     std::string s; 
-    utils::Check(fin, "Open data file problem."); 
+    utils::Check(fin.is_open(), "Open data file problem."); 
     while (!fin.eof()) { 
       std::getline(fin, s);
       if (s.empty()) break;
@@ -470,6 +470,7 @@ struct Node {
   }
   
   inline void Init(bool init_diff = false) { 
+    if (!initializer_) return;
     if (!is_share) {
       initializer_->DoInitialize(data);
       if (init_diff) {
@@ -479,6 +480,7 @@ struct Node {
   }
   
   inline void Update() {
+    if (!updater_) return;
     if (!is_share) {
       if (is_sparse) {
         updater_->UpdateSparse(data, diff, idx);

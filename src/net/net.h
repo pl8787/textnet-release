@@ -34,6 +34,7 @@ const int kTrainValid = 0;
 const int kTrainValidTest = 1;
 const int kCrossValid = 2;
 const int kTestOnly = 3;
+const int kMultiTrainValidTest = 4;
 
 typedef int DeviceType;
 const int CPU_DEVICE = 0;
@@ -55,19 +56,17 @@ class INet {
     virtual void TrainDisplay(string tag, int iter) = 0;
     virtual void TestAll(string tag, int iter) = 0;
     virtual void Start() = 0;
-    // virtual void SaveModelActivation(string tag, string dir_path, vector<string> node_names, int num_iter) = 0;
-    virtual void SaveModelActivation(string tag, vector<string> node_names, int num_iter, string file_name) = 0;
-    // virtual void LoadModel(string tag, string model_name) = 0;
+    virtual void SaveModelActivation(string tag, vector<string> node_names, int num_iter, string file_name, bool save_diff) = 0;
+    virtual void SaveModelActivation(int cur_iter) = 0;
     virtual void LoadModel(Json::Value &net_root) = 0;
-    // virtual void SaveModel(string tag, int iter) = 0;
     virtual void LoadModel(string model_file) = 0;
     virtual void SaveModel(int cur_iter, bool model_save_last) = 0;
-	// virtual void SaveAllModels(int iter) = 0;
+    virtual void SaveModel(string file_name, bool save_diff) = 0;
 
-	// For Statistic
-	virtual Json::Value StatisticNode(Json::Value &req_root) = 0;
-	virtual Json::Value StatisticParam(Json::Value &req_root) = 0;
-	virtual Json::Value StatisticState(Json::Value &req_root) = 0;
+  // For Statistic
+  virtual Json::Value StatisticNode(Json::Value &req_root) = 0;
+  virtual Json::Value StatisticParam(Json::Value &req_root) = 0;
+  virtual Json::Value StatisticState(Json::Value &req_root) = 0;
 };
 
 template<typename xpu>
@@ -75,12 +74,12 @@ class Net : public INet{
  public:
   Net() {
     need_reshape = false;
-	var_batch = false;
+    var_batch = false;
     model_save_interval = 0;
-	model_save_file_prefix = "";
-	model_save_last = false;
-	model_save_initial = true;
-	model_test_initial = true;
+    model_save_file_prefix = "";
+    model_save_last = false;
+    model_save_initial = true;
+    model_test_initial = true;
     InitSettingEngine();
   }
 
@@ -116,8 +115,8 @@ class Net : public INet{
     SettingV::SettingIntMap["Recurrent"] = kRecurrent;
     SettingV::SettingIntMap["TensorFullConnect"] = kTensorFullConnect;
     SettingV::SettingIntMap["WholePooling"] = kWholePooling;
-	SettingV::SettingIntMap["Gating"] = kGating;
-	SettingV::SettingIntMap["SwapAxis"] = kSwapAxis;
+    SettingV::SettingIntMap["Gating"] = kGating;
+    SettingV::SettingIntMap["SwapAxis"] = kSwapAxis;
 
     // Loss Layer 51-70
     SettingV::SettingIntMap["Softmax"] = kSoftmax;
@@ -149,6 +148,8 @@ class Net : public INet{
     SettingV::SettingIntMap["Adagrad"] = kAdagrad;
     SettingV::SettingIntMap["Adam"] = kAdam;
     SettingV::SettingIntMap["SGDSparse"] = kSGDSparse;
+    SettingV::SettingIntMap["SGDStep"] = kSGDStep;
+
   }
   
   // expand global_settings to all layer local settings
@@ -196,19 +197,19 @@ class Net : public INet{
   
   virtual void InitNet(Json::Value &net_root) {
 
-	utils::ShowMemoryUse();
+    utils::ShowMemoryUse();
 
     root = net_root;
 
     setLogFile();
 
-	// Write original model file to stand output
+    // Write original model file to stand output
     Json::StyledWriter writer;
     string json_file = writer.write(root);
-	std::cout << "======== Model File ========" << std::endl;
-	std::cout << json_file << std::endl;
-	std::cout << "======== Model File ========" << std::endl;
-	std::cout << std::endl;
+    std::cout << "======== Model File ========" << std::endl;
+    std::cout << json_file << std::endl;
+    std::cout << "======== Model File ========" << std::endl;
+    std::cout << std::endl;
 
     utils::Printf("[Process] Initial Network.\n");
 
@@ -229,39 +230,39 @@ class Net : public INet{
         utils::Printf("Set need_reshape to %d\n", need_reshape);
     }
 
-	if (!root["var_batch"].isNull()) {
-		var_batch = root["var_batch"].asBool();
-		utils::Printf("Set var_batch to %d\n", var_batch);
-	}
+    if (!root["var_batch"].isNull()) {
+      var_batch = root["var_batch"].asBool();
+      utils::Printf("Set var_batch to %d\n", var_batch);
+    }
 
-	if (!root["model_save_last"].isNull()) {
-		model_save_last = root["model_save_last"].asBool();
-		utils::Printf("Set model_save_last to %d\n", model_save_last);
-	}
+    if (!root["model_save_last"].isNull()) {
+      model_save_last = root["model_save_last"].asBool();
+      utils::Printf("Set model_save_last to %d\n", model_save_last);
+    }
 
-	if (!root["model_save_initial"].isNull()) {
-		model_save_initial = root["model_save_initial"].asBool();
-		utils::Printf("Set model_save_initial to %d\n", model_save_initial);
-	}
+    if (!root["model_save_initial"].isNull()) {
+      model_save_initial = root["model_save_initial"].asBool();
+      utils::Printf("Set model_save_initial to %d\n", model_save_initial);
+    }
 
-	if (!root["model_test_initial"].isNull()) {
-		model_test_initial = root["model_test_initial"].asBool();
-		utils::Printf("Set model_test_initial to %d\n", model_test_initial);
-	}
+    if (!root["model_test_initial"].isNull()) {
+      model_test_initial = root["model_test_initial"].asBool();
+      utils::Printf("Set model_test_initial to %d\n", model_test_initial);
+    }
 
-	ReadNetConfig();
-	ReadLayers();
-	ReadNodes();
-	ReadConnections();
+    ReadNetConfig();
+    ReadLayers();
+    ReadNodes();
+    ReadConnections();
 
     SetupAllNets();
 
-	ReadParamShare();
-	ReadSave();
+    ReadParamShare();
+    ReadSave();
 
-	// Set init phrase type
-	phrase_type = kInit;
-	cur_tag = "";
+    // Set init phrase type
+    phrase_type = kInit;
+    cur_tag = "";
   }
 
   void ReadNetConfig() {
@@ -276,9 +277,19 @@ class Net : public INet{
       tags.push_back(tag);
       max_iters[tag] = one_net["max_iters"].asInt();
       display_interval[tag] = one_net["display_interval"].asInt();
+      
       out_nodes[tag] = vector<string>();
       for (int i = 0; i < one_net["out_nodes"].size(); ++i) {
         out_nodes[tag].push_back(one_net["out_nodes"][i].asString());
+      }
+      
+      out_nodes_type[tag] = vector<string>();
+      for (int i = 0; i < one_net["out_nodes"].size(); ++i) {
+        if (!one_net["out_nodes_type"].isNull() && i < one_net["out_nodes_type"].size()) {
+          out_nodes_type[tag].push_back(one_net["out_nodes_type"][i].asString());
+        } else {
+          out_nodes_type[tag].push_back("avg");
+        }
       }
 
       // Initial nets vector
@@ -309,12 +320,12 @@ class Net : public INet{
         utils::Error("[Error] layer type error.\n");
       }
       
-	  // The default mode of tag is share
-	  // Share means there is one layer share by muti net,
-	  //   such as a validation net share param with train net
-	  // New means create a new layer for this tag net,
-	  //   in order to implement Cross Validation we 
-	  //   need this kind of logic.
+      // The default mode of tag is share
+      // Share means there is one layer share by multiple nets,
+      //   such as a validation net share param with train net
+      // New means create a new layer for this tag net,
+      //   in order to implement Cross Validation we 
+      //   need this kind of logic.
       string tag_mode = "share";
       if (!layer_root["tag_mode"].isNull()) {
         tag_mode = "new";
@@ -322,8 +333,9 @@ class Net : public INet{
       
       string layer_name = layer_root["layer_name"].asString();
 
-	  // For a layer mode is share
       if (tag_mode == "share") { 
+
+        // For a layer mode is share
         Layer<xpu> * new_layer = CreateLayer<xpu>(layer_type);
         new_layer->layer_name = layer_name;
 
@@ -346,8 +358,10 @@ class Net : public INet{
           }
         }
         layers.push_back(new_layer);
+
       } else if (tag_mode == "new") {
-	  // For a layer mode is new
+
+        // For a layer mode is new
         if (layer_root["tag"].isNull()) {
           for (int t = 0; t < tags.size(); ++t) {
             Layer<xpu> * new_layer = CreateLayer<xpu>(layer_type);
@@ -386,7 +400,7 @@ class Net : public INet{
     for (int i = 0; i < tags.size(); ++i) {
       utils::Printf("\t Net[%s] has %d layers.\n", tags[i].c_str(), nets[tags[i]].size());
     }
-	utils::Printf("\t Total number of layers is %d. \n", layers.size());
+    utils::Printf("\t Total number of layers is %d. \n", layers.size());
   }
 
   void ReadNodes() {
@@ -418,13 +432,13 @@ class Net : public INet{
       }
     }
 
-	// Check outnode exist
+    // Check outnode exist
     for (int t = 0; t < tags.size(); ++t) {
       for (int i = 0; i < out_nodes[tags[t]].size(); ++i) {
         utils::Check(nodes.count(out_nodes[tags[t]][i]), 
-				"out_node [%s] not in nodes.", out_nodes[tags[t]][i].c_str());
+        "out_node [%s] not in nodes.", out_nodes[tags[t]][i].c_str());
       }
-	}
+    }
 
     utils::Printf("Nodes count: %d\n", nodes.size());
   }
@@ -491,11 +505,16 @@ class Net : public INet{
     if (!save_model_root.isNull()) {
       model_save_interval = save_model_root["save_interval"].asInt();
       model_save_file_prefix = save_model_root["file_prefix"].asString();
-	  if (!save_model_root["everything"].isNull()) {
-	    model_save_everything = save_model_root["everything"].asBool();
-	  } else {
-		model_save_everything = false;
-	  }
+      if (!save_model_root["everything"].isNull()) {
+        model_save_everything = save_model_root["everything"].asBool();
+      } else {
+        model_save_everything = false;
+      }
+      if (!save_model_root["save_diff"].isNull()) {
+        model_save_diff = save_model_root["save_diff"].asBool();
+      } else {
+        model_save_diff = false;
+      }
     }
     Json::Value save_act_root = root["save_activation"];
     if (!save_act_root.isNull()) {
@@ -505,6 +524,12 @@ class Net : public INet{
         activation_save_file_prefix[tag] = tag_act_root["file_prefix"].asString();
         activation_save_interval[tag] = tag_act_root["save_interval"].asInt();
         activation_save_iter_num[tag] = tag_act_root["save_iter_num"].asInt();
+
+        if (!tag_act_root["save_diff"].isNull()) {
+          activation_save_diff[tag] = tag_act_root["save_diff"].asBool();
+        } else {
+          activation_save_diff[tag] = false;
+        }
         
         Json::Value save_nodes_root = tag_act_root["save_nodes"];
         vector<string> save_nodes;
@@ -517,6 +542,8 @@ class Net : public INet{
           }
         } else {
           for (int name_idx = 0; name_idx < save_nodes_root.size(); ++name_idx) {
+            utils::Check(nodes.count(save_nodes_root[name_idx].asString()), 
+              "save_node [%s] not in nodes.", save_nodes_root[name_idx].asString().c_str());
             save_nodes.push_back(save_nodes_root[name_idx].asString());
           }
         }
@@ -542,7 +569,7 @@ class Net : public INet{
       nets[tag][i]->SetupLayer(layers_root[layer_idx], 
           bottom_vecs[layer_idx], top_vecs[layer_idx], prnd);
       nets[tag][i]->Reshape(bottom_vecs[layer_idx], top_vecs[layer_idx], true);
-	  utils::ShowMemoryUse();
+      utils::ShowMemoryUse();
     }
   }
 
@@ -562,10 +589,10 @@ class Net : public INet{
   virtual void SetPhrase(string tag, PhraseType phrase) {
     if (phrase_type == phrase && cur_tag == tag) return;
 
-	utils::Printf("[Process] Set Tag to %s.\n", tag.c_str());
+    utils::Printf("[Process] Set Tag to %s.\n", tag.c_str());
     utils::Printf("[Process] Set Phrase to %d.\n", phrase);
     phrase_type = phrase;
-	cur_tag = tag;
+    cur_tag = tag;
     for (int i = 0; i < nets[tag].size(); ++i) {
       nets[tag][i]->SetPhrase(phrase);
     }
@@ -575,9 +602,23 @@ class Net : public INet{
   virtual void Forward(string tag) {
       for (int i = 0; i < nets[tag].size(); ++i) {
         int layer_idx = nets[tag][i]->layer_idx;
-		if (var_batch)
-			nets[tag][i]->CheckReshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+
+        if (var_batch)
+          nets[tag][i]->CheckReshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+
         nets[tag][i]->Forward(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+#if LENGTH_DEBUG
+        for (int j = 0; j < top_vecs[layer_idx].size(); ++j) {
+          cout << top_vecs[layer_idx][j]->node_name << endl;
+          for (int d1 = 0; d1 < top_vecs[layer_idx][j]->length.size(0); ++d1) {
+            for (int d2 = 0; d2 < top_vecs[layer_idx][j]->length.size(1); ++d2) {
+              cout << top_vecs[layer_idx][j]->length[d1][d2] << " ";    
+            }
+            cout << endl;
+          } 
+          cout << endl;
+        }
+#endif
 #if DEBUG
         cout << "Feed " ;
         for (int j = 0; j < bottom_vecs[layer_idx].size(); ++j)
@@ -601,7 +642,7 @@ class Net : public INet{
       int layer_idx = nets[tag][i]->layer_idx;
       nets[tag][i]->Backprop(bottom_vecs[layer_idx], top_vecs[layer_idx]);
 #if DEBUG
-		cout << "BP " << nets[tag][i]->layer_name << endl;
+      cout << "BP " << nets[tag][i]->layer_name << endl;
 #endif
     }
     NormLstmGradient(tag);
@@ -700,28 +741,28 @@ class Net : public INet{
       string name = node_list[k]->node_name; //it->first;
       cout << "Snapshot [" << name << "]" << endl;
       cout << "data : ";
-	  if (utils::checkNan(node_list[k]->data.dptr_, 
-				  node_list[k]->data.size(0)*node_list[k]->data.size(1)*node_list[k]->data.size(2)*node_list[k]->data.size(3))) {
-		  cout << "[Error] Contain NAN!" << endl;
-	  }
+    if (utils::checkNan(node_list[k]->data.dptr_, 
+          node_list[k]->data.size(0)*node_list[k]->data.size(1)*node_list[k]->data.size(2)*node_list[k]->data.size(3))) {
+      cout << "[Error] Contain NAN!" << endl;
+    }
       for (int i = 0; i < 5; ++i) {
         cout << node_list[k]->data[0][0][0][i] << "\t";
       }
       cout << endl;
       cout << "diff : ";
-	  if (utils::checkNan(node_list[k]->diff.dptr_, 
-				  node_list[k]->diff.size(0)*node_list[k]->diff.size(1)*node_list[k]->diff.size(2)*node_list[k]->diff.size(3))) {
-		  cout << "[Error] Contain NAN!" << endl;
-	  }
+    if (utils::checkNan(node_list[k]->diff.dptr_, 
+          node_list[k]->diff.size(0)*node_list[k]->diff.size(1)*node_list[k]->diff.size(2)*node_list[k]->diff.size(3))) {
+      cout << "[Error] Contain NAN!" << endl;
+    }
       for (int i = 0; i < 5; ++i) {
         cout << node_list[k]->diff[0][0][0][i] << "\t";
       }
       cout << endl;
       cout << "length : ";
-	  if (utils::checkNan(node_list[k]->length.dptr_, 
-				  node_list[k]->length.size(0)*node_list[k]->length.size(1))) {
-		  cout << "[Error] Contain NAN!" << endl;
-	  }
+    if (utils::checkNan(node_list[k]->length.dptr_, 
+          node_list[k]->length.size(0)*node_list[k]->length.size(1))) {
+      cout << "[Error] Contain NAN!" << endl;
+    }
       for (int i = 0; i < 5; ++i) {
         cout << node_list[k]->length[0][i] << "\t";
       }
@@ -734,9 +775,9 @@ class Net : public INet{
 
   virtual void TrainDisplay(string tag, int iter = 0) {
     for (int i = 0; i < out_nodes[tag].size(); ++i) {
-	  utils::Printf("[%s:kTrain]\tIter\t%d:\tOut[%s] =\t%f\n", 
-			  tag.c_str(), iter, out_nodes[tag][i].c_str(), 
-			  nodes[out_nodes[tag][i]]->data_d1()[0]);
+      utils::Printf("[%s:kTrain]\tIter\t%d:\tOut[%s] =\t%f\n", 
+          tag.c_str(), iter, out_nodes[tag][i].c_str(), 
+          nodes[out_nodes[tag][i]]->data_d1()[0]);
       // cout << "[" << tag << ":kTrain]\tIter\t" << iter 
       //      << ":\tOut[" << out_nodes[tag][i] << "] =\t" 
       //      << nodes[out_nodes[tag][i]]->data_d1()[0] << endl; 
@@ -748,27 +789,46 @@ class Net : public INet{
 
       // Initial test loss
       vector<float> test_loss;
+      vector< vector<float> > test_loss_list;
       for (int i = 0; i < out_nodes[tag].size(); ++i) {
         test_loss.push_back(0.0f);
+        test_loss_list.push_back(vector<float>());
       }
       
       for (int test_iter = 0; test_iter < max_iters[tag]; ++test_iter) {
         Forward(tag);
         for (int i = 0; i < out_nodes[tag].size(); ++i) {
-          test_loss[i] += nodes[out_nodes[tag][i]]->data_d1()[0];
+          test_loss_list[i].push_back(nodes[out_nodes[tag][i]]->data_d1()[0]);
         }
         // orc_tmp
         // cout << "test loss:" << nodes[test_out[0]]->data_d1()[0] << endl;
       }
-      
+
+      // Reduce to one output
       for (int i = 0; i < out_nodes[tag].size(); ++i) {
-        test_loss[i] /= max_iters[tag];
+        if (out_nodes_type[tag][i] == "avg") {
+          test_loss[i] = accumulate(test_loss_list[i].begin(), test_loss_list[i].end(), 0.0f);
+          test_loss[i] /= test_loss_list[i].size();
+        } else if (out_nodes_type[tag][i] == "sum") {
+          test_loss[i] = accumulate(test_loss_list[i].begin(), test_loss_list[i].end(), 0.0f);
+        } else if (out_nodes_type[tag][i] == "median") {
+          int med_idx = test_loss_list[i].size() / 2;
+          partial_sort( test_loss_list[i].begin(), 
+                        test_loss_list[i].begin() + med_idx + 1, 
+                        test_loss_list[i].end() );
+
+          if (med_idx % 2 == 0) {
+            test_loss[i] = test_loss_list[i][med_idx];
+          } else {
+            test_loss[i] = (test_loss_list[i][med_idx-1] + test_loss_list[i][med_idx]) * 0.5;
+          }
+        }
       }
       
       // Output
       for (int i = 0; i < out_nodes[tag].size(); ++i) {
-		utils::Printf("[%s:kTest]\tIter\t%d:\tOut[%s] =\t%f\n",
-				tag.c_str(), iter, out_nodes[tag][i].c_str(), test_loss[i]);
+        utils::Printf("[%s:kTest]\tIter\t%d:\tOut[%s]#%s =\t%f\n",
+            tag.c_str(), iter, out_nodes[tag][i].c_str(), out_nodes_type[tag][i].c_str(), test_loss[i]);
         // cout << "[" << tag << ":kTest]\tIter\t" << iter 
         //      << ":\tOut[" << out_nodes[tag][i] << "] =\t" 
         //      << test_loss[i] << endl; 
@@ -783,7 +843,7 @@ class Net : public INet{
           continue;
       }
       string file_name = activation_save_file_prefix[tag] + "." + int2str(cur_iter);
-      SaveModelActivation(tag, activation_save_nodes[tag], activation_save_iter_num[tag], file_name);
+      SaveModelActivation(tag, activation_save_nodes[tag], activation_save_iter_num[tag], file_name, activation_save_diff[tag]);
     }
   }
 
@@ -792,10 +852,10 @@ class Net : public INet{
         return;
     }
     string file_name = model_save_file_prefix + "." + int2str(cur_iter);
-    SaveModel(file_name);
+    SaveModel(file_name, model_save_diff);
   }
  
-  virtual void SaveModelActivation(string tag, vector<string> node_names, int num_iter, string file_name) {
+  virtual void SaveModelActivation(string tag, vector<string> node_names, int num_iter, string file_name, bool save_diff = false) {
     utils::Printf("[Save] Save activation to %s.\n", file_name.c_str());
     SetPhrase(tag, kTest);
     Json::Value iters_root;
@@ -805,7 +865,7 @@ class Net : public INet{
       for (int i = 0; i < node_names.size(); ++i) {
         string name = node_names[i];
         Json::Value node_root;
-        nodes[name]->SaveNode(node_root, false);
+        nodes[name]->SaveNode(node_root, save_diff);
         nodes_root[name] = node_root;
       }
       iters_root.append(nodes_root);
@@ -818,7 +878,7 @@ class Net : public INet{
     ofs.close();
   }
   
-  virtual void SaveModel(string model_file) {
+  virtual void SaveModel(string model_file, bool save_diff = false) {
     utils::Printf("[Save] Save model to %s.\n", model_file.c_str());
     ofstream ofs(model_file.c_str());
     Json::StyledWriter writer;
@@ -833,15 +893,15 @@ class Net : public INet{
         }
         // oracle 
         if (!model_save_everything && \
-				(layers[layer_idx]->layer_type == kEmbedding || \
-                 layers[layer_idx]->layer_type == kWordClassSoftmaxLoss) ) {
+             (layers[layer_idx]->layer_type == kEmbedding || \
+             layers[layer_idx]->layer_type == kWordClassSoftmaxLoss) ) {
             cout << "ORC: without save embedding" << endl;
             layer_params_root.append(0);
             continue;
         }
         // save the content of the matrix
         Json::Value node_root;
-        layers[layer_idx]->params[param_idx].SaveNode(node_root, false);
+        layers[layer_idx]->params[param_idx].SaveNode(node_root, save_diff);
         layer_params_root.append(node_root);
       }
       layers_params_root.append(layer_params_root);
@@ -857,16 +917,19 @@ class Net : public INet{
     for (int layer_idx = 0; layer_idx < layers.size(); ++layer_idx) {
       for (int param_idx = 0; param_idx < layers[layer_idx]->ParamNodeNum(); ++param_idx) {
         if (layers[layer_idx]->params[param_idx].is_share) {
-            continue;
+          continue;
         }
-		if (layers_params_root[layer_idx].isNull()) {
-			utils::Printf("\tNo Initial Params at layer: %d\n", layer_idx);
-			continue;
-		}
-		if (layers_params_root[layer_idx][param_idx].isNull()) {
-			utils::Printf("\tNo Initial Params at layer: %d, param: \n", layer_idx, param_idx);
-            continue;
-		}
+
+        if (layers_params_root[layer_idx].isNull()) {
+          utils::Printf("\tNo Initial Params at layer: %d\n", layer_idx);
+          continue;
+        }
+
+        if (layers_params_root[layer_idx][param_idx].isNull()) {
+          utils::Printf("\tNo Initial Params at layer: %d, param: \n", layer_idx, param_idx);
+          continue;
+        }
+
         Json::Value node_root = layers_params_root[layer_idx][param_idx];
         layers[layer_idx]->params[param_idx].LoadNode(node_root, false);
       }
@@ -882,8 +945,8 @@ class Net : public INet{
   }
 
   virtual void LoadModel(Json::Value &net_root) {
-	utils::Check(!net_root["config"].isNull(), "No [config] section.");
-	utils::Check(!net_root["layers_params"].isNull(), "No [layers_params] section.");
+  utils::Check(!net_root["config"].isNull(), "No [config] section.");
+  utils::Check(!net_root["layers_params"].isNull(), "No [layers_params] section.");
     root = net_root["config"];
     InitNet(root);
     LoadParams(net_root["layers_params"]);
@@ -894,50 +957,50 @@ class Net : public INet{
 
   virtual Json::Value StatisticNode(Json::Value &req_root) {
     bool rtn = utils::Require(!req_root["node_name"].isNull(), "Require node_name!\n") &&
-		       utils::Require(!req_root["static_node"].isNull(), "Require static_node!(data or diff)\n") &&
-			   utils::Require(!req_root["static_value"].isNull(), "Require static_value!\n");
-	Json::Value rtn_root;
-	if (rtn) {
-	  string node_name = req_root["node_name"].asString();
-	  rtn_root["request"] = req_root;
-	  for (int i = 0; i < req_root["static_node"].size(); ++i) {
-		if (req_root["static_node"][i] == "data") {
-		  rtn_root["data"] = nodes[node_name]->data_statistic(req_root["static_value"]);
-		} else if (req_root["static_node"][i] == "diff") {
-		  rtn_root["diff"] = nodes[node_name]->diff_statistic(req_root["static_value"]);
-		}
-	  }
-	}
-	return rtn_root;
+               utils::Require(!req_root["static_node"].isNull(), "Require static_node!(data or diff)\n") &&
+               utils::Require(!req_root["static_value"].isNull(), "Require static_value!\n");
+    Json::Value rtn_root;
+    if (rtn) {
+      string node_name = req_root["node_name"].asString();
+      rtn_root["request"] = req_root;
+      for (int i = 0; i < req_root["static_node"].size(); ++i) {
+        if (req_root["static_node"][i] == "data") {
+          rtn_root["data"] = nodes[node_name]->data_statistic(req_root["static_value"]);
+        } else if (req_root["static_node"][i] == "diff") {
+          rtn_root["diff"] = nodes[node_name]->diff_statistic(req_root["static_value"]);
+        }
+      }
+    }
+    return rtn_root;
   }
 
   virtual Json::Value StatisticParam(Json::Value &req_root) {
     bool rtn = utils::Require(!req_root["tag"].isNull(), "Require tag!\n") &&
-		       utils::Require(!req_root["layer_name"].isNull(), "Require node_name!\n") &&
-			   utils::Require(!req_root["param_id"].isNull(), "Require param_id!\n") &&
-		       utils::Require(!req_root["static_node"].isNull(), "Require static_node!(data or diff)\n") &&
-			   utils::Require(!req_root["static_value"].isNull(), "Require static_value!\n");
-	Json::Value rtn_root;
-	if (rtn) {
-	  string tag = req_root["tag"].asString();
-	  string layer_name = req_root["layer_name"].asString();
-	  int param_id = req_root["param_id"].asInt();
-	  rtn_root["request"] = req_root;
-	  for (int i = 0; i < req_root["static_node"].size(); ++i) {
-		if (req_root["static_node"][i] == "data") {
-		  rtn_root["data"] = name2layer[tag][layer_name]->GetParams()[param_id].data_statistic(req_root["static_value"]);
-		} else if (req_root["static_node"][i] == "diff") {
-		  rtn_root["diff"] = name2layer[tag][layer_name]->GetParams()[param_id].diff_statistic(req_root["static_value"]);
-		}
-	  }
-	}
-	return rtn_root;
+               utils::Require(!req_root["layer_name"].isNull(), "Require node_name!\n") &&
+               utils::Require(!req_root["param_id"].isNull(), "Require param_id!\n") &&
+               utils::Require(!req_root["static_node"].isNull(), "Require static_node!(data or diff)\n") &&
+               utils::Require(!req_root["static_value"].isNull(), "Require static_value!\n");
+    Json::Value rtn_root;
+    if (rtn) {
+      string tag = req_root["tag"].asString();
+      string layer_name = req_root["layer_name"].asString();
+      int param_id = req_root["param_id"].asInt();
+      rtn_root["request"] = req_root;
+      for (int i = 0; i < req_root["static_node"].size(); ++i) {
+        if (req_root["static_node"][i] == "data") {
+          rtn_root["data"] = name2layer[tag][layer_name]->GetParams()[param_id].data_statistic(req_root["static_value"]);
+        } else if (req_root["static_node"][i] == "diff") {
+          rtn_root["diff"] = name2layer[tag][layer_name]->GetParams()[param_id].diff_statistic(req_root["static_value"]);
+        }
+      }
+    }
+    return rtn_root;
   }
 
   virtual Json::Value StatisticState(Json::Value &req_root) {
-	Json::Value rtn_root;
+  Json::Value rtn_root;
 
-	return rtn_root;
+  return rtn_root;
   }
   
  public:
@@ -961,6 +1024,8 @@ class Net : public INet{
   map<string, int> activation_save_iter_num;
   // save file prefix, subfixed by training iter num
   map<string, string> activation_save_file_prefix;
+  // save diff for nets
+  map<string, bool> activation_save_diff;
   // save nodes
   map<string, vector<string> > activation_save_nodes;
   int model_save_interval;
@@ -969,10 +1034,13 @@ class Net : public INet{
   bool model_save_initial;
   bool model_test_initial;
   bool model_save_last;
+  bool model_save_diff;
   // is save best or not, output file is file_prefix + ".best" // to do
   // map<string, bool> save_best;
   // nets output nodes
   map<string, vector<string> > out_nodes;
+  // nets output nodes reduce type
+  map<string, vector<string> > out_nodes_type;
   // All layers
   vector<Layer<xpu>*> layers;
   // Add tags to name search, 

@@ -25,6 +25,7 @@ class ConcatLayer : public Layer<xpu>{
     // mutiple sentences with different lengths are concatenated into a consecutive memory
     // all lengths will be sumed to a new length
     this->defaults["is_concat_by_length"] = SettingV(false);
+	this->defaults["copy_length"] = SettingV(false);
 
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -39,9 +40,10 @@ class ConcatLayer : public Layer<xpu>{
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
-    nBottomNode = setting["bottom_node_num"].i_val;
-    concat_dim_index = setting["concat_dim_index"].i_val;
-    is_concat_by_length = setting["is_concat_by_length"].b_val;
+    nBottomNode = setting["bottom_node_num"].iVal();
+    concat_dim_index = setting["concat_dim_index"].iVal();
+    is_concat_by_length = setting["is_concat_by_length"].bVal();
+	copy_length = setting["copy_length"].bVal();
     utils::Check(concat_dim_index < 4, "ConcatLayer: setting problem."); 
     utils::Check((!is_concat_by_length) || concat_dim_index == 2, "ConcatLayer: length is used only on dim 2");
   }
@@ -66,7 +68,7 @@ class ConcatLayer : public Layer<xpu>{
     }
     mshadow::Shape<4> shape_out = shape_in_0;
     shape_out[concat_dim_index] = out_size;
-    if (concat_dim_index >= 2) {
+    if (concat_dim_index >= 2 || copy_length) {
       // this is a patch, length is set to the sampe with bottom 0
       top[0]->Resize(shape_out, bottom[0]->length.shape_, true);
     } else {
@@ -174,13 +176,18 @@ class ConcatLayer : public Layer<xpu>{
     Tensor4D top_data   = top[0]->data;
     Tensor2D top_length = top[0]->length;
 
+	if (copy_length) {
+		top[0]->length = F<op::identity>(bottom[0]->length); // all bottom nodes must have the same length
+	}
     for (index_t i = 0; i < top_data.size(0); ++i) {
       int cnt = 0;
       for (index_t n = 0; n < BottomNodeNum(); ++n){
         Tensor3D t = bottom[n]->data[i];
         top_data[i].Slice(cnt, cnt+t.size(0)) = F<op::identity>(t);
         Tensor1D t_length = bottom[n]->length[i];
-        top_length[i].Slice(cnt, cnt+t.size(0)) = F<op::identity>(t_length);
+		if (!copy_length) {
+			top_length[i].Slice(cnt, cnt+t.size(0)) = F<op::identity>(t_length);
+		}
         cnt += t.size(0);
       }
     }
@@ -312,6 +319,7 @@ class ConcatLayer : public Layer<xpu>{
  protected:
   int nBottomNode, concat_dim_index;
   bool is_concat_by_length;
+  bool copy_length;
 };
 }  // namespace layer
 }  // namespace textnet

@@ -16,7 +16,7 @@ namespace layer {
 template<typename xpu>
 class EmbeddingLayer : public Layer<xpu>{
  public:
-  EmbeddingLayer(LayerType type) { this->layer_type = type; }
+  EmbeddingLayer(LayerType type) { this->layer_type = type; read_embed_done = false; }
   virtual ~EmbeddingLayer(void) {}
   
   virtual int BottomNodeNum() { return 1; }
@@ -28,6 +28,7 @@ class EmbeddingLayer : public Layer<xpu>{
     this->defaults["pad_value"] = SettingV(0.f);
     this->defaults["embedding_file"] = SettingV("");
     this->defaults["update_indication_file"] = SettingV(""); // id (0 or 1), 1 is for update, 0 is for un update
+    this->defaults["length_mode"] = SettingV("embedding"); // embedding or kernel or featmap
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["feat_size"] = SettingV();
@@ -54,37 +55,50 @@ class EmbeddingLayer : public Layer<xpu>{
     feat_size = setting["feat_size"].iVal();
     word_count = setting["word_count"].iVal();
     pad_value = setting["pad_value"].fVal();
+    length_mode = setting["length_mode"].sVal();
 
-    this->params.resize(1);
-    // No need allocate diff memory
-    this->params[0].need_diff = false;
-    this->params[0].is_sparse = true;
-    this->params[0].Resize(word_count, feat_size, 1, 1);
-    
-    std::map<std::string, SettingV> w_setting = *setting["w_filler"].mVal();
-    this->params[0].initializer_ = 
-        initializer::CreateInitializer<xpu, 4>(w_setting["init_type"].iVal(),
-          w_setting, this->prnd_);
-    this->params[0].Init();   
+    utils::Check(length_mode == "embedding" || length_mode == "kernel" || length_mode == "featmap",
+                 "EmbeddingLayer: error value of length_mode");
 
-    std::map<std::string, SettingV> &w_updater = *setting["w_updater"].mVal();
-    this->params[0].updater_ = 
-        updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].iVal(),
-          w_updater, this->prnd_);
+    // shared layer only read one embedding files
+    // saving running time 
+    if (!read_embed_done) {
+      this->params.resize(1);
+      // No need allocate diff memory
+      this->params[0].need_diff = false;
+      this->params[0].is_sparse = true;
+      this->params[0].Resize(word_count, feat_size, 1, 1);
     
-    // Check if embedding file is empty
-    if(!embedding_file.empty()) {
-      ReadInitEmbedding();
+      std::map<std::string, SettingV> w_setting = *setting["w_filler"].mVal();
+      this->params[0].initializer_ = 
+          initializer::CreateInitializer<xpu, 4>(w_setting["init_type"].iVal(),
+            w_setting, this->prnd_);
+      this->params[0].Init();   
+  
+      std::map<std::string, SettingV> &w_updater = *setting["w_updater"].mVal();
+      this->params[0].updater_ = 
+          updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].iVal(),
+            w_updater, this->prnd_);
+
+      // Check if embedding file is empty
+      if(!embedding_file.empty()) {
+        read_embed_done = true;
+        ReadInitEmbedding();
+      }
+    } else {
+      utils::Printf("EmbeddingLayer: Read Embeddings done, skip.");
     }
+
     if(!update_indication_file.empty()) {
       ReadUpdateIndicationFile();
     }
+
   }
 
   void ReadUpdateIndicationFile() {
     utils::Printf("EmbeddingLayer: Open indication file: %s\n", update_indication_file.c_str());
     std::ifstream ifs(update_indication_file.c_str());
-    utils::Check(ifs, "EmbeddingLayer: Open indication file problem.");
+    utils::Check(ifs.is_open(), "EmbeddingLayer: Open indication file problem.");
     int word_idx, indication;
     while (!ifs.eof()) {
       ifs >> word_idx >> indication;
@@ -100,7 +114,7 @@ class EmbeddingLayer : public Layer<xpu>{
     std::vector<std::string> lines;
     std::ifstream fin(embedding_file.c_str());
     std::string s;
-    utils::Check(fin, "Open embedding file problem.");
+    utils::Check(fin.is_open(), "Open embedding file problem.");
     while (!fin.eof()) {
       std::getline(fin, s);
       if (s.empty()) break;
@@ -120,7 +134,7 @@ class EmbeddingLayer : public Layer<xpu>{
       iss >> w_idx;
       int j = 0;
       while (!iss.eof()) {
-		utils::Check(j < feat_size, "EmbeddingLayer: init embedding error. More %d. %d.", i, j);
+	utils::Check(j < feat_size, "EmbeddingLayer: init embedding error. More %d. %d.", i, j);
         iss >> this->params[0].data[w_idx][j++][0][0];
       }
       utils::Check(j == feat_size, "EmbeddingLayer: init embedding error. Less %d. %d.", i, j);
@@ -139,7 +153,16 @@ class EmbeddingLayer : public Layer<xpu>{
     doc_count = bottom[0]->data.size(1);
     nbatch = bottom[0]->data.size(0);
                   
-    top[0]->Resize(nbatch, doc_count, max_doc_len, feat_size, true);
+    // For one dimention length, such as sentence length
+    if (length_mode == "embedding") {
+      top[0]->Resize(nbatch, doc_count, max_doc_len, feat_size, true);
+    // For three dimention length, (channel_in=1, kernel_y=sentence length, kernel_x=1)
+    } else if (length_mode == "kernel") {
+      top[0]->Resize(nbatch, doc_count, max_doc_len, feat_size, nbatch, 3, true);
+    // For two dimention length, (kernel_y=sentence length, kernel_x=feat size)
+    } else if (length_mode == "featmap") {
+      top[0]->Resize(nbatch, doc_count, max_doc_len, feat_size, nbatch, 2, true);
+    }
 
     if (show_info) {
         bottom[0]->PrintShape("bottom0");
@@ -172,7 +195,19 @@ class EmbeddingLayer : public Layer<xpu>{
     
     // fill all top data to pad_value
     top_data = pad_value;
-    top_len = F<op::identity>(bottom_len);
+    if (length_mode == "embedding") {
+      top_len = F<op::identity>(bottom_len);
+    } else if (length_mode == "kernel") {
+      top_len = 1;
+      for (int i = 0; i < bottom_len.size(0); ++i) {
+        top_len[i][1] = bottom_len[i][0];
+      }
+    } else if (length_mode == "featmap") {
+      for (int i = 0; i < bottom_len.size(0); ++i) {
+        top_len[i][0] = bottom_len[i][0];
+        top_len[i][1] = feat_size;
+      }
+    }
 
     int w_idx = -1;
     for (int i = 0; i < nbatch; ++i) {
@@ -253,7 +288,9 @@ class EmbeddingLayer : public Layer<xpu>{
   int nbatch;
   int line_count;
   float pad_value;
+  bool read_embed_done;
   std::set<int> unupdate_words;
+  string length_mode;
 };
 }  // namespace layer
 }  // namespace textnet

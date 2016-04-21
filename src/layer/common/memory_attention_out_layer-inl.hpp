@@ -79,10 +79,10 @@ class MemoryAttentionOutLayer : public Layer<xpu> {
     mshadow::Tensor<xpu, 2> bottom1_diff = bottom[1]->diff_d2();
 
 	if (this->prop_error[0]) {
-      bottom0_diff = dot(bottom1_data.T(), top_diff);
+      bottom0_diff += dot(bottom1_data.T(), top_diff);
 	}
 	if (this->prop_error[1]) {
-      bottom1_diff = dot(top_diff, bottom0_data.T());
+      bottom1_diff += dot(top_diff, bottom0_data.T());
 	}
 
   }

@@ -89,6 +89,17 @@ const int kLocalFactor = 1013;
 const int kGaussianMask = 1014;
 const int kMemoryAttentionIn = 1015;
 const int kMemoryAttentionOut = 1016;
+const int kChannelDuplicate = 1017;
+const int kAugmentation = 1018;
+const int kElementOp = 1019;
+const int kParameter = 1020;
+const int kConvParam = 1021;
+const int kGenKernel = 1022;
+const int kPoolingVar = 1023;
+const int kPad = 1024;
+const int kBatchNorm = 1025;
+const int kFillCurveXY2D = 1026;
+const int kFillCurveD2XY = 1027;
 const int kDynamicKMaxPooling = 10001;
 const int kMatchTopKPooling = 10002;
 const int kSelectSubRepByToken = 10003;
@@ -116,6 +127,7 @@ const int kLmSoftmaxLoss = 60;
 const int kListwiseMeasure = 61;
 const int kLogistic = 62;
 const int kEuclidDistanceLoss = 63;
+const int kActivationNormLoss = 64;
 
 // Input Layer 71-
 const int kTextData = 71;
@@ -133,7 +145,8 @@ const int kWordRepInput = 82;
 const int kMapTextData = 83;
 const int kImage = 84;
 const int kMemoryGlobal = 85;
-const int kLcsToyData = 86;
+const int kMap2TextData = 86;
+const int kLcsToyData = 87;
 
 /*! \brief these are enumeration */
 const int kInit = -1;

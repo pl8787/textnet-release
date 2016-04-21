@@ -64,7 +64,7 @@ class ImageLayer : public Layer<xpu>{
     std::vector<std::string> lines;
     std::ifstream fin(data_file.c_str());
     std::string s;
-    utils::Check(fin, "Open data file problem.");
+    utils::Check(fin.is_open(), "Open data file problem.");
     while (!fin.eof()) {
       std::getline(fin, s);
       if (s.empty()) break;
@@ -87,8 +87,8 @@ class ImageLayer : public Layer<xpu>{
         iss.seekg(0, iss.beg);
       iss.str(lines[i]);
       iss >> label_set[i];
-	  length_set[i][0] = width;
-	  length_set[i][1] = height;
+	  length_set[i][1] = width;
+	  length_set[i][2] = height;
       for (int j = 0; j < height; ++j) {
 		for (int k = 0; k < width; ++k) {
 		  iss >> data_set[i][j][k];

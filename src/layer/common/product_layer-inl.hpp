@@ -22,6 +22,10 @@ class ProductLayer : public Layer<xpu> {
   
   virtual void Require() {
     // default value, just set the value you want
+    this->defaults["mu1"] = SettingV(0.0f);   // for activation mu1*bottom0_data
+    this->defaults["mu2"] = SettingV(0.0f);   // for activation mu2*bootom1_data
+	this->defaults["delta1"] = SettingV(0.0f);  // for L2 norm activation
+	this->defaults["delta2"] = SettingV(0.0f);  // for L2 norm activation
     
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -34,6 +38,11 @@ class ProductLayer : public Layer<xpu> {
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
+
+	mu1 = setting["mu1"].fVal();
+	mu2 = setting["mu2"].fVal();
+	delta1 = setting["delta1"].fVal();
+	delta2 = setting["delta2"].fVal();
     
     utils::Check(bottom.size() == BottomNodeNum(), "ProductLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "ProductLayer:top size problem.");
@@ -56,6 +65,9 @@ class ProductLayer : public Layer<xpu> {
     int size_0_3 = shape0[3];
     int size_1_3 = shape1[3];
     utils::Check(size_0_3 == 1 || size_1_3 == 1 || size_0_3 == size_1_3, "ProductLayer: bottom sizes does not match.");
+	if (mu1 != 0 || mu2 != 0) {
+	  utils::Check(size_0_3 == size_1_3, "ProductLayer: mu1 or mu2 have value, only support same size.");
+	}
 
     int output_size = size_0_3 > size_1_3 ? size_0_3 : size_1_3;
     top[0]->Resize(shape0[0], shape0[1], shape0[2], output_size, shape_len[0], shape_len[1], true);
@@ -78,6 +90,12 @@ class ProductLayer : public Layer<xpu> {
 
     if (bottom0_data.size(1) == bottom1_data.size(1)) {
       top_data = bottom0_data * bottom1_data;
+	  if (mu1 != 0) {
+		top_data -= mu1 * bottom0_data * bottom0_data;
+	  } 
+	  if (mu2 != 0) {
+		top_data -= mu2 * bottom1_data * bottom1_data;
+	  }
     } else {
       for (int i = 0; i < bottom0_data.size(0); ++i) {
         if (bottom0_data.size(1) == 1) {
@@ -103,6 +121,18 @@ class ProductLayer : public Layer<xpu> {
     if (bottom0_data.size(1) == bottom1_data.size(1)) {
       bottom0_diff += top_diff * bottom1_data;
       bottom1_diff += top_diff * bottom0_data;
+	  if (mu1 != 0) {
+		bottom0_diff -= 2 * mu1 * top_diff * bottom0_data;
+	  }
+	  if (mu2 != 0) {
+		bottom1_diff -= 2 * mu2 * top_diff * bottom1_data;
+      }
+	  if (delta1 != 0) {
+		bottom0_diff += delta1 * bottom0_data;
+	  }
+	  if (delta2 != 0) {
+		bottom1_diff += delta2 * bottom1_data;
+	  }
     } else {
       for (int i = 0; i < bottom0_data.size(0); ++i) {
         if (bottom0_data.size(1) == 1) {
@@ -121,6 +151,13 @@ class ProductLayer : public Layer<xpu> {
       }
     }
   }
+
+ protected:
+  float mu1;
+  float mu2;
+  float delta1;
+  float delta2;
+
 };
 }  // namespace layer
 }  // namespace textnet

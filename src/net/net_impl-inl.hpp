@@ -6,6 +6,7 @@
 #include "./train_valid_net-inl.hpp"
 #include "./train_valid_test_net-inl.hpp"
 #include "./test_net-inl.hpp"
+#include "./multi_train_valid_test_net-inl.hpp"
 
 namespace textnet {
 namespace net {
@@ -16,6 +17,7 @@ INet* CreateNet_(NetType type) {
     case kTrainValidTest: return new TrainValidTestNet<xpu>();
 	// case kCrossValid: return new CrossValidNet<xpu>();
 	case kTestOnly: return new TestNet<xpu>();
+    case kMultiTrainValidTest: return new MultiTrainValidTestNet<xpu>();
     default: utils::Error("unknown net type id : \"%d\"", type); return NULL;
   }
 }

@@ -84,7 +84,7 @@ class HingeLossLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 1> bottom0_diff = bottom[0]->diff_d1();
     
     if (this->prop_error[0]) {
-      bottom0_diff = -1.0f * F<op::relu_grad>(1.0f - bottom0_data * bottom1_data) * bottom1_data;
+      bottom0_diff += -1.0f/nbatch * F<op::relu_grad>(1.0f - bottom0_data * bottom1_data) * bottom1_data;
     }
   }
   

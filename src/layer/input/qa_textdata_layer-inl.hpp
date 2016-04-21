@@ -102,7 +102,7 @@ class QATextDataLayer : public Layer<xpu>{
     std::string key;
     int s_len;
     int value;
-    utils::Check(fin, "Open data file problem.");
+    utils::Check(fin.is_open(), "Open data file problem.");
 
     istringstream iss;
     while (!fin.eof()) {
@@ -138,7 +138,7 @@ class QATextDataLayer : public Layer<xpu>{
     std::string s;
     std::string value;
     int label;
-    utils::Check(fin, "Open data file problem.");
+    utils::Check(fin.is_open(), "Open data file problem.");
     line_count = 0;
 
     istringstream iss;
@@ -174,7 +174,7 @@ class QATextDataLayer : public Layer<xpu>{
     std::ifstream fin(data_file.c_str());
     std::string s;
     int label;
-    utils::Check(fin, "Open data file problem.");
+    utils::Check(fin.is_open(), "Open data file problem.");
 
     istringstream iss;
     while (!fin.eof()) {

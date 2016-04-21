@@ -94,8 +94,8 @@ class SoftmaxFuncLayer : public Layer<xpu>{
         }
       }
     }
-    std::cout << "SoftmaxFuncLayer: WARNING, prob too small, crop. " << crop_count << std::endl;
 #if DEBUG
+    std::cout << "SoftmaxFuncLayer: WARNING, prob too small, crop. " << crop_count << std::endl;
     checkNan(top[0]->data.dptr_, top[0]->data.shape_.Size());
 #endif
   }

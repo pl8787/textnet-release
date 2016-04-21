@@ -5,9 +5,13 @@
 #include "./common/activation_layer-inl.hpp"
 #include "./common/convolution_layer-inl.hpp"
 #include "./common/convolution_var_layer-inl.hpp"
+#include "./common/convolution_param_layer-inl.hpp"
+#include "./common/gen_kernel_layer-inl.hpp"
 #include "./common/fullc_layer-inl.hpp"
 #include "./common/tensor_fullc_layer-inl.hpp"
 #include "./common/pooling_layer-inl.hpp"
+#include "./common/pooling_var_layer-inl.hpp"
+#include "./common/pad_layer-inl.hpp"
 #include "./common/embedding_layer-inl.hpp"
 #include "./common/one_hot_layer-inl.hpp"
 #include "./common/cross_layer-inl.hpp"
@@ -25,6 +29,8 @@
 #include "./common/batch_split_layer-inl.hpp"
 #include "./common/batch_concat_layer-inl.hpp"
 #include "./common/batch_duplicate_layer-inl.hpp"
+#include "./common/batch_norm_layer-inl.hpp"
+#include "./common/channel_duplicate_layer-inl.hpp"
 #include "./common/lstm_layer-inl.hpp"
 #include "./common/lstm_d2_layer-inl.hpp"
 #include "./common/lstm_d2_optimize_layer-inl.hpp"
@@ -69,6 +75,11 @@
 #include "./common/gaussian_mask_layer-inl.hpp"
 #include "./common/memory_attention_in_layer-inl.hpp"
 #include "./common/memory_attention_out_layer-inl.hpp"
+#include "./common/augmentation_layer-inl.hpp"
+#include "./common/element_op_layer-inl.hpp"
+#include "./common/parameter_layer-inl.hpp"
+#include "./common/fill_curve_xy2d_layer-inl.hpp"
+#include "./common/fill_curve_d2xy_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/lcs_toy_data_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
@@ -82,6 +93,7 @@
 #include "./input/qa_textdata_layer-inl.hpp"
 #include "./input/word_rep_input_layer-inl.hpp"
 #include "./input/map_textdata_layer-inl.hpp"
+#include "./input/map_2_textdata_layer-inl.hpp"
 #include "./input/image_layer-inl.hpp"
 #include "./input/memory_global_layer-inl.hpp"
 #include "./loss/hingeloss_layer-inl.hpp"
@@ -95,6 +107,7 @@
 #include "./loss/listwise_measure_layer-inl.hpp"
 #include "./loss/euclid_distance_loss_layer-inl.hpp"
 #include "./loss/logistic_layer-inl.hpp"
+#include "./loss/activation_norm_loss_layer-inl.hpp"
 
 namespace textnet {
 namespace layer {
@@ -106,10 +119,14 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kRectifiedLinear: return new ActivationLayer<xpu, op::relu, op::relu_grad>(type);
     case kConv: return new ConvolutionLayer<xpu>(type);
     case kConvVar: return new ConvolutionVarLayer<xpu>(type);
+    case kConvParam: return new ConvolutionParamLayer<xpu>(type);
+    case kPoolingVar: return new PoolingVarLayer<xpu>(type);
+    case kPad: return new PadLayer<xpu>(type);
     case kFullConnect: return new FullConnectLayer<xpu>(type);
     case kTensorFullConnect: return new TensorFullConnectLayer<xpu>(type);
     case kMaxPooling: return new PoolingLayer<mshadow::red::maximum, xpu>(type);
     case kAvgPooling: return new PoolingLayer<mshadow::red::sum, xpu>(type);
+    case kSumPooling: return new PoolingLayer<mshadow::red::sum, xpu>(type);
     case kGateWholePooling: return new GateWholePoolingLayer<xpu>(type);
     case kGateWholePoolingD2: return new GateWholePoolingD2Layer<xpu>(type);
     case kGateDynamicPoolingD2: return new GateDynamicPoolingD2Layer<xpu>(type);
@@ -177,6 +194,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kBatchSplit: return new BatchSplitLayer<xpu>(type);
     case kBatchConcat: return new BatchConcatLayer<xpu>(type);
     case kBatchDuplicate: return new BatchDuplicateLayer<xpu>(type);
+	case kChannelDuplicate: return new ChannelDuplicateLayer<xpu>(type);
     case kSwapAxis: return new SwapAxisLayer<xpu>(type);
     case kFlatten: return new FlattenLayer<xpu>(type);
     case kMatchPhraseRep: return new MatchPhraseRepLayer<xpu>(type);
@@ -186,10 +204,12 @@ Layer<xpu>* CreateLayer_(LayerType type) {
 	case kListwiseMeasure: return new ListwiseMeasureLayer<xpu>(type);
 	case kQATextData: return new QATextDataLayer<xpu>(type);
 	case kMapTextData: return new MapTextDataLayer<xpu>(type);
+	case kMap2TextData: return new Map2TextDataLayer<xpu>(type);
     case kSelectSubRepByToken: return new SelectSubRepByTokenLayer<xpu>(type);
     case kWordRepInput: return new WordRepInputLayer<xpu>(type);
     case kEuclidDistanceLoss: return new EuclidDistanceLossLayer<xpu>(type);
 	case kLogistic: return new LogisticLayer<xpu>(type);
+	case kActivationNormLoss: return new ActivationNormLossLayer<xpu>(type);
 	case kLocal: return new LocalLayer<xpu>(type);
 	case kLocalFactor: return new LocalFactorLayer<xpu>(type);
 	case kImage: return new ImageLayer<xpu>(type);
@@ -197,6 +217,13 @@ Layer<xpu>* CreateLayer_(LayerType type) {
 	case kMemoryGlobal: return new MemoryGlobalLayer<xpu>(type);
 	case kMemoryAttentionIn: return new MemoryAttentionInLayer<xpu>(type);
 	case kMemoryAttentionOut: return new MemoryAttentionOutLayer<xpu>(type);
+	case kAugmentation: return new AugmentationLayer<xpu>(type);
+    case kElementOp: return new ElementOpLayer<xpu>(type);
+    case kParameter: return new ParameterLayer<xpu>(type);
+    case kGenKernel: return new GenKernelLayer<xpu>(type);
+    case kBatchNorm: return new BatchNormLayer<xpu>(type);
+    case kFillCurveXY2D: return new FillCurveXY2DLayer<xpu>(type);
+    case kFillCurveD2XY: return new FillCurveD2XYLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }

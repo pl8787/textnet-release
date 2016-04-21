@@ -100,23 +100,25 @@ class PoolingLayer : public Layer<xpu> {
     mshadow::Shape<2> pshape = top_data[0][0].shape_;
 
 	for (int i = 0; i < top_len.shape_[0]; ++i) {
-	  top_len[i][0] = (bottom_len[i][0] - kernel_x) / stride + 1;
+	  top_len[i][0] = ((int)bottom_len[i][0] - kernel_y) / stride + 1;
 	  if (top_len[i][0] <= 0) {
 		top_len[i][0] = 1;
 	  }
 	  if (bottom_len.shape_[1] == 2) {
-	    top_len[i][1] = (bottom_len[i][1] - kernel_y) / stride + 1;
+	    top_len[i][1] = ((int)bottom_len[i][1] - kernel_x) / stride + 1;
 	    if (top_len[i][1] <= 0) {
 		  top_len[i][1] = 1;
 	    }
 	  }
 	}
 
-    if (this->layer_type == kMaxPooling || this->layer_type == kSumPooling) {
+    if (this->layer_type == kMaxPooling) {
       top_data = pool<Reducer>(bottom_data, pshape, kernel_y, kernel_x, stride);
-    }else if (this->layer_type == kAvgPooling) {
+    } else if (this->layer_type == kAvgPooling) {
       top_data = pool<Reducer>(bottom_data, pshape, kernel_y, kernel_x, stride)
           * (1.0f / (kernel_y*kernel_x));
+    } else if (this->layer_type == kSumPooling) {
+      top_data = pool<Reducer>(bottom_data, pshape, kernel_y, kernel_x, stride);
     } else {
       utils::Error("Unknown pooling mode");
     }
@@ -131,11 +133,13 @@ class PoolingLayer : public Layer<xpu> {
     mshadow::Tensor<xpu, 4> bottom_diff = bottom[0]->diff;
     
     if (this->prop_error[0]) {
-      if (this->layer_type == kMaxPooling || this->layer_type == kSumPooling) {
+      if (this->layer_type == kMaxPooling) {
         bottom_diff += unpool<Reducer>(bottom_data, top_data, top_diff, kernel_y, kernel_x, stride);
-      }else if (this->layer_type == kAvgPooling) {
+      } else if (this->layer_type == kAvgPooling) {
         bottom_diff += unpool<Reducer>(bottom_data, top_data, top_diff, kernel_y, kernel_x, stride)
             * (1.0f / (kernel_y*kernel_x));
+      } else if (this->layer_type == kSumPooling) {
+        bottom_diff += unpool<Reducer>(bottom_data, top_data, top_diff, kernel_y, kernel_x, stride);
       } else {
         utils::Error("Unknown pooling mode");
       }

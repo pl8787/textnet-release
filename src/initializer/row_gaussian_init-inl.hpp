@@ -1,5 +1,5 @@
-#ifndef TEXTNET_GAUSSIAN_INIT_INL_HPP_
-#define TEXTNET_GAUSSIAN_INIT_INL_HPP_
+#ifndef TEXTNET_ROW_GAUSSIAN_INIT_INL_HPP_
+#define TEXTNET_ROW_GAUSSIAN_INIT_INL_HPP_
 
 #include <mshadow/tensor.h>
 #include "./initializer.h"
@@ -8,14 +8,14 @@ namespace textnet {
 namespace initializer {
 
 template<typename xpu, int dim>
-class GaussianInitializer : public Initializer<xpu, dim>{
+class RowGaussianInitializer : public Initializer<xpu, dim>{
  public:
-  GaussianInitializer(std::map<std::string, SettingV> &setting, 
+  RowGaussianInitializer(std::map<std::string, SettingV> &setting, 
                       mshadow::Random<xpu>* prnd) {
     this->prnd_ = prnd;
     SetupInitializer(setting);
   }
-  virtual ~GaussianInitializer(void) {}
+  virtual ~RowGaussianInitializer(void) {}
   
   virtual void Require(std::map<std::string, SettingV> &setting) {
     // default value, just set the value you want
@@ -32,30 +32,29 @@ class GaussianInitializer : public Initializer<xpu, dim>{
     Initializer<xpu, dim>::SetupInitializer(setting);
     
     this->init_type = setting["init_type"].iVal();
-    if (this->init_type == kGaussian) {
-      this->mu = setting["mu"].fVal();
-      this->sigma = setting["sigma"].fVal();
-    } else if (this->init_type == kKaiming) {
-      this->mu = 0.0;
-	  this->sigma = 1.0;
-    }
+    this->mu = setting["mu"].fVal();
+    this->sigma = setting["sigma"].fVal();
+    this->count = setting["count"].iVal();
   }
   
-  virtual void DoInitialize(mshadow::Tensor<xpu, dim> data) {
-	if (this->init_type == kKaiming) {
-		float node_size = 1.0;
-		for (int i = 1; i < dim; ++i)
-			node_size *= data.shape_[i];
-		this->sigma = sqrt(2.0 / node_size);
-		cout << "MSRA INITIAL: " << this->sigma << endl;
-	}
-    this->prnd_->SampleGaussian(&data, mu, sigma);
+  virtual void DoInitialize(mshadow::Tensor<cpu, dim> data) {
+    using namespace mshadow::expr;
+    using namespace mshadow;
+    TensorContainer<xpu, 1> row;
+    row.Resize(mshadow::Shape1(count));
+    this->prnd_->SampleGaussian(&row, mu, sigma);
+    for (int i = 0; i < data.shape_.Size(); i += count) {
+        for (int j = 0; j < count; ++j) {
+            data.dptr_[i+j] = row[j];
+        }
+    }
   }
   
   float mu;
   float sigma;
+  int count;
 };
 }  // namespace initializer
 }  // namespace textnet
-#endif  // TEXTNET_GAUSSIAN_INIT_INL_HPP_
+#endif  // TEXTNET_ROW_GAUSSIAN_INIT_INL_HPP_
 
