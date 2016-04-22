@@ -122,7 +122,7 @@ class PoolingVarLayer : public Layer<xpu> {
 	mshadow::Tensor<xpu, 2> bottom_len = bottom[0]->length;
     
     if (pooling_mode == "max") {
-	  top_data = -FLT_MAX;
+	  top_data = 0.0;
     } else if (pooling_mode == "avg") {
       top_data = 0.0;
     }
@@ -160,6 +160,7 @@ class PoolingVarLayer : public Layer<xpu> {
             int pooling_size = (xend - xstart) * (yend - ystart);
 
             if (pooling_mode == "max") {
+              top_data[i][c][py][px] = -FLT_MAX;
               for (int y = ystart; y < yend; ++y) {
                 for (int x = xstart; x < xend; ++x) {
                   if (bottom_data[i][c][y][x] > top_data[i][c][py][px]) {
@@ -171,9 +172,7 @@ class PoolingVarLayer : public Layer<xpu> {
             } else if (pooling_mode == "avg") {
               for (int y = ystart; y < yend; ++y) {
                 for (int x = xstart; x < xend; ++x) {
-                  if (bottom_data[i][c][y][x] > top_data[i][c][py][px]) {
-                    top_data[i][c][py][px] += bottom_data[i][c][y][x];
-                  }
+                  top_data[i][c][py][px] += bottom_data[i][c][y][x];
                 }
               }
               top_data[i][c][py][px] /= pooling_size;
