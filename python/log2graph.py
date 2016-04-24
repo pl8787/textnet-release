@@ -2,12 +2,13 @@ import sys
 import re
 
 reduce_interval = {
-    "Train" : 100,
-    "Valid" : 100,
-    "Test" : 100
+    "Train" : 1000,
+    "Valid" : 1000,
+    "Test" : 1000
         }
 
 seperator = ','  # '\t'
+
 
 def reduce_result(x, interval):
     y = {}
@@ -29,12 +30,14 @@ def reduce_result(x, interval):
         if idx in y:
             rtn.append(y[idx])
             idx += 1
+        elif idx == 0:
+            rtn.append(0)
+            idx += 1
         else:
             break
     return rtn
 
-# test = '[Train:kTrain]\tIter\t3321:\tOut[loss] =\t0.228255'
-pattern_raw = r"\[(.+?)\:(.+?)\]\tIter\t(.+?)\:\tOut\[(.+?)\].=\t(.+)"
+pattern_raw = r"\[.+?\] \[(.+?)\:(.+?)\]\tIter\t(.+?)\:\tOut\[(.+?)\].*?=\t(.+)"
 
 log_lines = {}
 
