@@ -111,6 +111,7 @@ const int kGateWholePoolingD2 = 10008;
 const int kGateDynamicPoolingD2 = 10009;
 const int kGruD2 = 10010;
 const int kGruD2Optimize = 10011;
+const int kGruD2OneGate = 10012;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;
@@ -145,6 +146,7 @@ const int kMapTextData = 83;
 const int kImage = 84;
 const int kMemoryGlobal = 85;
 const int kMap2TextData = 86;
+const int kLcsToyData = 87;
 
 /*! \brief these are enumeration */
 const int kInit = -1;
