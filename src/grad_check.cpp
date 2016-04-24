@@ -90,12 +90,13 @@ void TestSwapAxisLayer(mshadow::Random<cpu>* prnd) {
   bottoms.push_back(&bottom);
   tops.push_back(&top);
   
-  bottom.data.Resize(Shape4(2,1,5,5), 1.0);
-  bottom.diff.Resize(Shape4(2,1,5,5), 0.0);
+  bottom.Resize(Shape4(2,1,3,3), Shape2(2,2), true);
+  bottom.length = 3;
   
   map<string, SettingV> setting;
   setting["axis1"] = SettingV(1);
   setting["axis2"] = SettingV(3);
+  setting["swap_length"] = SettingV(true);
   
   /// Test Activation Layer
   Layer<cpu> * layer_swap = CreateLayer<cpu>(kSwapAxis);
@@ -105,7 +106,9 @@ void TestSwapAxisLayer(mshadow::Random<cpu>* prnd) {
   layer_swap->Forward(bottoms, tops);
 
   PrintTensor("bottom", bottom.data);
+  PrintTensor("bottom_len", bottom.length);
   PrintTensor("top", top.data);
+  PrintTensor("top_len", top.length);
   
   using namespace checker;
   Checker<cpu> * cker = CreateChecker<cpu>();
@@ -4633,7 +4636,7 @@ int main(int argc, char *argv[]) {
   // TestDiagRecurrentLayer(&rnd);
   // TestNegativeSampleLossLayer(&rnd);
   // TestPosPredRepLayer(&rnd);
-  // TestSwapAxisLayer(mshadow::Random<cpu>* prnd);
+  TestSwapAxisLayer(&rnd);
   // TestFlattenLayer(mshadow::Random<cpu>* prnd);
   // TestSoftmaxFuncLayer(&rnd);
   // TestWordClassSoftmaxLayer(&rnd);
@@ -4649,7 +4652,7 @@ int main(int argc, char *argv[]) {
   // TestElementOpLayer(&rnd);
   // TestParameterLayer(&rnd);
   // TestGenKernelLayer(&rnd);
-  TestPoolVarLayer(&rnd);
+  // TestPoolVarLayer(&rnd);
   // TestPadLayer(&rnd);
   // TestBatchNormLayer(&rnd);
   // TestFillCurveXY2DLayer(&rnd);

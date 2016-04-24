@@ -25,6 +25,7 @@ class SwapAxisLayer : public Layer<xpu>{
   
   virtual void Require() {
     // default value, just set the value you want
+    this->defaults["swap_length"] = SettingV(false);
 
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -47,6 +48,7 @@ class SwapAxisLayer : public Layer<xpu>{
     
     axis1 = setting["axis1"].iVal();
     axis2 = setting["axis2"].iVal();
+    swap_length = setting["swap_length"].bVal();
     if (axis1 > axis2) {
       int temp = axis1;
       axis1 = axis2;
@@ -121,6 +123,11 @@ class SwapAxisLayer : public Layer<xpu>{
                     break;
                 case 3:
                     top_data = swapaxis<3, 1>(bottom_data);
+                    if (swap_length) {
+                      for (int i = 0; i < top_len.size(0); ++i) {
+                        top_len[i][1] = bottom_data.size(1);
+                      }
+                    }
                     break;
             }
             break;
@@ -169,6 +176,7 @@ class SwapAxisLayer : public Layer<xpu>{
   
  protected:
   int axis1, axis2;
+  bool swap_length;
 
   mshadow::Shape<4> top_shape;
   mshadow::Shape<4> bottom_shape;
