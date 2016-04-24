@@ -38,6 +38,7 @@ class Map2TextDataLayer : public Layer<xpu>{
     this->defaults["speedup_list"] = SettingV(false); // only when list
     this->defaults["min_doc1_len"] = SettingV(1);
     this->defaults["min_doc2_len"] = SettingV(1);
+    this->defaults["fix_length"] = SettingV(false);
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["data1_file"] = SettingV();
@@ -71,6 +72,7 @@ class Map2TextDataLayer : public Layer<xpu>{
     mode = setting["mode"].sVal();
     shuffle = setting["shuffle"].bVal();
     speedup_list = setting["speedup_list"].bVal();
+    fix_length = setting["fix_length"].bVal();
     
     utils::Check(mode == "batch" || mode == "pair" || mode == "list",
                   "Map2TextDataLayer: mode is one of batch, pair or list.");
@@ -317,12 +319,20 @@ class Map2TextDataLayer : public Layer<xpu>{
       for (int k = 0; k < data1.size(); ++k) {
           top0_data[top_idx][0][0][k] = data1[k];
       }
-      top0_length[top_idx][0] = data1.size();
+      if (fix_length) {
+          top0_length[top_idx][0] = max_doc1_len;
+      } else {
+          top0_length[top_idx][0] = data1.size();
+      }
 
       for (int k = 0; k < data2.size(); ++k) {
           top1_data[top_idx][0][0][k] = data2[k];
       }
-      top1_length[top_idx][0] = data2.size();
+      if (fix_length) {
+          top1_length[top_idx][0] = max_doc2_len;
+      } else {
+          top1_length[top_idx][0] = data2.size();
+      }
   } 
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
@@ -400,6 +410,7 @@ class Map2TextDataLayer : public Layer<xpu>{
   string mode;
   bool shuffle;
   bool speedup_list;
+  bool fix_length;
   
   vector<vector<string> > rel_set;
   vector<int> label_set;
