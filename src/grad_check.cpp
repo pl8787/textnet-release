@@ -4642,14 +4642,14 @@ int main(int argc, char *argv[]) {
   // TestSumLayer(&rnd);
   // TestTopkPoolingLayer(&rnd);
   // TestHingeLossLayer(&rnd);
-  TestListwiseMeasureLayer(&rnd);
+  // TestListwiseMeasureLayer(&rnd);
   // TestQATextDataLayer(&rnd);
   // TestMapTextDataLayer(&rnd);
   // TestConvolutionAndLocalFactorLayer(&rnd);
   // TestElementOpLayer(&rnd);
   // TestParameterLayer(&rnd);
   // TestGenKernelLayer(&rnd);
-  // TestPoolVarLayer(&rnd);
+  TestPoolVarLayer(&rnd);
   // TestPadLayer(&rnd);
   // TestBatchNormLayer(&rnd);
   // TestFillCurveXY2DLayer(&rnd);
