@@ -100,7 +100,7 @@ class PoolingVarLayer : public Layer<xpu> {
     // Check for reshape
     bool need_reshape = false;
     mshadow::Shape<4> shape_in = bottom[0]->data.shape_;
-    mshadow::Shape<4> shape_out = mshadow::Shape4(nbatch, channel, 
+    mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in[0], channel, 
                    (shape_in[2] + pad_y * 2 - kernel_y) / stride_y + 1,
                    (shape_in[3] + pad_x * 2 - kernel_x) / stride_x + 1);
     if (! (shape_out == top[0]->data.shape_)) {

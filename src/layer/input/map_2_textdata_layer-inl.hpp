@@ -345,9 +345,17 @@ class Map2TextDataLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 1> top2_data = top[2]->data_d1();
 
     top0_data = -1;
-    top0_length = 0;
+    if (fix_length) {
+      top0_length = max_doc1_len;
+    } else {
+      top0_length = 0;
+    }
     top1_data = -1;
-    top1_length = 0;
+    if (fix_length) {
+      top1_length = max_doc2_len;
+    } else {
+      top1_length = 0;
+    }
     top2_data = -1;
 
     if (mode == "batch") {
