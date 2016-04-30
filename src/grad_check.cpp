@@ -495,6 +495,7 @@ void TestMatchLayer(mshadow::Random<cpu>* prnd) {
 
   map<string, SettingV> setting;
   setting["op"] = SettingV("cos");
+  setting["op"] = SettingV("elemwise_cat");
 
   // Test Match Layer
   Layer<cpu> * layer_match = CreateLayer<cpu>(kMatch);
@@ -4308,6 +4309,50 @@ void TestBatchDuplicateLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckError(layer_batch_duplicate, bottoms, tops);
 }
 
+void TestLengthTransLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Length Trans Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+
+  bottom.Resize(2, 1, 3, 2, 2, 2);
+  bottom.length = 2;
+
+  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+
+  map<string, SettingV> setting;
+  setting["trans_type"] = SettingV("2D->1D");
+  setting["source_axis"] = SettingV(0);
+  setting["target_axis"] = SettingV(0);
+
+  // Test BatchCombine Layer
+  Layer<cpu> * layer_length_trans = CreateLayer<cpu>(kLengthTrans);
+  layer_length_trans->PropAll();
+  layer_length_trans->SetupLayer(setting, bottoms, tops, prnd);
+  layer_length_trans->Reshape(bottoms, tops);
+
+  layer_length_trans->Forward(bottoms, tops);
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("bottom_len", bottom.length);
+  PrintTensor("top", top.data);
+  PrintTensor("top_len", top.length);
+
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.001f);
+  cker->SetupChecker(setting_checker, prnd);
+
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_length_trans, bottoms, tops);
+}
+
 void TestChannelDuplicateLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Batch Duplicate Layer." << endl;
   Node<cpu> bottom;
@@ -4638,7 +4683,7 @@ int main(int argc, char *argv[]) {
   // TestDiagRecurrentLayer(&rnd);
   // TestNegativeSampleLossLayer(&rnd);
   // TestPosPredRepLayer(&rnd);
-  TestSwapAxisLayer(&rnd);
+  // TestSwapAxisLayer(&rnd);
   // TestFlattenLayer(mshadow::Random<cpu>* prnd);
   // TestSoftmaxFuncLayer(&rnd);
   // TestWordClassSoftmaxLayer(&rnd);
@@ -4659,5 +4704,6 @@ int main(int argc, char *argv[]) {
   // TestBatchNormLayer(&rnd);
   // TestFillCurveXY2DLayer(&rnd);
   // TestFillCurveD2XYLayer(&rnd);
+  TestLengthTransLayer(&rnd);
   return 0;
 }
