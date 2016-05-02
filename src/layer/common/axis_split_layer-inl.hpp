@@ -110,10 +110,10 @@ class AxisSplitLayer : public Layer<xpu>{
     
     for (p[0] = 0; p[0] < shape_in[0]; ++p[0]) {
       top0_len[p[0]] = shape_out0[3];
-      top1_len[p[1]] = shape_out1[3];
-      for (p[1] = 0; p[1] < shape_in[0]; ++p[1]) {
-        for (p[2] = 0; p[2] < shape_in[0]; ++p[2]) {
-          for (p[3] = 0; p[3] < shape_in[0]; ++p[3]) {
+      top1_len[p[0]] = shape_out1[3];
+      for (p[1] = 0; p[1] < shape_in[1]; ++p[1]) {
+        for (p[2] = 0; p[2] < shape_in[2]; ++p[2]) {
+          for (p[3] = 0; p[3] < shape_in[3]; ++p[3]) {
             if (p[axis] < split_length) {
               top0_data[p[0]][p[1]][p[2]][p[3]] = bottom_data[p[0]][p[1]][p[2]][p[3]];
             } else {

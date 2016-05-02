@@ -4353,6 +4353,53 @@ void TestLengthTransLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckError(layer_length_trans, bottoms, tops);
 }
 
+void TestAxisSplitLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Axis Split Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top0;
+  Node<cpu> top1;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+
+  bottoms.push_back(&bottom);
+  tops.push_back(&top0);
+  tops.push_back(&top1);
+
+  bottom.Resize(2, 1, 3, 5, 2, 1);
+  bottom.length = 5;
+
+  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+
+  map<string, SettingV> setting;
+  setting["axis"] = SettingV(3);
+  setting["split_length"] = SettingV(4);
+
+  // Test BatchCombine Layer
+  Layer<cpu> * layer_axis_split = CreateLayer<cpu>(kAxisSplit);
+  layer_axis_split ->PropAll();
+  layer_axis_split ->SetupLayer(setting, bottoms, tops, prnd);
+  layer_axis_split ->Reshape(bottoms, tops);
+
+  layer_axis_split ->Forward(bottoms, tops);
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("bottom_len", bottom.length);
+  PrintTensor("top0", top0.data);
+  PrintTensor("top0_len", top0.length);
+  PrintTensor("top1", top1.data);
+  PrintTensor("top1_len", top1.length);
+
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.001f);
+  cker->SetupChecker(setting_checker, prnd);
+
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_axis_split , bottoms, tops);
+}
+
 void TestChannelDuplicateLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Batch Duplicate Layer." << endl;
   Node<cpu> bottom;
@@ -4704,6 +4751,7 @@ int main(int argc, char *argv[]) {
   // TestBatchNormLayer(&rnd);
   // TestFillCurveXY2DLayer(&rnd);
   // TestFillCurveD2XYLayer(&rnd);
-  TestLengthTransLayer(&rnd);
+  // TestLengthTransLayer(&rnd);
+  TestAxisSplitLayer(&rnd);
   return 0;
 }
