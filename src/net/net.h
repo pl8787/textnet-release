@@ -603,8 +603,40 @@ class Net : public INet{
       for (int i = 0; i < nets[tag].size(); ++i) {
         int layer_idx = nets[tag][i]->layer_idx;
 
-        if (var_batch)
+        if (var_batch) {
+#if DEBUG
+          cout << "Layer " << layer_idx << endl;
+          cout << "\tBefore" << endl;
+          for (int j = 0; j < top_vecs[layer_idx].size(); ++j) {
+            cout << "\tNode " << j << " data :" << " ";
+            for (int k = 0; k < 4; ++k) {
+              cout << top_vecs[layer_idx][j]->data.size(k) << " x ";
+            }
+            cout << endl;
+            cout << "\tNode " << j << " len :" << " ";
+            for (int k = 0; k < 2; ++k) {
+              cout << top_vecs[layer_idx][j]->length.size(k) << " x ";
+            }
+            cout << endl;
+          }
+#endif
           nets[tag][i]->CheckReshape(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+#if DEBUG
+          cout << "\tAfter" << endl;
+          for (int j = 0; j < top_vecs[layer_idx].size(); ++j) {
+            cout << "\tNode " << j << " data :" << " ";
+            for (int k = 0; k < 4; ++k) {
+              cout << top_vecs[layer_idx][j]->data.size(k) << " x ";
+            }
+            cout << endl;
+            cout << "\tNode " << j << " len :" << " ";
+            for (int k = 0; k < 2; ++k) {
+              cout << top_vecs[layer_idx][j]->length.size(k) << " x ";
+            }
+            cout << endl;
+          }
+#endif
+        }
 
         nets[tag][i]->Forward(bottom_vecs[layer_idx], top_vecs[layer_idx]);
 #if LENGTH_DEBUG
