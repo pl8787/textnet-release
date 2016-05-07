@@ -4182,6 +4182,45 @@ void TestBatchSelectLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckError(layer_batch_select, bottoms, tops);
 }
 
+void TestBatchMaxLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Batch Max Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+
+  bottom.Resize(4, 1, 1, 1);
+
+  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+
+  map<string, SettingV> setting;
+  setting["step"] = SettingV(2);
+
+  // Test BatchCombine Layer
+  Layer<cpu> * layer_batch_select = CreateLayer<cpu>(kBatchMax);
+  layer_batch_select->PropAll();
+  layer_batch_select->SetupLayer(setting, bottoms, tops, prnd);
+  layer_batch_select->Reshape(bottoms, tops);
+
+  layer_batch_select->Forward(bottoms, tops);
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("top", top.data);
+
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.001f);
+  cker->SetupChecker(setting_checker, prnd);
+
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_batch_select, bottoms, tops);
+}
+
 void TestBatchSplitLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Batch Split Layer." << endl;
   Node<cpu> bottom;
@@ -4719,6 +4758,7 @@ int main(int argc, char *argv[]) {
   // TestDynamicKMaxPoolingLayer(&rnd);
   // TestBatchCombineLayer(&rnd);
   // TestBatchSelectLayer(&rnd);
+  TestBatchMaxLayer(&rnd);
   // TestBatchSplitLayer(&rnd);
   // TestBatchConcatLayer(&rnd);
   // TestBatchDuplicateLayer(&rnd);
@@ -4752,6 +4792,6 @@ int main(int argc, char *argv[]) {
   // TestFillCurveXY2DLayer(&rnd);
   // TestFillCurveD2XYLayer(&rnd);
   // TestLengthTransLayer(&rnd);
-  TestAxisSplitLayer(&rnd);
+  // TestAxisSplitLayer(&rnd);
   return 0;
 }
