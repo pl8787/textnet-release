@@ -128,6 +128,7 @@ class ListwiseMeasureLayer : public Layer<xpu>{
 
     if (show_info) {
         bottom[0]->PrintShape("bottom0");
+        bottom[1]->PrintShape("bottom1");
         top[0]->PrintShape("top0");
     }
   }
