@@ -47,16 +47,18 @@ class HingeLossLayer : public Layer<xpu>{
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top,
-					   bool show_info = false) {
+                       bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(),
                   "HingeLossLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "HingeLossLayer:top size problem.");
     nbatch = bottom[0]->data.size(0);                 
     top[0]->Resize(nbatch, 1, 1, 1, true);
-	if (show_info) {
-		top[0]->PrintShape("top0");
-	}
+    if (show_info) {
+        bottom[0]->PrintShape("bottom0");
+        bottom[1]->PrintShape("bottom1");
+        top[0]->PrintShape("top0");
+    }
   }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
