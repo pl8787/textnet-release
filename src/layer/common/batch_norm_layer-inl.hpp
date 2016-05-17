@@ -100,6 +100,11 @@ class BatchNormLayer : public Layer<xpu> {
     
     mshadow::Shape<4> shape_in = bottom[0]->data.shape_;
 
+    nbatch = shape_in[0];
+    feat_count = shape_in[1];
+    feat_size = shape_in[0] * shape_in[2] * shape_in[3];
+    bias_correction_factor = feat_size > 1 ? (float)feat_size/(feat_size-1) : 1;
+
     running_mean_var_.Resize(feat_count, 1, 1, 1, 1, 1, true);
     diff_mean_.Resize(feat_count, 1, 1, 1, 1, 1, true);
 
@@ -287,6 +292,7 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
       // Rearrage values
       do_arrange(bottom_data, bottom_mat_.data, bottom_len, nbatch, feat_count, feat_size);
     }
+
     mshadow::Tensor<xpu, 2> bottom_mat_data = bottom_mat_.data_d2();
     mshadow::Tensor<xpu, 2> bottom_mat_data2 = bottom_mat_.diff_d2();
     
