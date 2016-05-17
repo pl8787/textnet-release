@@ -61,7 +61,8 @@ class MatchLayer : public Layer<xpu>{
     }
 
     utils::Check(op=="xor" || op=="mul" || op=="plus" || op=="cos" || op == "minus" ||\
-                 op=="elemwise_product" || op=="elemwise_plus" || op=="elemwise_cat" || op=="euc" || op=="euc_exp",
+                 op=="elemwise_product" || op=="elemwise_plus" || op=="elemwise_cat" ||\
+                 op=="euc" || op=="euc_exp" || op=="order",
                  "MatchLayer: one of xor, mul, plus, cos, minus, elemwise_product, euc or euc_exp.");
   }
   
@@ -251,6 +252,14 @@ class MatchLayer : public Layer<xpu>{
               m_dot[i][j][k] += bottom0_data4[i][0][j][m] * bottom1_data4[i][0][k][m];
             }
             top_data[i][0][j][k] = m_dot[i][j][k] / (m_norm[i][0][j] * m_norm[i][1][k]);    
+          } else if (op == "order") {
+            float sum_elem_square = 0.f;
+            for (int m = 0; m < feat_size; ++m) {
+              float sub_elem = bottom0_data4[i][0][j][m] - bottom1_data4[i][0][k][m];
+              if (sub_elem <= 0) continue;
+              sum_elem_square += sub_elem * sub_elem;
+            }
+            top_data[i][0][j][k] = sum_elem_square;
           } else if (op =="elemwise_product") {
             for (int m = 0; m < feat_size; ++m) {
               top_data[i][m][j][k] = bottom0_data4[i][0][j][m] * bottom1_data4[i][0][k][m];
@@ -393,6 +402,15 @@ class MatchLayer : public Layer<xpu>{
               }
               if (this->prop_error[1]) {
                 // bottom1_diff[i][0][k][m] += top_diff[i][0][j][k] * (1/(2*distance)) * 2*(-sub_elem);
+                bottom1_diff[i][0][k][m] += top_diff[i][0][j][k] * 2*(-sub_elem);
+              }
+            } else if (op == "order") {
+              float sub_elem = bottom0_data[i][0][j][m] - bottom1_data[i][0][k][m];
+              if (sub_elem <= 0) continue;
+              if (this->prop_error[0]) {
+                bottom0_diff[i][0][j][m] += top_diff[i][0][j][k] * 2*(sub_elem);
+              }
+              if (this->prop_error[1]) {
                 bottom1_diff[i][0][k][m] += top_diff[i][0][j][k] * 2*(-sub_elem);
               }
             } else if (op == "euc_exp") {

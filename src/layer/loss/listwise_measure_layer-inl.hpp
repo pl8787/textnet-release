@@ -46,6 +46,7 @@ class ListwiseMeasureLayer : public Layer<xpu>{
     this->defaults["col"] = SettingV(0);
     this->defaults["batch_size"] = SettingV(1);
     this->defaults["pos_count_file"] = SettingV("");
+    this->defaults["nearest_one"] = SettingV(false);
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["method"] = SettingV();
@@ -68,6 +69,7 @@ class ListwiseMeasureLayer : public Layer<xpu>{
     col = setting["col"].iVal();
     batch_size = setting["batch_size"].iVal();
     pos_count_file = setting["pos_count_file"].sVal();
+    nearest_one = setting["nearest_one"].bVal();
     
     utils::Check(method == "MRR" || method == "P@k" || method == "R@k" || method == "nDCG@k" || method == "MAP" || method == "P@R" || method == "Rank", 
                   "Parameter [method] must be MRR or P@k or R@k or nDCG@k or MAP or P@R or Rank.");
@@ -170,6 +172,22 @@ class ListwiseMeasureLayer : public Layer<xpu>{
       }
 
       int score_list_len = score_list.size();
+
+      if (nearest_one) {
+        int max_p = 0;
+        for (int cur_p = 0; cur_p < score_list_len; ++cur_p) {
+          if (score_list[cur_p].second > 0) {
+            if (score_list[cur_p].first > score_list[max_p].first) {
+              score_list[max_p].second = 0;
+              max_p = cur_p;
+            } else if (cur_p != max_p) {
+              score_list[cur_p].second = 0;
+            }
+          } else {
+            break;
+          }
+        }
+      }
 
       if (method == "nDCG@k") {
         idcg = 0.0;
@@ -319,6 +337,7 @@ class ListwiseMeasureLayer : public Layer<xpu>{
   string method;
   string pos_count_file;
   bool is_pos_count_file;
+  bool nearest_one;
   vector<int> pos_count;
   vector<string> list_id;
   int list_ptr;

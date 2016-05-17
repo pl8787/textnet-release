@@ -197,6 +197,64 @@ void TestHingeLossLayer(mshadow::Random<cpu>* prnd) {
   PrintTensor("bottom diff", bottom0.diff);
 }
 
+void TestListwiseMeasureForNearestOneLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check ListwiseMeasure Layer." << endl;
+  Node<cpu> bottom0;
+  Node<cpu> bottom1;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom0);
+  bottoms.push_back(&bottom1);
+  tops.push_back(&top);
+  
+  bottom0.Resize(Shape4(5000,1,1,1));
+  bottom1.Resize(Shape4(5000,1,1,1));
+
+  prnd->SampleUniform(&bottom0.data, -1.0, 1.0);
+
+  bottom0.data[0][0][0][0] = 0.998;
+  bottom0.data[1][0][0][0] = 0.7;
+  bottom0.data[2][0][0][0] = 0;
+  bottom0.data[3][0][0][0] = 0.9;
+  bottom0.data[4][0][0][0] = 0;
+
+  for (int i = 0; i < 5000; ++i) {
+    cerr << bottom0.data[i][0][0][0] << " ";
+  }
+
+  bottom1.data = 0;
+
+  bottom1.data[0][0][0][0] = 1;
+  bottom1.data[1][0][0][0] = 1;
+  bottom1.data[2][0][0][0] = 1;
+  bottom1.data[3][0][0][0] = 1;
+  bottom1.data[4][0][0][0] = 1;
+  
+  map<string, SettingV> setting;
+  setting["k"] = SettingV(5);
+  setting["nearest_one"] = SettingV(true);
+  // setting["method"] = SettingV("MAP");
+  // setting["pos_count_file"] = SettingV("/home/pangliang/pos_count.tmp");
+  // setting["method"] = SettingV("nDCG@k");
+  // setting["method"] = SettingV("MRR");
+  // setting["method"] = SettingV("P@k");
+  // setting["method"] = SettingV("Rank");
+  setting["method"] = SettingV("R@k");
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_listwise = CreateLayer<cpu>(kListwiseMeasure);
+  layer_listwise->PropAll();
+  layer_listwise->SetupLayer(setting, bottoms, tops, prnd);
+  layer_listwise->Reshape(bottoms, tops);
+  layer_listwise->Forward(bottoms, tops);
+  layer_listwise->Backprop(bottoms, tops);
+  
+  PrintTensor("top data", top.data);
+  //PrintTensor("bottom diff", bottom0.diff);
+}
+
 void TestListwiseMeasureLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check ListwiseMeasure Layer." << endl;
   Node<cpu> bottom0;
@@ -496,6 +554,7 @@ void TestMatchLayer(mshadow::Random<cpu>* prnd) {
   map<string, SettingV> setting;
   setting["op"] = SettingV("cos");
   setting["op"] = SettingV("elemwise_cat");
+  setting["op"] = SettingV("order");
 
   // Test Match Layer
   Layer<cpu> * layer_match = CreateLayer<cpu>(kMatch);
@@ -4742,7 +4801,7 @@ int main(int argc, char *argv[]) {
   // TestConcatLayer(&rnd);
   // TestConvResultTransformLayer(&rnd);
   // TestConvolutionLayer(&rnd);
-  // TestMatchLayer(&rnd);
+  TestMatchLayer(&rnd);
   // TestMatchTensorLayer(&rnd);
   // TestMatchTopKPoolingLayer(&rnd);
   // TestLstmD2Layer(&rnd);
@@ -4758,7 +4817,7 @@ int main(int argc, char *argv[]) {
   // TestDynamicKMaxPoolingLayer(&rnd);
   // TestBatchCombineLayer(&rnd);
   // TestBatchSelectLayer(&rnd);
-  TestBatchMaxLayer(&rnd);
+  // TestBatchMaxLayer(&rnd);
   // TestBatchSplitLayer(&rnd);
   // TestBatchConcatLayer(&rnd);
   // TestBatchDuplicateLayer(&rnd);
@@ -4780,6 +4839,7 @@ int main(int argc, char *argv[]) {
   // TestTopkPoolingLayer(&rnd);
   // TestHingeLossLayer(&rnd);
   // TestListwiseMeasureLayer(&rnd);
+  // TestListwiseMeasureForNearestOneLayer(&rnd);
   // TestQATextDataLayer(&rnd);
   // TestMapTextDataLayer(&rnd);
   // TestConvolutionAndLocalFactorLayer(&rnd);
