@@ -4028,6 +4028,45 @@ void TestMapTextDataLayer(mshadow::Random<cpu>* prnd) {
   PrintTensor("top2", top2.length);
 }
 
+void TestMap2TextDataLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Map2TextData Layer." << endl;
+  Node<cpu> top1;
+  Node<cpu> top2;
+  Node<cpu> top3;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  tops.push_back(&top1);
+  tops.push_back(&top2);
+  tops.push_back(&top3);
+
+  map<string, SettingV> setting;
+  setting["data1_file"] = SettingV("data1.wid");
+  setting["data2_file"] = SettingV("data2.wid");
+  setting["rel_file"] = SettingV("rel.dat");
+  setting["batch_size"] = SettingV(4);
+  setting["max_doc1_len"] = SettingV(3);
+  setting["max_doc2_len"] = SettingV(3);
+  setting["mode"] = SettingV("inner_list");
+  setting["shuffle"] = SettingV(true);
+  setting["bi_direct"] = SettingV(true);
+  
+  /// Test Map2TextData Layer
+  Layer<cpu> * layer_map_textdata = CreateLayer<cpu>(kMap2TextData);
+  layer_map_textdata->PropAll();
+  layer_map_textdata->SetupLayer(setting, bottoms, tops, prnd);
+  layer_map_textdata->Reshape(bottoms, tops);
+  layer_map_textdata->Forward(bottoms, tops);
+  layer_map_textdata->Backprop(bottoms, tops);
+
+  PrintTensor("top1", top1.data);
+  PrintTensor("top2", top2.data);
+  PrintTensor("top3", top3.data);
+  PrintTensor("top1", top1.length);
+  PrintTensor("top2", top2.length);
+  PrintTensor("top3", top3.length);
+}
+
 void TestQATextDataLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check QATextData Layer." << endl;
   Node<cpu> top1;
@@ -4801,7 +4840,7 @@ int main(int argc, char *argv[]) {
   // TestConcatLayer(&rnd);
   // TestConvResultTransformLayer(&rnd);
   // TestConvolutionLayer(&rnd);
-  TestMatchLayer(&rnd);
+  // TestMatchLayer(&rnd);
   // TestMatchTensorLayer(&rnd);
   // TestMatchTopKPoolingLayer(&rnd);
   // TestLstmD2Layer(&rnd);
@@ -4842,6 +4881,7 @@ int main(int argc, char *argv[]) {
   // TestListwiseMeasureForNearestOneLayer(&rnd);
   // TestQATextDataLayer(&rnd);
   // TestMapTextDataLayer(&rnd);
+  TestMap2TextDataLayer(&rnd);
   // TestConvolutionAndLocalFactorLayer(&rnd);
   // TestElementOpLayer(&rnd);
   // TestParameterLayer(&rnd);

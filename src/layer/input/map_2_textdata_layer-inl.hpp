@@ -9,6 +9,8 @@
 #include <unordered_map>
 #include <utility>
 #include <algorithm>
+#include <random>
+#include <chrono>
 #include "stdlib.h"
 
 #include <mshadow/tensor.h>
@@ -39,6 +41,7 @@ class Map2TextDataLayer : public Layer<xpu>{
     this->defaults["min_doc1_len"] = SettingV(1);
     this->defaults["min_doc2_len"] = SettingV(1);
     this->defaults["fix_length"] = SettingV(false);
+    this->defaults["bi_direct"] = SettingV(false);
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["data1_file"] = SettingV();
@@ -73,8 +76,9 @@ class Map2TextDataLayer : public Layer<xpu>{
     shuffle = setting["shuffle"].bVal();
     speedup_list = setting["speedup_list"].bVal();
     fix_length = setting["fix_length"].bVal();
+    bi_direct = setting["bi_direct"].bVal();
     
-    utils::Check(mode == "batch" || mode == "pair" || mode == "list",
+    utils::Check(mode == "batch" || mode == "pair" || mode == "list" || mode == "inner_pair" || mode == "inner_list",
                   "Map2TextDataLayer: mode is one of batch, pair or list.");
 
     ReadRelData(rel_file, rel_set, label_set, data1_set, data2_set);
@@ -86,9 +90,15 @@ class Map2TextDataLayer : public Layer<xpu>{
       MakePairs(rel_set, label_set, pair_set);
     } else if (mode == "list") {
       MakeLists(rel_set, label_set, list_set);
+    } else if (mode == "inner_pair") {
+      MakeInstances(rel_set, label_set, ins_set_1, ins_set_2, ins_map_12, ins_map_21);
+    } else if (mode == "inner_list") {
+      MakeInstances(rel_set, label_set, ins_set_1, ins_set_2, ins_map_12, ins_map_21);
     }
     
     line_ptr = 0;
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    rnd_generator = std::default_random_engine(seed);
   }
   
   void ReadTextData(string &data_file, unordered_map<string, vector<int> > &data_set, 
@@ -256,6 +266,31 @@ class Map2TextDataLayer : public Layer<xpu>{
     utils::Printf("List count: %d\n", list_set.size());
   }
 
+  void MakeInstances(vector<vector<string> > &rel_set, vector<int> &label_set, 
+                     vector<string> &ins_set_1, vector<string> &ins_set_2, 
+                     unordered_map<string, vector<string> > &ins_map_12, 
+                     unordered_map<string, vector<string> > &ins_map_21) {
+    for (int i = 0; i < line_count; ++i) {
+      utils::Check(label_set[i] == 1, "Map2TextDataLayer: only support one label.");
+      // store data1
+      if ( !ins_map_12.count(rel_set[i][0]) ) {
+        ins_set_1.push_back(rel_set[i][0]);
+        ins_map_12[rel_set[i][0]] = vector<string>();
+      }
+      if ( !ins_map_21.count(rel_set[i][1]) ) {
+        ins_set_2.push_back(rel_set[i][1]);
+        ins_map_21[rel_set[i][1]] = vector<string>();
+      }
+
+      // make instance
+      ins_map_12[rel_set[i][0]].push_back(rel_set[i][1]);
+      ins_map_21[rel_set[i][1]].push_back(rel_set[i][0]);
+    }
+    
+    utils::Printf("Num instance in data1: %d\n", ins_set_1.size());
+    utils::Printf("Num instance in data2: %d\n", ins_set_2.size());
+  }
+
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top,
                        bool show_info = false) {
@@ -280,6 +315,16 @@ class Map2TextDataLayer : public Layer<xpu>{
       top[0]->Resize(max_list * batch_size, 1, 1, max_doc1_len, true);
       top[1]->Resize(max_list * batch_size, 1, 1, max_doc2_len, true);
       top[2]->Resize(max_list * batch_size, 1, 1, 1, true);
+    } else if (mode == "inner_pair") {
+      int factor = bi_direct ? 4 : 2;
+      top[0]->Resize(factor * (batch_size-1) * batch_size, 1, 1, max_doc1_len, true);
+      top[1]->Resize(factor * (batch_size-1) * batch_size, 1, 1, max_doc2_len, true);
+      top[2]->Resize(factor * (batch_size-1) * batch_size, 1, 1, 1, true);
+    } else if (mode == "inner_list") {
+      int factor = bi_direct ? 2 : 1;
+      top[0]->Resize((factor * (batch_size-1) + 1) * batch_size, 1, 1, max_doc1_len, true);
+      top[1]->Resize((factor * (batch_size-1) + 1) * batch_size, 1, 1, max_doc2_len, true);
+      top[2]->Resize((factor * (batch_size-1) + 1) * batch_size, 1, 1, 1, true);
     }
     
     if (show_info) {
@@ -335,6 +380,35 @@ class Map2TextDataLayer : public Layer<xpu>{
       }
   } 
   
+  inline void FillData2(mshadow::Tensor<xpu, 4> &top0_data, mshadow::Tensor<xpu, 2> &top0_length,
+                        mshadow::Tensor<xpu, 4> &top1_data, mshadow::Tensor<xpu, 2> &top1_length, 
+                        int top_idx, string &data_id1, string &data_id2) {
+      utils::Check(data1_set.count(data_id1), 
+              "MapTextdataLayer: %s not in data1_set.", data_id1.c_str());
+      utils::Check(data2_set.count(data_id2), 
+              "MapTextdataLayer: %s not in data2_set.", data_id2.c_str());
+      vector<int> &data1 = data1_set[data_id1];
+      vector<int> &data2 = data2_set[data_id2];
+
+      for (int k = 0; k < data1.size(); ++k) {
+          top0_data[top_idx][0][0][k] = data1[k];
+      }
+      if (fix_length) {
+          top0_length[top_idx][0] = max_doc1_len;
+      } else {
+          top0_length[top_idx][0] = data1.size();
+      }
+
+      for (int k = 0; k < data2.size(); ++k) {
+          top1_data[top_idx][0][0][k] = data2[k];
+      }
+      if (fix_length) {
+          top1_length[top_idx][0] = max_doc2_len;
+      } else {
+          top1_length[top_idx][0] = data2.size();
+      }
+  } 
+
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
@@ -393,6 +467,73 @@ class Map2TextDataLayer : public Layer<xpu>{
         }
         line_ptr = (line_ptr + 1) % list_set.size();
       }
+    } else if (mode == "inner_pair") {
+      int out_idx = 0;
+      int ins1_size = ins_set_1.size();
+      if (shuffle && line_ptr >= ins1_size) {
+        line_ptr = 0;
+        std::shuffle(ins_set_1.begin(), ins_set_1.end(), rnd_generator);
+      }
+      // Initial positive position
+      vector<int> rnd_pos(batch_size);
+      for (int s = 0; s < batch_size; ++s) {
+        rnd_pos[s] = rand() % ins_map_12[ ins_set_1[(line_ptr+s) % ins1_size] ].size();
+      }
+      for (int s1 = 0; s1 < batch_size; ++s1) {
+        string s1_id = ins_set_1[(line_ptr+s1) % ins1_size];
+        for (int s2 = 0; s2 < batch_size; ++s2) {
+          string s2_id = ins_set_1[(line_ptr+s2) % ins1_size];
+          if (s1 != s2) {
+            FillData2(top0_data, top0_length, top1_data, top1_length, out_idx, s1_id, ins_map_12[s1_id][rnd_pos[s1]]);
+            top2_data[out_idx] = 1;
+            ++out_idx;
+            FillData2(top0_data, top0_length, top1_data, top1_length, out_idx, s1_id, ins_map_12[s2_id][rnd_pos[s2]]);
+            top2_data[out_idx] = 0;
+            ++out_idx;
+          }
+          if (bi_direct && s1 != s2) {
+            FillData2(top0_data, top0_length, top1_data, top1_length, out_idx, s1_id, ins_map_12[s1_id][rnd_pos[s1]]);
+            top2_data[out_idx] = 1;
+            ++out_idx;
+            FillData2(top0_data, top0_length, top1_data, top1_length, out_idx, s2_id, ins_map_12[s1_id][rnd_pos[s1]]);
+            top2_data[out_idx] = 0;
+            ++out_idx;
+          }
+        }
+      }
+      line_ptr += batch_size;
+    } else if (mode == "inner_list") {
+      int out_idx = 0;
+      int ins1_size = ins_set_1.size();
+      if (shuffle && line_ptr >= ins1_size) {
+        line_ptr = 0;
+        std::shuffle(ins_set_1.begin(), ins_set_1.end(), rnd_generator);
+      }
+      // Initial positive position
+      vector<int> rnd_pos(batch_size);
+      for (int s = 0; s < batch_size; ++s) {
+        rnd_pos[s] = rand() % ins_map_12[ ins_set_1[(line_ptr+s) % ins1_size] ].size();
+      }
+      for (int s1 = 0; s1 < batch_size; ++s1) {
+        string s1_id = ins_set_1[(line_ptr+s1) % ins1_size];
+        FillData2(top0_data, top0_length, top1_data, top1_length, out_idx, s1_id, ins_map_12[s1_id][rnd_pos[s1]]);
+        top2_data[out_idx] = 1;
+        ++out_idx;
+        for (int s2 = 0; s2 < batch_size; ++s2) {
+          string s2_id = ins_set_1[(line_ptr+s2) % ins1_size];
+          if (s1 != s2) {
+            FillData2(top0_data, top0_length, top1_data, top1_length, out_idx, s1_id, ins_map_12[s2_id][rnd_pos[s2]]);
+            top2_data[out_idx] = 0;
+            ++out_idx;
+          }
+          if (bi_direct && s1 != s2) {
+            FillData2(top0_data, top0_length, top1_data, top1_length, out_idx, s2_id, ins_map_12[s1_id][rnd_pos[s1]]);
+            top2_data[out_idx] = 0;
+            ++out_idx;
+          }
+        }
+      }
+      line_ptr += batch_size;
     }
   }
   
@@ -419,17 +560,24 @@ class Map2TextDataLayer : public Layer<xpu>{
   bool shuffle;
   bool speedup_list;
   bool fix_length;
+  bool bi_direct;
   
   vector<vector<string> > rel_set;
   vector<int> label_set;
   vector<vector<int> > pair_set;
   vector<vector<int> > list_set;
 
+  vector<string> ins_set_1;
+  vector<string> ins_set_2;
+  unordered_map<string, vector<string> > ins_map_12;
+  unordered_map<string, vector<string> > ins_map_21;
+
   int line_count;
   int line_ptr;
   int max_label;
 
   int max_list;
+  std::default_random_engine rnd_generator;
 };
 template<typename xpu> unordered_map<string, vector<int> > Map2TextDataLayer<xpu>::data1_set = unordered_map<string, vector<int> >();
 template<typename xpu> unordered_map<string, vector<int> > Map2TextDataLayer<xpu>::data2_set = unordered_map<string, vector<int> >();

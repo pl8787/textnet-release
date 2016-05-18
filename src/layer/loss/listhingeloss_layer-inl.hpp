@@ -1,5 +1,5 @@
-#ifndef TEXTNET_LAYER_PAIRHINGELOSS_LAYER_INL_HPP_
-#define TEXTNET_LAYER_PAIRHINGELOSS_LAYER_INL_HPP_
+#ifndef TEXTNET_LAYER_LISTHINGELOSS_LAYER_INL_HPP_
+#define TEXTNET_LAYER_LISTHINGELOSS_LAYER_INL_HPP_
 
 #include <iostream>
 #include <fstream>
@@ -14,10 +14,10 @@ namespace textnet {
 namespace layer {
 
 template<typename xpu>
-class PairHingeLossLayer : public Layer<xpu>{
+class ListHingeLossLayer : public Layer<xpu>{
  public:
-  PairHingeLossLayer(LayerType type) { this->layer_type = type; }
-  virtual ~PairHingeLossLayer(void) {}
+  ListHingeLossLayer(LayerType type) { this->layer_type = type; }
+  virtual ~ListHingeLossLayer(void) {}
   
   virtual int BottomNodeNum() { return 2; }
   virtual int TopNodeNum() { return 1; }
@@ -28,6 +28,7 @@ class PairHingeLossLayer : public Layer<xpu>{
     this->defaults["delta"] = SettingV(1.0f);
     // require value, set to SettingV(),
     // it will force custom to set in config
+    this->defaults["list_size"] = SettingV();
     
     Layer<xpu>::Require();
   }
@@ -39,10 +40,11 @@ class PairHingeLossLayer : public Layer<xpu>{
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
                             
     utils::Check(bottom.size() == BottomNodeNum(),
-                  "PairHingeLossLayer:bottom size problem."); 
+                  "ListHingeLossLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
-                  "PairHingeLossLayer:top size problem.");
+                  "ListHingeLossLayer:top size problem.");
     delta = setting["delta"].fVal();
+    list_size = setting["list_size"].iVal();
     
   }
   
@@ -50,11 +52,11 @@ class PairHingeLossLayer : public Layer<xpu>{
                        const std::vector<Node<xpu>*> &top,
                        bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(),
-                  "PairHingeLossLayer:bottom size problem."); 
+                  "ListHingeLossLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
-                  "PairHingeLossLayer:top size problem.");
+                  "ListHingeLossLayer:top size problem.");
     nbatch = bottom[0]->data.size(0);    
-    utils::Check(nbatch % 2 == 0, "PairHingeLossLayer:nBatch must be even. Batch size: %d.", nbatch);              
+    utils::Check(nbatch % list_size == 0, "ListHingeLossLayer:nBatch must be mod up list_size. Batch size: %d.", nbatch);              
     top[0]->Resize(1, 1, 1, 1, true);
     if (show_info) {
         top[0]->PrintShape("top0");
@@ -74,13 +76,15 @@ class PairHingeLossLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 1> bottom1_data = bottom[1]->data_d1();
     mshadow::Tensor<xpu, 1> top_data = top[0]->data_d1();
     
-    for (int i = 0; i < nbatch; i += 2) {
-      utils::Check(bottom1_data[i] > bottom1_data[i+1], 
-                    "Instances come like x y ... x > y");
-      top_data[0] += std::max(0.0f, delta + bottom0_data[i+1] - bottom0_data[i]);
+    for (int p_idx = 0; p_idx < nbatch; p_idx += list_size) {
+      for (int n_idx = p_idx+1; n_idx < p_idx + list_size; ++n_idx) {
+        utils::Check(bottom1_data[p_idx] > bottom1_data[n_idx], 
+                    "Instances come like x > y");
+        top_data[0] += std::max(0.0f, delta + bottom0_data[n_idx] - bottom0_data[p_idx]);
+      }
     }
     
-    top_data[0] /= (nbatch/2);
+    top_data[0] /= (list_size - 1) * (nbatch / list_size);
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
@@ -90,10 +94,13 @@ class PairHingeLossLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 1> bottom0_diff = bottom[0]->diff_d1();
     
     if (this->prop_error[0]) {
-      for (int i = 0; i < nbatch; i+=2) {
-        float gate = (delta + bottom0_data[i+1] - bottom0_data[i]) > 0 ? 1 : 0;
-        bottom0_diff[i] += -gate / nbatch;
-        bottom0_diff[i+1] += gate / nbatch;
+      float factor = (list_size - 1) * (nbatch / list_size);
+      for (int p_idx = 0; p_idx < nbatch; p_idx += list_size) {
+        for (int n_idx = p_idx+1; n_idx < p_idx + list_size; ++n_idx) {
+          float gate = (delta + bottom0_data[n_idx] - bottom0_data[p_idx]) > 0 ? 1 : 0;
+          bottom0_diff[p_idx] += -gate / factor;
+          bottom0_diff[n_idx] +=  gate / factor;
+        }
       }
     }
 
@@ -102,9 +109,10 @@ class PairHingeLossLayer : public Layer<xpu>{
  protected:
   int nbatch;
   float delta;
+  int list_size;
 
 };
 }  // namespace layer
 }  // namespace textnet
-#endif  // LAYER_PAIRHINGELOSS_LAYER_INL_HPP_
+#endif  // LAYER_LISTHINGELOSS_LAYER_INL_HPP_
 
