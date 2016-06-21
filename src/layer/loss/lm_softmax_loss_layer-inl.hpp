@@ -106,7 +106,7 @@ class LmSoftmaxLossLayer : public Layer<xpu>{
   }
   void checkNan(orc_real *p, int l) {
     for (int i = 0; i < l; ++i) {
-      assert(!isnan(p[i]));
+      assert(!std::isnan(p[i]));
     }
   }
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

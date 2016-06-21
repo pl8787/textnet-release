@@ -220,7 +220,7 @@ class LstmD2OptimizeLayer : public Layer<xpu> {
 
   bool is_nan(float *p, int l) {
     for (int i = 0; i < l; ++i) {
-      if (isnan(p[i]))
+      if (std::isnan(p[i]))
         return true;
     }
     return false;

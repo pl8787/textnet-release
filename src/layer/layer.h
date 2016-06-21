@@ -100,6 +100,9 @@ const int kPad = 1024;
 const int kBatchNorm = 1025;
 const int kFillCurveXY2D = 1026;
 const int kFillCurveD2XY = 1027;
+const int kLengthTrans = 1028;
+const int kAxisSplit = 1029;
+const int kBatchMax = 1030;
 const int kDynamicKMaxPooling = 10001;
 const int kMatchTopKPooling = 10002;
 const int kSelectSubRepByToken = 10003;
@@ -128,6 +131,7 @@ const int kListwiseMeasure = 61;
 const int kLogistic = 62;
 const int kEuclidDistanceLoss = 63;
 const int kActivationNormLoss = 64;
+const int kListHingeLoss = 65;
 
 // Input Layer 71-
 const int kTextData = 71;

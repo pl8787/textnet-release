@@ -22,6 +22,7 @@ class FullConnectLayer : public Layer<xpu> {
   virtual void Require() {
     // default value, just set the value you want
     this->defaults["no_bias"] = SettingV(false);
+    this->defaults["keep_length"] = SettingV(false);
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["num_hidden"] = SettingV();
@@ -46,6 +47,7 @@ class FullConnectLayer : public Layer<xpu> {
                             
     num_hidden = setting["num_hidden"].iVal();
     no_bias = setting["no_bias"].bVal();
+    keep_length = setting["keep_length"].bVal();
 
     mshadow::Tensor<xpu, 2> bottom_data = bottom[0]->data_d2();
     num_input = bottom_data.size(1);
@@ -88,7 +90,11 @@ class FullConnectLayer : public Layer<xpu> {
 
     nbatch = bottom_data.size(0);
     
-    top[0]->Resize(nbatch, num_hidden, 1, 1, nbatch, 1, true);
+    if (keep_length) {
+        top[0]->Resize(nbatch, num_hidden, 1, 1, nbatch, bottom[0]->length.size(1), true);
+    } else {
+        top[0]->Resize(nbatch, num_hidden, 1, 1, nbatch, 1, true);
+    }
 
     if (show_info) {
         bottom[0]->PrintShape("bottom0");
@@ -114,6 +120,10 @@ class FullConnectLayer : public Layer<xpu> {
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 2> bottom_data = bottom[0]->data_d2();
+    
+    if (keep_length) {
+        top[0]->length = F<op::identity>(bottom[0]->length);
+    }
 
     top[0]->data_d2() = dot(bottom_data, this->params[0].data_d2().T());
     if (!no_bias) {
@@ -147,6 +157,7 @@ class FullConnectLayer : public Layer<xpu> {
   int num_input;
   int num_hidden;
   bool no_bias;
+  bool keep_length;
   int nbatch;
 
 };

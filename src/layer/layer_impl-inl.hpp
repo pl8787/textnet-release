@@ -30,6 +30,7 @@
 #include "./common/batch_concat_layer-inl.hpp"
 #include "./common/batch_duplicate_layer-inl.hpp"
 #include "./common/batch_norm_layer-inl.hpp"
+#include "./common/batch_max_layer-inl.hpp"
 #include "./common/channel_duplicate_layer-inl.hpp"
 #include "./common/lstm_layer-inl.hpp"
 #include "./common/lstm_d2_layer-inl.hpp"
@@ -48,15 +49,19 @@
 #include "./common/convolutional_lstm_layer-inl.hpp"
 #include "./common/whole_pooling_layer-inl.hpp"
 #include "./common/whole_pooling_2d_layer-inl.hpp"
+
+#ifdef CPU_ONLY
 #include "./common/gate_whole_pooling_layer-inl.hpp"
 #include "./common/gate_whole_pooling_d2_layer-inl.hpp"
+#include "./common/softmax_func_var_len_layer-inl.hpp"
+#endif
+
 #include "./common/gate_dynamic_pooling_d2_layer-inl.hpp"
 #include "./common/topk_pooling_layer-inl.hpp"
 #include "./common/concat_layer-inl.hpp"
 #include "./common/gate_layer-inl.hpp"
 #include "./common/gate_alldim_layer-inl.hpp"
 #include "./common/softmax_func_layer-inl.hpp"
-#include "./common/softmax_func_var_len_layer-inl.hpp"
 #include "./common/sequcence_dim_reduction_layer-inl.hpp"
 #include "./common/gating_layer-inl.hpp"
 #include "./common/dynamic_pooling_layer-inl.hpp"
@@ -80,6 +85,8 @@
 #include "./common/parameter_layer-inl.hpp"
 #include "./common/fill_curve_xy2d_layer-inl.hpp"
 #include "./common/fill_curve_d2xy_layer-inl.hpp"
+#include "./common/length_trans_layer-inl.hpp"
+#include "./common/axis_split_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/lcs_toy_data_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
@@ -99,6 +106,7 @@
 #include "./loss/hingeloss_layer-inl.hpp"
 #include "./loss/cross_entropy_loss_layer-inl.hpp"
 #include "./loss/pairhingeloss_layer-inl.hpp"
+#include "./loss/listhingeloss_layer-inl.hpp"
 #include "./loss/softmax_layer-inl.hpp"
 #include "./loss/accuracy_layer-inl.hpp"
 #include "./loss/negative_sample_loss_layer-inl.hpp"
@@ -127,8 +135,11 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kMaxPooling: return new PoolingLayer<mshadow::red::maximum, xpu>(type);
     case kAvgPooling: return new PoolingLayer<mshadow::red::sum, xpu>(type);
     case kSumPooling: return new PoolingLayer<mshadow::red::sum, xpu>(type);
+#ifdef CPU_ONLY
     case kGateWholePooling: return new GateWholePoolingLayer<xpu>(type);
     case kGateWholePoolingD2: return new GateWholePoolingD2Layer<xpu>(type);
+    case kSoftmaxFuncVarLen: return new SoftmaxFuncVarLenLayer<xpu>(type);
+#endif
     case kGateDynamicPoolingD2: return new GateDynamicPoolingD2Layer<xpu>(type);
     case kWholePooling: return new WholePoolingLayer<xpu>(type);
     case kWholePooling2d: return new WholePooling2dLayer<xpu>(type);
@@ -164,9 +175,10 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kGate: return new GateLayer<xpu>(type);
     case kLr2softmax: return new Lr2softmaxLayer<xpu>(type);
     case kGateAlldim: return new GateAlldimLayer<xpu>(type);
-	case kGating: return new GatingLayer<xpu>(type);
+    case kGating: return new GatingLayer<xpu>(type);
     case kHingeLoss: return new HingeLossLayer<xpu>(type);
     case kPairHingeLoss: return new PairHingeLossLayer<xpu>(type);
+    case kListHingeLoss: return new ListHingeLossLayer<xpu>(type);
     case kCrossEntropyLoss: return new CrossEntropyLossLayer<xpu>(type);
     case kTextData: return new TextDataLayer<xpu>(type);
     case kLcsToyData: return new LcsToyDataLayer<xpu>(type);
@@ -175,7 +187,6 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kNegativeSample: return new NegativeSampleLayer<xpu>(type);
     case kSoftmax: return new SoftmaxLayer<xpu>(type);
     case kSoftmaxFunc: return new SoftmaxFuncLayer<xpu>(type);
-    case kSoftmaxFuncVarLen: return new SoftmaxFuncVarLenLayer<xpu>(type);
     case kNegativeSampleLoss: return new NegativeSampleLossLayer<xpu>(type);
     case kWordClassSoftmaxLoss: return new WordClassSoftmaxLossLayer<xpu>(type);
     case kLmSoftmaxLoss: return new LmSoftmaxLossLayer<xpu>(type);
@@ -187,43 +198,46 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kMatchTensor: return new MatchTensorLayer<xpu>(type);
     case kMatchTensorFact: return new MatchTensorFactLayer<xpu>(type);
     case kMatchWeightedDot: return new MatchWeightedDotLayer<xpu>(type);
-	case kMatchMulti: return new MatchMultiLayer<xpu>(type);
-	case kMatchTopKPooling: return new MatchTopKPoolingLayer<xpu>(type);
+    case kMatchMulti: return new MatchMultiLayer<xpu>(type);
+    case kMatchTopKPooling: return new MatchTopKPoolingLayer<xpu>(type);
     case kBatchCombine: return new BatchCombineLayer<xpu>(type);
     case kBatchSelect: return new BatchSelectLayer<xpu>(type);
     case kBatchSplit: return new BatchSplitLayer<xpu>(type);
     case kBatchConcat: return new BatchConcatLayer<xpu>(type);
     case kBatchDuplicate: return new BatchDuplicateLayer<xpu>(type);
-	case kChannelDuplicate: return new ChannelDuplicateLayer<xpu>(type);
+    case kBatchMax: return new BatchMaxLayer<xpu>(type);
+    case kChannelDuplicate: return new ChannelDuplicateLayer<xpu>(type);
     case kSwapAxis: return new SwapAxisLayer<xpu>(type);
     case kFlatten: return new FlattenLayer<xpu>(type);
     case kMatchPhraseRep: return new MatchPhraseRepLayer<xpu>(type);
     case kGru: return new GruLayer<xpu>(type);
-	case kPairTextData: return new PairTextDataLayer<xpu>(type);
-	case kListTextData: return new ListTextDataLayer<xpu>(type);
-	case kListwiseMeasure: return new ListwiseMeasureLayer<xpu>(type);
-	case kQATextData: return new QATextDataLayer<xpu>(type);
-	case kMapTextData: return new MapTextDataLayer<xpu>(type);
-	case kMap2TextData: return new Map2TextDataLayer<xpu>(type);
+    case kPairTextData: return new PairTextDataLayer<xpu>(type);
+    case kListTextData: return new ListTextDataLayer<xpu>(type);
+    case kListwiseMeasure: return new ListwiseMeasureLayer<xpu>(type);
+    case kQATextData: return new QATextDataLayer<xpu>(type);
+    case kMapTextData: return new MapTextDataLayer<xpu>(type);
+    case kMap2TextData: return new Map2TextDataLayer<xpu>(type);
     case kSelectSubRepByToken: return new SelectSubRepByTokenLayer<xpu>(type);
     case kWordRepInput: return new WordRepInputLayer<xpu>(type);
     case kEuclidDistanceLoss: return new EuclidDistanceLossLayer<xpu>(type);
-	case kLogistic: return new LogisticLayer<xpu>(type);
-	case kActivationNormLoss: return new ActivationNormLossLayer<xpu>(type);
-	case kLocal: return new LocalLayer<xpu>(type);
-	case kLocalFactor: return new LocalFactorLayer<xpu>(type);
-	case kImage: return new ImageLayer<xpu>(type);
-	case kGaussianMask: return new GaussianMaskLayer<xpu>(type);
-	case kMemoryGlobal: return new MemoryGlobalLayer<xpu>(type);
-	case kMemoryAttentionIn: return new MemoryAttentionInLayer<xpu>(type);
-	case kMemoryAttentionOut: return new MemoryAttentionOutLayer<xpu>(type);
-	case kAugmentation: return new AugmentationLayer<xpu>(type);
+    case kLogistic: return new LogisticLayer<xpu>(type);
+    case kActivationNormLoss: return new ActivationNormLossLayer<xpu>(type);
+    case kLocal: return new LocalLayer<xpu>(type);
+    case kLocalFactor: return new LocalFactorLayer<xpu>(type);
+    case kImage: return new ImageLayer<xpu>(type);
+    case kGaussianMask: return new GaussianMaskLayer<xpu>(type);
+    case kMemoryGlobal: return new MemoryGlobalLayer<xpu>(type);
+    case kMemoryAttentionIn: return new MemoryAttentionInLayer<xpu>(type);
+    case kMemoryAttentionOut: return new MemoryAttentionOutLayer<xpu>(type);
+    case kAugmentation: return new AugmentationLayer<xpu>(type);
     case kElementOp: return new ElementOpLayer<xpu>(type);
     case kParameter: return new ParameterLayer<xpu>(type);
     case kGenKernel: return new GenKernelLayer<xpu>(type);
     case kBatchNorm: return new BatchNormLayer<xpu>(type);
     case kFillCurveXY2D: return new FillCurveXY2DLayer<xpu>(type);
     case kFillCurveD2XY: return new FillCurveD2XYLayer<xpu>(type);
+    case kLengthTrans: return new LengthTransLayer<xpu>(type);
+    case kAxisSplit: return new AxisSplitLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }

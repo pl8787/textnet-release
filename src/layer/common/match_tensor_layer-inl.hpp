@@ -68,7 +68,7 @@ class MatchTensorLayer : public Layer<xpu>{
     is_use_linear = setting["is_use_linear"].bVal();
     interval = setting["interval"].iVal();
     t_l2 = setting["t_l2"].fVal();
-	feat_size = bottom[0]->data.size(3);
+    feat_size = bottom[0]->data.size(3);
     utils::Check(feat_size == bottom[1]->data.size(3), "MatchTensorLayer: input dim error.");
 
     diag_4_reg.Resize(feat_size, d_hidden, feat_size, 1, true);
@@ -122,13 +122,14 @@ class MatchTensorLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(), "MatchTensorLayer:top size problem.");
                   
     batch_size = bottom[0]->data.size(0); 
-    doc_len = bottom[0]->data.size(2);
+    doc1_len = bottom[0]->data.size(2);
+    doc2_len = bottom[1]->data.size(2);
                   
-    bottom_0_transform.Resize(batch_size, doc_len, d_hidden, feat_size, true);
-    bottom_1_transform.Resize(batch_size, doc_len, d_hidden, feat_size, true);
-    bottom_0_transform_linear.Resize(batch_size, 1, doc_len, d_hidden, true);
-    bottom_1_transform_linear.Resize(batch_size, 1, doc_len, d_hidden, true);
-    top[0]->Resize(batch_size, d_hidden, doc_len, doc_len, batch_size, 2, true);
+    bottom_0_transform.Resize(batch_size, doc1_len, d_hidden, feat_size, true);
+    bottom_1_transform.Resize(batch_size, doc2_len, d_hidden, feat_size, true);
+    bottom_0_transform_linear.Resize(batch_size, 1, doc1_len, d_hidden, true);
+    bottom_1_transform_linear.Resize(batch_size, 1, doc2_len, d_hidden, true);
+    top[0]->Resize(batch_size, d_hidden, doc1_len, doc2_len, batch_size, 2, true);
 
 	if (show_info) {
 	  bottom[0]->PrintShape("bottom0");
@@ -177,7 +178,7 @@ class MatchTensorLayer : public Layer<xpu>{
     for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
 	  top_len[batch_idx][0] = bottom0_len[batch_idx];
 	  top_len[batch_idx][1] = bottom1_len[batch_idx];
-      for (int word_idx = 0; word_idx < doc_len; ++word_idx) {
+      for (int word_idx = 0; word_idx < doc2_len; ++word_idx) {
         for (int d = 0; d < d_hidden; ++d) {
           for (int f = 0; f < feat_size; ++f) {
             bottom_1_transform.data[batch_idx][word_idx][d][f] = bottom1_data[batch_idx][0][word_idx][f];
@@ -193,8 +194,8 @@ class MatchTensorLayer : public Layer<xpu>{
         len_0 = bottom0_len[batch_idx];
         len_1 = bottom1_len[batch_idx];
       } else {
-        len_0 = doc_len;
-        len_1 = doc_len;
+        len_0 = doc1_len;
+        len_1 = doc2_len;
       }
       for (int i = 0; i < len_0; i+=interval) {
         for (int j = 0; j < len_1; j+=interval) {
@@ -229,8 +230,8 @@ class MatchTensorLayer : public Layer<xpu>{
         len_0 = bottom0_len[batch_idx];
         len_1 = bottom1_len[batch_idx];
       } else {
-        len_0 = doc_len;
-        len_1 = doc_len;
+        len_0 = doc1_len;
+        len_1 = doc2_len;
       }
       for (int i = 0; i < len_0; i+=interval) {
         for (int j = 0; j < len_1; j+=interval) {
@@ -266,7 +267,7 @@ class MatchTensorLayer : public Layer<xpu>{
     bottom0_diff_d2 += dot(bottom_0_transform.diff_d2_middle(), t_data.T());
     // bottom1_diff_d2 += dot(bottom_1_transform.diff_d2_middle(), t_data.T());
     for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
-      for (int word_idx = 0; word_idx < doc_len; ++word_idx) {
+      for (int word_idx = 0; word_idx < doc2_len; ++word_idx) {
         for (int d = 0; d < d_hidden; ++d) {
           for (int f = 0; f < feat_size; ++f) {
             bottom1_diff[batch_idx][0][word_idx][f] += bottom_1_transform.diff[batch_idx][word_idx][d][f];
@@ -289,7 +290,7 @@ class MatchTensorLayer : public Layer<xpu>{
   }
   
  protected:
-  int doc_len, feat_size, batch_size, interval, d_hidden;
+  int doc1_len, doc2_len, feat_size, batch_size, interval, d_hidden;
   bool is_var_len, is_init_as_I, is_use_linear, is_update_tensor;
   float t_l2;
   Node<xpu> bottom_0_transform, bottom_1_transform, diag_4_reg; // tensor layer is essentially a transform layer followed by a dot producttion

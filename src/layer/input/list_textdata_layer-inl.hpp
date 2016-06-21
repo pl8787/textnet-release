@@ -16,8 +16,6 @@
 namespace textnet {
 namespace layer {
 
-bool list_size_cmp(const vector<int> &x1, const vector<int> &x2); 
-
 template<typename xpu>
 class ListTextDataLayer : public Layer<xpu>{
  public:
@@ -63,6 +61,10 @@ class ListTextDataLayer : public Layer<xpu>{
     ReadTextData();
     
     line_ptr = 0;
+  }
+
+  static bool list_size_cmp(const vector<int> &x1, const vector<int> &x2) {
+    return x1.size() < x2.size(); // sort increase
   }
 
   int ReadLabel(string &line) {

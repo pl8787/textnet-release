@@ -79,7 +79,7 @@ $(MK_BIN):
 	mkdir bin
 
 layer_cpu.o layer_gpu.o: src/layer/layer_impl.cpp src/layer/layer_impl.cu\
-	src/layer/*.h src/layer/*.hpp src/layer/common/*.hpp src/utils/*.h
+	src/layer/*.h src/layer/*.hpp src/layer/common/*.hpp src/layer/input/*.hpp src/layer/loss/*.hpp src/utils/*.h
 
 updater_cpu.o updater_gpu.o: src/updater/updater_impl.cpp src/updater/updater_impl.cu\
 	src/updater/*.hpp src/updater/*.h src/utils/*.h

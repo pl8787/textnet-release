@@ -188,15 +188,16 @@ inline void ShowMemoryUse() {
   printf("\033[33m[Memory] Total Memory Use: %.4f MB \t Resident: %ld Shared: %ld UnshareData: %ld UnshareStack: %ld \33[0m\n", 
 		 total_memory, ru.ru_maxrss, ru.ru_ixrss, ru.ru_idrss, ru.ru_isrss);
 }
-
+#if 0
 inline bool checkNan(float *p, int l) {
   for (int i = 0; i < l; ++i) {
-    if ( isnan(p[i]) ) {
+    if ( std::isnan(p[i]) ) {
       return true;
-	}
+    }
   }
   return false;
 }
+#endif
 }  // namespace utils
 // easy utils that can be directly acessed in xgboost
 /*! \brief get the beginning address of a vector */

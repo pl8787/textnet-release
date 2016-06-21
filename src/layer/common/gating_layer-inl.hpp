@@ -220,22 +220,6 @@ class GatingLayer : public Layer<xpu> {
 	  }
 	}
   }
-
- protected:
-  /*! \brief random number generator */
-  std::string gate_type;
-  std::string activefun_type;
-  int feat_size;
-  int word_count;
-  int nbatch;
-  // Temp var
-  mshadow::TensorContainer<xpu, 2> gate_value;
-  mshadow::TensorContainer<xpu, 2> gate_grad;
-  mshadow::TensorContainer<xpu, 2> word_bias;
-  mshadow::TensorContainer<xpu, 2> word_p_diff;
-  mshadow::TensorContainer<xpu, 1> word_sum;
-  int total_words;
-  
   // Active function for gate only
   /*! \brief sigmoid unit */
   struct gate_sigmoid {
@@ -274,6 +258,22 @@ class GatingLayer : public Layer<xpu> {
   };
 
 
+
+ protected:
+  /*! \brief random number generator */
+  std::string gate_type;
+  std::string activefun_type;
+  int feat_size;
+  int word_count;
+  int nbatch;
+  // Temp var
+  mshadow::TensorContainer<xpu, 2> gate_value;
+  mshadow::TensorContainer<xpu, 2> gate_grad;
+  mshadow::TensorContainer<xpu, 2> word_bias;
+  mshadow::TensorContainer<xpu, 2> word_p_diff;
+  mshadow::TensorContainer<xpu, 1> word_sum;
+  int total_words;
+  
 };
 }  // namespace layer
 }  // namespace textnet
