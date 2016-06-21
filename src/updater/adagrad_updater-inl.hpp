@@ -67,9 +67,6 @@ class AdagradUpdater : public Updater<xpu, dim>{
 
     ++iter;
     
-    if (batch_size > 1) {
-        diff /= float(batch_size);
-    }
     if (wd > 0.) {
         diff += wd * data;
     }
@@ -94,9 +91,6 @@ class AdagradUpdater : public Updater<xpu, dim>{
 
     ++iter;
 
-    if (batch_size > 1) {
-        diff /= float(batch_size);
-    }
 
     int w_idx = -1;
     for (int i = 0; i < idx.size(0); ++i) {

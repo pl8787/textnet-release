@@ -73,9 +73,6 @@ class AdaDeltaUpdater : public Updater<xpu, dim>{
                       mshadow::Tensor<xpu, dim> diff) {
     using namespace mshadow::expr;
 
-    if (batch_size > 1) {
-        diff /= float(batch_size);
-    }
     if (wd > 0.f) {
       diff += wd * data;
     }
@@ -115,9 +112,6 @@ class AdaDeltaUpdater : public Updater<xpu, dim>{
                             mshadow::Tensor<xpu, 1> idx) {
     using namespace mshadow::expr;
 
-    if (batch_size > 1) {
-        diff /= float(batch_size);
-    }
 
     if (iter++ == 0) {
         sumGradSquare.Resize(data.shape_, 0.);

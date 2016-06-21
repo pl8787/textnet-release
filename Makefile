@@ -116,10 +116,10 @@ $(OBJ) :
 	$(CXX) -c $(CXXFLAGS) -o $@ $(firstword $(filter %.cpp %.c, $^) )
 
 $(CUOBJ) :
-	$(NVCC) -c -o $@ $(NVCCFLAGS) -Xcompiler "$(CXXFLAGS)" $(filter %.cu, $^)
+	$(NVCC) -c -o $@ $(NVCCFLAGS) -std=c++11 -Xcompiler "$(CXXFLAGS)" $(filter %.cu, $^)
 
 $(CUBIN) :
-	$(NVCC) -o $@ $(NVCCFLAGS) -Xcompiler "$(CXXFLAGS)" -Xlinker "$(LDFLAGS)" $(filter %.cu %.cpp %.o, $^)
+	$(NVCC) -o $@ $(NVCCFLAGS) -std=c++11 -Xcompiler "$(CXXFLAGS)" -Xlinker "$(LDFLAGS)" $(filter %.cu %.cpp %.o, $^)
   
 clean:
 	$(RM) $(OBJ) $(BIN) $(CUBIN) $(CUOBJ) *~ */*~ */*/*~

@@ -218,9 +218,13 @@ class MatchLayer : public Layer<xpu>{
       for (int j = 0; j < len_0; j+=interval_0) {
         for (int k = 0; k < len_1; k+=interval_1) {
           if (op == "xor") {
-            utils::Check(bottom0_data2[i][j]!=-1 && bottom1_data2[i][k]!=-1, 
-              "In Match Layer: please check length setting. (%d, %d, %d)", i, j, k);
-            top_data[i][0][j][k] = (bottom0_data2[i][j] == bottom1_data2[i][k]) ? 1 : 0;
+            //utils::Check(bottom0_data2[i][j]!=-1 && bottom1_data2[i][k]!=-1, 
+              //"In Match Layer: please check length setting. (%d, %d, %d)", i, j, k);
+            if(bottom0_data2[i][j]==-1 || bottom1_data2[i][k]==-1){
+                top_data[i][0][j][k] = 0;
+            } else {
+                top_data[i][0][j][k] = (bottom0_data2[i][j] == bottom1_data2[i][k]) ? 1 : 0;
+            }
           } else if (op == "mul") {
             for (int m = 0; m < feat_size; ++m) {
               top_data[i][0][j][k] += bottom0_data4[i][0][j][m] * bottom1_data4[i][0][k][m];
