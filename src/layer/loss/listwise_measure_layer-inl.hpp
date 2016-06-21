@@ -20,16 +20,6 @@ using namespace std;
 namespace textnet {
 namespace layer {
 
-bool list_cmp(const pair<float, float> &x1, const pair<float, float> &x2) {
-  return x1.first > x2.first; // sort decrease
-}
-
-bool list_cmp_label(const pair<float, float> &x1, const pair<float, float> &x2) {
-  if (x1.second == x2.second)
-    return x1.first < x2.first; // sort increase
-  return x1.second > x2.second; // sort decrease
-}
-
 template<typename xpu>
 class ListwiseMeasureLayer : public Layer<xpu>{
  public:
@@ -86,6 +76,16 @@ class ListwiseMeasureLayer : public Layer<xpu>{
 
   }
   
+  static bool list_cmp(const pair<float, float> &x1, const pair<float, float> &x2) {
+    return x1.first > x2.first; // sort decrease
+  }
+  
+  static bool list_cmp_label(const pair<float, float> &x1, const pair<float, float> &x2) {
+    if (x1.second == x2.second)
+      return x1.first < x2.first; // sort increase
+    return x1.second > x2.second; // sort decrease
+  }
+
   void ReadCountData() {
     utils::Printf("Open count data file: %s\n", pos_count_file.c_str());    
     std::vector<std::string> lines;
@@ -144,7 +144,7 @@ class ListwiseMeasureLayer : public Layer<xpu>{
 
   inline float rank_log(float x) {
     if (x == 1) return 1.0;
-    else return log2(x);
+    else return std::log2(x);
   }
 
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,

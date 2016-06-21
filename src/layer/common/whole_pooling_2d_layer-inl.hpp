@@ -134,7 +134,7 @@ class WholePooling2dLayer : public Layer<xpu>{
 
   void checkNan(float *p, int l) {
     for (int i = 0; i < l; ++i) {
-      assert(!isnan(p[i]));
+      assert(!std::isnan(p[i]));
     }
   }
 

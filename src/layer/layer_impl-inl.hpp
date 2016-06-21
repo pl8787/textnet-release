@@ -49,15 +49,19 @@
 #include "./common/convolutional_lstm_layer-inl.hpp"
 #include "./common/whole_pooling_layer-inl.hpp"
 #include "./common/whole_pooling_2d_layer-inl.hpp"
+
+#ifdef CPU_ONLY
 #include "./common/gate_whole_pooling_layer-inl.hpp"
 #include "./common/gate_whole_pooling_d2_layer-inl.hpp"
+#include "./common/softmax_func_var_len_layer-inl.hpp"
+#endif
+
 #include "./common/gate_dynamic_pooling_d2_layer-inl.hpp"
 #include "./common/topk_pooling_layer-inl.hpp"
 #include "./common/concat_layer-inl.hpp"
 #include "./common/gate_layer-inl.hpp"
 #include "./common/gate_alldim_layer-inl.hpp"
 #include "./common/softmax_func_layer-inl.hpp"
-#include "./common/softmax_func_var_len_layer-inl.hpp"
 #include "./common/sequcence_dim_reduction_layer-inl.hpp"
 #include "./common/gating_layer-inl.hpp"
 #include "./common/dynamic_pooling_layer-inl.hpp"
@@ -131,8 +135,11 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kMaxPooling: return new PoolingLayer<mshadow::red::maximum, xpu>(type);
     case kAvgPooling: return new PoolingLayer<mshadow::red::sum, xpu>(type);
     case kSumPooling: return new PoolingLayer<mshadow::red::sum, xpu>(type);
+#ifdef CPU_ONLY
     case kGateWholePooling: return new GateWholePoolingLayer<xpu>(type);
     case kGateWholePoolingD2: return new GateWholePoolingD2Layer<xpu>(type);
+    case kSoftmaxFuncVarLen: return new SoftmaxFuncVarLenLayer<xpu>(type);
+#endif
     case kGateDynamicPoolingD2: return new GateDynamicPoolingD2Layer<xpu>(type);
     case kWholePooling: return new WholePoolingLayer<xpu>(type);
     case kWholePooling2d: return new WholePooling2dLayer<xpu>(type);
@@ -180,7 +187,6 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kNegativeSample: return new NegativeSampleLayer<xpu>(type);
     case kSoftmax: return new SoftmaxLayer<xpu>(type);
     case kSoftmaxFunc: return new SoftmaxFuncLayer<xpu>(type);
-    case kSoftmaxFuncVarLen: return new SoftmaxFuncVarLenLayer<xpu>(type);
     case kNegativeSampleLoss: return new NegativeSampleLossLayer<xpu>(type);
     case kWordClassSoftmaxLoss: return new WordClassSoftmaxLossLayer<xpu>(type);
     case kLmSoftmaxLoss: return new LmSoftmaxLossLayer<xpu>(type);
