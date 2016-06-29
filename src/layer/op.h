@@ -3,6 +3,7 @@
 #pragma once
 
 #include <mshadow/tensor.h>
+#include <iostream>
 
 extern float SIGMOID_MAX_INPUT;
 extern int SIGMOID_TABLE_SIZE;
@@ -10,6 +11,9 @@ extern float *p_sigmoid_lookup_table;
 extern float TANH_MAX_INPUT;
 extern int TANH_TABLE_SIZE;
 extern float *p_tanh_lookup_table;
+extern float EXP_MAX_INPUT;
+extern int EXP_TABLE_SIZE;
+extern float *p_exp_lookup_table;
 
 namespace textnet {
 /*! \brief operations for ActivationLayer */
@@ -71,6 +75,27 @@ struct tanh_lookup {
       pos = 0; 
     }
     return p_tanh_lookup_table[pos];
+  }
+};
+
+/*! \brief exp unit */
+struct exp_lookup {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    if (a >= EXP_MAX_INPUT) {
+      return 1e8f;
+    } else if (a <= -EXP_MAX_INPUT) {
+      return 1e-9f;
+    }
+    
+    // NOTICE: float accuracy may cause problem here
+    int pos = ((a+EXP_MAX_INPUT)/(2*EXP_MAX_INPUT))*EXP_TABLE_SIZE;
+    if (pos >= EXP_TABLE_SIZE) {
+      pos = EXP_TABLE_SIZE-1;
+    }
+    if (pos < 0) {
+      pos = 0; 
+    }
+    return p_exp_lookup_table[pos];
   }
 };
 

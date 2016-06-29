@@ -555,6 +555,7 @@ void TestMatchLayer(mshadow::Random<cpu>* prnd) {
   setting["op"] = SettingV("cos");
   setting["op"] = SettingV("elemwise_cat");
   setting["op"] = SettingV("order");
+  setting["op"] = SettingV("euc_exp");
 
   // Test Match Layer
   Layer<cpu> * layer_match = CreateLayer<cpu>(kMatch);
@@ -4801,6 +4802,9 @@ float TANH_MAX_INPUT = 20;
 int TANH_TABLE_SIZE = 10000;
 float *p_tanh_lookup_table;
 
+float EXP_MAX_INPUT = 10.f;
+int EXP_TABLE_SIZE = 10000000;
+float *p_exp_lookup_table;
 
 int main(int argc, char *argv[]) {
   float max = SIGMOID_MAX_INPUT;
@@ -4817,6 +4821,13 @@ int main(int argc, char *argv[]) {
     float exp_val = exp(2*((float(i)*2*max)/len - max)); // map position to value, frow small to large
     p_tanh_lookup_table[i] = (exp_val-1)/(exp_val+1);
   }
+  max = EXP_MAX_INPUT;
+  len = EXP_TABLE_SIZE;
+  p_exp_lookup_table = new float[len];
+  for (int i = 0; i < len; ++i) {
+    p_exp_lookup_table[i] = exp((float(i)*2*max)/len - max); // map position to value, frow small to large
+  }
+
   mshadow::Random<cpu> rnd(37);
   // TestActivationLayer(&rnd);
   // TestFcLayer(&rnd);
@@ -4840,7 +4851,7 @@ int main(int argc, char *argv[]) {
   // TestConcatLayer(&rnd);
   // TestConvResultTransformLayer(&rnd);
   // TestConvolutionLayer(&rnd);
-  // TestMatchLayer(&rnd);
+  TestMatchLayer(&rnd);
   // TestMatchTensorLayer(&rnd);
   // TestMatchTopKPoolingLayer(&rnd);
   // TestLstmD2Layer(&rnd);
@@ -4881,7 +4892,7 @@ int main(int argc, char *argv[]) {
   // TestListwiseMeasureForNearestOneLayer(&rnd);
   // TestQATextDataLayer(&rnd);
   // TestMapTextDataLayer(&rnd);
-  TestMap2TextDataLayer(&rnd);
+  // TestMap2TextDataLayer(&rnd);
   // TestConvolutionAndLocalFactorLayer(&rnd);
   // TestElementOpLayer(&rnd);
   // TestParameterLayer(&rnd);
