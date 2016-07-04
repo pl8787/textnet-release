@@ -175,7 +175,8 @@ int main(int argc, char *argv[]) {
     need_cross_valid = true;
   }
 
-  int netTagType = kTrainValidTest;
+  //int netTagType = kTrainValidTest;
+  int netTagType = kTrainValid;
   //int netTagType = kTestOnly;
   if (!need_cross_valid) {
     run_one(net_root, netTagType);

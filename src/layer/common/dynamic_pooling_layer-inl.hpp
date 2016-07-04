@@ -305,6 +305,7 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 			len_r = bottom_len[batch_idx][1];
 		  }
 		}
+        //printf("batch_idex:%d,channel_idx:%d,len_l:%d,len_r:%d,row:%d,col:%d\n",batch_idx,channel_idx,len_l,len_r,row,col);
         pooling_one_matrix(bottom_data[batch_idx][channel_idx], top_data[batch_idx][channel_idx],
                            len_l, len_r,
                            row, col,

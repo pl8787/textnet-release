@@ -87,6 +87,7 @@
 #include "./common/fill_curve_d2xy_layer-inl.hpp"
 #include "./common/length_trans_layer-inl.hpp"
 #include "./common/axis_split_layer-inl.hpp"
+#include "./common/merge_2_window_data_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/lcs_toy_data_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
@@ -101,6 +102,7 @@
 #include "./input/word_rep_input_layer-inl.hpp"
 #include "./input/map_textdata_layer-inl.hpp"
 #include "./input/map_2_textdata_layer-inl.hpp"
+#include "./input/map_2_window_textdata_layer-inl.hpp"
 #include "./input/image_layer-inl.hpp"
 #include "./input/memory_global_layer-inl.hpp"
 #include "./loss/hingeloss_layer-inl.hpp"
@@ -217,6 +219,8 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kQATextData: return new QATextDataLayer<xpu>(type);
     case kMapTextData: return new MapTextDataLayer<xpu>(type);
     case kMap2TextData: return new Map2TextDataLayer<xpu>(type);
+    case kMap2WindowTextData:    return new Map2WindowTextDataLayer<xpu>(type);
+    case kMerge2WindowData:    return new Merge2WindowDataLayer<xpu>(type);
     case kSelectSubRepByToken: return new SelectSubRepByTokenLayer<xpu>(type);
     case kWordRepInput: return new WordRepInputLayer<xpu>(type);
     case kEuclidDistanceLoss: return new EuclidDistanceLossLayer<xpu>(type);

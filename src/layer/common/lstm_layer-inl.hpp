@@ -138,21 +138,41 @@ class LstmLayer : public Layer<xpu> {
 					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(), "LstmLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "LstmLayer:top size problem.");
+      //utils::ShowMemoryUse();
     
     mshadow::Shape<4> shape_in  = bottom[0]->data.shape_;
     mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in[0], shape_in[1], shape_in[2], d_mem);
     mshadow::Shape<4> shape_gate= mshadow::Shape4(shape_in[0], shape_in[1], shape_in[2], d_mem*4);
 
     top[0]->Resize(shape_out, true);
+      //utils::ShowMemoryUse();
     c.Resize(shape_out, 0.f);
+      //utils::ShowMemoryUse();
     g.Resize(shape_gate, 0.f);
+      //utils::ShowMemoryUse();
     c_er.Resize(shape_out, 0.f);
+      //utils::ShowMemoryUse();
     g_er.Resize(shape_gate, 0.f);
+      //utils::ShowMemoryUse();
 
 	if (show_info) {
 	  bottom[0]->PrintShape("bottom0");
 	  top[0]->PrintShape("top0");
 	}
+  }
+
+  virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,
+                            const std::vector<Node<xpu>*> &top) {
+    // Check for reshape
+    bool need_reshape = false;
+    if (! (bottom[0]->data.size(0) == top[0]->data.size(0))) {
+        need_reshape = true;
+    }
+
+    // Do reshape 
+    if (need_reshape) {
+        this->Reshape(bottom, top);
+    }
   }
 
   void checkNan(float *p, int l) {

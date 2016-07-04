@@ -15,7 +15,7 @@ class MatchTopKPoolingLayer : public Layer<xpu>{
   MatchTopKPoolingLayer(LayerType type) { this->layer_type = type; }
   virtual ~MatchTopKPoolingLayer(void) {}
   
-  virtual int BottomNodeNum() { return 3; } // matrix node, l_seq for length, r_seq for length
+  virtual int BottomNodeNum() { return nbottom; } // matrix node, l_seq for length, r_seq for length
   virtual int TopNodeNum() { return 1; }
   virtual int ParamNodeNum() { return 0; }
   
@@ -37,6 +37,7 @@ class MatchTopKPoolingLayer : public Layer<xpu>{
                           mshadow::Random<xpu> *prnd) {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
     k = setting["k"].iVal();
+    nbottom = bottom.size();
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -55,8 +56,10 @@ class MatchTopKPoolingLayer : public Layer<xpu>{
 
     if (show_info) {
         bottom[0]->PrintShape("bottom0");
-        bottom[1]->PrintShape("bottom1");
-        bottom[2]->PrintShape("bottom2");
+        if(nbottom == 3){
+          bottom[1]->PrintShape("bottom1");
+          bottom[2]->PrintShape("bottom2");
+        }
         top[0]->PrintShape("top0");
     }
   }
@@ -103,11 +106,15 @@ class MatchTopKPoolingLayer : public Layer<xpu>{
                           int input_row,  int input_col,
                           int k, Tensor2DInt pos) {
     utils::Check(t_in.size(0) >= input_row && t_in.size(1) >= input_col, "MatchTopKPoolingLayer: size error.");
+    if(input_row * input_col < k){
+        printf("input_row:%d,input_col:%d,k:%d\n",input_row,input_col,k);
+    }
     utils::Check(input_row * input_col >= k, "MatchTopKPoolingLayer: size error.");
     utils::Check(pos.size(0) == k && pos.size(1) == 2, "MatchTopKPoolingLayer: size error.");
     utils::Check(t_out.size(0) == k && t_out.size(1) == 1, "MatchTopKPoolingLayer: size error.");
 
     vector<ValidIdx> all;
+    int iindex = 0;
     for (int i = 0; i < input_row; ++i) {
       for (int j = 0; j < input_col; ++j) {
         ValidIdx val_idx;
@@ -115,8 +122,20 @@ class MatchTopKPoolingLayer : public Layer<xpu>{
         val_idx.x = i;
         val_idx.y = j;
         all.push_back(val_idx);
+        ++iindex;
       }
     }
+    /*
+    while(iindex < k){
+        ValidIdx val_idx;
+        val_idx.val = 0;
+        val_idx.x = -1;
+        val_idx.y = -1;
+        ++iindex;
+        all.push_back(val_idx);
+    }
+    assert(all.size() >= k);
+    */
     std::sort(all.begin(), all.end(), CmpVal());
         
     for (int i = 0; i < k; ++i) {
@@ -131,6 +150,7 @@ class MatchTopKPoolingLayer : public Layer<xpu>{
     for (int i = 0; i < k; ++i) {
       int x = pos[i][0];
       int y = pos[i][1];
+      //if( x == -1 || y == -1) continue;
       t_in[x][y] += t_out[i][0];
     }
   }
@@ -139,15 +159,17 @@ class MatchTopKPoolingLayer : public Layer<xpu>{
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 4> bottom_data  = bottom[0]->data;
-    mshadow::Tensor<xpu, 2> bottom_len_l = bottom[1]->length;
-    mshadow::Tensor<xpu, 2> bottom_len_r = bottom[2]->length;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
 
     top_data = 0;
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       for (index_t channel_idx = 0; channel_idx < bottom_data.size(1); ++channel_idx) {
-        int len_l = bottom_len_l[batch_idx][0];
-        int len_r = bottom_len_r[batch_idx][0];
+        int len_l = bottom_data[batch_idx][channel_idx].size(0);
+        int len_r = bottom_data[batch_idx][channel_idx].size(1);
+        if(nbottom == 3){
+          len_l = bottom[1]->length[batch_idx][0];
+          len_r = bottom[2]->length[batch_idx][0];
+        }
         pooling_one_matrix(bottom_data[batch_idx][channel_idx], top_data[batch_idx][channel_idx],
                            len_l, len_r, k, pos[batch_idx][channel_idx]);
       }
@@ -171,6 +193,7 @@ class MatchTopKPoolingLayer : public Layer<xpu>{
  protected:
   mshadow::TensorContainer<xpu, 4, int> pos;
   int k;
+  int nbottom;
 };
 }  // namespace layer
 }  // namespace textnet

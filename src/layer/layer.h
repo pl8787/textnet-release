@@ -151,6 +151,8 @@ const int kImage = 84;
 const int kMemoryGlobal = 85;
 const int kMap2TextData = 86;
 const int kLcsToyData = 87;
+const int kMap2WindowTextData = 88;
+const int kMerge2WindowData = 89;
 
 /*! \brief these are enumeration */
 const int kInit = -1;
