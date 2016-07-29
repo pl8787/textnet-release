@@ -10,6 +10,6 @@ typedef mshadow::default_real_t real_t;
 
 #define DEBUG 0
 #define LENGTH_DEBUG 0
-#define TIME_DEBUG 1
+#define TIME_DEBUG 0
 
 #endif  // CXXNET_GLOBAL_H_
