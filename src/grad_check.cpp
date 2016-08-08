@@ -91,6 +91,8 @@ void TestSwapAxisLayer(mshadow::Random<cpu>* prnd) {
   tops.push_back(&top);
   
   bottom.Resize(Shape4(2,1,3,3), Shape2(2,2), true);
+
+  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
   bottom.length = 3;
   
   map<string, SettingV> setting;
@@ -4793,6 +4795,48 @@ void TestParameterLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckGrad(layer, bottoms, tops);
 }
 
+void TestMerge2WindowDataLayer(mshadow::Random<cpu> * prnd){
+    cout<<" G Check Merge-2-Window-Data Layer."<<endl;
+    Node<cpu> bottom0;
+    Node<cpu> bottom1;
+    Node<cpu> top0;
+    vector<Node<cpu>*> bottoms;
+    vector<Node<cpu>*> tops;
+
+    bottoms.push_back(&bottom0);
+    bottoms.push_back(&bottom1);
+    tops.push_back(&top0);
+
+    bottom0.Resize(20,1,1,1);
+    bottom1.Resize(4,1,1,1);
+    prnd->SampleUniform(&bottom0.data,-0.1,0.1);
+    bottom1.data[0][0][0][0] = 3; 
+    bottom1.data[1][0][0][0] = 5; 
+    bottom1.data[2][0][0][0] = 7; 
+    bottom1.data[3][0][0][0] = 5; 
+    bottom0.length = 1;
+    bottom1.length = 1;
+    map<string,SettingV> setting;
+    setting["dim"] = 3;
+
+    //Test Merge2WindowDataLayer
+    Layer<cpu> * layer_merge2window = CreateLayer<cpu>(kMerge2WindowData);
+    layer_merge2window->PropAll();
+    layer_merge2window->SetupLayer(setting,bottoms,tops,prnd);
+    layer_merge2window->Reshape(bottoms,tops);
+
+    using namespace checker;
+    Checker<cpu> * cker = CreateChecker<cpu>();
+    map<string,SettingV> setting_checker;
+    setting_checker["range_min"] = SettingV(-0.1f);
+    setting_checker["range_max"] = SettingV(0.1f);
+    setting_checker["delta"] = SettingV(0.0001f);
+
+    cker->SetupChecker(setting_checker, prnd);
+
+    cout<<" Check Error."<<endl;
+    cker->CheckError(layer_merge2window,bottoms,tops);
+}
 float SIGMOID_MAX_INPUT = 20;
 int SIGMOID_TABLE_SIZE = 10000;
 float *p_sigmoid_lookup_table;
@@ -4868,7 +4912,7 @@ int main(int argc, char *argv[]) {
   // TestDiagRecurrentLayer(&rnd);
   // TestNegativeSampleLossLayer(&rnd);
   // TestPosPredRepLayer(&rnd);
-  // TestSwapAxisLayer(&rnd);
+   TestSwapAxisLayer(&rnd);
   // TestFlattenLayer(mshadow::Random<cpu>* prnd);
   // TestSoftmaxFuncLayer(&rnd);
   // TestWordClassSoftmaxLayer(&rnd);
@@ -4881,7 +4925,7 @@ int main(int argc, char *argv[]) {
   // TestListwiseMeasureForNearestOneLayer(&rnd);
   // TestQATextDataLayer(&rnd);
   // TestMapTextDataLayer(&rnd);
-  TestMap2TextDataLayer(&rnd);
+  // TestMap2TextDataLayer(&rnd);
   // TestConvolutionAndLocalFactorLayer(&rnd);
   // TestElementOpLayer(&rnd);
   // TestParameterLayer(&rnd);
@@ -4893,5 +4937,6 @@ int main(int argc, char *argv[]) {
   // TestFillCurveD2XYLayer(&rnd);
   // TestLengthTransLayer(&rnd);
   // TestAxisSplitLayer(&rnd);
+  TestMerge2WindowDataLayer(&rnd);
   return 0;
 }

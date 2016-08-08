@@ -29,7 +29,6 @@ class AdagradUpdater : public Updater<xpu, dim>{
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["lr"] = SettingV();
-    this->defaults["batch_size"] = SettingV();
     
     Updater<xpu, dim>::Require(setting);
   }
@@ -41,7 +40,6 @@ class AdagradUpdater : public Updater<xpu, dim>{
     eps = setting["eps"].fVal();
     lr = setting["lr"].fVal();
     max_iter = setting["max_iter"].iVal(); 
-    batch_size = setting["batch_size"].iVal(); 
     wd = setting["l2"].fVal(); 
     lr_decay_interval = setting["lr_decay_interval"].iVal(); 
     lr_decay_factor   = setting["lr_decay_factor"].fVal(); 
@@ -112,7 +110,7 @@ class AdagradUpdater : public Updater<xpu, dim>{
     }
   }
  protected: 
-  int iter, max_iter, batch_size, lr_decay_interval;
+  int iter, max_iter, lr_decay_interval;
   mshadow::TensorContainer<xpu, dim> sumGradSquare;
   float eps, lr, wd, lr_decay_factor;
 

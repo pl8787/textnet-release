@@ -826,14 +826,15 @@ class Net : public INet{
         test_loss.push_back(0.0f);
         test_loss_list.push_back(vector<float>());
       }
+#if DEBUG
+      cout<<"Start TestALL ..."<<endl;
+#endif
       
       for (int test_iter = 0; test_iter < max_iters[tag]; ++test_iter) {
         Forward(tag);
         for (int i = 0; i < out_nodes[tag].size(); ++i) {
           test_loss_list[i].push_back(nodes[out_nodes[tag][i]]->data_d1()[0]);
         }
-        // orc_tmp
-        // cout << "test loss:" << nodes[test_out[0]]->data_d1()[0] << endl;
       }
 
       // Reduce to one output

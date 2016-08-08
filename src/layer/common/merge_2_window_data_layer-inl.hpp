@@ -39,6 +39,7 @@ class Merge2WindowDataLayer : public Layer<xpu>{
   virtual int ParamNodeNum() { return 0; }
   
   virtual void Require() {
+    this->defaults["dim"] = SettingV(3);
     Layer<xpu>::Require();
   }
   
@@ -52,6 +53,7 @@ class Merge2WindowDataLayer : public Layer<xpu>{
                   "Merge2WindowDataLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "Merge2WindowDataLayer:top size problem.");
+    dim   = setting["dim"].iVal();
   }
 
   typedef mshadow::Tensor<xpu, 1> Tensor1D;
@@ -67,14 +69,25 @@ class Merge2WindowDataLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(),
                   "Merge2WindowDataLayer:top size problem.");
     Tensor2D bottom0_length = bottom[0]->length;
-    Tensor2D bottom1_length = bottom[1]->length;
 
     int idim = 0;
     for(index_t i = 0 ; i < bottom[1]->data.size(0); ++ i){
+        utils::Check(bottom[1]->data[i][0][0][0] > 0,"Merge2WindowDataLayer:: Reshape error, window size equals zero.");
         idim = idim > bottom[1]->data[i][0][0][0] ? idim : bottom[1]->data[i][0][0][0];
     }
+    utils::Check(idim > 0, "Merge2WindowDataLayer:: Reshape idim problem.");
+    int batch_size  = bottom[1]->data.size(0);
 
-    top[0]->Resize(bottom1_length.size(0), 1, 1, idim, true);
+    assert(bottom[0]->data.size(dim) == 1);
+    if(dim == 1){
+        top[0]->Resize(batch_size, idim, bottom[0]->data.size(2), bottom[0]->data.size(3), true);
+    }else if(dim == 2){
+        top[0]->Resize(batch_size, bottom[0]->data.size(1), idim, bottom[0]->data.size(3), true);
+    }else if(dim == 3){
+        top[0]->Resize(batch_size, bottom[0]->data.size(1), bottom[0]->data.size(2), idim, true);
+    }else{
+        utils::Check(0,"merge_2_window_data_layer::dim setting wrong,must be 1|2|3.");
+    }
     if (show_info) {
         bottom[0]->PrintShape("bottom0");
         bottom[1]->PrintShape("bottom1");
@@ -94,16 +107,36 @@ class Merge2WindowDataLayer : public Layer<xpu>{
     Tensor4D top0_data = top[0]->data;
     Tensor2D top0_length = top[0]->length;
     //printf("bottom[0]:%d,%d,%d,%d\n",bottom[0]->data.size(0),bottom[0]->data.size(1),bottom[0]->data.size(2),bottom[0]->data.size(3));
-    utils::Check(bottom[0]->data.size(1) == 1 && bottom[0]->data.size(2) == 1, " Merge2WindowDataLayer:: bottom[0] size problem.");
+    utils::Check(bottom[0]->data.size(dim) == 1, " Merge2WindowDataLayer:: bottom[%d] size problem.",dim);
 
+    top0_data = 0.0;
+    int batch_size = top0_data.size(0);
     index_t k = 0;
-    for(index_t i = 0 ; i < top0_data.size(0); ++ i){
+    for(index_t i = 0 ; i < batch_size; ++ i){
         int curr_len = bottom[1]->data[i][0][0][0];
         utils::Check(curr_len > 0," Merge2WindowDataLayer: curr_len must be above 0.");
         top0_length[i][0] = curr_len;
-        for(index_t j = 0 ; j < curr_len; ++ j){
-            top0_data[i][0][0][j] = bottom[0]->data[k][0][0][0];
-            ++k;
+        if(dim == 1){
+            for(index_t j = 0 ; j < curr_len; ++ j){
+                top0_data[i][j] = mshadow::expr::F<op::identity>(bottom[0]->data[k][0]);
+                ++ k;
+            }
+        }else if(dim == 2){
+            for(index_t j = 0 ; j < curr_len; ++ j){
+                for(index_t m = 0 ; m < bottom[0]->data.size(1); ++ m){
+                    top0_data[i][m][j] = F<op::identity>(bottom[0]->data[k][m][0]);
+                }
+                ++ k;
+            }
+        }else if(dim == 3){
+            for(index_t j = 0 ; j < curr_len; ++ j){
+                for(index_t m = 0 ; m < bottom[0]->data.size(1); ++ m){
+                    for(index_t n = 0 ; n < bottom[0]->data.size(2); ++ n){
+                        top0_data[i][m][n][j] = bottom[0]->data[k][m][n][0];
+                    }
+                }
+                ++ k;
+            }
         }
     }
   }
@@ -115,14 +148,33 @@ class Merge2WindowDataLayer : public Layer<xpu>{
     index_t k = 0;
     for(index_t i = 0 ; i < top0_diff.size(0); ++ i){ // copy query diff info
         int curr_len = bottom[1]->data[i][0][0][0];
-        for(index_t j = 0 ; j < curr_len; ++ j){
-            bottom[0]->diff[k][0][0][0] += top0_diff[i][0][0][j];
-            ++k;
+        if(dim == 1){
+            for(index_t j = 0 ; j < curr_len; ++ j){
+                bottom[0]->diff[k][0] += F<op::identity>(top0_diff[i][j]);
+                ++k;
+            }
+        }else if(dim == 2){
+            for(index_t j = 0 ; j < curr_len; ++ j){
+                for(index_t m = 0 ; m < bottom[0]->data.size(1); ++ m){
+                    bottom[0]->diff[k][m][0] += F<op::identity>(top0_diff[i][m][j]);
+                }
+                ++k;
+            }
+        }else if(dim == 3){
+            for(index_t j = 0 ; j < curr_len; ++ j){
+                for(index_t m = 0 ; m < bottom[0]->data.size(1); ++ m){
+                    for(index_t n = 0 ; n < bottom[0]->data.size(2); ++ n){
+                        bottom[0]->diff[k][m][n][0] += top0_diff[i][m][n][j];
+                    }
+                }
+                ++k;
+            }
         }
     }
   }
   
  protected:
+  int dim;
 };
 }  // namespace layer
 }  // namespace textnet

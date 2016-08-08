@@ -172,6 +172,11 @@ class MatchTopKPoolingLayer : public Layer<xpu>{
         }
         pooling_one_matrix(bottom_data[batch_idx][channel_idx], top_data[batch_idx][channel_idx],
                            len_l, len_r, k, pos[batch_idx][channel_idx]);
+        //printf("label:%d\tbatch_idx:%d\tchannel_idx:%d\n",batch_idx%2,batch_idx,channel_idx);
+        //for(int i = 0 ; i < k; ++ i){
+            //printf(" %.4f",top_data[batch_idx][channel_idx][1][i]);
+        //}
+        //printf("\n");
       }
     }
   }

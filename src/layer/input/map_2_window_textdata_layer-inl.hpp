@@ -40,6 +40,7 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
     this->defaults["shuffle"] = SettingV(false);
     this->defaults["speedup_list"] = SettingV(false); // only when list
     this->defaults["fix_length"] = SettingV(false);
+    this->defaults["max_doc_len"] = SettingV(2000);
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["data1_file"] = SettingV();
@@ -65,6 +66,7 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
     rel_file = setting["rel_file"].sVal();
     batch_size = setting["batch_size"].iVal();
     window_size = setting["window_size"].iVal();
+    max_doc_len = setting["max_doc_len"].iVal();
     mode = setting["mode"].sVal();
     shuffle = setting["shuffle"].bVal();
     speedup_list = setting["speedup_list"].bVal();
@@ -75,6 +77,9 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
     utils::Check(mode == "batch" || mode == "pair" || mode == "list" ,
                   "Map2WindowTextDataLayer: mode is one of batch, pair or list.");
 
+    /*
+       * rel_set :: vector<vector<string>> ->  vector<pair<query,doc>>
+    */
     ReadRelData(rel_file, rel_set, label_set, data1_set, data2_set);
 
     ReadTextData(data1_file, data1_set, max_doc1_len, min_doc1_len);
@@ -102,7 +107,7 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
   }
   
   void ReadTextData(string &data_file, unordered_map<string, vector<int> > &data_set, 
-          int & max_doc_len, int & min_doc_len) {
+          int & cmax_doc_len, int & cmin_doc_len) {
     utils::Printf("Open data file: %s\n", data_file.c_str());    
 
     std::ifstream fin(data_file.c_str());
@@ -123,8 +128,9 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
       iss.str(s);
       iss >> key;
       iss >> s_len;
-      max_doc_len = max_doc_len > s_len ? max_doc_len : s_len;
-      min_doc_len = min_doc_len > s_len ? min_doc_len : s_len;
+      cmax_doc_len = cmax_doc_len > s_len ? cmax_doc_len : s_len;
+      cmax_doc_len = cmax_doc_len > max_doc_len ? max_doc_len : cmax_doc_len;
+      cmin_doc_len = cmin_doc_len > s_len ? cmin_doc_len : s_len;
 
       // data_set[key] = vector<int>();
       if (!data_set.count(key) || data_set[key].size() != 0)
@@ -134,11 +140,12 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
       while(!iss.eof()) {
         iss >> value;
         data_set[key].push_back(value);
+        if(data_set[key].size() >= max_doc_len) break;
       }
 
       // Check sentence length
       utils::Check(data_set[key].size() > 0 , 
-              "Map2WindowTextDataLayer: Doc length %d less than %d, on line %d.", data_set[key].size(), min_doc_len, data_set.size());
+              "Map2WindowTextDataLayer: Doc length %d less than %d, on line %d.", data_set[key].size(), cmin_doc_len, data_set.size());
     }
     fin.close();
 
@@ -151,7 +158,7 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
     utils::Printf("Line count in file: %d\n", data_set.size());
   }
   
-  void ReadRelData(string &rel_file, vector<vector<string> > &rel_set, vector<int> &label_set, 
+  void ReadRelData(string &rel_file, vector<vector<string> > &crel_set, vector<int> &label_set, 
                    unordered_map<string, vector<int> > &data1_set, unordered_map<string, vector<int> > &data2_set) {
     utils::Printf("Open data file: %s\n", rel_file.c_str());    
 
@@ -175,29 +182,29 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
       iss >> label;
       label_set.push_back(label);
       max_label = std::max(max_label, label);
-      rel_set.push_back(vector<string>());
+      crel_set.push_back(vector<string>());
       while(!iss.eof()) {
         iss >> value;
-        rel_set[line_count].push_back(value);
+        crel_set[line_count].push_back(value);
       }
-      if (!data1_set.count(rel_set[line_count][0])) {
-        data1_set[rel_set[line_count][0]] = vector<int>();
+      if (!data1_set.count(crel_set[line_count][0])) {
+        data1_set[crel_set[line_count][0]] = vector<int>();
       }
-      if (!data2_set.count(rel_set[line_count][1])) {
-        data2_set[rel_set[line_count][1]] = vector<int>();
+      if (!data2_set.count(crel_set[line_count][1])) {
+        data2_set[crel_set[line_count][1]] = vector<int>();
       }
       line_count += 1;
     }
     fin.close();
 
-    for (int i = 0; i < rel_set[0].size(); ++i) {
-        std::cout << rel_set[0][i].c_str() << " ";
+    for (int i = 0; i < crel_set[0].size(); ++i) {
+        std::cout << crel_set[0][i].c_str() << " ";
     }
     std::cout << std::endl;
 
     max_label += 1;
 
-    utils::Printf("Line count in file: %d\n", rel_set.size());
+    utils::Printf("Line count in file: %d\n", crel_set.size());
     utils::Printf("Max label: %d\n", max_label);
   }
 
@@ -307,30 +314,36 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
     } else if (mode == "pair") {
       top[2]->Resize(2 * batch_size, 1, 1, 1, true); //record label for each document
       top[3]->Resize(2 * batch_size, 1, 1, 1, true); // record the window size for each document
+      top[2]->data = -1;
+      top[3]->data = -1;
 
       vector<int> vbatches(batch_size);
       wbatch_size = 0;
+      int cline_ptr = line_ptr % pair_set.size();
       for (int i = 0; i < batch_size; ++i) {
         if (shuffle) {
-          line_ptr = rand() % pair_set.size();
+          cline_ptr = rand() % pair_set.size();
         } 
-        int pos_idx = pair_set[line_ptr][0];
-        int neg_idx = pair_set[line_ptr][1];
+        int pos_idx = pair_set[cline_ptr][0];
+        int neg_idx = pair_set[cline_ptr][1];
         int pos_doc_len = data2_set[rel_set[pos_idx][1]].size();
-        int pos_doc_window_num = int((pos_doc_len * 2 - 2 + window_size) / window_size);
+        //int pos_doc_window_num = int((pos_doc_len * 2 - 2 + window_size) / window_size);
+        int pos_doc_window_num = int((pos_doc_len  - 1 + window_size) / window_size);
         int neg_doc_len = data2_set[rel_set[neg_idx][1]].size();
-        int neg_doc_window_num = int((neg_doc_len * 2 - 2 + window_size) / window_size);
+        int neg_doc_window_num = int((neg_doc_len  - 1 + window_size) / window_size);
         wbatch_size += (pos_doc_window_num + neg_doc_window_num);
         top[2]->data[2*i][0][0][0] = 1;
         top[2]->data[2*i+1][0][0][0] = 0;
         top[3]->data[2*i][0][0][0] = pos_doc_window_num;
         top[3]->data[2*i+1][0][0][0] = neg_doc_window_num;
 
-        vbatches[i] = line_ptr;
-        line_ptr = (line_ptr + 1) % pair_set.size();
+        vbatches[i] = cline_ptr;
+        cline_ptr = (cline_ptr + 1) % pair_set.size();
       }
       top[0]->Resize(wbatch_size, 1, 1, max_doc1_len, true); //query
       top[1]->Resize(wbatch_size, 1, 1, window_size, true); //doc
+      top[0]->data = -1;
+      top[1]->data = -1;
 
       index_t idx_top = 0;
       for(int i = 0 ; i < batch_size; ++ i){
@@ -344,27 +357,44 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
       if(idx_top != wbatch_size)    printf("idx_top:%d\t,wbatch_size:%d\n",idx_top,wbatch_size);
       utils::Check(idx_top == wbatch_size, "idx_top not equal to wbatch_size.");
     } else if (mode == "list") {
+      int cline_ptr = line_ptr % list_set.size() ;
+      if (max_list != list_set[cline_ptr].size()) {
+        max_list = list_set[cline_ptr].size();
+      }
+      //printf("cline_ptr:%d,max_list:%d,batch_size:%d\n",cline_ptr,max_list,batch_size);
       top[2]->Resize(max_list * batch_size, 1, 1, 1, true);
       top[3]->Resize(max_list * batch_size, 1, 1, 1, true);
+      top[2]->data = -1;
+      top[3]->data = -1;
       
       vector<int> vbatches(batch_size);
       wbatch_size = 0;
       for (int s = 0; s < batch_size; ++s) {
-        vbatches[s] = line_ptr;
-        for (int i = 0; i < list_set[line_ptr].size(); ++i) {
-          int idx = list_set[line_ptr][i];
+        vbatches[s] = cline_ptr;
+        int curr_pos = 0;
+        //printf("curr batch :%d, list-size:%d\n",s,list_set[cline_ptr].size());
+        for (int i = 0; i < list_set[cline_ptr].size(); ++i) {
+          int idx = list_set[cline_ptr][i];
+          //printf("i:%d,idx:%d,doc:%s\n",i,idx,rel_set[idx][1].c_str());
           int curr_doc_len = data2_set[rel_set[idx][1]].size();
-          int curr_doc_window_num = int((curr_doc_len * 2 - 2 + window_size) / window_size);
+          //int curr_doc_window_num = int((curr_doc_len * 2 - 2 + window_size) / window_size);
+          int curr_doc_window_num = int((curr_doc_len  - 1 + window_size) / window_size);
           wbatch_size += curr_doc_window_num;
           int out_idx = s * max_list + i;
           top[2]->data[out_idx] = label_set[idx];
+          if(label_set[idx] > 0) curr_pos += 1;
+          //printf("curr q:%s,d:%s,label:%d,curr-doc-len:%d,curr-window-size:%d\n",rel_set[idx][0].c_str(),rel_set[idx][1].c_str(),label_set[idx],curr_doc_len,curr_doc_window_num);
           top[3]->data[out_idx] = curr_doc_window_num;
         }
-        line_ptr = (line_ptr + 1) % list_set.size();
+        //printf("curr q:%s,label-count:%d\n",rel_set[list_set[cline_ptr][0]][0].c_str(),curr_pos);
+        cline_ptr = (cline_ptr + 1) % list_set.size();
+        //printf("cline_ptr:%d\n",cline_ptr);
       }
       //printf("wbatch_size:%d, max_doc1_size:%d, window_size:%d\n",wbatch_size,max_doc1_len,window_size);
       top[0]->Resize(wbatch_size, 1, 1, max_doc1_len, true);
       top[1]->Resize(wbatch_size, 1, 1, window_size, true);
+      top[0]->data = -1;
+      top[1]->data = -1;
       index_t idx_top = 0;
       for(int s = 0 ; s < batch_size; ++ s){
         for (int i = 0; i < list_set[vbatches[s]].size(); ++i) {
@@ -389,18 +419,16 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
   virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,
                             const std::vector<Node<xpu>*> &top) {
     // Check for reshape
-    bool need_reshape = true;
     if (mode == "list") {
       if (max_list != list_set[line_ptr].size()) {
         max_list = list_set[line_ptr].size();
-        need_reshape = true;
       }
     }
+    //printf("line_ptr:%d,max_list:%d\n",line_ptr,max_list);
 
     // Do reshape 
-    if (need_reshape) {
-        this->Reshape(bottom, top);
-    }
+    this->Reshape(bottom, top);
+    line_ptr += batch_size;
   }
 
   inline void FillData(mshadow::Tensor<xpu, 4> &top0_data, mshadow::Tensor<xpu, 2> &top0_length,
@@ -424,9 +452,11 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
             utils::Check(data1.size() > 1, "Map2WindowTextDataLayer: data1 size:%d\n",data1.size());
         }
 
-        int curr_beg = i * window_size / 2;
+        //int curr_beg = i * window_size / 2;
+        int curr_beg = i * window_size;
         int curr_len = window_size;
         if(curr_beg + curr_len >= data2.size()) curr_len = data2.size() - curr_beg;
+        utils::Check(curr_len > 0, "FillData Wrong, curr_len:%d.",curr_len);
         for (int k = 0; k < curr_len; ++k) {
             top1_data[top_idx+i][0][0][k] = data2[curr_beg + k];
         }
@@ -506,6 +536,7 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
   int max_doc1_len;
   int min_doc2_len;
   int max_doc2_len;
+  int max_doc_len;
   string mode;
   bool shuffle;
   bool speedup_list;
@@ -521,7 +552,7 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
   unordered_map<string, vector<string> > ins_map_12;
   unordered_map<string, vector<string> > ins_map_21;
 
-  int line_count;
+  int line_count; /* line_count records the relation files line number: instance number */
   int line_ptr;
   int max_label;
 
