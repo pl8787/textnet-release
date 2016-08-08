@@ -26,6 +26,8 @@ class ListHingeLossLayer : public Layer<xpu>{
   virtual void Require() {
     // default value, just set the value you want
     this->defaults["delta"] = SettingV(1.0f);
+    this->defaults["w1"] = SettingV(1.0f);
+    this->defaults["w2"] = SettingV(1.0f);
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["list_size"] = SettingV();
@@ -45,6 +47,8 @@ class ListHingeLossLayer : public Layer<xpu>{
                   "ListHingeLossLayer:top size problem.");
     delta = setting["delta"].fVal();
     list_size = setting["list_size"].iVal();
+    w1 = setting["w1"].fVal();
+    w2 = setting["w2"].fVal();
     
   }
   
@@ -80,7 +84,11 @@ class ListHingeLossLayer : public Layer<xpu>{
       for (int n_idx = p_idx+1; n_idx < p_idx + list_size; ++n_idx) {
         utils::Check(bottom1_data[p_idx] > bottom1_data[n_idx], 
                     "Instances come like x > y");
-        top_data[0] += std::max(0.0f, delta + bottom0_data[n_idx] - bottom0_data[p_idx]);
+        if (n_idx < p_idx + list_size / 2 + 1) {
+          top_data[0] += w1 * std::max(0.0f, delta + bottom0_data[n_idx] - bottom0_data[p_idx]);
+        } else {
+          top_data[0] += w2 * std::max(0.0f, delta + bottom0_data[n_idx] - bottom0_data[p_idx]);
+        }
       }
     }
     
@@ -98,8 +106,13 @@ class ListHingeLossLayer : public Layer<xpu>{
       for (int p_idx = 0; p_idx < nbatch; p_idx += list_size) {
         for (int n_idx = p_idx+1; n_idx < p_idx + list_size; ++n_idx) {
           float gate = (delta + bottom0_data[n_idx] - bottom0_data[p_idx]) > 0 ? 1 : 0;
-          bottom0_diff[p_idx] += -gate / factor;
-          bottom0_diff[n_idx] +=  gate / factor;
+          if (n_idx < p_idx + list_size / 2 + 1) {
+            bottom0_diff[p_idx] += - w1 * gate / factor;
+            bottom0_diff[n_idx] +=   w1 * gate / factor;
+          } else {
+            bottom0_diff[p_idx] += - w2 * gate / factor;
+            bottom0_diff[n_idx] +=   w2 * gate / factor;
+          }
         }
       }
     }
@@ -109,6 +122,8 @@ class ListHingeLossLayer : public Layer<xpu>{
  protected:
   int nbatch;
   float delta;
+  float w1;
+  float w2;
   int list_size;
 
 };

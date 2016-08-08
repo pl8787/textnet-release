@@ -43,6 +43,9 @@ class TrainValidTestNet : public Net<xpu>{
 		    if (this->display_interval["Test"] > 0 && iter % this->display_interval["Test"] == 0) {
 			    this->TestAll("Test", iter);
 	            utils::ShowMemoryUse();
+#if TIME_DEBUG
+                this->PrintClock("Train");
+#endif
 	    	}	
 		}
 		this->TrainOneStep("Train");

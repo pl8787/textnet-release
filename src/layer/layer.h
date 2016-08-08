@@ -165,6 +165,9 @@ class Layer {
   Layer(void) {
     layer_type = 0;
     phrase_type = -1;
+    time_consume_f = 0.0f;
+    time_consume_b = 0.0f;
+    time_consume_u = 0.0f;
   }
   virtual ~Layer(void) {}
   
@@ -450,6 +453,41 @@ class Layer {
 	phrase_type = phrase;
   }
  
+  virtual void ClockStart(int type) {
+    switch (type) {
+        case 0:
+            time_consume_f -= (float)clock();
+            break;
+        case 1:
+            time_consume_b -= (float)clock();
+            break;
+        case 2:
+            time_consume_u -= (float)clock();
+    }
+  }
+
+  virtual void ClockStop(int type) {
+    switch (type) {
+        case 0:
+            time_consume_f += (float)clock();
+            break;
+        case 1:
+            time_consume_b += (float)clock();
+            break;
+        case 2:
+            time_consume_u += (float)clock();
+    }
+  }
+
+  virtual void ClockPrint() {
+    cout << "Time consume: [" << this->layer_name << "]" 
+         << "\tForward: " << time_consume_f / (float)CLOCKS_PER_SEC << 's'
+         << "\tBackprop: " << time_consume_b / (float)CLOCKS_PER_SEC << 's'
+         << "\tUpdate: " << time_consume_u / (float)CLOCKS_PER_SEC << 's'
+         << "\tTotal: " << (time_consume_f+time_consume_b+time_consume_u) / (float)CLOCKS_PER_SEC << 's'
+         << endl;
+  }
+  
   // For Debug
   // If implement net.hpp move to protected
   std::string layer_name;
@@ -466,6 +504,9 @@ class Layer {
   LayerType layer_type;
   PhraseType phrase_type;
   mshadow::Random<xpu> *prnd_;
+  float time_consume_f;
+  float time_consume_b;
+  float time_consume_u;
   
   // required setting
   std::map<std::string, SettingV> defaults;
