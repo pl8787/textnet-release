@@ -41,7 +41,7 @@ class LstmLayer : public Layer<xpu> {
     this->defaults["max_norm2"] = SettingV();
     this->defaults["grad_norm2"] = SettingV();
     this->defaults["d_mem"] = SettingV();
-    this->defaults["d_input"] = SettingV();
+    //this->defaults["d_input"] = SettingV();
     this->defaults["w_filler"] = SettingV();
     this->defaults["u_filler"] = SettingV();
     this->defaults["b_filler"] = SettingV();
@@ -64,8 +64,8 @@ class LstmLayer : public Layer<xpu> {
     utils::Check(top.size() == TopNodeNum(), "LstmLayer:top size problem.");
                   
     d_mem   = setting["d_mem"].iVal();
-    d_input   = setting["d_input"].iVal();
-    //d_input = bottom[0]->data.size(3);
+    //d_input   = setting["d_input"].iVal();
+    d_input = bottom[0]->data.size(3);
     no_bias = setting["no_bias"].bVal();
     no_out_tanh = setting["no_out_tanh"].bVal();
     reverse = setting["reverse"].bVal();
