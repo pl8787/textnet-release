@@ -4425,6 +4425,7 @@ void TestBatchDuplicateLayer(mshadow::Random<cpu>* prnd) {
 
   map<string, SettingV> setting;
   setting["dup_count"] = SettingV(3);
+  setting["dup_dim"] = SettingV(0);
 
   // Test BatchCombine Layer
   Layer<cpu> * layer_batch_duplicate = CreateLayer<cpu>(kBatchDuplicate);
@@ -4903,7 +4904,7 @@ int main(int argc, char *argv[]) {
   // TestBatchMaxLayer(&rnd);
   // TestBatchSplitLayer(&rnd);
   // TestBatchConcatLayer(&rnd);
-  // TestBatchDuplicateLayer(&rnd);
+   TestBatchDuplicateLayer(&rnd);
   // TestChannelDuplicateLayer(&rnd);
   // TestProductLayer(&rnd);
   // TestPairTextDataLayer(&rnd);
@@ -4912,7 +4913,7 @@ int main(int argc, char *argv[]) {
   // TestDiagRecurrentLayer(&rnd);
   // TestNegativeSampleLossLayer(&rnd);
   // TestPosPredRepLayer(&rnd);
-   TestSwapAxisLayer(&rnd);
+  //TestSwapAxisLayer(&rnd);
   // TestFlattenLayer(mshadow::Random<cpu>* prnd);
   // TestSoftmaxFuncLayer(&rnd);
   // TestWordClassSoftmaxLayer(&rnd);
@@ -4937,6 +4938,6 @@ int main(int argc, char *argv[]) {
   // TestFillCurveD2XYLayer(&rnd);
   // TestLengthTransLayer(&rnd);
   // TestAxisSplitLayer(&rnd);
-  TestMerge2WindowDataLayer(&rnd);
+  // TestMerge2WindowDataLayer(&rnd);
   return 0;
 }
