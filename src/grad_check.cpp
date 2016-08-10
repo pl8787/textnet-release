@@ -4904,7 +4904,7 @@ int main(int argc, char *argv[]) {
   // TestBatchMaxLayer(&rnd);
   // TestBatchSplitLayer(&rnd);
   // TestBatchConcatLayer(&rnd);
-   TestBatchDuplicateLayer(&rnd);
+  // TestBatchDuplicateLayer(&rnd);
   // TestChannelDuplicateLayer(&rnd);
   // TestProductLayer(&rnd);
   // TestPairTextDataLayer(&rnd);
@@ -4915,7 +4915,7 @@ int main(int argc, char *argv[]) {
   // TestPosPredRepLayer(&rnd);
   //TestSwapAxisLayer(&rnd);
   // TestFlattenLayer(mshadow::Random<cpu>* prnd);
-  // TestSoftmaxFuncLayer(&rnd);
+  TestSoftmaxFuncLayer(&rnd);
   // TestWordClassSoftmaxLayer(&rnd);
   // TestGatingLayer(&rnd);
   // TestSoftmaxVarLenFuncLayer(&rnd);
