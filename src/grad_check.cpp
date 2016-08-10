@@ -4425,7 +4425,7 @@ void TestBatchDuplicateLayer(mshadow::Random<cpu>* prnd) {
 
   map<string, SettingV> setting;
   setting["dup_count"] = SettingV(3);
-  setting["dup_dim"] = SettingV(0);
+  setting["dup_dim"] = SettingV(3);
 
   // Test BatchCombine Layer
   Layer<cpu> * layer_batch_duplicate = CreateLayer<cpu>(kBatchDuplicate);

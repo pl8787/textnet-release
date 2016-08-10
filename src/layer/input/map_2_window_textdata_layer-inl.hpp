@@ -354,7 +354,7 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
         FillData(top[0]->data, top[0]->length, top[1]->data, top[1]->length, idx_top, top[3]->data[2*i+1][0][0][0], neg_idx);
         idx_top += top[3]->data[2*i+1][0][0][0];
       }
-      if(idx_top != wbatch_size)    printf("idx_top:%d\t,wbatch_size:%d\n",idx_top,wbatch_size);
+      //if(idx_top != wbatch_size)    printf("idx_top:%d\t,wbatch_size:%d\n",idx_top,wbatch_size);
       utils::Check(idx_top == wbatch_size, "idx_top not equal to wbatch_size.");
     } else if (mode == "list") {
       int cline_ptr = line_ptr % list_set.size() ;
@@ -404,7 +404,7 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
           idx_top += top[3]->data[out_idx][0][0][0];
         }
       }
-      if(idx_top != wbatch_size)    printf("idx_top:%d\t,wbatch_size:%d\n",idx_top,wbatch_size);
+      //if(idx_top != wbatch_size)    printf("idx_top:%d\t,wbatch_size:%d\n",idx_top,wbatch_size);
       utils::Check(idx_top == wbatch_size, "idx_top not equal to wbatch_size.");
     }
     
