@@ -64,7 +64,7 @@ class SoftmaxFuncLayer : public Layer<xpu>{
                             const std::vector<Node<xpu>*> &top) {
     // Check for reshape
     bool need_reshape = false;
-    if (nbatch != bottom[0]->data.size(0)) {
+    if (top[0]->data.shape_[0] != bottom[0]->data.shape_[0]) {
         need_reshape = true;
     }
 
