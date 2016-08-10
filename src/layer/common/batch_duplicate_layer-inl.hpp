@@ -165,49 +165,51 @@ class BatchDuplicateLayer : public Layer<xpu>{
 	int top_ptr = 0;
     int newsize = 0;
 
-    if(dup_dim == 0){
-      mshadow::Tensor<xpu, 2> bottom_diff2 = bottom[0]->diff_d2();
-      mshadow::Tensor<xpu, 2> top_diff2 = top[0]->diff_d2();
-      newsize = bottom[0]->data.size(0) * dup_count;
-      while (top_ptr < newsize) {
-        for (int i = 0; i < dup_count; ++i) {
-          bottom_diff2[bottom_ptr] += F<op::identity>(top_diff2[top_ptr]);
-          ++top_ptr;
+    if(this->prop_error[0]){
+      if(dup_dim == 0){
+        mshadow::Tensor<xpu, 2> bottom_diff2 = bottom[0]->diff_d2();
+        mshadow::Tensor<xpu, 2> top_diff2 = top[0]->diff_d2();
+        newsize = bottom[0]->data.size(0) * dup_count;
+        while (top_ptr < newsize) {
+          for (int i = 0; i < dup_count; ++i) {
+            bottom_diff2[bottom_ptr] += F<op::identity>(top_diff2[top_ptr]);
+            ++top_ptr;
+          }
+          ++bottom_ptr;
         }
-        ++bottom_ptr;
-      }
-    }else if(dup_dim == 1){
-      mshadow::Tensor<xpu, 2> bottom_diff2 = bottom[0]->diff_d2_middle();
-      mshadow::Tensor<xpu, 2> top_diff2 = top[0]->diff_d2_middle();
-      newsize = bottom[0]->data.size(0) * bottom[0]->data.size(1) * dup_count;
-      while (top_ptr < newsize) {
-        for (int i = 0; i < dup_count; ++i) {
-          bottom_diff2[bottom_ptr] += F<op::identity>(top_diff2[top_ptr]);
-          ++top_ptr;
+      }else if(dup_dim == 1){
+        mshadow::Tensor<xpu, 2> bottom_diff2 = bottom[0]->diff_d2_middle();
+        mshadow::Tensor<xpu, 2> top_diff2 = top[0]->diff_d2_middle();
+        newsize = bottom[0]->data.size(0) * bottom[0]->data.size(1) * dup_count;
+        while (top_ptr < newsize) {
+          for (int i = 0; i < dup_count; ++i) {
+            bottom_diff2[bottom_ptr] += F<op::identity>(top_diff2[top_ptr]);
+            ++top_ptr;
+          }
+          ++bottom_ptr;
         }
-        ++bottom_ptr;
-      }
-    }else if(dup_dim == 2){
-      mshadow::Tensor<xpu, 2> bottom_diff2 = bottom[0]->diff_d2_reverse();
-      mshadow::Tensor<xpu, 2> top_diff2 = top[0]->diff_d2_reverse();
-      newsize = bottom[0]->data.size(0) * bottom[0]->data.size(1)*bottom[0]->data.size(2) * dup_count;
-      while (top_ptr < newsize) {
-        for (int i = 0; i < dup_count; ++i) {
-          bottom_diff2[bottom_ptr] += F<op::identity>(top_diff2[top_ptr]);
-          ++top_ptr;
+      }else if(dup_dim == 2){
+        mshadow::Tensor<xpu, 2> bottom_diff2 = bottom[0]->diff_d2_reverse();
+        mshadow::Tensor<xpu, 2> top_diff2 = top[0]->diff_d2_reverse();
+        newsize = bottom[0]->data.size(0) * bottom[0]->data.size(1)*bottom[0]->data.size(2) * dup_count;
+        while (top_ptr < newsize) {
+          for (int i = 0; i < dup_count; ++i) {
+            bottom_diff2[bottom_ptr] += F<op::identity>(top_diff2[top_ptr]);
+            ++top_ptr;
+          }
+          ++bottom_ptr;
         }
-        ++bottom_ptr;
-      }
-    }else if(dup_dim == 3){
-      mshadow::Tensor<xpu, 1> bottom_diff3 = bottom[0]->diff_d1();
-      mshadow::Tensor<xpu, 1> top_diff3 = top[0]->diff_d1();
-      newsize = bottom[0]->data.size(0) * bottom[0]->data.size(1)*bottom[0]->data.size(2) * bottom[0]->data.size(3) * dup_count;
-      while (top_ptr < newsize) {
-        for (int i = 0; i < dup_count; ++i) {
-          bottom_diff3[bottom_ptr] += top_diff3[top_ptr];
-          ++top_ptr;
+      }else if(dup_dim == 3){
+        mshadow::Tensor<xpu, 1> bottom_diff3 = bottom[0]->diff_d1();
+        mshadow::Tensor<xpu, 1> top_diff3 = top[0]->diff_d1();
+        newsize = bottom[0]->data.size(0) * bottom[0]->data.size(1)*bottom[0]->data.size(2) * bottom[0]->data.size(3) * dup_count;
+        while (top_ptr < newsize) {
+          for (int i = 0; i < dup_count; ++i) {
+            bottom_diff3[bottom_ptr] += top_diff3[top_ptr];
+            ++top_ptr;
+          }
+          ++bottom_ptr;
         }
-        ++bottom_ptr;
       }
     }
   }

@@ -143,6 +143,7 @@ class Merge2WindowDataLayer : public Layer<xpu>{
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
                         const std::vector<Node<xpu>*> &top) {
+    if(!this->prop_error[0] && !this->prop_error[1]) return;
     using namespace mshadow::expr;
     Tensor4D top0_diff = top[0]->diff;
     index_t k = 0;

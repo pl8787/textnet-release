@@ -35,9 +35,9 @@ class MatchTopKPoolingLayer : public Layer<xpu>{
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
+    nbottom = bottom.size(); // nbottom should be set before SetupLayer
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
     k = setting["k"].iVal();
-    nbottom = bottom.size();
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -183,6 +183,7 @@ class MatchTopKPoolingLayer : public Layer<xpu>{
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
                         const std::vector<Node<xpu>*> &top) {
+    if(!this->prop_error[0])    return;
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 4> bottom_diff  = bottom[0]->diff;
     mshadow::Tensor<xpu, 4> top_diff     = top[0]->diff;

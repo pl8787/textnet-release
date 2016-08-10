@@ -44,11 +44,11 @@ class DynamicPoolingLayer : public Layer<xpu>{
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
+	nbottom = bottom.size(); // pay attention!!!, nbottom should be set before SetupLayer
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
     row = setting["row"].iVal();
     col = setting["col"].iVal();
     dim = setting["dim"].iVal();
-	nbottom = bottom.size();
     utils::Check(dim == 1 || dim == 2, "DynamicPoolingLayer: dim error.");
     if (dim == 1) {
       utils::Check(row == 1, "DynamicPoolingLayer: dim error.");

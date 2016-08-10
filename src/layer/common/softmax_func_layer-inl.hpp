@@ -102,6 +102,7 @@ class SoftmaxFuncLayer : public Layer<xpu>{
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
                         const std::vector<Node<xpu>*> &top) {
+    if(!this->prop_error[0])    return;
     using namespace mshadow::expr;
     mshadow::Shape<4>       bottom_shape= bottom[0]->data.shape_;
     mshadow::Tensor<xpu, 4> bottom_diff = bottom[0]->diff;

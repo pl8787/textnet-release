@@ -304,6 +304,13 @@ class MatchLayer : public Layer<xpu>{
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
                         const std::vector<Node<xpu>*> &top) {
+
+    if (!this->prop_error[0] && !this->prop_error[1]) return;
+    if (op == "xor") {
+      // do nothing
+      return;
+    }
+      
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 4> top_diff = top[0]->diff;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
@@ -316,13 +323,6 @@ class MatchLayer : public Layer<xpu>{
 
 	int interval_0 = 1;
 	int interval_1 = 1;
-
-    if (op == "xor") {
-      // do nothing
-      return;
-    }
-      
-    if (!this->prop_error[0] && !this->prop_error[1]) return;
 
     for (int i = 0; i < nbatch; ++i) {
       int len_0 = -1, len_1 = -1;

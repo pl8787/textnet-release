@@ -104,6 +104,8 @@ class ElementOpLayer : public Layer<xpu> {
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
                         const std::vector<Node<xpu>*> &top) {
+
+    if(!this->prop_error[0] && !this->prop_error[1])    return;
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 4> top_diff     = top[0]->diff;
     mshadow::Tensor<xpu, 4> bottom0_data = bottom[0]->data;
@@ -112,11 +114,15 @@ class ElementOpLayer : public Layer<xpu> {
     mshadow::Tensor<xpu, 4> bottom1_diff = bottom[1]->diff;
 
     if (op == "product") {
-      bottom0_diff += top_diff * bottom1_data;
-      bottom1_diff += top_diff * bottom0_data;
+      if(this->prop_error[0])
+        bottom0_diff += top_diff * bottom1_data;
+      if(this->prop_error[1])
+        bottom1_diff += top_diff * bottom0_data;
     } else if (op == "sum") {
-      bottom0_diff += top_diff;
-      bottom1_diff += top_diff;
+      if(this->prop_error[0])
+        bottom0_diff += top_diff;
+      if(this->prop_error[1])
+        bottom1_diff += top_diff;
     }
   }
 
