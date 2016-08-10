@@ -168,6 +168,8 @@ class Layer {
     time_consume_f = 0.0f;
     time_consume_b = 0.0f;
     time_consume_u = 0.0f;
+    b_prop_error = true;
+    b_prop_grad = true;
   }
   virtual ~Layer(void) {}
   
@@ -182,6 +184,32 @@ class Layer {
     prnd_ = prnd;
 
 	setting = this->settings;
+
+    for (int i = 0; i < this->BottomNodeNum(); ++i) {
+      prop_error.push_back(true);
+    }
+    for (int i = 0; i < this->ParamNodeNum(); ++i) {
+      prop_grad.push_back(true);
+    }
+
+
+    if(setting.count("prop_error")){
+      string sPropError = setting["prop_error"].sVal();
+      assert(sPropError.size() == this->BottomNodeNum());
+      for(int i = 0 ; i < sPropError.size() ; ++ i){
+        assert(sPropError[i] == '0' || sPropError[i] == '1');
+        if(sPropError[i] == '0')    prop_error[i] = false;
+      }
+    }
+    if(setting.count("prop_grad")){
+      string sPropGrad = setting["prop_grad"].sVal();
+      assert(sPropGrad.size() == this->ParamNodeNum());
+      for(int i = 0 ; i < sPropGrad.size() ; ++ i){
+        assert(sPropGrad[i] == '0' || sPropGrad[i] == '1');
+        if(sPropGrad[i] == '0')     prop_grad[i] = false;
+      }
+    }
+
   }
   
   virtual void SetupLayer(Json::Value &root,
@@ -190,6 +218,7 @@ class Layer {
                           mshadow::Random<xpu> *prnd) {
     LoadModel(root);
     this->SetupLayer(this->settings, bottom, top, prnd);                      
+
   }
   
   // To implement this function you need call base function in the end
@@ -507,6 +536,9 @@ class Layer {
   float time_consume_f;
   float time_consume_b;
   float time_consume_u;
+
+  bool b_prop_error;
+  bool b_prop_grad;
   
   // required setting
   std::map<std::string, SettingV> defaults;

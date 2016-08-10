@@ -787,7 +787,7 @@ class Net : public INet{
     for (int i = 0; i < tags.size(); ++i) {
       SetupReshape(tags[i]);
     }
-    PropAll();
+    //PropAll();
   }
   
   virtual void TrainOneStep(string tag, int iter = 0) {
