@@ -116,6 +116,8 @@ const int kGruD2 = 10010;
 const int kGruD2Optimize = 10011;
 const int kGruD2OneGate = 10012;
 
+const int kMatchHistogram = 20001;
+
 // Loss Layer 51-70
 const int kSoftmax = 51;
 const int kL2Loss = 52;

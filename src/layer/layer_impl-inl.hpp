@@ -118,6 +118,7 @@
 #include "./loss/euclid_distance_loss_layer-inl.hpp"
 #include "./loss/logistic_layer-inl.hpp"
 #include "./loss/activation_norm_loss_layer-inl.hpp"
+#include "./common/match_histogram_layer-inl.hpp"
 
 namespace textnet {
 namespace layer {
@@ -242,6 +243,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kFillCurveD2XY: return new FillCurveD2XYLayer<xpu>(type);
     case kLengthTrans: return new LengthTransLayer<xpu>(type);
     case kAxisSplit: return new AxisSplitLayer<xpu>(type);
+    case kMatchHistogram: return new MatchHistogramLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }
