@@ -8,25 +8,6 @@
 namespace textnet {
 namespace updater {
 
-template<int dim>
-void norm2ByRow(mshadow::Tensor<cpu, dim> t, mshadow::Tensor<cpu, 1> &norm2row) {
-    utils::Check(norm2row.size(0) == t.size(0), "norm2ByRow: size error.");
-    utils::Check(t.size(1) >  1, "norm2ByRow: size error.");
-    utils::Check(t.size(2) == 1, "norm2ByRow: size error.");
-    utils::Check(t.size(3) == 1, "norm2ByRow: size error.");
-    
-    int num_row = t.size(0);
-    int num_col = t.size(1);
-    norm2row = 0.f;
-    for (int i = 0; i < num_row; ++i) {
-        for (int j = 0; j < num_col; ++j) {
-            norm2row[i] += t.dptr_[i * num_col + j] * t.dptr_[i * num_col + j];
-        }
-        norm2row[i] = sqrt(norm2row[i]);
-    }
-    return;
-}
-
 template<typename xpu, int dim>
 class AdaDeltaUpdater : public Updater<xpu, dim>{
  public:
@@ -37,6 +18,24 @@ class AdaDeltaUpdater : public Updater<xpu, dim>{
   }
   virtual ~AdaDeltaUpdater(void) {}
   
+  void norm2ByRow(mshadow::Tensor<xpu, dim> t, mshadow::Tensor<xpu, 1> &norm2row) {
+      utils::Check(norm2row.size(0) == t.size(0), "norm2ByRow: size error.");
+      utils::Check(t.size(1) >  1, "norm2ByRow: size error.");
+      utils::Check(t.size(2) == 1, "norm2ByRow: size error.");
+      utils::Check(t.size(3) == 1, "norm2ByRow: size error.");
+      
+      int num_row = t.size(0);
+      int num_col = t.size(1);
+      norm2row = 0.f;
+      for (int i = 0; i < num_row; ++i) {
+          for (int j = 0; j < num_col; ++j) {
+              norm2row[i] += t.dptr_[i * num_col + j] * t.dptr_[i * num_col + j];
+          }
+          norm2row[i] = sqrt(norm2row[i]);
+      }
+      return;
+  }
+
   virtual void Require(std::map<std::string, SettingV> &setting) {
     // default value, just set the value you want
     this->defaults["eps"] = SettingV(0.000001f);
@@ -73,9 +72,6 @@ class AdaDeltaUpdater : public Updater<xpu, dim>{
                       mshadow::Tensor<xpu, dim> diff) {
     using namespace mshadow::expr;
 
-    if (batch_size > 1) {
-        diff /= float(batch_size);
-    }
     if (wd > 0.f) {
       diff += wd * data;
     }
@@ -96,7 +92,7 @@ class AdaDeltaUpdater : public Updater<xpu, dim>{
     if (norm2 > 0.f) {
       float sqrt_norm2 = sqrt(norm2);
       mshadow::Shape<1> shape = mshadow::Shape1(data.size(0));
-      mshadow::TensorContainer<cpu, 1> norm2row(shape);
+      mshadow::TensorContainer<xpu, 1> norm2row(shape);
       norm2ByRow(data, norm2row);      
       for (int i = 0; i < norm2row.size(0); ++i) {
           float n2 = norm2row[i];
@@ -115,9 +111,6 @@ class AdaDeltaUpdater : public Updater<xpu, dim>{
                             mshadow::Tensor<xpu, 1> idx) {
     using namespace mshadow::expr;
 
-    if (batch_size > 1) {
-        diff /= float(batch_size);
-    }
 
     if (iter++ == 0) {
         sumGradSquare.Resize(data.shape_, 0.);

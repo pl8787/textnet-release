@@ -189,14 +189,17 @@ inline void ShowMemoryUse() {
 		 total_memory, ru.ru_maxrss, ru.ru_ixrss, ru.ru_idrss, ru.ru_isrss);
 }
 
+#if DEBUG 
 inline bool checkNan(float *p, int l) {
   for (int i = 0; i < l; ++i) {
-    if ( isnan(p[i]) ) {
+    if ( std::isnan(p[i]) ) {
       return true;
-	}
+    }
   }
   return false;
 }
+#endif
+
 }  // namespace utils
 // easy utils that can be directly acessed in xgboost
 /*! \brief get the beginning address of a vector */

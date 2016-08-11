@@ -53,6 +53,20 @@ class WholePooling2dLayer : public Layer<xpu>{
 	}
   }
 
+  virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,
+                            const std::vector<Node<xpu>*> &top) {
+    // Check for reshape
+    bool need_reshape = false;
+    if (! (bottom[0]->data.size(0) == top[0]->data.size(0))) {
+        need_reshape = true;
+    }
+
+    // Do reshape 
+    if (need_reshape) {
+        this->Reshape(bottom, top);
+    }
+  }
+
   typedef mshadow::Tensor<xpu, 1> Tensor1D;
   typedef mshadow::Tensor<xpu, 2> Tensor2D;
   typedef mshadow::Tensor<xpu, 3> Tensor3D;
@@ -134,7 +148,7 @@ class WholePooling2dLayer : public Layer<xpu>{
 
   void checkNan(float *p, int l) {
     for (int i = 0; i < l; ++i) {
-      assert(!isnan(p[i]));
+      assert(!std::isnan(p[i]));
     }
   }
 

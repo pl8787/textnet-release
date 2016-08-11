@@ -5,6 +5,7 @@
 #include <mshadow/tensor.h>
 #include <iostream>
 
+#ifdef CPU_ONLY
 extern float SIGMOID_MAX_INPUT;
 extern int SIGMOID_TABLE_SIZE;
 extern float *p_sigmoid_lookup_table;
@@ -14,6 +15,7 @@ extern float *p_tanh_lookup_table;
 extern float EXP_MAX_INPUT;
 extern int EXP_TABLE_SIZE;
 extern float *p_exp_lookup_table;
+#endif
 
 namespace textnet {
 /*! \brief operations for ActivationLayer */
@@ -37,6 +39,7 @@ struct orc_exp {
   }
 };
 
+#ifdef CPU_ONLY
 /*! \brief sigmoid unit */
 struct sigmoid_lookup {
   MSHADOW_XINLINE static real_t Map(real_t a) {
@@ -98,6 +101,27 @@ struct exp_lookup {
     return p_exp_lookup_table[pos];
   }
 };
+
+#else
+
+/*! \brief sigmoid unit */
+struct sigmoid_lookup {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return 1.0f / (1.0f + expf(-a));
+  }
+};
+struct tanh_lookup {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return tanhf( a );
+  }
+};
+struct exp_lookup {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return exp( a );
+  }
+};
+#endif
+
 
 /*! \brief sigmoid unit */
 struct sigmoid {

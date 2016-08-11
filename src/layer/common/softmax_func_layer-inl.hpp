@@ -60,9 +60,23 @@ class SoftmaxFuncLayer : public Layer<xpu>{
 	}
   }
 
+  virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,
+                            const std::vector<Node<xpu>*> &top) {
+    // Check for reshape
+    bool need_reshape = false;
+    if (top[0]->data.shape_[0] != bottom[0]->data.shape_[0]) {
+        need_reshape = true;
+    }
+
+    // Do reshape 
+    if (need_reshape) {
+        this->Reshape(bottom, top);
+    }
+  }
+
   void checkNan(float *p, int l) {
     for (int i = 0; i < l; ++i) {
-      assert(!isnan(p[i]));
+      assert(!std::isnan(p[i]));
     }
   }
 
@@ -102,6 +116,7 @@ class SoftmaxFuncLayer : public Layer<xpu>{
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
                         const std::vector<Node<xpu>*> &top) {
+    if(!this->prop_error[0])    return;
     using namespace mshadow::expr;
     mshadow::Shape<4>       bottom_shape= bottom[0]->data.shape_;
     mshadow::Tensor<xpu, 4> bottom_diff = bottom[0]->diff;

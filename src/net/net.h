@@ -62,6 +62,7 @@ class INet {
     virtual void LoadModel(string model_file) = 0;
     virtual void SaveModel(int cur_iter, bool model_save_last) = 0;
     virtual void SaveModel(string file_name, bool save_diff) = 0;
+    virtual void PrintClock(string tag) = 0;
 
   // For Statistic
   virtual Json::Value StatisticNode(Json::Value &req_root) = 0;
@@ -638,7 +639,16 @@ class Net : public INet{
 #endif
         }
 
+#if TIME_DEBUG
+        nets[tag][i]->ClockStart(0);
+#endif
+
         nets[tag][i]->Forward(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+
+#if TIME_DEBUG
+        nets[tag][i]->ClockStop(0);
+#endif
+
 #if LENGTH_DEBUG
         for (int j = 0; j < top_vecs[layer_idx].size(); ++j) {
           cout << top_vecs[layer_idx][j]->node_name << endl;
@@ -672,7 +682,17 @@ class Net : public INet{
     }
     for (int i = nets[tag].size()-1; i>=0; --i) {
       int layer_idx = nets[tag][i]->layer_idx;
+
+#if TIME_DEBUG
+        nets[tag][i]->ClockStart(1);
+#endif
+
       nets[tag][i]->Backprop(bottom_vecs[layer_idx], top_vecs[layer_idx]);
+
+#if TIME_DEBUG
+        nets[tag][i]->ClockStop(1);
+#endif
+
 #if DEBUG
       cout << "BP " << nets[tag][i]->layer_name << endl;
 #endif
@@ -742,7 +762,17 @@ class Net : public INet{
              << "\t" << nets[tag][i]->GetParams()[j].diff[0][0][0][1]
              << endl;
 #endif
+
+#if TIME_DEBUG
+        nets[tag][i]->ClockStart(2);
+#endif
+
         nets[tag][i]->GetParams()[j].Update();
+
+#if TIME_DEBUG
+        nets[tag][i]->ClockStop(2);
+#endif
+
 #if DEBUG
         cout << "param data" << i << " , " << j << ": " << nets[tag][i]->GetParams()[j].data[0][0][0][0]
              << "\t" << nets[tag][i]->GetParams()[j].data[0][0][0][1]
@@ -757,7 +787,7 @@ class Net : public INet{
     for (int i = 0; i < tags.size(); ++i) {
       SetupReshape(tags[i]);
     }
-    PropAll();
+    //PropAll();
   }
   
   virtual void TrainOneStep(string tag, int iter = 0) {
@@ -816,6 +846,12 @@ class Net : public INet{
     }
   }
       
+  virtual void PrintClock(string tag) {
+      for (int i = 0; i < nets[tag].size(); ++i) {
+        nets[tag][i]->ClockPrint();
+      }
+  }
+
   virtual void TestAll(string tag, int iter = 0) {
       SetPhrase(tag, kTest);
 
@@ -826,14 +862,15 @@ class Net : public INet{
         test_loss.push_back(0.0f);
         test_loss_list.push_back(vector<float>());
       }
+#if DEBUG
+      cout<<"Start TestALL ..."<<endl;
+#endif
       
       for (int test_iter = 0; test_iter < max_iters[tag]; ++test_iter) {
         Forward(tag);
         for (int i = 0; i < out_nodes[tag].size(); ++i) {
           test_loss_list[i].push_back(nodes[out_nodes[tag][i]]->data_d1()[0]);
         }
-        // orc_tmp
-        // cout << "test loss:" << nodes[test_out[0]]->data_d1()[0] << endl;
       }
 
       // Reduce to one output

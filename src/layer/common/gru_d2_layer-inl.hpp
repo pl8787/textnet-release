@@ -178,9 +178,23 @@ class GruD2Layer : public Layer<xpu> {
 	}
   }
 
+  virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,
+                            const std::vector<Node<xpu>*> &top) {
+    // Check for reshape
+    bool need_reshape = false;
+    if (! (bottom[0]->data.size(0) == top[0]->data.size(0))) {
+        need_reshape = true;
+    }
+
+    // Do reshape 
+    if (need_reshape) {
+        this->Reshape(bottom, top);
+    }
+  }
+
   void checkNan(float *p, int l) {
     for (int i = 0; i < l; ++i) {
-      assert(!isnan(p[i]));
+      assert(!std::isnan(p[i]));
     }
   }
 
@@ -492,7 +506,7 @@ class GruD2Layer : public Layer<xpu> {
   void ForwardLeftTop2RightBottom(Tensor3D x, int x_len, int y_len, 
                                   Tensor3D g, Tensor3D reset_h, 
                                   Tensor3D hi, Tensor3D h) {
-    utils::Check(x_len > 0 && y_len > 0 && x_len <= x.size(0) && y_len <= x.size(1), "GruD2Layer: input size error.");
+    utils::Check(x_len > 0 && y_len > 0 && x_len <= x.size(0) && y_len <= x.size(1), "GruD2Layer: input size error. x_len: %d, y_len: %d, x.size: %d x %d", x_len, y_len, x.size(0), x.size(1));
     Tensor2D pre_h_l, pre_h_m, pre_h_t;
     // not need any padding, begin h and c are set to 0
     for (index_t row_idx = 0; row_idx < x_len; ++row_idx) {
@@ -528,7 +542,7 @@ class GruD2Layer : public Layer<xpu> {
   void ForwardRightBottom2LeftTop(Tensor3D x, int x_len, int y_len, 
                                   Tensor3D g, Tensor3D reset_h,
                                   Tensor3D hi, Tensor3D h) {
-    utils::Check(x_len > 0 && y_len > 0 && x_len <= x.size(0) && y_len <= x.size(1), "GruD2Layer: input size error.");
+    utils::Check(x_len > 0 && y_len > 0 && x_len <= x.size(0) && y_len <= x.size(1), "GruD2Layer: input size error. x_len: %d, y_len: %d, x.size: %d x %d", x_len, y_len, x.size(0), x.size(1));
     Tensor2D pre_h_l, pre_h_m, pre_h_t;
     // not need any padding, begin h and c are set to 0
     for (int row_idx = x_len-1; row_idx >= 0; --row_idx) {

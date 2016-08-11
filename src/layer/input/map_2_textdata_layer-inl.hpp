@@ -101,6 +101,10 @@ class Map2TextDataLayer : public Layer<xpu>{
     rnd_generator = std::default_random_engine(seed);
   }
   
+  static bool map_list_size_cmp(const vector<int> &x1, const vector<int> &x2) {
+    return x1.size() < x2.size(); // sort increase
+  }
+  
   void ReadTextData(string &data_file, unordered_map<string, vector<int> > &data_set, 
           int max_doc_len, int min_doc_len) {
     utils::Printf("Open data file: %s\n", data_file.c_str());    

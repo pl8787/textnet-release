@@ -14,7 +14,8 @@ endif
 ifeq ($(COMPILE_VERSION), debug)
 CXXFLAGS += -g -Ddebug -I./mshadow/ -std=c++11
 else
-CXXFLAGS += -Wall -O3 -msse3 -Wno-unknown-pragmas -funroll-loops -I./mshadow/ -std=c++11
+#CXXFLAGS += -Wall -O3 -msse3 -Wno-unknown-pragmas -funroll-loops -I./mshadow/ -std=c++11
+CXXFLAGS += -O3 -msse3 -Wno-unknown-pragmas -funroll-loops -I./mshadow/ -std=c++11
 endif
 
 CUDA_INCLUDE_DIR := $(CUDA_DIR)/include
@@ -79,7 +80,7 @@ $(MK_BIN):
 	mkdir bin
 
 layer_cpu.o layer_gpu.o: src/layer/layer_impl.cpp src/layer/layer_impl.cu\
-	src/layer/*.h src/layer/*.hpp src/layer/common/*.hpp src/utils/*.h
+	src/layer/*.h src/layer/*.hpp src/layer/common/*.hpp src/layer/input/*.hpp src/layer/loss/*.hpp src/utils/*.h
 
 updater_cpu.o updater_gpu.o: src/updater/updater_impl.cpp src/updater/updater_impl.cu\
 	src/updater/*.hpp src/updater/*.h src/utils/*.h
@@ -116,10 +117,10 @@ $(OBJ) :
 	$(CXX) -c $(CXXFLAGS) -o $@ $(firstword $(filter %.cpp %.c, $^) )
 
 $(CUOBJ) :
-	$(NVCC) -c -o $@ $(NVCCFLAGS) -Xcompiler "$(CXXFLAGS)" $(filter %.cu, $^)
+	$(NVCC) -c -o $@ $(NVCCFLAGS) -std=c++11 -Xcompiler "$(CXXFLAGS)" $(filter %.cu, $^)
 
 $(CUBIN) :
-	$(NVCC) -o $@ $(NVCCFLAGS) -Xcompiler "$(CXXFLAGS)" -Xlinker "$(LDFLAGS)" $(filter %.cu %.cpp %.o, $^)
+	$(NVCC) -o $@ $(NVCCFLAGS) -std=c++11 -Xcompiler "$(CXXFLAGS)" -Xlinker "$(LDFLAGS)" $(filter %.cu %.cpp %.o, $^)
   
 clean:
 	$(RM) $(OBJ) $(BIN) $(CUBIN) $(CUOBJ) *~ */*~ */*/*~

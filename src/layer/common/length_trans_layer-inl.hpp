@@ -67,7 +67,7 @@ class LengthTransLayer : public Layer<xpu>{
     nbatch = bottom[0]->data.size(0); 
     
     if (trans_type == "2D->1D") { 
-      utils::Check(bottom[0]->length.size(1) == 2, "LengthTransLayer: need 2d length.");
+      utils::Check(bottom[0]->length.size(1) >= 2, "LengthTransLayer: need 2d length.");
       top[0]->Resize(nbatch, bottom[0]->data.size(1), bottom[0]->data.size(2), bottom[0]->data.size(3), nbatch, 1, true);
     } else if (trans_type == "1D->2D") {
       utils::Check(bottom[0]->length.size(1) == 1, "LengthTransLayer: need 1d length.");

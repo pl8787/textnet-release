@@ -20,10 +20,6 @@ using namespace std;
 namespace textnet {
 namespace layer {
 
-bool list_size_cmp(const vector<int> &x1, const vector<int> &x2) {
-  return x1.size() < x2.size(); // sort increase
-}
-
 template<typename xpu>
 class QATextDataLayer : public Layer<xpu>{
  public:
@@ -94,6 +90,10 @@ class QATextDataLayer : public Layer<xpu>{
     line_ptr = 0;
   }
   
+  static bool list_size_cmp(const vector<int> &x1, const vector<int> &x2) {
+    return x1.size() < x2.size(); // sort increase
+  }
+
   void ReadTextData(string &data_file, unordered_map<string, vector<int> > &data_set) {
     utils::Printf("Open data file: %s\n", data_file.c_str());    
 
