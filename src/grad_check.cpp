@@ -1216,6 +1216,115 @@ void TestLocalFactorLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckGrad(layer_conv, bottoms, tops);
   
 }
+void TestReshapeLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Reshape Layer." << endl;
+  Node<cpu> bottom0;
+  Node<cpu> top0;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom0);
+  tops.push_back(&top0);
+  
+  bottom0.Resize(Shape4(2,1,1,4), true);
+
+  bottom0.data[0][0][0][0] = 1;
+  bottom0.data[0][0][0][1] = 2;
+  bottom0.data[0][0][0][2] = 3;
+  bottom0.data[0][0][0][3] = 4;
+  bottom0.data[1][0][0][0] = 1;
+  bottom0.data[1][0][0][1] = 2;
+  bottom0.data[1][0][0][2] = 3;
+  bottom0.data[1][0][0][3] = 4;
+  
+  bottom0.length = 4;
+
+  map<string, SettingV> setting;
+  setting["D0"] = SettingV(-1);
+  setting["D1"] = SettingV(1);
+  setting["D2"] = SettingV(2);
+  setting["D3"] = SettingV(2);
+  setting["L0"] = SettingV(0);
+  setting["L1"] = SettingV(0);
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_conv = CreateLayer<cpu>(kReshape);
+  layer_conv->PropAll();
+  layer_conv->SetupLayer(setting, bottoms, tops, prnd);
+  layer_conv->Reshape(bottoms, tops, true);
+
+  layer_conv->Forward(bottoms, tops);
+  PrintTensor("bottom0", bottom0.data);
+  PrintTensor("bottom0", bottom0.length);
+  PrintTensor("top0", top0.data);
+  PrintTensor("top0", top0.length);
+
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.01f);
+  setting_checker["range_max"] = SettingV(0.01f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_conv, bottoms, tops);
+}
+
+void TestKeySnipLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Key Snip Layer." << endl;
+  Node<cpu> bottom0;
+  Node<cpu> bottom1;
+  Node<cpu> top0;
+  Node<cpu> top1;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom0);
+  bottoms.push_back(&bottom1);
+  tops.push_back(&top0);
+  tops.push_back(&top1);
+  
+  bottom0.Resize(Shape4(2,1,1,5), true);
+  bottom1.Resize(Shape4(2,1,1,2), true);
+
+  bottom0.data[0][0][0][0] = 1;
+  bottom0.data[0][0][0][1] = 2;
+  bottom0.data[0][0][0][2] = 3;
+  bottom0.data[0][0][0][3] = 4;
+  bottom0.data[0][0][0][4] = 1;
+  bottom0.data[1][0][0][0] = 1;
+  bottom0.data[1][0][0][1] = 2;
+  bottom0.data[1][0][0][2] = 3;
+  bottom0.data[1][0][0][3] = 4;
+  bottom0.data[1][0][0][4] = 1;
+  bottom1.data[0][0][0][0] = 1;
+  bottom1.data[0][0][0][1] = 3;
+  bottom1.data[1][0][0][0] = 2;
+  bottom1.data[1][0][0][1] = 4;
+  
+  bottom0.length = 5;
+  bottom1.length = 2;
+
+  map<string, SettingV> setting;
+  setting["snip_size"] = SettingV(1);
+  setting["group_snip"] = SettingV(2);
+  setting["max_snip"] = SettingV(5);
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_conv = CreateLayer<cpu>(kKeySnip);
+  layer_conv->PropAll();
+  layer_conv->SetupLayer(setting, bottoms, tops, prnd);
+  layer_conv->Reshape(bottoms, tops, true);
+
+  layer_conv->Forward(bottoms, tops);
+  PrintTensor("bottom0", bottom0.data);
+  PrintTensor("bottom1", bottom1.data);
+  PrintTensor("top0", top0.data);
+  PrintTensor("top1", top1.data);
+  PrintTensor("top0", top0.length);
+  PrintTensor("top1", top1.length);
+}
+
 void TestGaussianMaskLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Gaussian Mask Layer." << endl;
   Node<cpu> bottom0;
@@ -4968,6 +5077,8 @@ int main(int argc, char *argv[]) {
   // TestQATextDataLayer(&rnd);
   // TestMapTextDataLayer(&rnd);
   // TestMap2TextDataLayer(&rnd);
+  TestKeySnipLayer(&rnd);
+  // TestReshapeLayer(&rnd);
   // TestConvolutionAndLocalFactorLayer(&rnd);
   // TestElementOpLayer(&rnd);
   // TestParameterLayer(&rnd);

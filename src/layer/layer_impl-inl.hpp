@@ -87,6 +87,8 @@
 #include "./common/fill_curve_d2xy_layer-inl.hpp"
 #include "./common/length_trans_layer-inl.hpp"
 #include "./common/axis_split_layer-inl.hpp"
+#include "./common/key_snip_layer-inl.hpp"
+#include "./common/reshape_layer-inl.hpp"
 #include "./common/merge_2_window_data_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/lcs_toy_data_layer-inl.hpp"
@@ -243,6 +245,8 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kFillCurveD2XY: return new FillCurveD2XYLayer<xpu>(type);
     case kLengthTrans: return new LengthTransLayer<xpu>(type);
     case kAxisSplit: return new AxisSplitLayer<xpu>(type);
+    case kKeySnip: return new KeySnipLayer<xpu>(type);
+    case kReshape: return new ReshapeLayer<xpu>(type);
     case kMatchHistogram: return new MatchHistogramLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
