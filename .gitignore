@@ -1,5 +1,6 @@
 *.o
 *.pyc
+Makefile.config
 bin/
 data/
 model/
