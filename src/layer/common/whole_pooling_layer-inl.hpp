@@ -54,6 +54,21 @@ class WholePoolingLayer : public Layer<xpu>{
 	}
   }
 
+  virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,
+                            const std::vector<Node<xpu>*> &top) {
+    // Check for reshape
+    bool need_reshape = false;
+
+    if (top[0]->data.shape_[0] != bottom[0]->data.shape_[0]) {
+        need_reshape = true;
+    }
+
+    // Do reshape 
+    if (need_reshape) {
+        this->Reshape(bottom, top);
+    }
+  }
+ 
   typedef mshadow::Tensor<xpu, 1> Tensor1D;
   typedef mshadow::Tensor<xpu, 2> Tensor2D;
   typedef mshadow::Tensor<xpu, 2, int> Tensor2DInt;

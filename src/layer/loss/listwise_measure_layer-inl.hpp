@@ -107,7 +107,7 @@ class ListwiseMeasureLayer : public Layer<xpu>{
       iss.seekg(0, iss.beg);
       iss.str(lines[i]);
       string id;
-      int count;
+      float count;
       iss >> id >> count;
       list_id.push_back(id);
       pos_count.push_back(count);
@@ -194,12 +194,16 @@ class ListwiseMeasureLayer : public Layer<xpu>{
         if (!is_pos_count_file) {
           sort(score_list.begin(), score_list.end(), list_cmp_label);
           for (int i = 0; i < min(k, score_list_len); ++i) {
-            idcg += score_list[i].second / rank_log(i+1);
+            //idcg += score_list[i].second / rank_log(i+1);
+            //start by fanyixing
+            idcg += (pow(2.0, score_list[i].second) - 1.0 ) / rank_log(1.0 + i);
+            //end by fanyixing
           }
         } else {
-          for (int i = 0; i < min(k, pos_count[list_ptr]); ++i) {
-            idcg += 1.0 / rank_log(i+1);
-          }
+          idcg = pos_count[list_ptr];
+          //for (int i = 0; i < min(k, pos_count[list_ptr]); ++i) {
+            //idcg += 1.0 / rank_log(i+1);
+          //}
         }
       }
 
@@ -286,15 +290,25 @@ class ListwiseMeasureLayer : public Layer<xpu>{
         }
       } else if (method == "nDCG@k") {
         for (int i = 0; i < min(k, score_list_len); ++i) {
-          score += score_list[i].second / rank_log(i+1);
+          //score += pow(2,score_list[i].second - 1) / rank_log(i+2);
+          //start by fanyixing
+          score += (pow(2.0,score_list[i].second) - 1.0) / rank_log(1.0 + i);
+          //end by fanyixing
         }
+        //start by fanyixing
+        /*
         if (idcg == 0) {
             utils::Check(score==0.0, "nDCG@k Error! idcg=0 score!=0 List ID: %s.", list_id[list_ptr].c_str());
         } else {
             score /= idcg;
         }
+        */
+        //end by fanyixing
+        if(idcg != 0)
+            score /= idcg;
       } else if (method == "MAP") {
         int p_count = 0;
+        /*
         for (int i = 0; i < score_list_len; ++i) {
           score_list[i].first = i+1;
         }
@@ -305,6 +319,16 @@ class ListwiseMeasureLayer : public Layer<xpu>{
           p_count += 1;
           score += (i+1) / score_list[i].first;
         }
+        */
+
+        //start by fanyixing
+        for(int i = 0 ; i < score_list_len; ++ i){
+          if (score_list[i].second != 0){
+              ++ p_count;
+              score += float(p_count / (1.0 + i));
+          }
+        }
+        // end by fanyixing
 
         if (is_pos_count_file) {
           p_count = pos_count[list_ptr];
@@ -338,7 +362,7 @@ class ListwiseMeasureLayer : public Layer<xpu>{
   string pos_count_file;
   bool is_pos_count_file;
   bool nearest_one;
-  vector<int> pos_count;
+  vector<float> pos_count;
   vector<string> list_id;
   int list_ptr;
   int col;

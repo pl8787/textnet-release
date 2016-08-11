@@ -14,7 +14,8 @@ endif
 ifeq ($(COMPILE_VERSION), debug)
 CXXFLAGS += -g -Ddebug -I./mshadow/ -std=c++11
 else
-CXXFLAGS += -Wall -O3 -msse3 -Wno-unknown-pragmas -funroll-loops -I./mshadow/ -std=c++11
+#CXXFLAGS += -Wall -O3 -msse3 -Wno-unknown-pragmas -funroll-loops -I./mshadow/ -std=c++11
+CXXFLAGS += -O3 -msse3 -Wno-unknown-pragmas -funroll-loops -I./mshadow/ -std=c++11
 endif
 
 CUDA_INCLUDE_DIR := $(CUDA_DIR)/include

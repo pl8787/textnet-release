@@ -29,10 +29,11 @@ class PadLayer : public Layer<xpu>{
 
     // require value, set to SettingV(),
     // it will force custom to set in config
+    this->defaults["dim"] = SettingV();
     this->defaults["pad_x1"] = SettingV();
     this->defaults["pad_x2"] = SettingV();
-    this->defaults["pad_y1"] = SettingV();
-    this->defaults["pad_y2"] = SettingV();
+    this->defaults["pad_y1"] = SettingV(0);
+    this->defaults["pad_y2"] = SettingV(0);
     
     Layer<xpu>::Require();
   }
@@ -48,6 +49,7 @@ class PadLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(),
                   "PadLayer:top size problem.");    
     
+    dim = setting["dim"].iVal();
     pad_x1 = setting["pad_x1"].iVal();
     pad_x2 = setting["pad_x2"].iVal();
     pad_y1 = setting["pad_y1"].iVal();
@@ -103,15 +105,31 @@ class PadLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 2> top_len = top[0]->length;
     
     for (int i = 0; i < top_data.size(0); ++i) {
-      top_len[i][0] = bottom_len[i][0] + pad_y1 + pad_y2;
-      top_len[i][1] = bottom_len[i][1] + pad_x1 + pad_x2;
+      if(dim == 1){
+        top_len[i][0] = bottom_len[i][0] + pad_x1 + pad_x2;
+      }else if(dim == 2){
+        top_len[i][0] = bottom_len[i][0] + pad_y1 + pad_y2;
+        top_len[i][1] = bottom_len[i][1] + pad_x1 + pad_x2;
+      }
       for (int c = 0; c < top_data.size(1); ++c) {
-        for (int y = 0; y < top_len[i][0]; ++y) {
-          for (int x = 0; x < top_len[i][1]; ++x) {
-            if ((x >= pad_x1 && x < bottom_len[i][1] + pad_x1) && (y >= pad_y1 && y < bottom_len[i][0] + pad_y1)) {
-              top_data[i][c][y][x] = bottom_data[i][c][y - pad_y1][x - pad_x1];
-            } else {
-              top_data[i][c][y][x] = pad_value;
+        if(dim == 1){
+          for( int y = 0 ; y < top_data.size(2); ++ y){
+            for( int x = 0 ; x < top_len[i][0]; ++ x){
+              if((x >= pad_x1 && x < bottom_len[i][0] + pad_x1)){
+                top_data[i][c][y][x] = bottom_data[i][c][y][x - pad_x1];
+              }else{
+                top_data[i][c][y][x] = pad_value;
+              }
+            }
+          }
+        }else if (dim == 2){
+          for (int y = 0; y < top_len[i][0]; ++y) {
+            for (int x = 0; x < top_len[i][1]; ++x) {
+              if ((x >= pad_x1 && x < bottom_len[i][1] + pad_x1) && (y >= pad_y1 && y < bottom_len[i][0] + pad_y1)) {
+                top_data[i][c][y][x] = bottom_data[i][c][y - pad_y1][x - pad_x1];
+              } else {
+                top_data[i][c][y][x] = pad_value;
+              }
             }
           }
         }
@@ -131,10 +149,20 @@ class PadLayer : public Layer<xpu>{
     }
     for (int i = 0; i < top_diff.size(0); ++i) {
       for (int c = 0; c < top_diff.size(1); ++c) {
-        for (int y = 0; y < top_len[i][0]; ++y) {
-          for (int x = 0; x < top_len[i][1]; ++x) {
-            if ((x >= pad_x1 && x < bottom_len[i][1] + pad_x1) && (y >= pad_y1 && y < bottom_len[i][0] + pad_y1)) {
-              bottom_diff[i][c][y - pad_y1][x - pad_x1] += top_diff[i][c][y][x];
+        if(dim == 1){
+          for(int y = 0 ; y < top_diff.size(2); ++ y){
+            for(int x = 0 ; x < top_len[i][0]; ++ x){
+              if (x >= pad_x1 && x < bottom_len[i][1] + pad_x1) {
+                bottom_diff[i][c][y][x - pad_x1] += top_diff[i][c][y][x];
+              }
+            }
+          }
+        }else if(dim == 2){
+          for (int y = 0; y < top_len[i][0]; ++y) {
+            for (int x = 0; x < top_len[i][1]; ++x) {
+              if ((x >= pad_x1 && x < bottom_len[i][1] + pad_x1) && (y >= pad_y1 && y < bottom_len[i][0] + pad_y1)) {
+                bottom_diff[i][c][y - pad_y1][x - pad_x1] += top_diff[i][c][y][x];
+              }
             }
           }
         }
@@ -148,6 +176,7 @@ class PadLayer : public Layer<xpu>{
   int pad_y1;
   int pad_y2;
   int pad_value;
+  int dim;
   mshadow::Shape<4> top_shape;
   mshadow::Shape<4> bottom_shape;
 

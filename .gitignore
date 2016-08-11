@@ -1,3 +1,6 @@
 *.o
 *.pyc
 bin/
+data/
+model/
+result/

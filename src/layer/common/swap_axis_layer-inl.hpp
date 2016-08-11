@@ -120,6 +120,11 @@ class SwapAxisLayer : public Layer<xpu>{
             switch (axis2) {
                 case 2:
                     top_data = swapaxis<2, 1>(bottom_data);
+                    if (swap_length) {
+                      for (int i = 0; i < top_len.size(0); ++i) {
+                        top_len[i][0] = bottom_data.size(1);
+                      }
+                    }
                     break;
                 case 3:
                     top_data = swapaxis<3, 1>(bottom_data);

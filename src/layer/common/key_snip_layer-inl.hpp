@@ -77,6 +77,7 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 
   virtual void Require() {
     // default value, just set the value you want
+    this->defaults["group_snip"] = SettingV(0);
     
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -98,6 +99,7 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
         "KeySnipLayer:top size problem.");
 
     max_snip = setting["max_snip"].iVal();
+    group_snip = setting["group_snip"].iVal();
     snip_size = setting["snip_size"].iVal();
 
   }
@@ -111,10 +113,17 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
         "KeySnipLayer:top size problem.");
                   
     batch_size = bottom[0]->data.size(0); 
+    max_query = bottom[1]->data.size(3);
     
-    top[0]->Resize(batch_size, max_snip, 1, snip_size*2+1, batch_size, max_snip, true);
-    top[1]->Resize(batch_size, max_snip, 1, 1, batch_size, max_snip, true);
-    snip_center_.Resize(mshadow::Shape2(batch_size, max_snip)); 
+    if (group_snip == 0) {
+      top[0]->Resize(batch_size, max_snip, 1, snip_size*2+1, batch_size, max_snip, true);
+      top[1]->Resize(batch_size, max_snip, 1, 1, batch_size, max_snip, true);
+      snip_center_.Resize(mshadow::Shape2(batch_size, max_snip)); 
+    } else {
+      top[0]->Resize(batch_size, group_snip * max_query, 1, snip_size*2+1, batch_size, group_snip * max_query, true);
+      top[1]->Resize(batch_size, group_snip * max_query, 1, 1, batch_size, group_snip * max_query, true);
+      snip_center_.Resize(mshadow::Shape2(batch_size, group_snip * max_query)); 
+    }
 
     if (show_info) {
       bottom[0]->PrintShape("bottom0");
@@ -152,6 +161,7 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 
     top0_data = -1;
     top1_data = -1;
+    snip_center_ = -1;
 
     top0_len = 0;
     top1_len = 0;
@@ -161,21 +171,37 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
       int d_cnt = bottom0_len[i];
       int q_cnt = bottom1_len[i];
 
-      for (int j = 0; j < q_cnt; ++j) {
-        for (int k = 0; k < d_cnt; ++k) {
-          if ( fabs(bottom0_data[i][k]-bottom1_data[i][j]) < 1e-5 ) {
-            top1_data[i][s] = j;
-            top1_len[i][s] = 1;
-            snip_center_[i][s] = k;
-            ++s;
-            if (s >= max_snip) break;
+      if (group_snip == 0) {
+        for (int j = 0; j < q_cnt; ++j) {
+          for (int k = 0; k < d_cnt; ++k) {
+            if ( fabs(bottom0_data[i][k]-bottom1_data[i][j]) < 1e-5 ) {
+              top1_data[i][s] = j;
+              top1_len[i][s] = 1;
+              snip_center_[i][s] = k;
+              ++s;
+              if (s >= max_snip) break;
+            }
+          }
+          if (s >= max_snip) break;
+        }
+      } else {
+        for (int j = 0; j < q_cnt; ++j) {
+          s = j * group_snip;
+          for (int k = 0; k < d_cnt; ++k) {
+            if ( fabs(bottom0_data[i][k]-bottom1_data[i][j]) < 1e-5 ) {
+              top1_data[i][s] = j;
+              top1_len[i][s] = 1;
+              snip_center_[i][s] = k;
+              ++s;
+              if (s >= group_snip) break;
+            }
           }
         }
-        if (s >= max_snip) break;
       }
        
       // crop snipping
       for (int j = 0; j < s; ++j) {
+        if (snip_center_[i][j] == -1) continue;
         for (int k = snip_center_[i][j] - snip_size, pk = 0; 
              k <= snip_center_[i][j] + snip_size; ++k, ++pk) {
           if (k < 0 || k >= d_cnt) continue;
@@ -202,6 +228,8 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
   int batch_size;
   int snip_size;
   int max_snip;
+  int max_query;
+  int group_snip;
   mshadow::TensorContainer<xpu, 2> snip_center_;
 
 };

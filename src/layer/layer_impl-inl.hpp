@@ -88,6 +88,8 @@
 #include "./common/length_trans_layer-inl.hpp"
 #include "./common/axis_split_layer-inl.hpp"
 #include "./common/key_snip_layer-inl.hpp"
+#include "./common/reshape_layer-inl.hpp"
+#include "./common/merge_2_window_data_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/lcs_toy_data_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
@@ -102,6 +104,7 @@
 #include "./input/word_rep_input_layer-inl.hpp"
 #include "./input/map_textdata_layer-inl.hpp"
 #include "./input/map_2_textdata_layer-inl.hpp"
+#include "./input/map_2_window_textdata_layer-inl.hpp"
 #include "./input/image_layer-inl.hpp"
 #include "./input/memory_global_layer-inl.hpp"
 #include "./loss/hingeloss_layer-inl.hpp"
@@ -117,6 +120,7 @@
 #include "./loss/euclid_distance_loss_layer-inl.hpp"
 #include "./loss/logistic_layer-inl.hpp"
 #include "./loss/activation_norm_loss_layer-inl.hpp"
+#include "./common/match_histogram_layer-inl.hpp"
 
 namespace textnet {
 namespace layer {
@@ -218,6 +222,8 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kQATextData: return new QATextDataLayer<xpu>(type);
     case kMapTextData: return new MapTextDataLayer<xpu>(type);
     case kMap2TextData: return new Map2TextDataLayer<xpu>(type);
+    case kMap2WindowTextData:    return new Map2WindowTextDataLayer<xpu>(type);
+    case kMerge2WindowData:    return new Merge2WindowDataLayer<xpu>(type);
     case kSelectSubRepByToken: return new SelectSubRepByTokenLayer<xpu>(type);
     case kWordRepInput: return new WordRepInputLayer<xpu>(type);
     case kEuclidDistanceLoss: return new EuclidDistanceLossLayer<xpu>(type);
@@ -240,6 +246,8 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kLengthTrans: return new LengthTransLayer<xpu>(type);
     case kAxisSplit: return new AxisSplitLayer<xpu>(type);
     case kKeySnip: return new KeySnipLayer<xpu>(type);
+    case kReshape: return new ReshapeLayer<xpu>(type);
+    case kMatchHistogram: return new MatchHistogramLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }

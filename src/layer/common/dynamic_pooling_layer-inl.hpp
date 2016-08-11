@@ -44,11 +44,11 @@ class DynamicPoolingLayer : public Layer<xpu>{
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
+	nbottom = bottom.size(); // pay attention!!!, nbottom should be set before SetupLayer
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
     row = setting["row"].iVal();
     col = setting["col"].iVal();
     dim = setting["dim"].iVal();
-	nbottom = bottom.size();
     utils::Check(dim == 1 || dim == 2, "DynamicPoolingLayer: dim error.");
     if (dim == 1) {
       utils::Check(row == 1, "DynamicPoolingLayer: dim error.");
@@ -305,6 +305,7 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 			len_r = bottom_len[batch_idx][1];
 		  }
 		}
+        //printf("batch_idex:%d,channel_idx:%d,len_l:%d,len_r:%d,row:%d,col:%d\n",batch_idx,channel_idx,len_l,len_r,row,col);
         pooling_one_matrix(bottom_data[batch_idx][channel_idx], top_data[batch_idx][channel_idx],
                            len_l, len_r,
                            row, col,

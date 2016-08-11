@@ -45,12 +45,12 @@ class BatchCombineLayer : public Layer<xpu>{
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
+	nbottom = setting["nbottom"].iVal(); // pay attention!!! nbottom should be set before SetupLayer!
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
     
     op = setting["op"].sVal();
     candids = setting["candids"].iVal();
     element = setting["element"].bVal();
-	nbottom = setting["nbottom"].iVal();
 
     utils::Check(bottom.size() == BottomNodeNum(),
                   "BatchCombineLayer:bottom size problem."); 

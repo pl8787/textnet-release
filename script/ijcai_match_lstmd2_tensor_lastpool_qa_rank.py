@@ -391,7 +391,7 @@ for dataset in ['qa_top1k_4']:
                             #                            "save_iter_num":1}]
 
 
-                            gen_conf_file(net, '/home/wsx/exp/match/{0}/lstmd2/run.{1}/'.format(dataset,str(run)) + \
+                            gen_conf_file(net, '/home/fyx/textnet/model/rnn/{0}/lstmd2/run.{1}/'.format(dataset,str(run)) + \
                                                'model.match.lstmd2.{0}.d{1}.run{2}.{3}'.format\
                                                (dataset, str(d_mem), str(run), str(idx)))
                             idx += 1

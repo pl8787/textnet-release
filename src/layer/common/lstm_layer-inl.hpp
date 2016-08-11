@@ -41,6 +41,7 @@ class LstmLayer : public Layer<xpu> {
     this->defaults["max_norm2"] = SettingV();
     this->defaults["grad_norm2"] = SettingV();
     this->defaults["d_mem"] = SettingV();
+    //this->defaults["d_input"] = SettingV();
     this->defaults["w_filler"] = SettingV();
     this->defaults["u_filler"] = SettingV();
     this->defaults["b_filler"] = SettingV();
@@ -63,6 +64,7 @@ class LstmLayer : public Layer<xpu> {
     utils::Check(top.size() == TopNodeNum(), "LstmLayer:top size problem.");
                   
     d_mem   = setting["d_mem"].iVal();
+    //d_input   = setting["d_input"].iVal();
     d_input = bottom[0]->data.size(3);
     no_bias = setting["no_bias"].bVal();
     no_out_tanh = setting["no_out_tanh"].bVal();
@@ -138,16 +140,22 @@ class LstmLayer : public Layer<xpu> {
 					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(), "LstmLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "LstmLayer:top size problem.");
+      //utils::ShowMemoryUse();
     
     mshadow::Shape<4> shape_in  = bottom[0]->data.shape_;
     mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in[0], shape_in[1], shape_in[2], d_mem);
     mshadow::Shape<4> shape_gate= mshadow::Shape4(shape_in[0], shape_in[1], shape_in[2], d_mem*4);
 
     top[0]->Resize(shape_out, true);
+      //utils::ShowMemoryUse();
     c.Resize(shape_out, 0.f);
+      //utils::ShowMemoryUse();
     g.Resize(shape_gate, 0.f);
+      //utils::ShowMemoryUse();
     c_er.Resize(shape_out, 0.f);
+      //utils::ShowMemoryUse();
     g_er.Resize(shape_gate, 0.f);
+      //utils::ShowMemoryUse();
 
 	if (show_info) {
 	  bottom[0]->PrintShape("bottom0");

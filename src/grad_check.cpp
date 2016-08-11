@@ -91,6 +91,8 @@ void TestSwapAxisLayer(mshadow::Random<cpu>* prnd) {
   tops.push_back(&top);
   
   bottom.Resize(Shape4(2,1,3,3), Shape2(2,2), true);
+
+  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
   bottom.length = 3;
   
   map<string, SettingV> setting;
@@ -1214,6 +1216,60 @@ void TestLocalFactorLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckGrad(layer_conv, bottoms, tops);
   
 }
+void TestReshapeLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Reshape Layer." << endl;
+  Node<cpu> bottom0;
+  Node<cpu> top0;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom0);
+  tops.push_back(&top0);
+  
+  bottom0.Resize(Shape4(2,1,1,4), true);
+
+  bottom0.data[0][0][0][0] = 1;
+  bottom0.data[0][0][0][1] = 2;
+  bottom0.data[0][0][0][2] = 3;
+  bottom0.data[0][0][0][3] = 4;
+  bottom0.data[1][0][0][0] = 1;
+  bottom0.data[1][0][0][1] = 2;
+  bottom0.data[1][0][0][2] = 3;
+  bottom0.data[1][0][0][3] = 4;
+  
+  bottom0.length = 4;
+
+  map<string, SettingV> setting;
+  setting["D0"] = SettingV(-1);
+  setting["D1"] = SettingV(1);
+  setting["D2"] = SettingV(2);
+  setting["D3"] = SettingV(2);
+  setting["L0"] = SettingV(0);
+  setting["L1"] = SettingV(0);
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_conv = CreateLayer<cpu>(kReshape);
+  layer_conv->PropAll();
+  layer_conv->SetupLayer(setting, bottoms, tops, prnd);
+  layer_conv->Reshape(bottoms, tops, true);
+
+  layer_conv->Forward(bottoms, tops);
+  PrintTensor("bottom0", bottom0.data);
+  PrintTensor("bottom0", bottom0.length);
+  PrintTensor("top0", top0.data);
+  PrintTensor("top0", top0.length);
+
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.01f);
+  setting_checker["range_max"] = SettingV(0.01f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_conv, bottoms, tops);
+}
+
 void TestKeySnipLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Key Snip Layer." << endl;
   Node<cpu> bottom0;
@@ -1251,6 +1307,7 @@ void TestKeySnipLayer(mshadow::Random<cpu>* prnd) {
 
   map<string, SettingV> setting;
   setting["snip_size"] = SettingV(1);
+  setting["group_snip"] = SettingV(2);
   setting["max_snip"] = SettingV(5);
   
   /// Test Activation Layer
@@ -4477,6 +4534,7 @@ void TestBatchDuplicateLayer(mshadow::Random<cpu>* prnd) {
 
   map<string, SettingV> setting;
   setting["dup_count"] = SettingV(3);
+  setting["dup_dim"] = SettingV(3);
 
   // Test BatchCombine Layer
   Layer<cpu> * layer_batch_duplicate = CreateLayer<cpu>(kBatchDuplicate);
@@ -4847,6 +4905,48 @@ void TestParameterLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckGrad(layer, bottoms, tops);
 }
 
+void TestMerge2WindowDataLayer(mshadow::Random<cpu> * prnd){
+    cout<<" G Check Merge-2-Window-Data Layer."<<endl;
+    Node<cpu> bottom0;
+    Node<cpu> bottom1;
+    Node<cpu> top0;
+    vector<Node<cpu>*> bottoms;
+    vector<Node<cpu>*> tops;
+
+    bottoms.push_back(&bottom0);
+    bottoms.push_back(&bottom1);
+    tops.push_back(&top0);
+
+    bottom0.Resize(20,1,1,1);
+    bottom1.Resize(4,1,1,1);
+    prnd->SampleUniform(&bottom0.data,-0.1,0.1);
+    bottom1.data[0][0][0][0] = 3; 
+    bottom1.data[1][0][0][0] = 5; 
+    bottom1.data[2][0][0][0] = 7; 
+    bottom1.data[3][0][0][0] = 5; 
+    bottom0.length = 1;
+    bottom1.length = 1;
+    map<string,SettingV> setting;
+    setting["dim"] = 3;
+
+    //Test Merge2WindowDataLayer
+    Layer<cpu> * layer_merge2window = CreateLayer<cpu>(kMerge2WindowData);
+    layer_merge2window->PropAll();
+    layer_merge2window->SetupLayer(setting,bottoms,tops,prnd);
+    layer_merge2window->Reshape(bottoms,tops);
+
+    using namespace checker;
+    Checker<cpu> * cker = CreateChecker<cpu>();
+    map<string,SettingV> setting_checker;
+    setting_checker["range_min"] = SettingV(-0.1f);
+    setting_checker["range_max"] = SettingV(0.1f);
+    setting_checker["delta"] = SettingV(0.0001f);
+
+    cker->SetupChecker(setting_checker, prnd);
+
+    cout<<" Check Error."<<endl;
+    cker->CheckError(layer_merge2window,bottoms,tops);
+}
 float SIGMOID_MAX_INPUT = 20;
 int SIGMOID_TABLE_SIZE = 10000;
 float *p_sigmoid_lookup_table;
@@ -4922,7 +5022,7 @@ int main(int argc, char *argv[]) {
   // TestDiagRecurrentLayer(&rnd);
   // TestNegativeSampleLossLayer(&rnd);
   // TestPosPredRepLayer(&rnd);
-  // TestSwapAxisLayer(&rnd);
+  //TestSwapAxisLayer(&rnd);
   // TestFlattenLayer(mshadow::Random<cpu>* prnd);
   // TestSoftmaxFuncLayer(&rnd);
   // TestWordClassSoftmaxLayer(&rnd);
@@ -4937,6 +5037,7 @@ int main(int argc, char *argv[]) {
   // TestMapTextDataLayer(&rnd);
   // TestMap2TextDataLayer(&rnd);
   TestKeySnipLayer(&rnd);
+  // TestReshapeLayer(&rnd);
   // TestConvolutionAndLocalFactorLayer(&rnd);
   // TestElementOpLayer(&rnd);
   // TestParameterLayer(&rnd);
@@ -4948,5 +5049,6 @@ int main(int argc, char *argv[]) {
   // TestFillCurveD2XYLayer(&rnd);
   // TestLengthTransLayer(&rnd);
   // TestAxisSplitLayer(&rnd);
+  // TestMerge2WindowDataLayer(&rnd);
   return 0;
 }

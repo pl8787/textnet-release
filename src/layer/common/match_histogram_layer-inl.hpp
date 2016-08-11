@@ -1,5 +1,5 @@
-#ifndef TEXTNET_LAYER_MATCH_LAYER_INL_HPP_
-#define TEXTNET_LAYER_MATCH_LAYER_INL_HPP_
+#ifndef TEXTNET_LAYER_MATCH_HISTOGRAM_LAYER_INL_HPP_
+#define TEXTNET_LAYER_MATCH_HISTOGRAM_LAYER_INL_HPP_
 
 #include <iostream>
 #include <fstream>
@@ -14,10 +14,10 @@ namespace textnet {
 namespace layer {
 
 template<typename xpu>
-class MatchLayer : public Layer<xpu>{
+class MatchHistogramLayer : public Layer<xpu>{
  public:
-  MatchLayer(LayerType type) { this->layer_type = type; }
-  virtual ~MatchLayer(void) {}
+  MatchHistogramLayer(LayerType type) { this->layer_type = type; }
+  virtual ~MatchHistogramLayer(void) {}
   
   virtual int BottomNodeNum() { return 2; }
   virtual int TopNodeNum() { return 1; }
@@ -49,30 +49,30 @@ class MatchLayer : public Layer<xpu>{
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
     
     utils::Check(bottom.size() == BottomNodeNum(),
-                  "MatchLayer:bottom size problem."); 
+                  "MatchHistogramLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
-                  "MatchLayer:top size problem.");
+                  "MatchHistogramLayer:top size problem.");
     op = setting["op"].sVal();
     is_var_len = setting["is_var_len"].bVal();
     interval = setting["interval"].iVal();
 	max_element = setting["max_element"].iVal();
     if (interval != 1 || max_element != 0) {
-      utils::Check(op != "cos", "MatchLayer: does not support cos when interval is set");
+      utils::Check(op != "cos", "MatchHistogramLayer: does not support cos when interval is set");
     }
 
     utils::Check(op=="xor" || op=="mul" || op=="plus" || op=="cos" || op == "minus" ||\
                  op=="elemwise_product" || op=="elemwise_plus" || op=="elemwise_cat" ||\
                  op=="euc" || op=="euc_exp" || op=="order",
-                 "MatchLayer: one of xor, mul, plus, cos, minus, elemwise_product, euc or euc_exp.");
+                 "MatchHistogramLayer: one of xor, mul, plus, cos, minus, elemwise_product, euc or euc_exp.");
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top,
                        bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(),
-                  "MatchLayer:bottom size problem."); 
+                  "MatchHistogramLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
-                  "MatchLayer:top size problem.");
+                  "MatchHistogramLayer:top size problem.");
                   
     nbatch = bottom[0]->data.size(0); 
     if (op == "xor") {
@@ -89,7 +89,7 @@ class MatchLayer : public Layer<xpu>{
       doc1_len = bottom[1]->data.size(2);
       feat0_size = bottom[0]->data.size(3);
       feat1_size = bottom[1]->data.size(3);
-      utils::Check(feat0_size == feat1_size, "MatchLayer: feature size not equal.");
+      utils::Check(feat0_size == feat1_size, "MatchHistogramLayer: feature size not equal.");
       feat_size = feat0_size;
     }        
                   
@@ -178,9 +178,9 @@ class MatchLayer : public Layer<xpu>{
 		  }
         }
         utils::Check(len_0 >= 0 && len_1 >= 0, 
-				"MatchLayer: length error negative. len_0=%d, len_1=%d.", len_0, len_1);
+				"MatchHistogramLayer: length error negative. len_0=%d, len_1=%d.", len_0, len_1);
         utils::Check(len_0 <= doc0_len && len_1 <= doc1_len, 
-				"MatchLayer: length error large. len_0=%d, len_1=%d, max=%d, max=%d.", len_0, len_1, doc0_len, doc1_len);
+				"MatchHistogramLayer: length error large. len_0=%d, len_1=%d, max=%d, max=%d.", len_0, len_1, doc0_len, doc1_len);
         for (int j = 0; j < len_0; j++) {
           for (int m = 0; m < feat_size; ++m) {
             m_norm[i][0][j] += bottom0_data4[i][0][j][m] * bottom0_data4[i][0][j][m];
@@ -223,9 +223,9 @@ class MatchLayer : public Layer<xpu>{
 		}
       }
       utils::Check(len_0 >= 0 && len_1 >= 0, 
-				"MatchLayer: length error negative. len_0=%d, len_1=%d.", len_0, len_1);
+				"MatchHistogramLayer: length error negative. len_0=%d, len_1=%d.", len_0, len_1);
       utils::Check(len_0 <= doc0_len && len_1 <= doc1_len, 
-				"MatchLayer: length error large. len_0=%d, len_1=%d, max=%d, max=%d.", len_0, len_1, doc0_len, doc1_len);
+				"MatchHistogramLayer: length error large. len_0=%d, len_1=%d, max=%d, max=%d.", len_0, len_1, doc0_len, doc1_len);
 
       // for (int j = 0; j < len_0; j++) {
       //   for (int k = 0; k < len_1; k++) {
@@ -348,9 +348,9 @@ class MatchLayer : public Layer<xpu>{
 		}
       }
       utils::Check(len_0 >= 0 && len_1 >= 0, 
-				"MatchLayer: length error negative. len_0=%d, len_1=%d.", len_0, len_1);
+				"MatchHistogramLayer: length error negative. len_0=%d, len_1=%d.", len_0, len_1);
       utils::Check(len_0 <= doc0_len && len_1 <= doc1_len, 
-				"MatchLayer: length error large. len_0=%d, len_1=%d, max=%d, max=%d.", len_0, len_1, doc0_len, doc1_len);
+				"MatchHistogramLayer: length error large. len_0=%d, len_1=%d, max=%d, max=%d.", len_0, len_1, doc0_len, doc1_len);
 
       // for (int j = 0; j < len_0; ++j) {
       //   for (int k = 0; k < len_1; ++k) {
