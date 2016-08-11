@@ -5002,7 +5002,7 @@ void TestSortAxisLayer(mshadow::Random<cpu> * prnd){
 
     bottom0.Resize(2,1,2,6);
     prnd->SampleUniform(&bottom0.data,-1.0,1.0);
-    bottom0.length = 1;
+    bottom0.length = 6;
     map<string,SettingV> setting;
     setting["axis"] = 3;
     setting["reverse"] = false;
@@ -5014,7 +5014,9 @@ void TestSortAxisLayer(mshadow::Random<cpu> * prnd){
 
     layer_sortaxis->Forward(bottoms, tops);
     PrintTensor("bottom", bottom0.data);
+    PrintTensor("bottom-length", bottom0.length);
     PrintTensor("top", top0.data);
+    PrintTensor("top-length", top0.length);
 
     using namespace checker;
     Checker<cpu> * cker = CreateChecker<cpu>();

@@ -41,6 +41,7 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
     this->defaults["speedup_list"] = SettingV(false); // only when list
     this->defaults["fix_length"] = SettingV(false);
     this->defaults["max_doc_len"] = SettingV(2000);
+    this->defaults["data1_doc_len"] = SettingV(18);
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["data1_file"] = SettingV();
@@ -67,6 +68,7 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
     batch_size = setting["batch_size"].iVal();
     window_size = setting["window_size"].iVal();
     max_doc_len = setting["max_doc_len"].iVal();
+    data1_doc_len = setting["data1_doc_len"].iVal();
     mode = setting["mode"].sVal();
     shuffle = setting["shuffle"].bVal();
     speedup_list = setting["speedup_list"].bVal();
@@ -340,7 +342,7 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
         vbatches[i] = cline_ptr;
         cline_ptr = (cline_ptr + 1) % pair_set.size();
       }
-      top[0]->Resize(wbatch_size, 1, 1, max_doc1_len, true); //query
+      top[0]->Resize(wbatch_size, 1, 1, data1_doc_len, true); //query
       top[1]->Resize(wbatch_size, 1, 1, window_size, true); //doc
       top[0]->data = -1;
       top[1]->data = -1;
@@ -391,7 +393,7 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
         //printf("cline_ptr:%d\n",cline_ptr);
       }
       //printf("wbatch_size:%d, max_doc1_size:%d, window_size:%d\n",wbatch_size,max_doc1_len,window_size);
-      top[0]->Resize(wbatch_size, 1, 1, max_doc1_len, true);
+      top[0]->Resize(wbatch_size, 1, 1, data1_doc_len, true);
       top[1]->Resize(wbatch_size, 1, 1, window_size, true);
       top[0]->data = -1;
       top[1]->data = -1;
@@ -537,6 +539,7 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
   int min_doc2_len;
   int max_doc2_len;
   int max_doc_len;
+  int data1_doc_len;
   string mode;
   bool shuffle;
   bool speedup_list;

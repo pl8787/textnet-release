@@ -754,7 +754,7 @@ class Net : public INet{
     for (int i = 0; i < nets[tag].size(); ++i) {
       for (int j = 0; j < nets[tag][i]->ParamNodeNum(); ++j) {
 #if DEBUG
-        cout << "Update param in layer " << i << " params " << j << endl;
+        cout << "Update param in layer " << i << "(" << nets[tag][i]->layer_name.c_str() << ") params " << j << endl;
         cout << "param data" << i << " , " << j << ": " << nets[tag][i]->GetParams()[j].data[0][0][0][0] 
              << "\t" << nets[tag][i]->GetParams()[j].data[0][0][0][1]
              << endl;

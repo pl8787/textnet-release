@@ -278,6 +278,8 @@ class EmbeddingLayer : public Layer<xpu>{
         }
       }
     }
+    if(this->prop_error[0]){
+    }
   }
  protected:
   std::string embedding_file, update_indication_file;

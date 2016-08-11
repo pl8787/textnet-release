@@ -52,7 +52,8 @@ class SortAxisLayer : public Layer<xpu> {
     
     mshadow::Shape<4> shape_in = bottom[0]->data.shape_;
     mshadow::Shape<4> shape_out= shape_in;
-    top[0]->Resize(shape_out, true);
+    top[0]->Resize(bottom[0]->data.size(0), bottom[0]->data.size(1), bottom[0]->data.size(2), bottom[0]->data.size(3), bottom[0]->length.size(0), bottom[0]->length.size(1), true);
+    vecidx.clear();
 
 	if (show_info) {
 		bottom[0]->PrintShape("bottom0");
@@ -89,6 +90,7 @@ class SortAxisLayer : public Layer<xpu> {
     using namespace mshadow::expr;
 
     if (axis == 3) { 
+      vecidx.clear();
       mshadow::Tensor<xpu, 2> bottom_data2 = bottom[0]->data_d2();
       mshadow::Tensor<xpu, 2> top_data2 = top[0]->data_d2();
       for(int i = 0 ; i < bottom_data2.size(0); ++ i){
