@@ -1809,8 +1809,8 @@ void TestSumLayer(mshadow::Random<cpu>* prnd) {
 
   // top.diff = bottom.data;
   layer->Forward(bottoms, tops);
-  PrintTensor("b0_data", bottoms[0]->data);
-  PrintTensor("t_data",  tops[0]->data);
+  PrintTensor("bottom_data", bottoms[0]->data);
+  PrintTensor("top_data",  tops[0]->data);
   
   using namespace checker;
   Checker<cpu> * cker = CreateChecker<cpu>();
@@ -4838,6 +4838,47 @@ void TestMerge2WindowDataLayer(mshadow::Random<cpu> * prnd){
     cout<<" Check Error."<<endl;
     cker->CheckError(layer_merge2window,bottoms,tops);
 }
+
+void TestMatchHistogramLayer(mshadow::Random<cpu> * prnd){
+    cout<<" G Check Match-Histogram Layer."<<endl;
+    Node<cpu> bottom0;
+    Node<cpu> bottom1;
+    Node<cpu> top0;
+    vector<Node<cpu>*> bottoms;
+    vector<Node<cpu>*> tops;
+
+    bottoms.push_back(&bottom0);
+    tops.push_back(&top0);
+
+    bottom0.Resize(3,1,3,10);
+    prnd->SampleUniform(&bottom0.data,-1.0,1.0);
+    bottom0.length = 1;
+    map<string,SettingV> setting;
+    setting["base_val"] = 1;
+    setting["axis"] = 3;
+    setting["hist_size"] = 5;
+
+    Layer<cpu> * layer_matchhist = CreateLayer<cpu>(kMatchHistogram);
+    //layer_matchhist->PropAll();
+    layer_matchhist->SetupLayer(setting,bottoms,tops,prnd);
+    layer_matchhist->Reshape(bottoms,tops);
+
+    layer_matchhist->Forward(bottoms, tops);
+    PrintTensor("bottom", bottom0.data);
+    PrintTensor("top", top0.data);
+
+    using namespace checker;
+    Checker<cpu> * cker = CreateChecker<cpu>();
+    map<string,SettingV> setting_checker;
+    setting_checker["range_min"] = SettingV(-0.1f);
+    setting_checker["range_max"] = SettingV(0.1f);
+    setting_checker["delta"] = SettingV(0.0001f);
+
+    cker->SetupChecker(setting_checker, prnd);
+
+    cout<<" Check Error."<<endl;
+    cker->CheckError(layer_matchhist,bottoms,tops);
+}
 float SIGMOID_MAX_INPUT = 20;
 int SIGMOID_TABLE_SIZE = 10000;
 float *p_sigmoid_lookup_table;
@@ -4913,13 +4954,13 @@ int main(int argc, char *argv[]) {
   // TestDiagRecurrentLayer(&rnd);
   // TestNegativeSampleLossLayer(&rnd);
   // TestPosPredRepLayer(&rnd);
-  //TestSwapAxisLayer(&rnd);
+  // TestSwapAxisLayer(&rnd);
   // TestFlattenLayer(mshadow::Random<cpu>* prnd);
-  TestSoftmaxFuncLayer(&rnd);
+  // TestSoftmaxFuncLayer(&rnd);
   // TestWordClassSoftmaxLayer(&rnd);
   // TestGatingLayer(&rnd);
   // TestSoftmaxVarLenFuncLayer(&rnd);
-  // TestSumLayer(&rnd);
+   TestSumLayer(&rnd);
   // TestTopkPoolingLayer(&rnd);
   // TestHingeLossLayer(&rnd);
   // TestListwiseMeasureLayer(&rnd);
@@ -4939,5 +4980,6 @@ int main(int argc, char *argv[]) {
   // TestLengthTransLayer(&rnd);
   // TestAxisSplitLayer(&rnd);
   // TestMerge2WindowDataLayer(&rnd);
+  // TestMatchHistogramLayer(&rnd);
   return 0;
 }

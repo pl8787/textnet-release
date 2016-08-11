@@ -116,7 +116,9 @@ const int kGruD2 = 10010;
 const int kGruD2Optimize = 10011;
 const int kGruD2OneGate = 10012;
 
-const int kMatchHistogram = 20001;
+const int kMerge2WindowData = 20001;
+const int kMatchHistogram = 20002;
+const int kSqueezeMatrix = 20003;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;
@@ -154,7 +156,6 @@ const int kMemoryGlobal = 85;
 const int kMap2TextData = 86;
 const int kLcsToyData = 87;
 const int kMap2WindowTextData = 88;
-const int kMerge2WindowData = 89;
 
 /*! \brief these are enumeration */
 const int kInit = -1;
@@ -170,8 +171,6 @@ class Layer {
     time_consume_f = 0.0f;
     time_consume_b = 0.0f;
     time_consume_u = 0.0f;
-    b_prop_error = true;
-    b_prop_grad = true;
   }
   virtual ~Layer(void) {}
   
@@ -538,9 +537,6 @@ class Layer {
   float time_consume_f;
   float time_consume_b;
   float time_consume_u;
-
-  bool b_prop_error;
-  bool b_prop_grad;
   
   // required setting
   std::map<std::string, SettingV> defaults;

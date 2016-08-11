@@ -59,6 +59,20 @@ class SumLayer : public Layer<xpu> {
 		top[0]->PrintShape("top0");
 	}
   }
+
+  virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,
+                            const std::vector<Node<xpu>*> &top) {
+    // Check for reshape
+    bool need_reshape = false;
+    if (! (bottom[0]->data.size(0) == top[0]->data.size(0))) {
+        need_reshape = true;
+    }
+
+    // Do reshape 
+    if (need_reshape) {
+        this->Reshape(bottom, top);
+    }
+  }
   
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
@@ -77,12 +91,12 @@ class SumLayer : public Layer<xpu> {
       top[0]->length[0] = F<op::identity>(bottom[0]->length[0]); 
     }
 
-    if (axis == 2 && bottom[0]->length[0][0] > -1) { // var len, this is just for check, not for flag
-      int length = bottom[0]->length[0][0];
-      if (length < bottom_shape[2]) {
-        utils::Check(bottom_data[0][0][length][0] == 0.f, "SumLayer: error, var len must be padding as zero.");
-      }
-    }
+    //if (axis == 2 && bottom[0]->length[0][0] > -1) { // var len, this is just for check, not for flag
+    //  int length = bottom[0]->length[0][0];
+    //  if (length < bottom_shape[2]) {
+    //    utils::Check(bottom_data[0][0][length][0] == 0.f, "SumLayer: error, var len must be padding as zero.");
+    //  }
+    //}
     
     int left = 1, right = 1, middle = bottom_shape[axis];
     for (int i = 0; i < axis; ++i) {
@@ -102,7 +116,6 @@ class SumLayer : public Layer<xpu> {
         }
       }
     } 
-    int tmp = 0;
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
