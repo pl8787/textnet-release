@@ -1,6 +1,8 @@
 *.o
 *.pyc
+Makefile.config
 bin/
 data/
 model/
 result/
+analyse/

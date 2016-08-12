@@ -121,6 +121,7 @@
 #include "./loss/logistic_layer-inl.hpp"
 #include "./loss/activation_norm_loss_layer-inl.hpp"
 #include "./common/match_histogram_layer-inl.hpp"
+#include "./common/sort_axis_layer-inl.hpp"
 
 namespace textnet {
 namespace layer {
@@ -248,6 +249,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kKeySnip: return new KeySnipLayer<xpu>(type);
     case kReshape: return new ReshapeLayer<xpu>(type);
     case kMatchHistogram: return new MatchHistogramLayer<xpu>(type);
+    case kSortAxis: return new SortAxisLayer<cpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }
