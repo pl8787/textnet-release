@@ -193,7 +193,7 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
               top1_len[i][s] = 1;
               snip_center_[i][s] = k;
               ++s;
-              if (s >= group_snip) break;
+              if (s >= (j+1) * group_snip) break;
             }
           }
         }

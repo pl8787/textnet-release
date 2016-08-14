@@ -1298,8 +1298,8 @@ void TestKeySnipLayer(mshadow::Random<cpu>* prnd) {
   bottom0.data[1][0][0][2] = 3;
   bottom0.data[1][0][0][3] = 4;
   bottom0.data[1][0][0][4] = 1;
-  bottom1.data[0][0][0][0] = 1;
-  bottom1.data[0][0][0][1] = 3;
+  bottom1.data[0][0][0][0] = 3;
+  bottom1.data[0][0][0][1] = 1;
   bottom1.data[1][0][0][0] = 2;
   bottom1.data[1][0][0][1] = 4;
   
@@ -5130,8 +5130,8 @@ int main(int argc, char *argv[]) {
   // TestQATextDataLayer(&rnd);
   // TestMapTextDataLayer(&rnd);
   // TestMap2TextDataLayer(&rnd);
-  // TestKeySnipLayer(&rnd);
-  TestReshapeLayer(&rnd);
+  TestKeySnipLayer(&rnd);
+  // TestReshapeLayer(&rnd);
   // TestConvolutionAndLocalFactorLayer(&rnd);
   // TestElementOpLayer(&rnd);
   // TestParameterLayer(&rnd);
@@ -5145,6 +5145,6 @@ int main(int argc, char *argv[]) {
   // TestAxisSplitLayer(&rnd);
   // TestMerge2WindowDataLayer(&rnd);
   // TestMatchHistogramLayer(&rnd);
-  TestSortAxisLayer(&rnd);
+  // TestSortAxisLayer(&rnd);
   return 0;
 }
