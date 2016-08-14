@@ -194,8 +194,10 @@ class WholePooling2dLayer : public Layer<xpu>{
 	  // top_len[batch_idx][seq_idx] = 1; // not forward length for a fixed length layer
       int x_len = bottom_len[batch_idx][0];
       int y_len = bottom_len[batch_idx][1];
-      utils::Check(x_len > 0, "WholePooling2dLayer: sequence length error.");
-      utils::Check(y_len > 0, "WholePooling2dLayer: sequence length error.");
+      utils::Check(x_len >= 0, "WholePooling2dLayer: sequence length error.");
+      utils::Check(y_len >= 0, "WholePooling2dLayer: sequence length error.");
+
+      if (x_len == 0 || y_len == 0) continue;
 
       mshadow::TensorContainer<xpu, 3, float> sub_tensor(mshadow::Shape3(x_len, y_len, d_hidden));
       sub_tensor = 0.f;
@@ -232,8 +234,10 @@ class WholePooling2dLayer : public Layer<xpu>{
       // int begin = 0, end = bottom_len[batch_idx][seq_idx]; 
       int x_len = bottom_len[batch_idx][0];
       int y_len = bottom_len[batch_idx][1];
-      utils::Check(x_len > 0, "WholePooling2dLayer: sequence length error.");
-      utils::Check(y_len > 0, "WholePooling2dLayer: sequence length error.");
+      utils::Check(x_len >= 0, "WholePooling2dLayer: sequence length error.");
+      utils::Check(y_len >= 0, "WholePooling2dLayer: sequence length error.");
+
+      if (x_len == 0 || y_len == 0) continue;
 
       mshadow::TensorContainer<xpu, 3, float> sub_tensor(mshadow::Shape3(x_len, y_len, d_hidden));
       sub_tensor = 0.f;
