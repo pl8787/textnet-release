@@ -4179,6 +4179,48 @@ void TestMap2TextDataLayer(mshadow::Random<cpu>* prnd) {
   PrintTensor("top3", top3.length);
 }
 
+void TestMap3TextDataLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Map2TextData Layer." << endl;
+  Node<cpu> top1;
+  Node<cpu> top2;
+  Node<cpu> top3;
+  Node<cpu> top4;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  tops.push_back(&top1);
+  tops.push_back(&top2);
+  tops.push_back(&top3);
+  tops.push_back(&top4);
+
+  map<string, SettingV> setting;
+  setting["data1_file"] = SettingV("data1.wid");
+  setting["data2_file"] = SettingV("data2.wid");
+  setting["rel_file"] = SettingV("rel.dat");
+  setting["batch_size"] = SettingV(4);
+  setting["max_doc1_len"] = SettingV(3);
+  setting["max_doc2_len"] = SettingV(3);
+  setting["mode"] = SettingV("pair");
+  setting["shuffle"] = SettingV(true);
+  setting["bi_direct"] = SettingV(false);
+  
+  /// Test Map2TextData Layer
+  Layer<cpu> * layer_map_textdata = CreateLayer<cpu>(kMap3TextData);
+  layer_map_textdata->PropAll();
+  layer_map_textdata->SetupLayer(setting, bottoms, tops, prnd);
+  layer_map_textdata->Reshape(bottoms, tops);
+  layer_map_textdata->Forward(bottoms, tops);
+  layer_map_textdata->Backprop(bottoms, tops);
+
+  PrintTensor("top1", top1.data);
+  PrintTensor("top2", top2.data);
+  PrintTensor("top3", top3.data);
+  PrintTensor("top4", top4.data);
+  PrintTensor("top1", top1.length);
+  PrintTensor("top2", top2.length);
+  PrintTensor("top3", top3.length);
+}
+
 void TestQATextDataLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check QATextData Layer." << endl;
   Node<cpu> top1;
@@ -4588,6 +4630,53 @@ void TestLengthTransLayer(mshadow::Random<cpu>* prnd) {
   layer_length_trans->Forward(bottoms, tops);
   PrintTensor("bottom", bottom.data);
   PrintTensor("bottom_len", bottom.length);
+  PrintTensor("top", top.data);
+  PrintTensor("top_len", top.length);
+
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.001f);
+  cker->SetupChecker(setting_checker, prnd);
+
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_length_trans, bottoms, tops);
+}
+
+void TestLengthFillLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Length Fill Layer." << endl;
+  Node<cpu> bottom0;
+  Node<cpu> bottom1;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+
+  bottoms.push_back(&bottom0);
+  bottoms.push_back(&bottom1);
+  tops.push_back(&top);
+
+  bottom0.Resize(2, 5, 3, 2, 2, 1);
+  bottom0.length = 2;
+  bottom1.Resize(2, 5, 1, 1, 2, 1);
+
+  prnd->SampleUniform(&bottom0.data, -1.0, 1.0);
+  bottom1.data = 5;
+
+  map<string, SettingV> setting;
+
+  // Test BatchCombine Layer
+  Layer<cpu> * layer_length_trans = CreateLayer<cpu>(kLengthFill);
+  layer_length_trans->PropAll();
+  layer_length_trans->SetupLayer(setting, bottoms, tops, prnd);
+  layer_length_trans->Reshape(bottoms, tops);
+
+  layer_length_trans->Forward(bottoms, tops);
+  PrintTensor("bottom0", bottom0.data);
+  PrintTensor("bottom0_len", bottom0.length);
+  PrintTensor("bottom1", bottom1.data);
+  PrintTensor("bottom1_len", bottom1.length);
   PrintTensor("top", top.data);
   PrintTensor("top_len", top.length);
 
@@ -5130,7 +5219,8 @@ int main(int argc, char *argv[]) {
   // TestQATextDataLayer(&rnd);
   // TestMapTextDataLayer(&rnd);
   // TestMap2TextDataLayer(&rnd);
-  TestKeySnipLayer(&rnd);
+  TestMap3TextDataLayer(&rnd);
+  // TestKeySnipLayer(&rnd);
   // TestReshapeLayer(&rnd);
   // TestConvolutionAndLocalFactorLayer(&rnd);
   // TestElementOpLayer(&rnd);
@@ -5142,6 +5232,7 @@ int main(int argc, char *argv[]) {
   // TestFillCurveXY2DLayer(&rnd);
   // TestFillCurveD2XYLayer(&rnd);
   // TestLengthTransLayer(&rnd);
+  // TestLengthFillLayer(&rnd);
   // TestAxisSplitLayer(&rnd);
   // TestMerge2WindowDataLayer(&rnd);
   // TestMatchHistogramLayer(&rnd);
