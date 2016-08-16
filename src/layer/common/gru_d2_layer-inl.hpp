@@ -172,10 +172,10 @@ class GruD2Layer : public Layer<xpu> {
     reset_h.Resize(shape_reset_h, 0.f);
     reset_h_er.Resize(shape_reset_h, 0.f);
 
-	if (show_info) {
-      bottom[0]->PrintShape("bottom0");
-	  top[0]->PrintShape("top0");
-	}
+    if (show_info) {
+        bottom[0]->PrintShape("bottom0");
+      top[0]->PrintShape("top0");
+    }
   }
 
   virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,

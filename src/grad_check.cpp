@@ -4959,9 +4959,15 @@ void TestMatchHistogramLayer(mshadow::Random<cpu> * prnd){
     bottoms.push_back(&bottom0);
     tops.push_back(&top0);
 
-    bottom0.Resize(3,1,3,10);
+    bottom0.Resize(3,1,3,10,3,2);
     prnd->SampleUniform(&bottom0.data,-1.0,1.0);
-    bottom0.length = 1;
+    bottom0.length[0][0] = 3;
+    bottom0.length[0][1] = 10;
+    bottom0.length[1][0] = 3;
+    bottom0.length[1][1] = 5;
+    bottom0.length[2][0] = 3;
+    bottom0.length[2][1] = 3;
+    //bottom0.length = 1;
     map<string,SettingV> setting;
     setting["base_val"] = 1;
     setting["axis"] = 3;
@@ -4973,8 +4979,11 @@ void TestMatchHistogramLayer(mshadow::Random<cpu> * prnd){
     layer_matchhist->Reshape(bottoms,tops);
 
     layer_matchhist->Forward(bottoms, tops);
-    PrintTensor("bottom", bottom0.data);
-    PrintTensor("top", top0.data);
+    PrintTensor("bottom-data", bottom0.data);
+    PrintTensor("bottom-length", bottom0.length);
+
+    PrintTensor("top-data", top0.data);
+    PrintTensor("top-length", top0.length);
 
     using namespace checker;
     Checker<cpu> * cker = CreateChecker<cpu>();
@@ -5098,7 +5107,7 @@ int main(int argc, char *argv[]) {
   // TestBatchConcatLayer(&rnd);
   // TestBatchDuplicateLayer(&rnd);
   // TestChannelDuplicateLayer(&rnd);
-  // TestProductLayer(&rnd);
+   TestProductLayer(&rnd);
   // TestPairTextDataLayer(&rnd);
   // TestListTextDataLayer(&rnd);
   // TestGateLayer(&rnd);
@@ -5120,9 +5129,9 @@ int main(int argc, char *argv[]) {
   // TestMapTextDataLayer(&rnd);
   // TestMap2TextDataLayer(&rnd);
   // TestKeySnipLayer(&rnd);
-  TestReshapeLayer(&rnd);
+  // TestReshapeLayer(&rnd);
   // TestConvolutionAndLocalFactorLayer(&rnd);
-  // TestElementOpLayer(&rnd);
+   TestElementOpLayer(&rnd);
   // TestParameterLayer(&rnd);
   // TestGenKernelLayer(&rnd);
   // TestPoolVarLayer(&rnd);
@@ -5133,7 +5142,7 @@ int main(int argc, char *argv[]) {
   // TestLengthTransLayer(&rnd);
   // TestAxisSplitLayer(&rnd);
   // TestMerge2WindowDataLayer(&rnd);
-  // TestMatchHistogramLayer(&rnd);
-  TestSortAxisLayer(&rnd);
+  //  TestMatchHistogramLayer(&rnd);
+  // TestSortAxisLayer(&rnd);
   return 0;
 }
