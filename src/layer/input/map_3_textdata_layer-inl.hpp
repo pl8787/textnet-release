@@ -42,6 +42,8 @@ class Map3TextDataLayer : public Layer<xpu>{
     this->defaults["min_doc2_len"] = SettingV(1);
     this->defaults["fix_length"] = SettingV(false);
     this->defaults["bi_direct"] = SettingV(false);
+    this->defaults["loss_weight_factor"] = SettingV(1.0f);
+    this->defaults["loss_weight_log"] = SettingV(false);
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["data1_file"] = SettingV();
@@ -77,6 +79,8 @@ class Map3TextDataLayer : public Layer<xpu>{
     speedup_list = setting["speedup_list"].bVal();
     fix_length = setting["fix_length"].bVal();
     bi_direct = setting["bi_direct"].bVal();
+    loss_weight_factor = setting["loss_weight_factor"].fVal();
+    loss_weight_log = setting["loss_weight_log"].bVal();
     
     utils::Check(mode == "batch" || mode == "pair" || mode == "list" || mode == "inner_pair" || mode == "inner_list",
                   "Map3TextDataLayer: mode is one of batch, pair or list.");
@@ -472,8 +476,13 @@ class Map3TextDataLayer : public Layer<xpu>{
 
         top2_data[2*i] = 1;
         top2_data[2*i+1] = 0;
-        top3_data[2*i] = 1.0 / loss_weight[rel_set[pos_idx][0]];
-        top3_data[2*i+1] = 1.0 / loss_weight[rel_set[neg_idx][0]];
+        if (loss_weight_log) {
+          top3_data[2*i] = max(1.0f, loss_weight_factor / log(loss_weight[rel_set[pos_idx][0]]));
+          top3_data[2*i+1] = max(1.0f, loss_weight_factor / log(loss_weight[rel_set[neg_idx][0]]));
+        } else {
+          top3_data[2*i] = max(1.0f, loss_weight_factor / loss_weight[rel_set[pos_idx][0]]);
+          top3_data[2*i+1] = max(1.0f, loss_weight_factor / loss_weight[rel_set[neg_idx][0]]);
+        }
         line_ptr = (line_ptr + 1) % pair_set.size();
       }
     } else if (mode == "list") {
@@ -581,6 +590,8 @@ class Map3TextDataLayer : public Layer<xpu>{
   bool speedup_list;
   bool fix_length;
   bool bi_direct;
+  float loss_weight_factor;
+  bool loss_weight_log;
   
   vector<vector<string> > rel_set;
   vector<int> label_set;
