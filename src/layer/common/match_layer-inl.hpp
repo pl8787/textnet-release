@@ -293,12 +293,16 @@ class MatchLayer : public Layer<xpu>{
               float sub_elem = bottom0_data4[i][0][j][m] - bottom1_data4[i][0][k][m];
               sum_elem_square += sub_elem * sub_elem;
             }
-            top_data[i][0][j][k] = exp(-(sum_elem_square)/(2*2.f)); // beta is set to 2.f
+            // top_data[i][0][j][k] = exp(-(sum_elem_square)/(2*2.f)); // beta is set to 2.f
+            top_data[i][0][j][k] = -(sum_elem_square)/(2*2.f); // beta is set to 2.f
           }  else {
             utils::Error("In Match Layer: no op named %s.\n", op.c_str());
           }
         }
       }
+    }
+    if (op == "euc_exp") {
+      top_data = F<op::exp_lookup>(top_data);
     }
   }
   

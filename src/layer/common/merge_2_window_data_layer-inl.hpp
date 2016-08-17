@@ -106,6 +106,8 @@ class Merge2WindowDataLayer : public Layer<xpu>{
     using namespace mshadow::expr;
     Tensor4D top0_data = top[0]->data;
     Tensor2D top0_length = top[0]->length;
+    Tensor1D bottom0_data1 = bottom[0]->data_d1();
+    Tensor2D top0_data2 = top[0]->data_d2();
     //printf("bottom[0]:%d,%d,%d,%d\n",bottom[0]->data.size(0),bottom[0]->data.size(1),bottom[0]->data.size(2),bottom[0]->data.size(3));
     utils::Check(bottom[0]->data.size(dim) == 1, " Merge2WindowDataLayer:: bottom[%d] size problem.",dim);
 
@@ -129,14 +131,20 @@ class Merge2WindowDataLayer : public Layer<xpu>{
                 ++ k;
             }
         }else if(dim == 3){
+          if(bottom[0]->data.size(1) == 1 && bottom[0]->data.size(2) == 1){
+            //top0_data[i].Slice(0,curr_len) = F<op::identity>(bottom[0]->data.Slice(k,curr_len));
+            top0_data2[i].Slice(0,curr_len) = F<op::identity>(bottom0_data1.Slice(k,k + curr_len));
+            k += curr_len;
+          }else{
             for(index_t j = 0 ; j < curr_len; ++ j){
-                for(index_t m = 0 ; m < bottom[0]->data.size(1); ++ m){
-                    for(index_t n = 0 ; n < bottom[0]->data.size(2); ++ n){
-                        top0_data[i][m][n][j] = bottom[0]->data[k][m][n][0];
-                    }
+              for(index_t m = 0 ; m < bottom[0]->data.size(1); ++ m){
+                for(index_t n = 0 ; n < bottom[0]->data.size(2); ++ n){
+                  top0_data[i][m][n][j] = bottom[0]->data[k][m][n][0];
                 }
-                ++ k;
+              }
+              ++ k;
             }
+          }
         }
     }
   }

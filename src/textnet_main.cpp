@@ -129,6 +129,10 @@ float TANH_MAX_INPUT = 20.f;
 int TANH_TABLE_SIZE = 1000000;
 float *p_tanh_lookup_table = NULL;
 
+float EXP_MAX_INPUT = 10.f;
+int EXP_TABLE_SIZE = 10000000;
+float *p_exp_lookup_table = NULL;
+
 int main(int argc, char *argv[]) {
   string model_file = "model/matching.tvt.model";
   bool need_cross_valid = false;
@@ -149,6 +153,12 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < len; ++i) {
     float val = (float(i)*2.f*max)/len - max; // map position to value, frow small to large
     p_tanh_lookup_table[i] = tanhf(val);
+  }
+  max = EXP_MAX_INPUT;
+  len = EXP_TABLE_SIZE;
+  p_exp_lookup_table = new float[len];
+  for (int i = 0; i < len; ++i) {
+    p_exp_lookup_table[i] = exp((float(i)*2*max)/len - max); // map position to value, frow small to large
   }
 
   /*

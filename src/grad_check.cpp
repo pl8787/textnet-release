@@ -557,6 +557,7 @@ void TestMatchLayer(mshadow::Random<cpu>* prnd) {
   setting["op"] = SettingV("cos");
   setting["op"] = SettingV("elemwise_cat");
   setting["op"] = SettingV("order");
+  setting["op"] = SettingV("euc_exp");
 
   // Test Match Layer
   Layer<cpu> * layer_match = CreateLayer<cpu>(kMatch);
@@ -1297,8 +1298,8 @@ void TestKeySnipLayer(mshadow::Random<cpu>* prnd) {
   bottom0.data[1][0][0][2] = 3;
   bottom0.data[1][0][0][3] = 4;
   bottom0.data[1][0][0][4] = 1;
-  bottom1.data[0][0][0][0] = 1;
-  bottom1.data[0][0][0][1] = 3;
+  bottom1.data[0][0][0][0] = 3;
+  bottom1.data[0][0][0][1] = 1;
   bottom1.data[1][0][0][0] = 2;
   bottom1.data[1][0][0][1] = 4;
   
@@ -4178,6 +4179,48 @@ void TestMap2TextDataLayer(mshadow::Random<cpu>* prnd) {
   PrintTensor("top3", top3.length);
 }
 
+void TestMap3TextDataLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Map2TextData Layer." << endl;
+  Node<cpu> top1;
+  Node<cpu> top2;
+  Node<cpu> top3;
+  Node<cpu> top4;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  tops.push_back(&top1);
+  tops.push_back(&top2);
+  tops.push_back(&top3);
+  tops.push_back(&top4);
+
+  map<string, SettingV> setting;
+  setting["data1_file"] = SettingV("data1.wid");
+  setting["data2_file"] = SettingV("data2.wid");
+  setting["rel_file"] = SettingV("rel.dat");
+  setting["batch_size"] = SettingV(4);
+  setting["max_doc1_len"] = SettingV(3);
+  setting["max_doc2_len"] = SettingV(3);
+  setting["mode"] = SettingV("pair");
+  setting["shuffle"] = SettingV(true);
+  setting["bi_direct"] = SettingV(false);
+  
+  /// Test Map2TextData Layer
+  Layer<cpu> * layer_map_textdata = CreateLayer<cpu>(kMap3TextData);
+  layer_map_textdata->PropAll();
+  layer_map_textdata->SetupLayer(setting, bottoms, tops, prnd);
+  layer_map_textdata->Reshape(bottoms, tops);
+  layer_map_textdata->Forward(bottoms, tops);
+  layer_map_textdata->Backprop(bottoms, tops);
+
+  PrintTensor("top1", top1.data);
+  PrintTensor("top2", top2.data);
+  PrintTensor("top3", top3.data);
+  PrintTensor("top4", top4.data);
+  PrintTensor("top1", top1.length);
+  PrintTensor("top2", top2.length);
+  PrintTensor("top3", top3.length);
+}
+
 void TestQATextDataLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check QATextData Layer." << endl;
   Node<cpu> top1;
@@ -4602,6 +4645,53 @@ void TestLengthTransLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckError(layer_length_trans, bottoms, tops);
 }
 
+void TestLengthFillLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Length Fill Layer." << endl;
+  Node<cpu> bottom0;
+  Node<cpu> bottom1;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+
+  bottoms.push_back(&bottom0);
+  bottoms.push_back(&bottom1);
+  tops.push_back(&top);
+
+  bottom0.Resize(2, 5, 3, 2, 2, 1);
+  bottom0.length = 2;
+  bottom1.Resize(2, 5, 1, 1, 2, 1);
+
+  prnd->SampleUniform(&bottom0.data, -1.0, 1.0);
+  bottom1.data = 5;
+
+  map<string, SettingV> setting;
+
+  // Test BatchCombine Layer
+  Layer<cpu> * layer_length_trans = CreateLayer<cpu>(kLengthFill);
+  layer_length_trans->PropAll();
+  layer_length_trans->SetupLayer(setting, bottoms, tops, prnd);
+  layer_length_trans->Reshape(bottoms, tops);
+
+  layer_length_trans->Forward(bottoms, tops);
+  PrintTensor("bottom0", bottom0.data);
+  PrintTensor("bottom0_len", bottom0.length);
+  PrintTensor("bottom1", bottom1.data);
+  PrintTensor("bottom1_len", bottom1.length);
+  PrintTensor("top", top.data);
+  PrintTensor("top_len", top.length);
+
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.001f);
+  cker->SetupChecker(setting_checker, prnd);
+
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_length_trans, bottoms, tops);
+}
+
 void TestAxisSplitLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Axis Split Layer." << endl;
   Node<cpu> bottom;
@@ -4928,13 +5018,17 @@ void TestMerge2WindowDataLayer(mshadow::Random<cpu> * prnd){
     bottom1.length = 1;
     map<string,SettingV> setting;
     setting["dim"] = 3;
+    PrintTensor("bottom0-data", bottom0.data);
+    PrintTensor("bottom1-data", bottom1.data);
 
     //Test Merge2WindowDataLayer
     Layer<cpu> * layer_merge2window = CreateLayer<cpu>(kMerge2WindowData);
     layer_merge2window->PropAll();
-    layer_merge2window->SetupLayer(setting,bottoms,tops,prnd);
-    layer_merge2window->Reshape(bottoms,tops);
+    layer_merge2window->SetupLayer(setting, bottoms, tops, prnd);
+    layer_merge2window->Reshape(bottoms, tops);
+    layer_merge2window->Forward(bottoms, tops);
 
+    PrintTensor("top0-data", top0.data);
     using namespace checker;
     Checker<cpu> * cker = CreateChecker<cpu>();
     map<string,SettingV> setting_checker;
@@ -5047,6 +5141,9 @@ float TANH_MAX_INPUT = 20;
 int TANH_TABLE_SIZE = 10000;
 float *p_tanh_lookup_table;
 
+float EXP_MAX_INPUT = 10.f;
+int EXP_TABLE_SIZE = 10000000;
+float *p_exp_lookup_table;
 
 int main(int argc, char *argv[]) {
   float max = SIGMOID_MAX_INPUT;
@@ -5063,6 +5160,13 @@ int main(int argc, char *argv[]) {
     float exp_val = exp(2*((float(i)*2*max)/len - max)); // map position to value, frow small to large
     p_tanh_lookup_table[i] = (exp_val-1)/(exp_val+1);
   }
+  max = EXP_MAX_INPUT;
+  len = EXP_TABLE_SIZE;
+  p_exp_lookup_table = new float[len];
+  for (int i = 0; i < len; ++i) {
+    p_exp_lookup_table[i] = exp((float(i)*2*max)/len - max); // map position to value, frow small to large
+  }
+
   mshadow::Random<cpu> rnd(37);
   // TestActivationLayer(&rnd);
   // TestFcLayer(&rnd);
@@ -5107,7 +5211,7 @@ int main(int argc, char *argv[]) {
   // TestBatchConcatLayer(&rnd);
   // TestBatchDuplicateLayer(&rnd);
   // TestChannelDuplicateLayer(&rnd);
-   TestProductLayer(&rnd);
+  // TestProductLayer(&rnd);
   // TestPairTextDataLayer(&rnd);
   // TestListTextDataLayer(&rnd);
   // TestGateLayer(&rnd);
@@ -5128,10 +5232,11 @@ int main(int argc, char *argv[]) {
   // TestQATextDataLayer(&rnd);
   // TestMapTextDataLayer(&rnd);
   // TestMap2TextDataLayer(&rnd);
+  // TestMap3TextDataLayer(&rnd);
   // TestKeySnipLayer(&rnd);
   // TestReshapeLayer(&rnd);
   // TestConvolutionAndLocalFactorLayer(&rnd);
-   TestElementOpLayer(&rnd);
+  // TestElementOpLayer(&rnd);
   // TestParameterLayer(&rnd);
   // TestGenKernelLayer(&rnd);
   // TestPoolVarLayer(&rnd);
@@ -5140,9 +5245,10 @@ int main(int argc, char *argv[]) {
   // TestFillCurveXY2DLayer(&rnd);
   // TestFillCurveD2XYLayer(&rnd);
   // TestLengthTransLayer(&rnd);
+  // TestLengthFillLayer(&rnd);
   // TestAxisSplitLayer(&rnd);
-  // TestMerge2WindowDataLayer(&rnd);
-  //  TestMatchHistogramLayer(&rnd);
+   TestMerge2WindowDataLayer(&rnd);
+  // TestMatchHistogramLayer(&rnd);
   // TestSortAxisLayer(&rnd);
   return 0;
 }

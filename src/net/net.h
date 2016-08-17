@@ -511,6 +511,11 @@ class Net : public INet{
       } else {
         model_save_everything = false;
       }
+      if (!save_model_root["everything_once"].isNull()) {
+        model_save_everything_once = save_model_root["everything_once"].asBool();
+      } else {
+        model_save_everything_once = false;
+      }
       if (!save_model_root["save_diff"].isNull()) {
         model_save_diff = save_model_root["save_diff"].asBool();
       } else {
@@ -960,11 +965,11 @@ class Net : public INet{
             layer_params_root.append(0);
             continue;
         }
-        // oracle 
-        if (!model_save_everything && \
+        // Check for embedding saving 
+        if (!model_save_everything && !model_save_everything_once && \
              (layers[layer_idx]->layer_type == kEmbedding || \
              layers[layer_idx]->layer_type == kWordClassSoftmaxLoss) ) {
-            cout << "ORC: without save embedding" << endl;
+            cout << "\t Without save embedding, in layer " << layers[layer_idx]->layer_name << "." << endl;
             layer_params_root.append(0);
             continue;
         }
@@ -979,6 +984,13 @@ class Net : public INet{
     string json_file = writer.write(net_root);
     ofs << json_file;
     ofs.close();
+
+    // Reset save everything_once
+    if (model_save_everything_once) {
+        model_save_everything_once = false;
+        cout << "\t Turn off save everything." << endl;
+    }
+    
   }
 
   void LoadParams(Json::Value &layers_params_root) {
@@ -1100,6 +1112,7 @@ class Net : public INet{
   int model_save_interval;
   string model_save_file_prefix;
   bool model_save_everything;
+  bool model_save_everything_once;
   bool model_save_initial;
   bool model_test_initial;
   bool model_save_last;

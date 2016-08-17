@@ -105,6 +105,7 @@ const int kAxisSplit = 1029;
 const int kBatchMax = 1030;
 const int kKeySnip = 1031;
 const int kReshape = 1032;
+const int kLengthFill = 1033;
 const int kDynamicKMaxPooling = 10001;
 const int kMatchTopKPooling = 10002;
 const int kSelectSubRepByToken = 10003;
@@ -138,6 +139,7 @@ const int kLogistic = 62;
 const int kEuclidDistanceLoss = 63;
 const int kActivationNormLoss = 64;
 const int kListHingeLoss = 65;
+const int kPairWeightedHingeLoss = 67;
 
 // Input Layer 71-
 const int kTextData = 71;
@@ -158,6 +160,7 @@ const int kMemoryGlobal = 85;
 const int kMap2TextData = 86;
 const int kLcsToyData = 87;
 const int kMap2WindowTextData = 88;
+const int kMap3TextData = 89;
 
 /*! \brief these are enumeration */
 const int kInit = -1;

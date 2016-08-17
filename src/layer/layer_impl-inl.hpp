@@ -86,6 +86,7 @@
 #include "./common/fill_curve_xy2d_layer-inl.hpp"
 #include "./common/fill_curve_d2xy_layer-inl.hpp"
 #include "./common/length_trans_layer-inl.hpp"
+#include "./common/length_fill_layer-inl.hpp"
 #include "./common/axis_split_layer-inl.hpp"
 #include "./common/key_snip_layer-inl.hpp"
 #include "./common/reshape_layer-inl.hpp"
@@ -104,12 +105,14 @@
 #include "./input/word_rep_input_layer-inl.hpp"
 #include "./input/map_textdata_layer-inl.hpp"
 #include "./input/map_2_textdata_layer-inl.hpp"
+#include "./input/map_3_textdata_layer-inl.hpp"
 #include "./input/map_2_window_textdata_layer-inl.hpp"
 #include "./input/image_layer-inl.hpp"
 #include "./input/memory_global_layer-inl.hpp"
 #include "./loss/hingeloss_layer-inl.hpp"
 #include "./loss/cross_entropy_loss_layer-inl.hpp"
 #include "./loss/pairhingeloss_layer-inl.hpp"
+#include "./loss/pair_weighted_hinge_loss_layer-inl.hpp"
 #include "./loss/listhingeloss_layer-inl.hpp"
 #include "./loss/softmax_layer-inl.hpp"
 #include "./loss/accuracy_layer-inl.hpp"
@@ -184,6 +187,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kGating: return new GatingLayer<xpu>(type);
     case kHingeLoss: return new HingeLossLayer<xpu>(type);
     case kPairHingeLoss: return new PairHingeLossLayer<xpu>(type);
+    case kPairWeightedHingeLoss: return new PairWeightedHingeLossLayer<xpu>(type);
     case kListHingeLoss: return new ListHingeLossLayer<xpu>(type);
     case kCrossEntropyLoss: return new CrossEntropyLossLayer<xpu>(type);
     case kTextData: return new TextDataLayer<xpu>(type);
@@ -223,6 +227,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kQATextData: return new QATextDataLayer<xpu>(type);
     case kMapTextData: return new MapTextDataLayer<xpu>(type);
     case kMap2TextData: return new Map2TextDataLayer<xpu>(type);
+    case kMap3TextData: return new Map3TextDataLayer<xpu>(type);
     case kMap2WindowTextData:    return new Map2WindowTextDataLayer<xpu>(type);
     case kMerge2WindowData:    return new Merge2WindowDataLayer<xpu>(type);
     case kSelectSubRepByToken: return new SelectSubRepByTokenLayer<xpu>(type);
@@ -245,6 +250,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kFillCurveXY2D: return new FillCurveXY2DLayer<xpu>(type);
     case kFillCurveD2XY: return new FillCurveD2XYLayer<xpu>(type);
     case kLengthTrans: return new LengthTransLayer<xpu>(type);
+    case kLengthFill: return new LengthFillLayer<xpu>(type);
     case kAxisSplit: return new AxisSplitLayer<xpu>(type);
     case kKeySnip: return new KeySnipLayer<xpu>(type);
     case kReshape: return new ReshapeLayer<xpu>(type);
