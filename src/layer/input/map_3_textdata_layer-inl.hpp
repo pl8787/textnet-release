@@ -477,11 +477,11 @@ class Map3TextDataLayer : public Layer<xpu>{
         top2_data[2*i] = 1;
         top2_data[2*i+1] = 0;
         if (loss_weight_log) {
-          top3_data[2*i] = loss_weight_factor / log(loss_weight[rel_set[pos_idx][0]]);
-          top3_data[2*i+1] = loss_weight_factor / log(loss_weight[rel_set[neg_idx][0]]);
+          top3_data[2*i] = max(1.0f, loss_weight_factor / log(loss_weight[rel_set[pos_idx][0]]));
+          top3_data[2*i+1] = max(1.0f, loss_weight_factor / log(loss_weight[rel_set[neg_idx][0]]));
         } else {
-          top3_data[2*i] = loss_weight_factor / loss_weight[rel_set[pos_idx][0]];
-          top3_data[2*i+1] = loss_weight_factor / loss_weight[rel_set[neg_idx][0]];
+          top3_data[2*i] = max(1.0f, loss_weight_factor / loss_weight[rel_set[pos_idx][0]]);
+          top3_data[2*i+1] = max(1.0f, loss_weight_factor / loss_weight[rel_set[neg_idx][0]]);
         }
         line_ptr = (line_ptr + 1) % pair_set.size();
       }
