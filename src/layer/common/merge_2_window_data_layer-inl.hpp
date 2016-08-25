@@ -40,6 +40,7 @@ class Merge2WindowDataLayer : public Layer<xpu>{
   
   virtual void Require() {
     this->defaults["dim"] = SettingV(3);
+    this->defaults["max_len"] = SettingV(100);
     Layer<xpu>::Require();
   }
   
@@ -53,6 +54,7 @@ class Merge2WindowDataLayer : public Layer<xpu>{
                   "Merge2WindowDataLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "Merge2WindowDataLayer:top size problem.");
+    max_len   = setting["max_len"].iVal();
     dim   = setting["dim"].iVal();
   }
 
@@ -70,7 +72,7 @@ class Merge2WindowDataLayer : public Layer<xpu>{
                   "Merge2WindowDataLayer:top size problem.");
     Tensor2D bottom0_length = bottom[0]->length;
 
-    int idim = 0;
+    int idim = max_len;
     for(index_t i = 0 ; i < bottom[1]->data.size(0); ++ i){
         utils::Check(bottom[1]->data[i][0][0][0] > 0,"Merge2WindowDataLayer:: Reshape error, window size equals zero.");
         idim = idim > bottom[1]->data[i][0][0][0] ? idim : bottom[1]->data[i][0][0][0];
@@ -184,6 +186,7 @@ class Merge2WindowDataLayer : public Layer<xpu>{
   
  protected:
   int dim;
+  int max_len;
 };
 }  // namespace layer
 }  // namespace textnet

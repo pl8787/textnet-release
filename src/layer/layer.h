@@ -122,6 +122,8 @@ const int kGruD2OneGate = 10012;
 const int kMerge2WindowData = 20001;
 const int kMatchHistogram = 20002;
 const int kSortAxis = 20003;
+const int kBLstm = 20004;
+const int kBGruD2 = 20005;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;

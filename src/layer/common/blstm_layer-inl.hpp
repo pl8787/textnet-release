@@ -1,22 +1,23 @@
-#ifndef TEXTNET_LAYER_LSTM_LAYER_INL_HPP_
-#define TEXTNET_LAYER_LSTM_LAYER_INL_HPP_
+#ifndef TEXTNET_LAYER_BLSTM_LAYER_INL_HPP_
+#define TEXTNET_LAYER_BLSTM_LAYER_INL_HPP_
 
 #include <iostream>
 
 #include <mshadow/tensor.h>
 #include "../layer.h"
-#include "../../utils/utils.h"
-#include "../../io/json/json.h"
-#include <cassert>
+#include "../op.h"
+//#include "../../utils/utils.h"
+//#include "../../io/json/json.h"
+//#include <cassert>
 
 namespace textnet {
 namespace layer {
 
 template<typename xpu>
-class LstmLayer : public Layer<xpu> {
+class BLstmLayer : public Layer<xpu> {
  public:
-  LstmLayer(LayerType type) { this->layer_type = type; }
-  virtual ~LstmLayer(void) {}
+  BLstmLayer(LayerType type) { this->layer_type = type; }
+  virtual ~BLstmLayer(void) {}
   
   virtual int BottomNodeNum() { return 1; }
   virtual int TopNodeNum() { return 1; }
@@ -60,8 +61,8 @@ class LstmLayer : public Layer<xpu> {
                           mshadow::Random<xpu> *prnd) {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);                        
     
-    utils::Check(bottom.size() == BottomNodeNum(), "LstmLayer:bottom size problem."); 
-    utils::Check(top.size() == TopNodeNum(), "LstmLayer:top size problem.");
+    utils::Check(bottom.size() == BottomNodeNum(), "BLstmLayer:bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(), "BLstmLayer:top size problem.");
                   
     d_mem   = setting["d_mem"].iVal();
     //d_input   = setting["d_input"].iVal();
@@ -76,15 +77,10 @@ class LstmLayer : public Layer<xpu> {
     grad_cut_off = setting["grad_cut_off"].fVal();
     max_norm2 = setting["max_norm2"].fVal();
 
-    begin_h.Resize(mshadow::Shape2(1, d_mem), 0.f);
-    begin_c.Resize(mshadow::Shape2(1, d_mem), 0.f);
-    begin_h_er.Resize(mshadow::Shape2(1, d_mem), 0.f);
-    begin_c_er.Resize(mshadow::Shape2(1, d_mem), 0.f);
-
     this->params.resize(3);
-    this->params[0].Resize(1, 1, d_input, 4*d_mem, true); // w
-    this->params[1].Resize(1, 1, d_mem,   4*d_mem, true); // u
-    this->params[2].Resize(1, 1, 1,       4*d_mem, true); // b
+    this->params[0].Resize(1, 1, 4*d_mem, d_input, true); // w
+    this->params[1].Resize(1, 1, 4*d_mem, d_mem, true); // u
+    this->params[2].Resize(1, 1, 4*d_mem,    1, true); // b
     
     std::map<std::string, SettingV> &w_setting = *setting["w_filler"].mVal();
     std::map<std::string, SettingV> &u_setting = *setting["u_filler"].mVal();
@@ -138,29 +134,50 @@ class LstmLayer : public Layer<xpu> {
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top,
 					   bool show_info = false) {
-    utils::Check(bottom.size() == BottomNodeNum(), "LstmLayer:bottom size problem."); 
-    utils::Check(top.size() == TopNodeNum(), "LstmLayer:top size problem.");
+    utils::Check(bottom.size() == BottomNodeNum(), "BLstmLayer:bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(), "BLstmLayer:top size problem.");
       //utils::ShowMemoryUse();
     
+    nbatch = bottom[0]->data.size(0);
     mshadow::Shape<4> shape_in  = bottom[0]->data.shape_;
+    mshadow::Shape<4> shape_in1  = mshadow::Shape4(shape_in[2], shape_in[1], shape_in[0], shape_in[3]);
+    mshadow::Shape<4> shape_in2  = mshadow::Shape4(shape_in[2], shape_in[1], shape_in[3], shape_in[0]);
     mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in[0], shape_in[1], shape_in[2], d_mem);
-    mshadow::Shape<4> shape_gate= mshadow::Shape4(shape_in[0], shape_in[1], shape_in[2], d_mem*4);
+    mshadow::Shape<4> shape_out1 = mshadow::Shape4(shape_in[2], shape_in[1], shape_in[0], d_mem);
+    mshadow::Shape<4> shape_out2 = mshadow::Shape4(shape_in[2], shape_in[1], d_mem, shape_in[0]);
+    mshadow::Shape<4> shape_gate= mshadow::Shape4(shape_in[2], shape_in[1], 4*d_mem, shape_in[0]);
 
     top[0]->Resize(shape_out, true);
+    mask_data.Resize(shape_out2, 0.f); // mask_data : batch_size * max_length
+    mask_diff.Resize(shape_in2, 0.f); // mask_diff: batch_size * max_length
+    rd_bottom_data_tmp.Resize(shape_in1);
+    rd_bottom_data.Resize(shape_in2);
+    rd_bottom_diff_tmp.Resize(shape_in1);
+    rd_bottom_diff.Resize(shape_in2);
+    rd_top_data_tmp.Resize(shape_out1);
+    rd_top_data.Resize(shape_out2);
+    rd_top_diff_tmp.Resize(shape_out1);
+    rd_top_diff.Resize(shape_out2);
       //utils::ShowMemoryUse();
-    c.Resize(shape_out, 0.f);
+    c.Resize(shape_out2, 0.f);
       //utils::ShowMemoryUse();
     g.Resize(shape_gate, 0.f);
       //utils::ShowMemoryUse();
-    c_er.Resize(shape_out, 0.f);
+    c_er.Resize(shape_out2, 0.f);
       //utils::ShowMemoryUse();
     g_er.Resize(shape_gate, 0.f);
       //utils::ShowMemoryUse();
 
-	if (show_info) {
-	  bottom[0]->PrintShape("bottom0");
-	  top[0]->PrintShape("top0");
-	}
+    begin_h.Resize(mshadow::Shape2(d_mem, nbatch), 0.f);
+    begin_c.Resize(mshadow::Shape2(d_mem, nbatch), 0.f);
+    begin_h_er.Resize(mshadow::Shape2(d_mem, nbatch), 0.f);
+    begin_c_er.Resize(mshadow::Shape2(d_mem, nbatch), 0.f);
+
+    b_expand.Resize(mshadow::Shape2(nbatch, 4*d_mem), 0.f);
+    if (show_info) {
+      bottom[0]->PrintShape("bottom0");
+      top[0]->PrintShape("top0");
+    }
   }
 
   virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,
@@ -200,30 +217,31 @@ class LstmLayer : public Layer<xpu> {
                               Tensor2D cur_g,
                               Tensor2D cur_c,
                               Tensor2D cur_h) {
+      using namespace mshadow::expr;
       Tensor2D w_data = this->params[0].data[0][0];
       Tensor2D u_data = this->params[1].data[0][0];
-      Tensor2D b_data = this->params[2].data[0][0];
 
       Tensor2D i, f, o, cc;
-      cur_g = dot(x, w_data);
-      cur_g += dot(pre_h, u_data);
+      cur_g = dot(w_data, x); // x: dinput * nbatch,   w_data: 4dmem * dinput
+      
+      cur_g += dot(u_data, pre_h); // u_data: 4dmem * 4dmem,  pre_h: 4dmem * nbatch
+      //PrintTensor("cur_g",cur_g);
       if (!no_bias) {
-        cur_g += b_data;
+        cur_g += b_expand.T(); // cur_g: 4dmem * nbatch,  b_expand: 4dmem * nbatch
       }
-      SplitGate(cur_g, i, f, o, cc);
-      i = mshadow::expr::F<op::sigmoid>(i); // logi
-      f = mshadow::expr::F<op::sigmoid>(f); // logi
-      o = mshadow::expr::F<op::sigmoid>(o); // logi
-      cc= mshadow::expr::F<op::tanh>(cc);   // tanh 
+      SplitGate(cur_g, i, f, o, cc); // cur_g: 4dmem * nbatch
+      i = mshadow::expr::F<op::sigmoid>(i); // logi   dmem * nbatch
+      f = mshadow::expr::F<op::sigmoid>(f); // logi   dmem * nbatch
+      o = mshadow::expr::F<op::sigmoid>(o); // logi   dmem * nbatch
+      cc= mshadow::expr::F<op::tanh>(cc);   // tanh   dmem * nbatch
 
-      cur_c = f * pre_c + i * cc;
+      cur_c = f * pre_c + i * cc;  //dmem * nbatch
       if (!no_out_tanh) {
         cur_h = o * mshadow::expr::F<op::tanh>(cur_c); // tanh
       } else {
-        cur_h = o * cur_c; 
+        cur_h = o * cur_c;  // dmem * nbatch
       }
   }
-
   void PrintTensor(const char * name, mshadow::Tensor<cpu, 4> x) {
     mshadow::Shape<4> s = x.shape_;
       cout << name << " shape " << s[0] << "x" << s[1] << "x" << s[2] << "x" << s[3] << endl;
@@ -252,73 +270,67 @@ class LstmLayer : public Layer<xpu> {
       }
       cout << endl;
   }
-  void ForwardLeft2Right(Tensor2D in, Tensor2D g, Tensor2D c, Tensor2D out) {
-      int begin = 0, end = in.size(0);
-      Tensor2D pre_c, pre_h;
-      // not need any padding, begin h and c are set to 0
-      for (index_t row_idx = begin; row_idx < end; ++row_idx) {
-        if (row_idx == begin) {
-          pre_c = begin_c; 
-          pre_h = begin_h;
-        } else {
-          pre_c = c.Slice(row_idx-1, row_idx);
-          pre_h = out.Slice(row_idx-1, row_idx);
-        }
-        ForwardOneStep(pre_c,
-                       pre_h,
-                       in.Slice(row_idx, row_idx+1),
-                       g.Slice(row_idx, row_idx+1), 
-                       c.Slice(row_idx, row_idx+1), 
-                       out.Slice(row_idx, row_idx+1));
-      }
-  }
-  void ForwardRight2Left(Tensor2D in, Tensor2D g, Tensor2D c, Tensor2D out) {
-      int begin = 0, end = in.size(0);
-      Tensor2D pre_c, pre_h;
-      // not need any padding, begin h and c are set to 0
-      for (int row_idx = end-1; row_idx >= begin; --row_idx) {
-        if (row_idx == end-1) {
-          pre_c = begin_c; 
-          pre_h = begin_h;
-        } else {
-          pre_c = c.Slice(row_idx+1, row_idx+2);
-          pre_h = out.Slice(row_idx+1, row_idx+2);
-        }
-        ForwardOneStep(pre_c,
-                       pre_h,
-                       in.Slice(row_idx, row_idx+1),
-                       g.Slice(row_idx, row_idx+1), 
-                       c.Slice(row_idx, row_idx+1), 
-                       out.Slice(row_idx, row_idx+1));
-      }
-  }
-  
+
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top) {
 #if DEBUG
     checkNanParams();
 #endif
+    using namespace mshadow::expr;
     Tensor4D bottom_data = bottom[0]->data;
     Tensor4D top_data = top[0]->data;
-    top[0]->length = mshadow::expr::F<op::identity>(bottom[0]->length);
-    top_data = 0.f; c = 0.f, g = 0.f; c_er = 0.f; g_er = 0.f;
-    for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
-      for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
-        int len = bottom[0]->length[batch_idx][seq_idx];
-        utils::Assert(len >= 0, "LstmLayer: sequence length error.");
-        if (!reverse) {
-          ForwardLeft2Right(bottom_data[batch_idx][seq_idx].Slice(0,len), 
-                            g[batch_idx][seq_idx].Slice(0,len), 
-                            c[batch_idx][seq_idx].Slice(0,len), 
-                            top_data[batch_idx][seq_idx].Slice(0,len));
-        } else {
-          ForwardRight2Left(bottom_data[batch_idx][seq_idx].Slice(0,len), 
-                            g[batch_idx][seq_idx].Slice(0,len), 
-                            c[batch_idx][seq_idx].Slice(0,len), 
-                            top_data[batch_idx][seq_idx].Slice(0,len));
+    int n_steps = rd_bottom_data.size(0);
+    mask_data = 0.f; rd_top_data = 0.f; rd_top_data_tmp=0.f; rd_bottom_data_tmp = 0.f; rd_bottom_data = 0.f; b_expand = 0.f;
+
+    c = 0.f, g = 0.f; c_er = 0.f; g_er = 0.f;
+    top[0]->length = F<op::identity>(bottom[0]->length);
+    rd_bottom_data_tmp = swapaxis<2,0>(bottom_data);
+    rd_bottom_data = swapaxis<3,2>(rd_bottom_data_tmp);
+    b_expand = repmat(this->params[2].data_d1(),nbatch); // expand bias to (nbatch * 4dmem)
+
+    for ( index_t batch_idx = 0 ; batch_idx < bottom_data.size(0); ++ batch_idx){
+      for(index_t steps = 0 ; steps < bottom[0]->length[batch_idx][0]; ++ steps){
+        for(index_t seq_idx = 0 ; seq_idx < bottom_data.size(1); ++ seq_idx){
+          for(index_t dim_idx = 0 ; dim_idx < d_mem; ++ dim_idx){
+            mask_data[steps][seq_idx][dim_idx][batch_idx] = 1.f;
+          }
         }
       }
     }
+    if(!reverse) {
+      for(index_t step = 0 ;  step < n_steps; ++ step){
+        for(index_t seq_idx = 0 ; seq_idx < rd_bottom_data.size(1); ++ seq_idx){
+          Tensor2D pre_c, pre_h;
+          if(step == 0){
+            pre_c = begin_c;
+            pre_h = begin_h;
+          } else {
+            pre_c = c[step-1][seq_idx];
+            pre_h = rd_top_data[step-1][seq_idx];
+          }
+          ForwardOneStep(pre_c, pre_h, rd_bottom_data[step][seq_idx], g[step][seq_idx], c[step][seq_idx], rd_top_data[step][seq_idx]);
+        }
+      }
+    } else {
+      for(int step = n_steps - 1 ;  step >= 0; -- step){
+        for(index_t seq_idx = 0 ; seq_idx < rd_bottom_data.size(1); ++ seq_idx){
+          Tensor2D pre_c, pre_h;
+          if(step == n_steps - 1){
+            pre_c = begin_c;
+            pre_h = begin_h;
+          } else {
+            pre_c = c[step+1][seq_idx];
+            pre_h = rd_top_data[step+1][seq_idx];
+          }
+          ForwardOneStep(pre_c, pre_h, rd_bottom_data[step][seq_idx], g[step][seq_idx], c[step][seq_idx], rd_top_data[step][seq_idx]);
+        }
+      }
+    }
+    rd_top_data = mask_data * rd_top_data;
+    //g = mask * g;
+    c = mask_data * c;
+    rd_top_data_tmp = swapaxis<3,2>(rd_top_data);
+    top_data = swapaxis<2,0>(rd_top_data_tmp);
 #if DEBUG
     checkNanParams();
 #endif
@@ -326,11 +338,11 @@ class LstmLayer : public Layer<xpu> {
 
   // too tricky, may bring errors
   void SplitGate(Tensor2D g, Tensor2D &i, Tensor2D &f, Tensor2D &o, Tensor2D &cc) {
-    utils::Check(g.size(0) == 1, "LstmLayer: gate problem."); 
-    i = Tensor2D(g.dptr_, mshadow::Shape2(1, d_mem));
-    f = Tensor2D(g.dptr_ + 1 * d_mem, mshadow::Shape2(1, d_mem));
-    o = Tensor2D(g.dptr_ + 2 * d_mem, mshadow::Shape2(1, d_mem));
-    cc= Tensor2D(g.dptr_ + 3 * d_mem, mshadow::Shape2(1, d_mem));
+    //utils::Check(g.size(0) == nbatch, "BLstmLayer: gate problem."); 
+    i = Tensor2D(g.dptr_, mshadow::Shape2(d_mem, nbatch));
+    f = Tensor2D(g.dptr_ + nbatch * d_mem, mshadow::Shape2(d_mem, nbatch));
+    o = Tensor2D(g.dptr_ + 2 * nbatch * d_mem, mshadow::Shape2(d_mem, nbatch));
+    cc= Tensor2D(g.dptr_ + 3 * nbatch * d_mem, mshadow::Shape2(d_mem, nbatch));
   }
 
   float norm2(Tensor2D t) {
@@ -357,6 +369,7 @@ class LstmLayer : public Layer<xpu> {
                  Tensor2D pre_h_er,
                  Tensor2D x_er) {
 
+    using namespace mshadow::expr;
     Tensor2D w_data = this->params[0].data[0][0];
     Tensor2D u_data = this->params[1].data[0][0];
     Tensor2D w_er = this->params[0].diff[0][0];
@@ -389,85 +402,17 @@ class LstmLayer : public Layer<xpu> {
     pre_c_er = cur_c_er * f;
     f_er = mshadow::expr::F<op::sigmoid_grad>(f) * (cur_c_er * pre_c); // logi
 
-    pre_h_er += dot(cur_g_er, u_data.T());
-    x_er += dot(cur_g_er, w_data.T());
+    pre_h_er += dot(u_data.T(), cur_g_er); // cur_g_er: 4dmem * nbatch , u_data: 4dmem * dmem
+    x_er += dot(w_data.T(), cur_g_er); // cur_g_er: 4dmem * nbatch, w_data: dinput * 4dmem
 
     // grad
-    if (!no_bias) {
-        b_er += cur_g_er;
+    if (!no_bias) {  // need to speed
+      this->params[2].diff_d1() += sum_rows(cur_g_er.T());
     }
-    w_er += dot(x.T(), cur_g_er); 
-    u_er += dot(pre_h.T(), cur_g_er);
+    w_er += dot(cur_g_er, x.T());  // w_er: 4dmem * dinput, x.T(): d_input * nbatch , cur_g_er: 4dmem * nbatch
+    u_er += dot(cur_g_er, pre_h.T());
   }
 
-  void BackpropForLeft2RightLstm(Tensor2D top_data, Tensor2D top_diff, 
-                                 Tensor2D c, Tensor2D c_er, 
-                                 Tensor2D g, Tensor2D g_er, 
-                                 Tensor2D bottom_data, Tensor2D bottom_diff) {
-      int begin = 0, end = top_data.size(0);
-
-      Tensor2D pre_c, pre_h, pre_c_er, pre_h_er;
-      for (int row_idx = end-1; row_idx >= begin; --row_idx) {
-        if (row_idx == begin) {
-            pre_c = begin_c;
-            pre_h = begin_h;
-            pre_c_er = begin_c_er;
-            pre_h_er = begin_h_er;
-        } else {
-            pre_c = c.Slice(row_idx-1, row_idx);
-            pre_h = top_data.Slice(row_idx-1, row_idx);
-            pre_c_er = c_er.Slice(row_idx-1, row_idx);
-            pre_h_er = top_diff.Slice(row_idx-1, row_idx);
-        }
-        BpOneStep(top_diff.Slice(row_idx, row_idx+1), 
-                  pre_c,
-                  pre_h,
-                  bottom_data.Slice(row_idx, row_idx+1), 
-                  g.Slice(row_idx, row_idx+1), 
-                  c.Slice(row_idx, row_idx+1), 
-                  top_data.Slice(row_idx, row_idx+1),
-                  c_er.Slice(row_idx, row_idx+1),
-                  g_er.Slice(row_idx, row_idx+1),
-                  pre_c_er,
-                  pre_h_er,
-                  bottom_diff.Slice(row_idx, row_idx+1));
-      }
-  }
-  void BackpropForRight2LeftLstm(Tensor2D top_data, Tensor2D top_diff, 
-                                 Tensor2D c, Tensor2D c_er, 
-                                 Tensor2D g, Tensor2D g_er, 
-                                 Tensor2D bottom_data, Tensor2D bottom_diff) {
-      int begin = 0, end = top_data.size(0);
-
-      Tensor2D pre_c, pre_h, pre_c_er, pre_h_er;
-      for (int row_idx = begin; row_idx < end; ++row_idx) {
-        if (row_idx == end-1) {
-            pre_c = begin_c;
-            pre_h = begin_h;
-            pre_c_er = begin_c_er;
-            pre_h_er = begin_h_er;
-        } else {
-            pre_c = c.Slice(row_idx+1, row_idx+2);
-            pre_h = top_data.Slice(row_idx+1, row_idx+2);
-            pre_c_er = c_er.Slice(row_idx+1, row_idx+2);
-            pre_h_er = top_diff.Slice(row_idx+1, row_idx+2);
-        }
-        BpOneStep(top_diff.Slice(row_idx, row_idx+1), 
-                  pre_c,
-                  pre_h,
-                  bottom_data.Slice(row_idx, row_idx+1), 
-                  g.Slice(row_idx, row_idx+1), 
-                  c.Slice(row_idx, row_idx+1), 
-                  top_data.Slice(row_idx, row_idx+1),
-                  c_er.Slice(row_idx, row_idx+1),
-                  g_er.Slice(row_idx, row_idx+1),
-                  pre_c_er,
-                  pre_h_er,
-                  bottom_diff.Slice(row_idx, row_idx+1));
-      }
-  }
-
-  
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
                         const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
@@ -478,41 +423,93 @@ class LstmLayer : public Layer<xpu> {
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
     mshadow::Tensor<xpu, 4> bottom_diff = bottom[0]->diff;
-        
+
+    mask_diff = 0.f; rd_top_diff_tmp = 0.f; rd_top_diff = 0.f;
+    rd_bottom_diff = 0.f; rd_bottom_diff_tmp = 0.f;
     begin_c_er = 0.; begin_h_er = 0.; g_er = 0.; c_er = 0.;
-    for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
-      for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
-        int len = bottom[0]->length[batch_idx][seq_idx];
-        utils::Assert(len >= 0, "LstmLayer: sequence length error.");
-        if (!reverse) {
-            BackpropForLeft2RightLstm(top_data[batch_idx][seq_idx].Slice(0,len), 
-                                      top_diff[batch_idx][seq_idx].Slice(0,len), 
-                                      c[batch_idx][seq_idx].Slice(0,len), 
-                                      c_er[batch_idx][seq_idx].Slice(0,len),
-                                      g[batch_idx][seq_idx].Slice(0,len), 
-                                      g_er[batch_idx][seq_idx].Slice(0,len), 
-                                      bottom_data[batch_idx][seq_idx].Slice(0,len), 
-                                      bottom_diff[batch_idx][seq_idx].Slice(0,len));
-        } else {
-            BackpropForRight2LeftLstm(top_data[batch_idx][seq_idx].Slice(0,len), 
-                                      top_diff[batch_idx][seq_idx].Slice(0,len), 
-                                      c[batch_idx][seq_idx].Slice(0,len), 
-                                      c_er[batch_idx][seq_idx].Slice(0,len),
-                                      g[batch_idx][seq_idx].Slice(0,len), 
-                                      g_er[batch_idx][seq_idx].Slice(0,len), 
-                                      bottom_data[batch_idx][seq_idx].Slice(0,len), 
-                                      bottom_diff[batch_idx][seq_idx].Slice(0,len));
+    int n_steps = rd_bottom_diff.size(0);
+    Tensor2D pre_c, pre_h, pre_c_er, pre_h_er;
+
+    for ( index_t batch_idx = 0 ; batch_idx < bottom_data.size(0); ++ batch_idx){
+      for(index_t seq_idx = 0 ; seq_idx < bottom_data.size(1); ++ seq_idx){
+        for(index_t dim_idx = 0 ; dim_idx < bottom_data.size(3); ++ dim_idx){
+          for(index_t steps = 0 ; steps < bottom[0]->length[batch_idx][0]; ++ steps){
+            mask_diff[steps][seq_idx][dim_idx][batch_idx] = 1.f;
+          }
         }
       }
     }
+    rd_top_diff_tmp = swapaxis<2,0>(top_diff);
+    rd_top_diff = swapaxis<3,2>(rd_top_diff_tmp);
+    if(!reverse) {
+      for(int step = n_steps - 1; step >= 0; -- step){ //attention here step should be decleared as int
+        for(index_t seq_idx = 0 ; seq_idx < rd_bottom_diff.size(1); ++ seq_idx){
+          if(0 == step ){
+            pre_c = begin_c;
+            pre_h = begin_h;
+            pre_c_er = begin_c_er;
+            pre_h_er = begin_h_er;
+          } else {
+            pre_c = c[step - 1][seq_idx];
+            pre_h = rd_top_data[step - 1][seq_idx];
+            pre_c_er = c_er[step - 1][seq_idx];
+            pre_h_er = rd_top_diff[step - 1][seq_idx];
+          }
+          BpOneStep(rd_top_diff[step][seq_idx],
+                    pre_c,
+                    pre_h,
+                    rd_bottom_data[step][seq_idx], // d_input * nbatch
+                    g[step][seq_idx],
+                    c[step][seq_idx],
+                    rd_top_data[step][seq_idx],
+                    c_er[step][seq_idx],
+                    g_er[step][seq_idx],
+                    pre_c_er,
+                    pre_h_er,
+                    rd_bottom_diff[step][seq_idx]);
+        }
+      }
+    } else {
+      for(int step = 0 ; step < n_steps; ++ step){
+        for(index_t seq_idx = 0 ; seq_idx < rd_bottom_diff.size(1); ++ seq_idx){
+          if( n_steps-1 == step){
+            pre_c = begin_c;
+            pre_h = begin_h;
+            pre_c_er = begin_c_er;
+            pre_h_er = begin_h_er;
+          } else {
+            pre_c = c[step + 1][seq_idx];
+            pre_h = rd_top_data[step + 1][seq_idx];
+            pre_c_er = c_er[step + 1][seq_idx];
+            pre_h_er = rd_top_diff[step + 1][seq_idx];
+          }
+          BpOneStep(rd_top_diff[step][seq_idx],
+                    pre_c,
+                    pre_h,
+                    rd_bottom_data[step][seq_idx],
+                    g[step][seq_idx],
+                    c[step][seq_idx],
+                    rd_top_data[step][seq_idx],
+                    c_er[step][seq_idx],
+                    g_er[step][seq_idx],
+                    pre_c_er,
+                    pre_h_er,
+                    rd_bottom_diff[step][seq_idx]);
+        }
+      }
+    }
+    rd_bottom_diff = mask_diff * rd_bottom_diff;
+    rd_bottom_diff_tmp = swapaxis<3,2>(rd_bottom_diff);
+    bottom_diff = swapaxis<2,0>(rd_bottom_diff_tmp);
+
     this->params[0].CutOffGradient(grad_cut_off);
     this->params[1].CutOffGradient(grad_cut_off);
     this->params[2].CutOffGradient(grad_cut_off);
 
 #if DEBUG
-    this->params[0].PrintStatistic("LSTM W");
-    this->params[1].PrintStatistic("LSTM U");
-    this->params[2].PrintStatistic("LSTM b");
+    this->params[0].PrintStatistic("BLSTM W");
+    this->params[1].PrintStatistic("BLSTM U");
+    this->params[2].PrintStatistic("BLSTM b");
     checkNanParams();
 #endif
   }
@@ -523,14 +520,14 @@ class LstmLayer : public Layer<xpu> {
     int s2 = data_root["shape"][2].asInt();
     int s3 = data_root["shape"][3].asInt();
     utils::Check(t.size(0) == s0 && t.size(1) == s1 && t.size(2) == s2 && t.size(3) == s3, 
-                 "LstmLayer: load tensor error.");
+                 "BLstmLayer: load tensor error.");
     int size = s0*s1*s2*s3;
     for (int i = 0; i < size; ++i) {
       t.dptr_[i] = data_root["value"][i].asFloat();
     }
   }
   void LoadParam() {
-    utils::Printf("LstmLayer: load params...\n");
+    utils::Printf("BLstmLayer: load params...\n");
     Json::Value param_root;
     ifstream ifs(param_file.c_str());
     ifs >> param_root;
@@ -543,16 +540,18 @@ class LstmLayer : public Layer<xpu> {
  public:
 // protected:
   float max_norm2;
-  int d_mem, d_input;
+  int d_mem, d_input, nbatch;
   bool no_bias, reverse, no_out_tanh; 
   float grad_norm2;
   float o_gate_bias_init;
   float f_gate_bias_init;
   float grad_cut_off;
   string param_file;
-  mshadow::TensorContainer<xpu, 4> c, g, c_er, g_er;
-  mshadow::TensorContainer<xpu, 2> begin_h, begin_c, begin_c_er, begin_h_er;
+  mshadow::TensorContainer<xpu, 4> mask_data, mask_diff, rd_bottom_data, rd_top_data, rd_bottom_diff, rd_top_diff; 
+  mshadow::TensorContainer<xpu, 4> rd_bottom_data_tmp, rd_top_data_tmp, rd_bottom_diff_tmp, rd_top_diff_tmp; 
+  mshadow::TensorContainer<xpu, 4> c, g, c_er, g_er; 
+  mshadow::TensorContainer<xpu, 2> b_expand, begin_h, begin_c, begin_c_er, begin_h_er;
 };
 }  // namespace layer
 }  // namespace textnet
-#endif  // LAYER_LSTM_LAYER_INL_HPP_
+#endif  // LAYER_BLSTM_LAYER_INL_HPP_
