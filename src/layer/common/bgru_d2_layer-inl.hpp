@@ -574,8 +574,7 @@ class BGruD2Layer : public Layer<xpu> {
                  bottom_len.size(1) == 2, "BGruD2Layer: input length error.");
     top[0]->length = mshadow::expr::F<op::identity>(bottom[0]->length);
 
-    mask_data = 0.f; 
-    //mask_g = 0.f; mask_reset_h = 0.f;
+    mask_data = 0.f; //mask_g = 0.f; mask_reset_h = 0.f;
     rd_top_data = 0.f; rd_bottom_data=0.f;b_g_expand = 0.f, b_c_expand=0.f;
     top_data = 0.f; g = 0.f; reset_h = 0.f; hi = 0.f;
     Tensor2D pre_h_l, pre_h_m, pre_h_t;
@@ -832,7 +831,8 @@ class BGruD2Layer : public Layer<xpu> {
   // float f_gate_bias_init;
   // float grad_cut_off;
   // string param_file;
-  mshadow::TensorContainer<xpu, 4> mask_data, mask_g, mask_reset_h, mask_diff, rd_bottom_data, rd_top_data, rd_bottom_diff, rd_top_diff; 
+  mshadow::TensorContainer<xpu, 4> mask_data; // mask_g, mask_reset_h, mask_diff, rd_bottom_data, rd_top_data, rd_bottom_diff, rd_top_diff; 
+  mshadow::TensorContainer<xpu, 4> mask_diff, rd_bottom_data, rd_top_data, rd_bottom_diff, rd_top_diff; 
   mshadow::TensorContainer<xpu, 4> hi, g, reset_h, hi_er, g_er; //reset_h_er;
   mshadow::TensorContainer<xpu, 2> b_g_expand, b_c_expand, begin_h, begin_h_er, input, input_er;
   mshadow::TensorContainer<xpu, 1> sum;
