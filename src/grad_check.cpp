@@ -649,6 +649,98 @@ void TestDropoutLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckError(layer_dropout, bottoms, tops);
 }
 
+void TestXeLULayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check XeLU Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(1,1,5,5), Shape2(1,2), true);
+
+  float bottom_data_[] = {5,-5,9,1,1,
+						 1,1,1,2,1,
+						 1,4,1,9,1,
+						 1,1,2,1,1,
+						 -8,1,1,-1,1};
+  
+  vector<float> bottom_data(bottom_data_, bottom_data_ + sizeof(bottom_data_) / sizeof(float));
+  FillTensor(bottom.data, bottom_data);
+  bottom.data *= 0.2;
+
+  map<string, SettingV> setting;
+  setting["b"] = SettingV(0.5f);
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_conv = CreateLayer<cpu>(kXeLU);
+  layer_conv->PropAll();
+  layer_conv->SetupLayer(setting, bottoms, tops, prnd);
+  layer_conv->Reshape(bottoms, tops, true);
+  layer_conv->Forward(bottoms, tops);
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("top", top.data);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.001f);
+  setting_checker["range_max"] = SettingV(0.001f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_conv, bottoms, tops);
+
+}
+
+void TestELULayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check ELU Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(1,1,5,5), Shape2(1,2), true);
+
+  float bottom_data_[] = {5,-5,9,1,1,
+						 1,1,1,2,1,
+						 1,4,1,9,1,
+						 1,1,2,1,1,
+						 -8,1,1,-1,1};
+  
+  vector<float> bottom_data(bottom_data_, bottom_data_ + sizeof(bottom_data_) / sizeof(float));
+  FillTensor(bottom.data, bottom_data);
+  bottom.data *= 0.2;
+
+  map<string, SettingV> setting;
+  setting["b"] = SettingV(0.5f);
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_conv = CreateLayer<cpu>(kELU);
+  layer_conv->PropAll();
+  layer_conv->SetupLayer(setting, bottoms, tops, prnd);
+  layer_conv->Reshape(bottoms, tops, true);
+  layer_conv->Forward(bottoms, tops);
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("top", top.data);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.001f);
+  setting_checker["range_max"] = SettingV(0.001f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_conv, bottoms, tops);
+
+}
+
 void TestBatchNormLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check BatchNorm Layer." << endl;
   Node<cpu> bottom;
@@ -1290,11 +1382,11 @@ void TestKeySnipLayer(mshadow::Random<cpu>* prnd) {
 
   bottom0.data[0][0][0][0] = 1;
   bottom0.data[0][0][0][1] = 2;
-  bottom0.data[0][0][0][2] = 3;
+  bottom0.data[0][0][0][2] = -10; //3;
   bottom0.data[0][0][0][3] = 4;
   bottom0.data[0][0][0][4] = 1;
   bottom0.data[1][0][0][0] = 1;
-  bottom0.data[1][0][0][1] = 2;
+  bottom0.data[1][0][0][1] = -11; //2;
   bottom0.data[1][0][0][2] = 3;
   bottom0.data[1][0][0][3] = 4;
   bottom0.data[1][0][0][4] = 1;
@@ -1310,6 +1402,7 @@ void TestKeySnipLayer(mshadow::Random<cpu>* prnd) {
   setting["snip_size"] = SettingV(1);
   setting["group_snip"] = SettingV(2);
   setting["max_snip"] = SettingV(5);
+  setting["input_snip_doc"] = SettingV(true);
   
   /// Test Activation Layer
   Layer<cpu> * layer_conv = CreateLayer<cpu>(kKeySnip);
@@ -5219,7 +5312,7 @@ int main(int argc, char *argv[]) {
   // TestQATextDataLayer(&rnd);
   // TestMapTextDataLayer(&rnd);
   // TestMap2TextDataLayer(&rnd);
-  TestMap3TextDataLayer(&rnd);
+  // TestMap3TextDataLayer(&rnd);
   // TestKeySnipLayer(&rnd);
   // TestReshapeLayer(&rnd);
   // TestConvolutionAndLocalFactorLayer(&rnd);
@@ -5237,5 +5330,7 @@ int main(int argc, char *argv[]) {
   // TestMerge2WindowDataLayer(&rnd);
   // TestMatchHistogramLayer(&rnd);
   // TestSortAxisLayer(&rnd);
+  // TestXeLULayer(&rnd);
+  TestELULayer(&rnd);
   return 0;
 }
