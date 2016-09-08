@@ -29,6 +29,7 @@ class MatchTensorLayer : public Layer<xpu>{
     this->defaults["is_var_len"] = SettingV(true); 
     this->defaults["is_use_linear"] = SettingV(true); 
     this->defaults["is_init_as_I"] = SettingV(false);
+    this->defaults["init_as_I"] = SettingV(1.f);
     this->defaults["is_update_tensor"] = SettingV(true);
     this->defaults["t_l2"] = SettingV(0.f);
     
@@ -64,6 +65,7 @@ class MatchTensorLayer : public Layer<xpu>{
     d_hidden = setting["d_hidden"].iVal();
     is_var_len = setting["is_var_len"].bVal();
     is_init_as_I = setting["is_init_as_I"].bVal();
+    init_as_I = setting["init_as_I"].fVal();
     is_update_tensor = setting["is_update_tensor"].bVal();
     is_use_linear = setting["is_use_linear"].bVal();
     interval = setting["interval"].iVal();
@@ -90,7 +92,7 @@ class MatchTensorLayer : public Layer<xpu>{
     this->params[1].Init();
     this->params[2].Init();
     if (is_init_as_I) {
-      InitAsDiag();
+      InitAsDiag(init_as_I);
     }
 
     std::map<std::string, SettingV> &t_updater = *setting["t_updater"].mVal();
@@ -105,11 +107,11 @@ class MatchTensorLayer : public Layer<xpu>{
   }
 
   // init t nearly with I
-  void InitAsDiag(void) {
+  void InitAsDiag(float init) {
     utils::Printf("Init As Diag.");
     for (int i = 0; i < feat_size; ++i) {
       for (int j = 0; j < d_hidden; ++j) {
-        this->params[0].data[i][j][i][0] = 1.f;
+        this->params[0].data[i][j][i][0] = init;
         diag_4_reg.data[i][j][i][0] = 1.f;
       }
     }
@@ -292,7 +294,7 @@ class MatchTensorLayer : public Layer<xpu>{
  protected:
   int doc1_len, doc2_len, feat_size, batch_size, interval, d_hidden;
   bool is_var_len, is_init_as_I, is_use_linear, is_update_tensor;
-  float t_l2;
+  float t_l2, init_as_I;
   Node<xpu> bottom_0_transform, bottom_1_transform, diag_4_reg; // tensor layer is essentially a transform layer followed by a dot producttion
   Node<xpu> bottom_0_transform_linear, bottom_1_transform_linear; // this is for w in tensor layer
 };

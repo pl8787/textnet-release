@@ -715,6 +715,23 @@ void TestBatchNormLayer(mshadow::Random<cpu>* prnd) {
   PrintTensor("mean", layer_conv->params[2].data);
   PrintTensor("var", layer_conv->params[3].data);
   PrintTensor("scale", layer_conv->params[4].data);
+  layer_conv->Forward(bottoms, tops);
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("top", top.data);
+  PrintTensor("gamma", layer_conv->params[0].data);
+  PrintTensor("beta", layer_conv->params[1].data);
+  PrintTensor("mean", layer_conv->params[2].data);
+  PrintTensor("var", layer_conv->params[3].data);
+  PrintTensor("scale", layer_conv->params[4].data);
+  layer_conv->Reshape(bottoms, tops, true);
+  layer_conv->Forward(bottoms, tops);
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("top", top.data);
+  PrintTensor("gamma", layer_conv->params[0].data);
+  PrintTensor("beta", layer_conv->params[1].data);
+  PrintTensor("mean", layer_conv->params[2].data);
+  PrintTensor("var", layer_conv->params[3].data);
+  PrintTensor("scale", layer_conv->params[4].data);
   
   using namespace checker;
   Checker<cpu> * cker = CreateChecker<cpu>();
@@ -5219,7 +5236,7 @@ int main(int argc, char *argv[]) {
   // TestQATextDataLayer(&rnd);
   // TestMapTextDataLayer(&rnd);
   // TestMap2TextDataLayer(&rnd);
-  TestMap3TextDataLayer(&rnd);
+  // TestMap3TextDataLayer(&rnd);
   // TestKeySnipLayer(&rnd);
   // TestReshapeLayer(&rnd);
   // TestConvolutionAndLocalFactorLayer(&rnd);
@@ -5228,7 +5245,7 @@ int main(int argc, char *argv[]) {
   // TestGenKernelLayer(&rnd);
   // TestPoolVarLayer(&rnd);
   // TestPadLayer(&rnd);
-  // TestBatchNormLayer(&rnd);
+  TestBatchNormLayer(&rnd);
   // TestFillCurveXY2DLayer(&rnd);
   // TestFillCurveD2XYLayer(&rnd);
   // TestLengthTransLayer(&rnd);
