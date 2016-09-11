@@ -5,6 +5,7 @@
 #include <sstream>
 #include <vector>
 #include <map>
+#include <unordered_map>
 #include <string>
 #include <mshadow/tensor.h>
 #include "../global.h"
@@ -108,6 +109,7 @@ const int kReshape = 1032;
 const int kLengthFill = 1033;
 const int kXeLU = 1034;
 const int kELU = 1035;
+const int kAppendFeature = 1036;
 const int kDynamicKMaxPooling = 10001;
 const int kMatchTopKPooling = 10002;
 const int kSelectSubRepByToken = 10003;
@@ -547,8 +549,11 @@ class Layer {
   
   // required setting
   std::map<std::string, SettingV> defaults;
+
+  static unordered_map<string, vector<string> > global_data;
   
 };
+template<typename xpu> unordered_map<string, vector<string> > Layer<xpu>::global_data = unordered_map<string, vector<string> >();
 
 
 template<typename xpu>

@@ -469,6 +469,18 @@ struct Node {
     return mshadow::Tensor<xpu, 3>(diff.dptr_, mshadow::Shape3(s[0], s[1], ymax));
   }
   
+  inline mshadow::Tensor<xpu, 3> data_d3_middle() {
+    mshadow::Shape<4> s = data.shape_;
+    index_t  ymax = s[1]*s[2];
+    return mshadow::Tensor<xpu, 3>(data.dptr_, mshadow::Shape3(s[0], ymax, s[3]));
+  }
+
+  inline mshadow::Tensor<xpu, 3> diff_d3_middle() {
+    mshadow::Shape<4> s = diff.shape_;
+    index_t  ymax = s[1]*s[2];
+    return mshadow::Tensor<xpu, 3>(diff.dptr_, mshadow::Shape3(s[0], ymax, s[3]));
+  }
+
   inline void Init(bool init_diff = false) { 
     if (!initializer_) return;
     if (!is_share) {
