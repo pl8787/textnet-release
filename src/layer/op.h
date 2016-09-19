@@ -160,6 +160,19 @@ struct xelu_grad {
   }
 };
 
+/*! \brief ELU Operation */
+struct elu {
+  MSHADOW_XINLINE static real_t Map(real_t a, real_t b) {
+    return a > 0 ? a : b * (exp(a) - 1.0);
+  }
+};
+
+struct elu_grad {
+  MSHADOW_XINLINE static real_t Map(real_t a, real_t b) {
+    return a > 0 ? 1 : a + b;
+  }
+};
+
 struct tanh {
   MSHADOW_XINLINE static real_t Map(real_t a) {
     return tanhf( a );

@@ -225,6 +225,7 @@ class Net : public INet{
     }
     mshadow::InitTensorEngine<xpu>(device_id);
     prnd = new Random<xpu>(59);
+    // prnd = new Random<xpu>(197);
 
     if (!root["need_reshape"].isNull()) {
         need_reshape = root["need_reshape"].asBool();

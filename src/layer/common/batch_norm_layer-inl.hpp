@@ -90,6 +90,23 @@ class BatchNormLayer : public Layer<xpu> {
     // Ignore setting parameter 2 and 3
   }
   
+  void PrintParamSample() {
+    cout << endl;
+    cout << "param 0: " << this->params[0].data[0][0][0][0] << endl;
+    cout << "param 1: " << this->params[1].data[0][0][0][0] << endl;
+    cout << "param 2: " << this->params[2].data[0][0][0][0] << endl;
+    cout << "param 3: " << this->params[3].data[0][0][0][0] << endl;
+    cout << "param 4: " << this->params[4].data[0][0][0][0] << endl;
+    cout << "feat_count: " << feat_count << endl;
+    cout << "feat_size: " << feat_size << endl;
+    cout << "bias_correction_factor: " << bias_correction_factor << endl;
+    running_mean_var_.PrintShape("running_mean_var");
+    diff_mean_.PrintShape("diff_mean");
+    cout << feat_size_sum_multiplier_.shape_[0] << " " << feat_size_sum_multiplier_.shape_[1] << endl;
+    bottom_mat_.PrintShape("bottom_mat_");
+    top_mat_.PrintShape("top_mat_");
+  }
+
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top,
                        bool show_info = false) {
@@ -190,8 +207,8 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 
   void do_arrange(mshadow::Tensor<xpu, 4> &from_tensor, mshadow::Tensor<xpu, 4> &to_matrix, 
           mshadow::Tensor<xpu, 2> &length, int nbatch, int feat_count, int feat_size) {
-    int v_idx = 0;
     for (int c = 0; c < feat_count; ++c) {
+      int v_idx = 0;
       for (int i = 0; i < nbatch; ++i) {
         if (length.shape_[1] == 1){
           for (int x = 0; x < length[i][0]; ++x) {
@@ -207,14 +224,14 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
           utils::Check(false, "In BatchNormLayer: bottom length size error");
         }
       }
+      utils::Check(v_idx==feat_size, "In BatchNormLayer: v_idx=%d, feat_size=%d.", v_idx, feat_size);
     }
-    utils::Check(v_idx==feat_size, "In BatchNormLayer: v_idx=%d, feat_size=%d.", v_idx, feat_size);
   }
 
   void undo_arrange(mshadow::Tensor<xpu, 4> &from_matrix, mshadow::Tensor<xpu, 4> &to_tensor, 
           mshadow::Tensor<xpu, 2> &length, int nbatch, int feat_count, int feat_size, bool do_plus=false) {
-    int v_idx = 0;
     for (int c = 0; c < feat_count; ++c) {
+      int v_idx = 0;
       for (int i = 0; i < nbatch; ++i) {
         if (length.shape_[1] == 1){
           for (int x = 0; x < length[i][0]; ++x) {
@@ -238,8 +255,8 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
           utils::Check(false, "In BatchNormLayer: bottom length size error");
         }
       }
+      utils::Check(v_idx==feat_size, "In BatchNormLayer: v_idx=%d, feat_size=%d.", v_idx, feat_size);
     }
-    utils::Check(v_idx==feat_size, "In BatchNormLayer: v_idx=%d, feat_size=%d.", v_idx, feat_size);
   }
 
   virtual void Forward(const std::vector<Node<xpu>*> &bottom,
@@ -267,6 +284,8 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 
     top_len = F<op::identity>(bottom_len);
     
+    top_data = 0;
+
     if (ignore_len) {
       bottom_mat_.data = swapaxis<1, 0>(bottom_data);
     } else {

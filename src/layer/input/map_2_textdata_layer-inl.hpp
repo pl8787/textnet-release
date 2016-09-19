@@ -64,6 +64,13 @@ class Map2TextDataLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(),
                   "Map2TextDataLayer:top size problem.");
 
+    if (!Layer<xpu>::global_data.count("data1")) {
+        Layer<xpu>::global_data["data1"] = vector<string>();
+    }
+    if (!Layer<xpu>::global_data.count("data2")) {
+        Layer<xpu>::global_data["data2"] = vector<string>();
+    }
+
     data1_file = setting["data1_file"].sVal();
     data2_file = setting["data2_file"].sVal();
     rel_file = setting["rel_file"].sVal();
@@ -446,6 +453,8 @@ class Map2TextDataLayer : public Layer<xpu>{
         line_ptr = (line_ptr + 1) % line_count;
       }
     } else if (mode == "pair") {
+      Layer<xpu>::global_data["data1"].clear();
+      Layer<xpu>::global_data["data2"].clear();
       for (int i = 0; i < batch_size; ++i) {
         if (shuffle) {
           line_ptr = rand() % pair_set.size();
@@ -453,6 +462,11 @@ class Map2TextDataLayer : public Layer<xpu>{
 
         int pos_idx = pair_set[line_ptr][0];
         int neg_idx = pair_set[line_ptr][1];
+
+        Layer<xpu>::global_data["data1"].push_back(rel_set[pos_idx][0]);
+        Layer<xpu>::global_data["data2"].push_back(rel_set[pos_idx][1]);
+        Layer<xpu>::global_data["data1"].push_back(rel_set[neg_idx][0]);
+        Layer<xpu>::global_data["data2"].push_back(rel_set[neg_idx][1]);
 
         FillData(top0_data, top0_length, top1_data, top1_length, 2*i, pos_idx);
         FillData(top0_data, top0_length, top1_data, top1_length, 2*i+1, neg_idx);
@@ -462,10 +476,16 @@ class Map2TextDataLayer : public Layer<xpu>{
         line_ptr = (line_ptr + 1) % pair_set.size();
       }
     } else if (mode == "list") {
+      Layer<xpu>::global_data["data1"].clear();
+      Layer<xpu>::global_data["data2"].clear();
       for (int s = 0; s < batch_size; ++s) {
         for (int i = 0; i < list_set[line_ptr].size(); ++i) {
           int idx = list_set[line_ptr][i];
           int out_idx = s * max_list + i;
+
+          Layer<xpu>::global_data["data1"].push_back(rel_set[idx][0]);
+          Layer<xpu>::global_data["data2"].push_back(rel_set[idx][1]);
+
           FillData(top0_data, top0_length, top1_data, top1_length, out_idx, idx);
           top2_data[out_idx] = label_set[idx];
         }

@@ -649,6 +649,153 @@ void TestDropoutLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckError(layer_dropout, bottoms, tops);
 }
 
+void TestXeLULayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check XeLU Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(1,1,5,5), Shape2(1,2), true);
+
+  float bottom_data_[] = {5,-5,9,1,1,
+						 1,1,1,2,1,
+						 1,4,1,9,1,
+						 1,1,2,1,1,
+						 -8,1,1,-1,1};
+  
+  vector<float> bottom_data(bottom_data_, bottom_data_ + sizeof(bottom_data_) / sizeof(float));
+  FillTensor(bottom.data, bottom_data);
+  bottom.data *= 0.2;
+
+  map<string, SettingV> setting;
+  setting["b"] = SettingV(0.5f);
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_conv = CreateLayer<cpu>(kXeLU);
+  layer_conv->PropAll();
+  layer_conv->SetupLayer(setting, bottoms, tops, prnd);
+  layer_conv->Reshape(bottoms, tops, true);
+  layer_conv->Forward(bottoms, tops);
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("top", top.data);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.001f);
+  setting_checker["range_max"] = SettingV(0.001f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_conv, bottoms, tops);
+
+}
+
+void TestELULayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check ELU Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(1,1,5,5), Shape2(1,2), true);
+
+  float bottom_data_[] = {5,-5,9,1,1,
+						 1,1,1,2,1,
+						 1,4,1,9,1,
+						 1,1,2,1,1,
+						 -8,1,1,-1,1};
+  
+  vector<float> bottom_data(bottom_data_, bottom_data_ + sizeof(bottom_data_) / sizeof(float));
+  FillTensor(bottom.data, bottom_data);
+  bottom.data *= 0.2;
+
+  map<string, SettingV> setting;
+  setting["b"] = SettingV(0.5f);
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_conv = CreateLayer<cpu>(kELU);
+  layer_conv->PropAll();
+  layer_conv->SetupLayer(setting, bottoms, tops, prnd);
+  layer_conv->Reshape(bottoms, tops, true);
+  layer_conv->Forward(bottoms, tops);
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("top", top.data);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.001f);
+  setting_checker["range_max"] = SettingV(0.001f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_conv, bottoms, tops);
+
+}
+
+void TestAppendFeatureLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Append Feature Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(2,2,3,2), Shape2(1,2), true);
+
+  float bottom_data_[] = {5,5,9,1,
+						  1,1,1,2,
+						  1,4,1,9,
+						  1,1,2,1,
+						  8,1,1,1,
+                          1,1,1,1};
+  
+  vector<float> bottom_data(bottom_data_, bottom_data_ + sizeof(bottom_data_) / sizeof(float));
+  FillTensor(bottom.data, bottom_data);
+  bottom.data *= 0.2;
+
+  // Setting global data
+  Layer<cpu>::global_data["data2"] = vector<string>();
+  Layer<cpu>::global_data["data2"].push_back("S1");
+  Layer<cpu>::global_data["data2"].push_back("S3");
+
+  map<string, SettingV> setting;
+  setting["D1"] = SettingV(2);
+  setting["D2"] = SettingV(3);
+  setting["D3"] = SettingV(2);
+  setting["feature_file"] = SettingV("test_data/feature.dat");
+  setting["key"] = SettingV("data2");
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_conv = CreateLayer<cpu>(kAppendFeature);
+  layer_conv->PropAll();
+  layer_conv->SetupLayer(setting, bottoms, tops, prnd);
+  layer_conv->Reshape(bottoms, tops, true);
+  layer_conv->Forward(bottoms, tops);
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("top", top.data);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.01f);
+  setting_checker["range_max"] = SettingV(0.01f);
+  setting_checker["delta"] = SettingV(0.1f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_conv, bottoms, tops);
+}
+
 void TestBatchNormLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check BatchNorm Layer." << endl;
   Node<cpu> bottom;
@@ -706,6 +853,23 @@ void TestBatchNormLayer(mshadow::Random<cpu>* prnd) {
   Layer<cpu> * layer_conv = CreateLayer<cpu>(kBatchNorm);
   layer_conv->PropAll();
   layer_conv->SetupLayer(setting, bottoms, tops, prnd);
+  layer_conv->Reshape(bottoms, tops, true);
+  layer_conv->Forward(bottoms, tops);
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("top", top.data);
+  PrintTensor("gamma", layer_conv->params[0].data);
+  PrintTensor("beta", layer_conv->params[1].data);
+  PrintTensor("mean", layer_conv->params[2].data);
+  PrintTensor("var", layer_conv->params[3].data);
+  PrintTensor("scale", layer_conv->params[4].data);
+  layer_conv->Forward(bottoms, tops);
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("top", top.data);
+  PrintTensor("gamma", layer_conv->params[0].data);
+  PrintTensor("beta", layer_conv->params[1].data);
+  PrintTensor("mean", layer_conv->params[2].data);
+  PrintTensor("var", layer_conv->params[3].data);
+  PrintTensor("scale", layer_conv->params[4].data);
   layer_conv->Reshape(bottoms, tops, true);
   layer_conv->Forward(bottoms, tops);
   PrintTensor("bottom", bottom.data);
@@ -1290,11 +1454,11 @@ void TestKeySnipLayer(mshadow::Random<cpu>* prnd) {
 
   bottom0.data[0][0][0][0] = 1;
   bottom0.data[0][0][0][1] = 2;
-  bottom0.data[0][0][0][2] = 3;
+  bottom0.data[0][0][0][2] = -10; //3;
   bottom0.data[0][0][0][3] = 4;
   bottom0.data[0][0][0][4] = 1;
   bottom0.data[1][0][0][0] = 1;
-  bottom0.data[1][0][0][1] = 2;
+  bottom0.data[1][0][0][1] = -11; //2;
   bottom0.data[1][0][0][2] = 3;
   bottom0.data[1][0][0][3] = 4;
   bottom0.data[1][0][0][4] = 1;
@@ -1310,6 +1474,7 @@ void TestKeySnipLayer(mshadow::Random<cpu>* prnd) {
   setting["snip_size"] = SettingV(1);
   setting["group_snip"] = SettingV(2);
   setting["max_snip"] = SettingV(5);
+  setting["input_snip_doc"] = SettingV(true);
   
   /// Test Activation Layer
   Layer<cpu> * layer_conv = CreateLayer<cpu>(kKeySnip);
@@ -4408,9 +4573,9 @@ void TestMapTextDataLayer(mshadow::Random<cpu>* prnd) {
   tops.push_back(&top2);
 
   map<string, SettingV> setting;
-  setting["data1_file"] = SettingV("data1.wid");
-  setting["data2_file"] = SettingV("data2.wid");
-  setting["rel_file"] = SettingV("rel.dat");
+  setting["data1_file"] = SettingV("test_data/data1.wid");
+  setting["data2_file"] = SettingV("test_data/data2.wid");
+  setting["rel_file"] = SettingV("test_data/rel.dat");
   setting["batch_size"] = SettingV(5);
   setting["max_doc_len"] = SettingV(3);
   setting["min_doc_len"] = SettingV(3);
@@ -4444,15 +4609,16 @@ void TestMap2TextDataLayer(mshadow::Random<cpu>* prnd) {
   tops.push_back(&top3);
 
   map<string, SettingV> setting;
-  setting["data1_file"] = SettingV("data1.wid");
-  setting["data2_file"] = SettingV("data2.wid");
-  setting["rel_file"] = SettingV("rel.dat");
+  setting["data1_file"] = SettingV("test_data/data1.wid");
+  setting["data2_file"] = SettingV("test_data/data2.wid");
+  setting["rel_file"] = SettingV("test_data/rel.dat");
   setting["batch_size"] = SettingV(4);
   setting["max_doc1_len"] = SettingV(3);
   setting["max_doc2_len"] = SettingV(3);
-  setting["mode"] = SettingV("inner_list");
+  setting["mode"] = SettingV("pair");
+  // setting["mode"] = SettingV("inner_list");
   setting["shuffle"] = SettingV(true);
-  setting["bi_direct"] = SettingV(true);
+  // setting["bi_direct"] = SettingV(true);
   
   /// Test Map2TextData Layer
   Layer<cpu> * layer_map_textdata = CreateLayer<cpu>(kMap2TextData);
@@ -4468,6 +4634,13 @@ void TestMap2TextDataLayer(mshadow::Random<cpu>* prnd) {
   PrintTensor("top1", top1.length);
   PrintTensor("top2", top2.length);
   PrintTensor("top3", top3.length);
+
+  for (int i = 0; i < Layer<cpu>::global_data["data1"].size(); ++i) {
+      cout << Layer<cpu>::global_data["data1"][i] << endl;
+  }
+  for (int i = 0; i < Layer<cpu>::global_data["data2"].size(); ++i) {
+      cout << Layer<cpu>::global_data["data2"][i] << endl;
+  }
 }
 
 void TestMap3TextDataLayer(mshadow::Random<cpu>* prnd) {
@@ -4485,9 +4658,9 @@ void TestMap3TextDataLayer(mshadow::Random<cpu>* prnd) {
   tops.push_back(&top4);
 
   map<string, SettingV> setting;
-  setting["data1_file"] = SettingV("data1.wid");
-  setting["data2_file"] = SettingV("data2.wid");
-  setting["rel_file"] = SettingV("rel.dat");
+  setting["data1_file"] = SettingV("test_data/data1.wid");
+  setting["data2_file"] = SettingV("test_data/data2.wid");
+  setting["rel_file"] = SettingV("test_data/rel.dat");
   setting["batch_size"] = SettingV(4);
   setting["max_doc1_len"] = SettingV(3);
   setting["max_doc2_len"] = SettingV(3);
@@ -5543,5 +5716,8 @@ int main(int argc, char *argv[]) {
   // TestMerge2WindowDataLayer(&rnd);
   // TestMatchHistogramLayer(&rnd);
   // TestSortAxisLayer(&rnd);
+  // TestXeLULayer(&rnd);
+  // TestELULayer(&rnd);
+  TestAppendFeatureLayer(&rnd);
   return 0;
 }
