@@ -425,9 +425,9 @@ class BGruD2Layer : public Layer<xpu> {
 
     Tensor2D r_l, r_m, r_t, z_i, z_l, z_m, z_t;
     SplitGate(cur_g, r_l, r_m, r_t, z_i, z_l, z_m, z_t);
-    r_l = mshadow::expr::F<op::sigmoid>(r_l); // logi
-    r_m = mshadow::expr::F<op::sigmoid>(r_m); // logi
-    r_t = mshadow::expr::F<op::sigmoid>(r_t); // logi
+    r_l = mshadow::expr::F<op::sigmoid_lookup>(r_l); // logi
+    r_m = mshadow::expr::F<op::sigmoid_lookup>(r_m); // logi
+    r_t = mshadow::expr::F<op::sigmoid_lookup>(r_t); // logi
 
     Tensor2D reset_h_l(reset_h.dptr_,         mshadow::Shape2(d_mem, nbatch));
     Tensor2D reset_h_m(reset_h.dptr_+d_mem * nbatch,   mshadow::Shape2(d_mem, nbatch));
@@ -448,7 +448,7 @@ class BGruD2Layer : public Layer<xpu> {
       cur_hi += b_c_expand.T();
     }
     
-    cur_hi = mshadow::expr::F<op::tanh>(cur_hi);
+    cur_hi = mshadow::expr::F<op::tanh_lookup>(cur_hi);
 
     // here we use a softmax layer for input and forget gate on each dimension
     // NOTE: on each dimension

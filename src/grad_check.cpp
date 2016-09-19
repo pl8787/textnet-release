@@ -3474,18 +3474,18 @@ void TestLstmD2Layer(mshadow::Random<cpu>* prnd) {
   bottom.diff = 0.f;
   // PrintTensor("t0_diff", tops[0]->diff);
   layer_fc->Backprop(bottoms, tops);
-  PrintTensor("b0_data", bottoms[0]->data);
-  PrintTensor("t0_data", tops[0]->data);
-  PrintTensor("b0_diff", bottoms[0]->diff);
-  PrintTensor("t0_diff", tops[0]->diff);
+  //PrintTensor("b0_data", bottoms[0]->data);
+  //PrintTensor("t0_data", tops[0]->data);
+  //PrintTensor("b0_diff", bottoms[0]->diff);
+  //PrintTensor("t0_diff", tops[0]->diff);
   prnd->SampleUniform(&bottom.data, -1.0, 1.0);
   layer_fc->Forward(bottoms, tops);
   prnd->SampleUniform(&top.diff, -1.0, 1.0);
   layer_fc->Backprop(bottoms, tops);
-  PrintTensor("b0_data", bottoms[0]->data);
-  PrintTensor("t0_data", tops[0]->data);
-  PrintTensor("b0_diff", bottoms[0]->diff);
-  PrintTensor("t0_diff", tops[0]->diff);
+  //PrintTensor("b0_data", bottoms[0]->data);
+  //PrintTensor("t0_data", tops[0]->data);
+  //PrintTensor("b0_diff", bottoms[0]->diff);
+  //PrintTensor("t0_diff", tops[0]->diff);
   // PrintTensor("t0_diff", tops[0]->diff);
   // PrintTensor("b0", bottoms[0]->data);
   // PrintTensor("t0", tops[0]->data);
@@ -3494,18 +3494,18 @@ void TestLstmD2Layer(mshadow::Random<cpu>* prnd) {
   // PrintTensor("w_diff", layer_fc->params[0].diff);
   // PrintTensor("b_diff", layer_fc->params[1].diff);
   
-  // using namespace checker;
-  // Checker<cpu> * cker = CreateChecker<cpu>();
-  // map<string, SettingV> setting_checker;
-  // setting_checker["range_min"] = SettingV(-0.001f);
-  // setting_checker["range_max"] = SettingV(0.001f);
-  // setting_checker["delta"] = SettingV(0.0001f);
-  // cker->SetupChecker(setting_checker, prnd);
-  // cout << "Check Error." << endl;
-  // cker->CheckError(layer_fc, bottoms, tops);
+   using namespace checker;
+   Checker<cpu> * cker = CreateChecker<cpu>();
+   map<string, SettingV> setting_checker;
+   setting_checker["range_min"] = SettingV(-0.001f);
+   setting_checker["range_max"] = SettingV(0.001f);
+   setting_checker["delta"] = SettingV(0.0001f);
+   cker->SetupChecker(setting_checker, prnd);
+   cout << "Check Error." << endl;
+   cker->CheckError(layer_fc, bottoms, tops);
 
-  // cout << "Check Grad." << endl;
-  // cker->CheckGrad(layer_fc, bottoms, tops);
+   cout << "Check Grad." << endl;
+   cker->CheckGrad(layer_fc, bottoms, tops);
 }
 
 void TestLstmLayer(mshadow::Random<cpu>* prnd) {
@@ -5485,9 +5485,9 @@ int main(int argc, char *argv[]) {
   // TestMatchLayer(&rnd);
   // TestMatchTensorLayer(&rnd);
   // TestMatchTopKPoolingLayer(&rnd);
-  // TestLstmD2Layer(&rnd);
-   TestGruD2Layer(&rnd);
-  TestBGruD2Layer(&rnd);
+   TestLstmD2Layer(&rnd);
+   //TestGruD2Layer(&rnd);
+  //TestBGruD2Layer(&rnd);
   // TestWholePooling2DLayer(&rnd);
   // TestGateWholePoolingLayer(&rnd);
   // TestGateWholePoolingD2Layer(&rnd);
