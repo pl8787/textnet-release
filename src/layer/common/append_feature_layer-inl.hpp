@@ -102,11 +102,7 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
     utils::Check(top.size() == TopNodeNum(), 
         "AppendFeatureLayer:top size problem.");
 
-    // Dx represents data axis x shape 
-    // Lx represents length axis x shape
-    // if set to 0, copy the shape size as bottom axis
-    // if set to -1, automatically compute shape. 
-    //   So only one -1 can be set, and its value can be derived from other values.
+    // Dx represents data axis x shape, only need to set D1 D2 D3 
     D0 = setting["D0"].iVal();
     D1 = setting["D1"].iVal();
     D2 = setting["D2"].iVal();
