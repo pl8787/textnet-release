@@ -156,6 +156,7 @@ class GruD2Layer : public Layer<xpu> {
 					   bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(), "GruD2Layer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "GruD2Layer:top size problem.");
+    high_resolution_clock::time_point b_time_2 = high_resolution_clock::now();
     
     mshadow::Shape<4> shape_in  = bottom[0]->data.shape_;
     // (batch size, x_len, y_len, d_mem)
@@ -172,10 +173,13 @@ class GruD2Layer : public Layer<xpu> {
     reset_h.Resize(shape_reset_h, 0.f);
     reset_h_er.Resize(shape_reset_h, 0.f);
 
-	if (show_info) {
-      bottom[0]->PrintShape("bottom0");
-	  top[0]->PrintShape("top0");
-	}
+    high_resolution_clock::time_point e_time_2 = high_resolution_clock::now();
+    time_2 += duration_cast<duration<double>>(e_time_2 - b_time_2);
+	  //utils::Printf("\tGRU D2 Reshape Time:%fs\n", time_2.count()); 
+    if (show_info) {
+        bottom[0]->PrintShape("bottom0");
+      top[0]->PrintShape("top0");
+    }
   }
 
   virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,
@@ -203,6 +207,42 @@ class GruD2Layer : public Layer<xpu> {
     Tensor2D w_diff = this->params[0].diff_d2_reverse();
     checkNan(w_data.dptr_, w_data.size());
     checkNan(w_diff.dptr_, w_diff.size());
+  }
+  void PrintTensor(const char * name, mshadow::Tensor<cpu, 4> x) {
+    mshadow::Shape<4> s = x.shape_;
+      cout << name << " shape " << s[0] << "x" << s[1] << "x" << s[2]<< "x" <<s[3]<<endl;
+      for (unsigned int d1 = 0; d1 < s[0]; ++d1) {
+        for (unsigned int d2 = 0; d2 < s[1]; ++d2) {
+          for (unsigned int d3 = 0; d3 < s[2]; ++d3) {
+            for (unsigned int d4 = 0; d4 < s[3]; ++d4) {
+              cout << x[d1][d2][d3][d4] << " ";
+            }
+            cout<<"|";
+          }
+          cout<<";";
+        }
+        cout << endl;
+      }
+      cout << endl;
+  }
+  void PrintTensor(const char * name, mshadow::Tensor<cpu, 2> x) {
+    mshadow::Shape<2> s = x.shape_;
+      cout << name << " shape " << s[0] << "x" << s[1] << endl;
+      for (unsigned int d1 = 0; d1 < s[0]; ++d1) {
+        for (unsigned int d2 = 0; d2 < s[1]; ++d2) {
+          cout << x[d1][d2] << " ";
+        }
+        cout << endl;
+      }
+      cout << endl;
+  }
+  void PrintTensor(const char * name, mshadow::Tensor<cpu, 1> x) {
+    mshadow::Shape<1> s = x.shape_;
+      cout << name << " shape " << s[0] << endl;
+      for (unsigned int d1 = 0; d1 < s[0]; ++d1) {
+        cout << x[d1]<< " ";
+      }
+      cout << endl;
   }
 
   // this layer copy the input value to a continue memory
@@ -580,6 +620,7 @@ class GruD2Layer : public Layer<xpu> {
 // #if DEBUG
 //     checkNanParams();
 // #endif
+    high_resolution_clock::time_point b_time_1 = high_resolution_clock::now();
     Tensor4D bottom_data = bottom[0]->data;
     Tensor2D bottom_len  = bottom[0]->length;
     Tensor4D top_data    = top[0]->data;
@@ -589,7 +630,6 @@ class GruD2Layer : public Layer<xpu> {
     top[0]->length = mshadow::expr::F<op::identity>(bottom[0]->length);
 
     top_data = 0.f; g = 0.f; reset_h = 0.f; hi = 0.f;
-    high_resolution_clock::time_point b_time_1 = high_resolution_clock::now();
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       int x_len = bottom_len[batch_idx][0];
       int y_len = bottom_len[batch_idx][1];
@@ -612,7 +652,7 @@ class GruD2Layer : public Layer<xpu> {
     }
     high_resolution_clock::time_point e_time_1 = high_resolution_clock::now();
     time_1 += duration_cast<duration<double>>(e_time_1 - b_time_1);
-	// utils::Printf("\tLSTM D2 Time:%fs,%fs,%f\n", time_1.count(), time_2.count(), time_3.count()); 
+	 //utils::Printf("\tGRU D2 Time:%fs,%fs,%f\n", time_1.count(), time_2.count(), time_3.count()); 
 // #if DEBUG
 //     checkNanParams();
 // #endif
@@ -774,6 +814,7 @@ class GruD2Layer : public Layer<xpu> {
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
                         const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
+    high_resolution_clock::time_point b_time_4 = high_resolution_clock::now();
 // #if DEBUG
 //     checkNanParams();
 // #endif
@@ -783,7 +824,6 @@ class GruD2Layer : public Layer<xpu> {
     mshadow::Tensor<xpu, 4> x_er = bottom[0]->diff;
     mshadow::Tensor<xpu, 2> len  = bottom[0]->length;
         
-    high_resolution_clock::time_point b_time_4 = high_resolution_clock::now();
     begin_h_er = 0.; g_er = 0.; reset_h_er = 0.; hi_er = 0.;
     for (index_t batch_idx = 0; batch_idx < x.size(0); ++batch_idx) {
       int x_len = len[batch_idx][0];
@@ -816,7 +856,7 @@ class GruD2Layer : public Layer<xpu> {
     }
     high_resolution_clock::time_point e_time_4 = high_resolution_clock::now();
     time_4 += duration_cast<duration<double>>(e_time_4 - b_time_4);
-	// utils::Printf("\tLSTM D2 BP Time:%fs\n", time_4.count()); 
+	 //utils::Printf("\tGRU D2 BP Time:%fs\n", time_4.count()); 
     // this->params[0].CutOffGradient(grad_cut_off);
     // this->params[1].CutOffGradient(grad_cut_off);
     // this->params[2].CutOffGradient(grad_cut_off);

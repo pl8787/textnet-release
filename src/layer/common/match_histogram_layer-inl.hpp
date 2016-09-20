@@ -64,6 +64,7 @@ class MatchHistogramLayer : public Layer<xpu>{
     }else if(axis == 2){
       top[0]->Resize(nbatch, bottom[0]->data.size(1), hist_size, bottom[0]->data.size(3), nbatch, bottom[0]->length.size(1), true);
     }else if(axis == 3){
+      utils::Check(bottom[0]->length.size(1) == 2, "MatchHistogramLayer: bottom length should be equal to 2.");
       top[0]->Resize(nbatch, bottom[0]->data.size(1), bottom[0]->data.size(2), hist_size, nbatch, bottom[0]->length.size(1), true);
     }
 
@@ -94,9 +95,6 @@ class MatchHistogramLayer : public Layer<xpu>{
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
 	mshadow::Tensor<xpu, 2> top_len = top[0]->length;
 
-	int interval_0 = 1;
-	int interval_1 = 1;
-
     top_data = 0.0f;
     if(axis == 1){
       for(int i = 0 ; i < bottom[0]->data.size(0); ++ i){
@@ -109,6 +107,7 @@ class MatchHistogramLayer : public Layer<xpu>{
           }
         }
       }
+      top_len = F<op::identity>(bottom_len);
     }else if(axis == 2){
       for(int i = 0 ; i < bottom[0]->data.size(0); ++ i){
         for(int j = 0 ; j < bottom[0]->data.size(1); ++ j){
@@ -120,7 +119,9 @@ class MatchHistogramLayer : public Layer<xpu>{
           }
         }
       }
+      top_len = F<op::identity>(bottom_len);
     }else if(axis == 3){
+      /*
       mshadow::Tensor<xpu,2> bottom_data2 = bottom[0]->data_d2_reverse();
       mshadow::Tensor<xpu,2> top_data2 = top[0]->data_d2_reverse();
       for(int i = 0 ; i < bottom_data2.size(0); ++ i){
@@ -128,9 +129,31 @@ class MatchHistogramLayer : public Layer<xpu>{
           int idx = int(((bottom_data2[i][j] + 1.0) / 2.0 ) * (hist_size - 1));
           top_data2[i][idx] += base_val;
         }
+        top_data2[i] /= bottom_data2.size(1); //distribution
+        //for(int j = 0 ; j < hist_size; ++ j){ // rescale
+          //top_data2[i][j] = log10(1.0 + top_data2[i][j]);
+        //}
+      }
+      top_len = F<op::identity>(bottom_len);
+      */
+      for(int i = 0 ; i < bottom[0]->data.size(0); ++ i){
+        for(int j = 0 ; j < bottom[0]->data.size(1); ++ j){
+          for(int k = 0 ; k < bottom[0]->data.size(2); ++ k){
+            int doc_len = bottom_len[i][1];
+            utils::Check(doc_len <= bottom[0]->data.size(3),"doc-len:%d less than size:%d.", doc_len, bottom[0]->data.size(3));
+            for(int l = 0 ; l < bottom[0]->data.size(3); ++ l){
+              int idx = int(((bottom[0]->data[i][j][k][l] + 1.0) / 2.0 ) * (hist_size - 1));
+              top[0]->data[i][j][k][idx] += base_val;
+            }
+            for(int l = 0 ; l < hist_size; ++ l){
+              top[0]->data[i][j][k][l] = log10(1 + top[0]->data[i][j][k][l]);
+            }
+            top[0]->length[i][0] = bottom[0]->length[i][0];
+            top[0]->length[i][1] = hist_size;
+          }
+        }
       }
     }
-    top_len = F<op::identity>(bottom_len);
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,

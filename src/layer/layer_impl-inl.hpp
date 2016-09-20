@@ -52,6 +52,8 @@
 #include "./common/convolutional_lstm_layer-inl.hpp"
 #include "./common/whole_pooling_layer-inl.hpp"
 #include "./common/whole_pooling_2d_layer-inl.hpp"
+#include "./common/blstm_layer-inl.hpp"
+#include "./common/bgru_d2_layer-inl.hpp"
 
 #ifdef CPU_ONLY
 #include "./common/gate_whole_pooling_layer-inl.hpp"
@@ -258,7 +260,9 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kKeySnip: return new KeySnipLayer<xpu>(type);
     case kReshape: return new ReshapeLayer<xpu>(type);
     case kMatchHistogram: return new MatchHistogramLayer<xpu>(type);
-    case kSortAxis: return new SortAxisLayer<xpu>(type);
+    case kSortAxis: return new SortAxisLayer<cpu>(type);
+    case kBLstm: return new BLstmLayer<cpu>(type);
+    case kBGruD2: return new BGruD2Layer<cpu>(type);
     case kXeLU: return new XeLULayer<xpu>(type);
     case kELU: return new ELULayer<xpu>(type);
     case kAppendFeature: return new AppendFeatureLayer<xpu>(type);

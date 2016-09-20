@@ -166,10 +166,24 @@ class LstmD2OptimizeLayer : public Layer<xpu> {
     }
     ReshapeRunTensors(max_run, total_cnt, d_input, d_mem);
 
-	if (show_info) {
-      bottom[0]->PrintShape("bottom0");
-	  top[0]->PrintShape("top0");
-	}
+    if (show_info) {
+        bottom[0]->PrintShape("bottom0");
+      top[0]->PrintShape("top0");
+    }
+  }
+
+  virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,
+                            const std::vector<Node<xpu>*> &top) {
+    // Check for reshape
+    bool need_reshape = false;
+    if (! (bottom[0]->data.size(0) == top[0]->data.size(0))) {
+        need_reshape = true;
+    }
+
+    // Do reshape 
+    if (need_reshape) {
+        this->Reshape(bottom, top);
+    }
   }
 
   // 这个函数为中间结果重新分配内存

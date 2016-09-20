@@ -40,6 +40,7 @@ class Merge2WindowDataLayer : public Layer<xpu>{
   
   virtual void Require() {
     this->defaults["dim"] = SettingV(3);
+    this->defaults["max_len"] = SettingV(100);
     Layer<xpu>::Require();
   }
   
@@ -53,6 +54,7 @@ class Merge2WindowDataLayer : public Layer<xpu>{
                   "Merge2WindowDataLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
                   "Merge2WindowDataLayer:top size problem.");
+    max_len   = setting["max_len"].iVal();
     dim   = setting["dim"].iVal();
   }
 
@@ -70,7 +72,7 @@ class Merge2WindowDataLayer : public Layer<xpu>{
                   "Merge2WindowDataLayer:top size problem.");
     Tensor2D bottom0_length = bottom[0]->length;
 
-    int idim = 0;
+    int idim = max_len;
     for(index_t i = 0 ; i < bottom[1]->data.size(0); ++ i){
         utils::Check(bottom[1]->data[i][0][0][0] > 0,"Merge2WindowDataLayer:: Reshape error, window size equals zero.");
         idim = idim > bottom[1]->data[i][0][0][0] ? idim : bottom[1]->data[i][0][0][0];
@@ -106,6 +108,8 @@ class Merge2WindowDataLayer : public Layer<xpu>{
     using namespace mshadow::expr;
     Tensor4D top0_data = top[0]->data;
     Tensor2D top0_length = top[0]->length;
+    Tensor1D bottom0_data1 = bottom[0]->data_d1();
+    Tensor2D top0_data2 = top[0]->data_d2();
     //printf("bottom[0]:%d,%d,%d,%d\n",bottom[0]->data.size(0),bottom[0]->data.size(1),bottom[0]->data.size(2),bottom[0]->data.size(3));
     utils::Check(bottom[0]->data.size(dim) == 1, " Merge2WindowDataLayer:: bottom[%d] size problem.",dim);
 
@@ -129,14 +133,20 @@ class Merge2WindowDataLayer : public Layer<xpu>{
                 ++ k;
             }
         }else if(dim == 3){
+          if(bottom[0]->data.size(1) == 1 && bottom[0]->data.size(2) == 1){
+            //top0_data[i].Slice(0,curr_len) = F<op::identity>(bottom[0]->data.Slice(k,curr_len));
+            top0_data2[i].Slice(0,curr_len) = F<op::identity>(bottom0_data1.Slice(k,k + curr_len));
+            k += curr_len;
+          }else{
             for(index_t j = 0 ; j < curr_len; ++ j){
-                for(index_t m = 0 ; m < bottom[0]->data.size(1); ++ m){
-                    for(index_t n = 0 ; n < bottom[0]->data.size(2); ++ n){
-                        top0_data[i][m][n][j] = bottom[0]->data[k][m][n][0];
-                    }
+              for(index_t m = 0 ; m < bottom[0]->data.size(1); ++ m){
+                for(index_t n = 0 ; n < bottom[0]->data.size(2); ++ n){
+                  top0_data[i][m][n][j] = bottom[0]->data[k][m][n][0];
                 }
-                ++ k;
+              }
+              ++ k;
             }
+          }
         }
     }
   }
@@ -176,6 +186,7 @@ class Merge2WindowDataLayer : public Layer<xpu>{
   
  protected:
   int dim;
+  int max_len;
 };
 }  // namespace layer
 }  // namespace textnet

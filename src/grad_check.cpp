@@ -3343,7 +3343,7 @@ void TestGruLayer(mshadow::Random<cpu>* prnd) {
 }
 
 void TestGruD2Layer(mshadow::Random<cpu>* prnd) {
-  cout << "G Check Rru D2 Layer." << endl;
+  cout << "G Check GRU D2 Layer." << endl;
   Node<cpu> bottom;
   Node<cpu> top;
   vector<Node<cpu>*> bottoms;
@@ -3356,25 +3356,48 @@ void TestGruD2Layer(mshadow::Random<cpu>* prnd) {
   int max_len = 6;
   int d_mem = 3;
   bottom.Resize(Shape4(batch_size, max_len, max_len, d_mem), Shape2(batch_size,2), true);
-  bottom.length[0][0] = 2;
-  bottom.length[0][1] = 4;
+  /*
+  for(int i = 0 ; i < batch_size; ++ i){
+    bottom.length[i][0] = 20;
+    bottom.length[i][1] = 18;
+  }
+  */
+  bottom.length[0][0] = 3;
+  bottom.length[0][1] = 3;
   bottom.length[1][0] = 3;
-  bottom.length[1][1] = 1;
-  prnd->SampleUniform(&bottom.data, -2, 2);
+  bottom.length[1][1] = 3;
+  //prnd->SampleUniform(&bottom.data, -2, 2);
+  for(int i = 0 ; i < batch_size; ++ i){
+    for(int j = 0 ; j < bottom.length[i][0]; ++ j){
+      for(int k = 0 ; k < bottom.length[i][1]; ++ k){
+        for(int l = 0 ; l < d_mem; ++ l){
+          bottom.data[i][j][k][l] = (i+1)*0.0007 + (j+1)*0.005 + (k+1)*0.02 + (l+1)*0.1;
+        }
+      }
+    }
+  }
+ 
   
   map<string, SettingV> setting;
   {
     setting["d_mem"] = SettingV(d_mem);
     setting["no_bias"] = SettingV(false);
-    setting["is_use_reset_gate"] = SettingV(false);
-    setting["reverse"] = SettingV(true);
-    setting["is_diag_connection"] = SettingV(false);
+    setting["is_use_reset_gate"] = SettingV(true);
+    setting["reverse"] = SettingV(false);
+    setting["is_diag_connection"] = SettingV(true);
       
     map<string, SettingV> &w_filler = *(new map<string, SettingV>());
-      w_filler["init_type"] = SettingV(initializer::kUniform);
-      w_filler["range"] = SettingV(0.1f);
+      //w_filler["init_type"] = SettingV(initializer::kUniform);
+      //w_filler["range"] = SettingV(0.1f);
+      w_filler["init_type"] = SettingV(initializer::kFileInit);
+      w_filler["file_path"] = SettingV("/data/textnet/data/LetorMQ2007/textnet-letor-mq2007-r5w/w.bgru2d.param");
+    map<string, SettingV> &c_filler = *(new map<string, SettingV>());
+      c_filler["init_type"] = SettingV(initializer::kFileInit);
+      c_filler["file_path"] = SettingV("/data/textnet/data/LetorMQ2007/textnet-letor-mq2007-r5w/u.bgru2d.param");
+      //c_filler["init_type"] = SettingV(initializer::kUniform);
+      //c_filler["range"] = SettingV(0.1f);
     setting["w_g_filler"] = SettingV(&w_filler);
-    setting["w_c_filler"] = SettingV(&w_filler);
+    setting["w_c_filler"] = SettingV(&c_filler);
 
     map<string, SettingV> &b_filler = *(new map<string, SettingV>());
       b_filler["init_type"] = SettingV(initializer::kZero);
@@ -3384,7 +3407,7 @@ void TestGruD2Layer(mshadow::Random<cpu>* prnd) {
     map<string, SettingV> &w_updater = *(new map<string, SettingV>());
       w_updater["updater_type"] = SettingV(updater::kAdagrad);
       w_updater["eps"] = SettingV(0.01f);
-      w_updater["batch_size"] = SettingV(1);
+      //w_updater["batch_size"] = SettingV(1);
       w_updater["max_iter"] = SettingV(10000);
       w_updater["lr"] = SettingV(0.1f);
     setting["w_g_updater"] = SettingV(&w_updater);
@@ -3393,11 +3416,14 @@ void TestGruD2Layer(mshadow::Random<cpu>* prnd) {
     setting["b_c_updater"] = SettingV(&w_updater);
   }
   /// Test Activation Layer
-  Layer<cpu> * layer_fc = CreateLayer<cpu>(kGruD2OneGate);
+  Layer<cpu> * layer_fc = CreateLayer<cpu>(kGruD2);
   layer_fc->PropAll();
   layer_fc->SetupLayer(setting, bottoms, tops, prnd);
   layer_fc->Reshape(bottoms, tops);
-  // layer_fc->Forward(bottoms, tops);
+  layer_fc->Forward(bottoms, tops);
+  PrintTensor("top-gru-data",top.data);
+  layer_fc->Backprop(bottoms, tops);
+  //PrintTensor("bottom-gru-diff",bottom.diff);
   // prnd->SampleUniform(&top.diff, -1.0, 1.0);
   // bottom.diff = 0.f;
   // // PrintTensor("t0_diff", tops[0]->diff);
@@ -3422,6 +3448,129 @@ void TestGruD2Layer(mshadow::Random<cpu>* prnd) {
   // PrintTensor("w_diff", layer_fc->params[0].diff);
   // PrintTensor("b_diff", layer_fc->params[1].diff);
   
+  /*
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.001f);
+  setting_checker["range_max"] = SettingV(0.001f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  //cout << "Check Error." << endl;
+  //cker->CheckError(layer_fc, bottoms, tops);
+
+  cout << "Check Grad." << endl;
+  cker->CheckGrad(layer_fc, bottoms, tops);
+  */
+}
+
+void TestBGruD2Layer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check BGRU D2 Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  int batch_size = 2;
+  int max_len = 6;
+  int d_mem = 3;
+  bottom.Resize(Shape4(batch_size, max_len, max_len, d_mem), Shape2(batch_size,2), true);
+  /*
+  for(int i = 0 ; i < batch_size; ++ i){
+    bottom.length[i][0] = 20;
+    bottom.length[i][1] = 18;
+  }
+  */
+  bottom.length[0][0] = 3;
+  bottom.length[0][1] = 3;
+  bottom.length[1][0] = 3;
+  bottom.length[1][1] = 3;
+  //prnd->SampleUniform(&bottom.data, -2, 2);
+  for(int i = 0 ; i < batch_size; ++ i){
+    for(int j = 0 ; j < bottom.length[i][0]; ++ j){
+      for(int k = 0 ; k < bottom.length[i][1]; ++ k){
+        for(int l = 0 ; l < d_mem; ++ l){
+          bottom.data[i][j][k][l] = (i+1)*0.0007 + (j+1)*0.005 + (k+1)*0.02 + (l+1)*0.1;
+        }
+      }
+    }
+  }
+ 
+  
+  map<string, SettingV> setting;
+  {
+    setting["d_mem"] = SettingV(d_mem);
+    setting["no_bias"] = SettingV(false);
+    setting["is_use_reset_gate"] = SettingV(true);
+    setting["reverse"] = SettingV(false);
+    setting["is_diag_connection"] = SettingV(true);
+      
+    map<string, SettingV> &w_filler = *(new map<string, SettingV>());
+      //w_filler["init_type"] = SettingV(initializer::kUniform);
+      //w_filler["range"] = SettingV(0.1f);
+      w_filler["init_type"] = SettingV(initializer::kFileInit);
+      w_filler["file_path"] = SettingV("/data/textnet/data/LetorMQ2007/textnet-letor-mq2007-r5w/w.gru2d.param");
+    map<string, SettingV> &c_filler = *(new map<string, SettingV>());
+      c_filler["init_type"] = SettingV(initializer::kFileInit);
+      c_filler["file_path"] = SettingV("/data/textnet/data/LetorMQ2007/textnet-letor-mq2007-r5w/u.gru2d.param");
+      //c_filler["init_type"] = SettingV(initializer::kUniform);
+      //c_filler["range"] = SettingV(0.1f);
+    setting["w_g_filler"] = SettingV(&w_filler);
+    setting["w_c_filler"] = SettingV(&c_filler);
+
+    map<string, SettingV> &b_filler = *(new map<string, SettingV>());
+      b_filler["init_type"] = SettingV(initializer::kZero);
+    setting["b_g_filler"] = SettingV(&b_filler);
+    setting["b_c_filler"] = SettingV(&b_filler);
+      
+    map<string, SettingV> &w_updater = *(new map<string, SettingV>());
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["eps"] = SettingV(0.01f);
+      //w_updater["batch_size"] = SettingV(1);
+      w_updater["max_iter"] = SettingV(10000);
+      w_updater["lr"] = SettingV(0.1f);
+    setting["w_g_updater"] = SettingV(&w_updater);
+    setting["b_g_updater"] = SettingV(&w_updater);
+    setting["w_c_updater"] = SettingV(&w_updater);
+    setting["b_c_updater"] = SettingV(&w_updater);
+  }
+  /// Test Activation Layer
+  Layer<cpu> * layer_fc = CreateLayer<cpu>(kBGruD2);
+  layer_fc->PropAll();
+  layer_fc->SetupLayer(setting, bottoms, tops, prnd);
+  layer_fc->Reshape(bottoms, tops);
+  layer_fc->Forward(bottoms, tops);
+  PrintTensor("top-gru-data",top.data);
+  //layer_fc->Backprop(bottoms, tops);
+  //PrintTensor("bottom-gru-diff",bottom.diff);
+  // prnd->SampleUniform(&top.diff, -1.0, 1.0);
+  // bottom.diff = 0.f;
+  // // PrintTensor("t0_diff", tops[0]->diff);
+  // layer_fc->Backprop(bottoms, tops);
+  // PrintTensor("b0_data", bottoms[0]->data);
+  // PrintTensor("t0_data", tops[0]->data);
+  // PrintTensor("b0_diff", bottoms[0]->diff);
+  // PrintTensor("t0_diff", tops[0]->diff);
+  // prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+  // layer_fc->Forward(bottoms, tops);
+  // prnd->SampleUniform(&top.diff, -1.0, 1.0);
+  // layer_fc->Backprop(bottoms, tops);
+  // PrintTensor("b0_data", bottoms[0]->data);
+  // PrintTensor("t0_data", tops[0]->data);
+  // PrintTensor("b0_diff", bottoms[0]->diff);
+  // PrintTensor("t0_diff", tops[0]->diff);
+  // PrintTensor("t0_diff", tops[0]->diff);
+  // PrintTensor("b0", bottoms[0]->data);
+  // PrintTensor("t0", tops[0]->data);
+  // PrintTensor("t0_diff", tops[0]->diff);
+  // PrintTensor("b0_diff", bottoms[0]->diff);
+  // PrintTensor("w_diff", layer_fc->params[0].diff);
+  // PrintTensor("b_diff", layer_fc->params[1].diff);
+  
+  /*
   using namespace checker;
   Checker<cpu> * cker = CreateChecker<cpu>();
   map<string, SettingV> setting_checker;
@@ -3434,6 +3583,7 @@ void TestGruD2Layer(mshadow::Random<cpu>* prnd) {
 
   cout << "Check Grad." << endl;
   cker->CheckGrad(layer_fc, bottoms, tops);
+  */
 }
 void TestLstmD2Layer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Lstm D2 Layer." << endl;
@@ -3489,18 +3639,18 @@ void TestLstmD2Layer(mshadow::Random<cpu>* prnd) {
   bottom.diff = 0.f;
   // PrintTensor("t0_diff", tops[0]->diff);
   layer_fc->Backprop(bottoms, tops);
-  PrintTensor("b0_data", bottoms[0]->data);
-  PrintTensor("t0_data", tops[0]->data);
-  PrintTensor("b0_diff", bottoms[0]->diff);
-  PrintTensor("t0_diff", tops[0]->diff);
+  //PrintTensor("b0_data", bottoms[0]->data);
+  //PrintTensor("t0_data", tops[0]->data);
+  //PrintTensor("b0_diff", bottoms[0]->diff);
+  //PrintTensor("t0_diff", tops[0]->diff);
   prnd->SampleUniform(&bottom.data, -1.0, 1.0);
   layer_fc->Forward(bottoms, tops);
   prnd->SampleUniform(&top.diff, -1.0, 1.0);
   layer_fc->Backprop(bottoms, tops);
-  PrintTensor("b0_data", bottoms[0]->data);
-  PrintTensor("t0_data", tops[0]->data);
-  PrintTensor("b0_diff", bottoms[0]->diff);
-  PrintTensor("t0_diff", tops[0]->diff);
+  //PrintTensor("b0_data", bottoms[0]->data);
+  //PrintTensor("t0_data", tops[0]->data);
+  //PrintTensor("b0_diff", bottoms[0]->diff);
+  //PrintTensor("t0_diff", tops[0]->diff);
   // PrintTensor("t0_diff", tops[0]->diff);
   // PrintTensor("b0", bottoms[0]->data);
   // PrintTensor("t0", tops[0]->data);
@@ -3509,18 +3659,18 @@ void TestLstmD2Layer(mshadow::Random<cpu>* prnd) {
   // PrintTensor("w_diff", layer_fc->params[0].diff);
   // PrintTensor("b_diff", layer_fc->params[1].diff);
   
-  // using namespace checker;
-  // Checker<cpu> * cker = CreateChecker<cpu>();
-  // map<string, SettingV> setting_checker;
-  // setting_checker["range_min"] = SettingV(-0.001f);
-  // setting_checker["range_max"] = SettingV(0.001f);
-  // setting_checker["delta"] = SettingV(0.0001f);
-  // cker->SetupChecker(setting_checker, prnd);
-  // cout << "Check Error." << endl;
-  // cker->CheckError(layer_fc, bottoms, tops);
+   using namespace checker;
+   Checker<cpu> * cker = CreateChecker<cpu>();
+   map<string, SettingV> setting_checker;
+   setting_checker["range_min"] = SettingV(-0.001f);
+   setting_checker["range_max"] = SettingV(0.001f);
+   setting_checker["delta"] = SettingV(0.0001f);
+   cker->SetupChecker(setting_checker, prnd);
+   cout << "Check Error." << endl;
+   cker->CheckError(layer_fc, bottoms, tops);
 
-  // cout << "Check Grad." << endl;
-  // cker->CheckGrad(layer_fc, bottoms, tops);
+   cout << "Check Grad." << endl;
+   cker->CheckGrad(layer_fc, bottoms, tops);
 }
 
 void TestLstmLayer(mshadow::Random<cpu>* prnd) {
@@ -3533,18 +3683,154 @@ void TestLstmLayer(mshadow::Random<cpu>* prnd) {
   bottoms.push_back(&bottom);
   tops.push_back(&top);
   
-  bottom.Resize(Shape4(2,1,10,5), true);
-  prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+  bottom.Resize(Shape4(2,1,4,5), true);
+    //prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+    bottom.length[0][0] = 3;
+    bottom.length[1][0] = 2;
+    bottom.data[0][0][0][0] = 0.01;
+    bottom.data[0][0][0][1] = 0.02;
+    bottom.data[0][0][0][2] = 0.02;
+    bottom.data[0][0][0][3] = 0.001;
+    bottom.data[0][0][0][4] = 0.004;
+    bottom.data[0][0][1][0] = 0.05;
+    bottom.data[0][0][1][0] = 0.2;
+    bottom.data[0][0][1][0] = 0.01;
+    bottom.data[0][0][1][0] = 0.002;
+    bottom.data[0][0][1][0] = 0.01;
+    bottom.data[0][0][2][0] = 0.005;
+    bottom.data[0][0][2][0] = 0.08;
+    bottom.data[0][0][2][0] = 0.33;
+    bottom.data[0][0][2][0] = 0.01;
+    bottom.data[0][0][2][0] = 0.13;
+    bottom.data[1][0][0][0] = 0.01;
+    bottom.data[1][0][0][1] = 0.09;
+    bottom.data[1][0][0][2] = 0.25;
+    bottom.data[1][0][0][3] = 0.31;
+    bottom.data[1][0][0][4] = 0.01;
+    bottom.data[1][0][1][0] = 0.18;
+    bottom.data[1][0][1][1] = 0.01;
+    bottom.data[1][0][1][2] = 0.09;
+    bottom.data[1][0][1][3] = 0.41;
+    bottom.data[1][0][1][4] = 0.23;
   
   map<string, SettingV> setting;
   {
     setting["d_input"] = SettingV(5);
     setting["d_mem"] = SettingV(3);
-    setting["no_bias"] = SettingV(true);
+    setting["no_out_tanh"] = SettingV(true);
+    setting["no_bias"] = SettingV(false);
+    setting["reverse"] = SettingV(false);
+    setting["grad_cut_off"] = SettingV(10000.f);
+    setting["grad_norm2"] = SettingV(10000.f);
+    setting["max_norm2"] = SettingV(10000.f);
+    setting["f_gate_bias_init"] = SettingV(0.f);
+    setting["o_gate_bias_init"] = SettingV(0.f);
       
     map<string, SettingV> &w_filler = *(new map<string, SettingV>());
       w_filler["init_type"] = SettingV(initializer::kUniform);
       w_filler["range"] = SettingV(0.1f);
+      //w_filler["init_type"] = SettingV(initializer::kConstant);
+      //w_filler["value"] = SettingV(0.1f);
+      setting["w_filler"] = SettingV(&w_filler);
+      setting["u_filler"] = SettingV(&w_filler);
+
+      map<string, SettingV> &b_filler = *(new map<string, SettingV>());
+      b_filler["init_type"] = SettingV(initializer::kZero);
+      setting["b_filler"] = SettingV(&b_filler);
+      
+      map<string, SettingV> &w_updater = *(new map<string, SettingV>());
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["eps"] = SettingV(0.01f);
+      w_updater["max_iter"] = SettingV(10000);
+      w_updater["lr"] = SettingV(0.1f);
+      setting["w_updater"] = SettingV(&w_updater);
+      setting["u_updater"] = SettingV(&w_updater);
+      setting["b_updater"] = SettingV(&w_updater);
+  }
+
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_fc = CreateLayer<cpu>(kLstm);
+  //layer_fc->PropAll();
+  layer_fc->SetupLayer(setting, bottoms, tops, prnd);
+  layer_fc->Reshape(bottoms, tops);
+  layer_fc->Forward(bottoms, tops);
+  PrintTensor("bottom-data",bottom.data);
+  PrintTensor("top-data",top.data);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.001f);
+  setting_checker["range_max"] = SettingV(0.001f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_fc, bottoms, tops);
+
+  cout << "Check Grad." << endl;
+  cker->CheckGrad(layer_fc, bottoms, tops);
+}
+
+void TestBLstmLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check BLstm Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(2,1,4,5), true);
+    //prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+    bottom.length[0][0] = 3;
+    bottom.length[1][0] = 2;
+    bottom.data[0][0][0][0] = 0.01;
+    bottom.data[0][0][0][1] = 0.02;
+    bottom.data[0][0][0][2] = 0.02;
+    bottom.data[0][0][0][3] = 0.001;
+    bottom.data[0][0][0][4] = 0.004;
+    bottom.data[0][0][1][0] = 0.05;
+    bottom.data[0][0][1][0] = 0.2;
+    bottom.data[0][0][1][0] = 0.01;
+    bottom.data[0][0][1][0] = 0.002;
+    bottom.data[0][0][1][0] = 0.01;
+    bottom.data[0][0][2][0] = 0.005;
+    bottom.data[0][0][2][0] = 0.08;
+    bottom.data[0][0][2][0] = 0.33;
+    bottom.data[0][0][2][0] = 0.01;
+    bottom.data[0][0][2][0] = 0.13;
+    bottom.data[1][0][0][0] = 0.01;
+    bottom.data[1][0][0][1] = 0.09;
+    bottom.data[1][0][0][2] = 0.25;
+    bottom.data[1][0][0][3] = 0.31;
+    bottom.data[1][0][0][4] = 0.01;
+    bottom.data[1][0][1][0] = 0.18;
+    bottom.data[1][0][1][1] = 0.01;
+    bottom.data[1][0][1][2] = 0.09;
+    bottom.data[1][0][1][3] = 0.41;
+    bottom.data[1][0][1][4] = 0.23;
+  
+  map<string, SettingV> setting;
+  {
+    setting["d_input"] = SettingV(5);
+    setting["d_mem"] = SettingV(3);
+    setting["no_out_tanh"] = SettingV(true);
+    setting["no_bias"] = SettingV(false);
+    setting["reverse"] = SettingV(true);
+    setting["grad_cut_off"] = SettingV(10000.f);
+    setting["grad_norm2"] = SettingV(10000.f);
+    setting["max_norm2"] = SettingV(10000.f);
+    setting["f_gate_bias_init"] = SettingV(0.f);
+    setting["o_gate_bias_init"] = SettingV(0.f);
+    setting["param_file"] = SettingV("");
+      
+    map<string, SettingV> &w_filler = *(new map<string, SettingV>());
+      w_filler["init_type"] = SettingV(initializer::kUniform);
+      w_filler["range"] = SettingV(0.1f);
+      //w_filler["init_type"] = SettingV(initializer::kConstant);
+      //w_filler["value"] = SettingV(0.1f);
     setting["w_filler"] = SettingV(&w_filler);
     setting["u_filler"] = SettingV(&w_filler);
 
@@ -3564,10 +3850,14 @@ void TestLstmLayer(mshadow::Random<cpu>* prnd) {
 
   
   /// Test Activation Layer
-  Layer<cpu> * layer_fc = CreateLayer<cpu>(kLstm);
-  layer_fc->PropAll();
+  Layer<cpu> * layer_fc = CreateLayer<cpu>(kBLstm);
+  //layer_fc->PropAll();
   layer_fc->SetupLayer(setting, bottoms, tops, prnd);
   layer_fc->Reshape(bottoms, tops);
+  layer_fc->Forward(bottoms, tops);
+
+  PrintTensor("bottom-data",bottom.data);
+  PrintTensor("top-data",top.data);
   
   using namespace checker;
   Checker<cpu> * cker = CreateChecker<cpu>();
@@ -3581,6 +3871,7 @@ void TestLstmLayer(mshadow::Random<cpu>* prnd) {
 
   cout << "Check Grad." << endl;
   cker->CheckGrad(layer_fc, bottoms, tops);
+  layer_fc->Backprop(bottoms, tops);
 }
 
 void TestConvolutionalLstmLayer(mshadow::Random<cpu>* prnd) {
@@ -5191,13 +5482,17 @@ void TestMerge2WindowDataLayer(mshadow::Random<cpu> * prnd){
     bottom1.length = 1;
     map<string,SettingV> setting;
     setting["dim"] = 3;
+    PrintTensor("bottom0-data", bottom0.data);
+    PrintTensor("bottom1-data", bottom1.data);
 
     //Test Merge2WindowDataLayer
     Layer<cpu> * layer_merge2window = CreateLayer<cpu>(kMerge2WindowData);
     layer_merge2window->PropAll();
-    layer_merge2window->SetupLayer(setting,bottoms,tops,prnd);
-    layer_merge2window->Reshape(bottoms,tops);
+    layer_merge2window->SetupLayer(setting, bottoms, tops, prnd);
+    layer_merge2window->Reshape(bottoms, tops);
+    layer_merge2window->Forward(bottoms, tops);
 
+    PrintTensor("top0-data", top0.data);
     using namespace checker;
     Checker<cpu> * cker = CreateChecker<cpu>();
     map<string,SettingV> setting_checker;
@@ -5222,9 +5517,15 @@ void TestMatchHistogramLayer(mshadow::Random<cpu> * prnd){
     bottoms.push_back(&bottom0);
     tops.push_back(&top0);
 
-    bottom0.Resize(3,1,3,10);
+    bottom0.Resize(3,1,3,10,3,2);
     prnd->SampleUniform(&bottom0.data,-1.0,1.0);
-    bottom0.length = 1;
+    bottom0.length[0][0] = 3;
+    bottom0.length[0][1] = 10;
+    bottom0.length[1][0] = 3;
+    bottom0.length[1][1] = 5;
+    bottom0.length[2][0] = 3;
+    bottom0.length[2][1] = 3;
+    //bottom0.length = 1;
     map<string,SettingV> setting;
     setting["base_val"] = 1;
     setting["axis"] = 3;
@@ -5236,8 +5537,11 @@ void TestMatchHistogramLayer(mshadow::Random<cpu> * prnd){
     layer_matchhist->Reshape(bottoms,tops);
 
     layer_matchhist->Forward(bottoms, tops);
-    PrintTensor("bottom", bottom0.data);
-    PrintTensor("top", top0.data);
+    PrintTensor("bottom-data", bottom0.data);
+    PrintTensor("bottom-length", bottom0.length);
+
+    PrintTensor("top-data", top0.data);
+    PrintTensor("top-length", top0.length);
 
     using namespace checker;
     Checker<cpu> * cker = CreateChecker<cpu>();
@@ -5340,6 +5644,7 @@ int main(int argc, char *argv[]) {
   // TestCrossLayer(&rnd);
   // TestDropoutLayer(&rnd);
   // TestLstmLayer(&rnd);
+  //TestBLstmLayer(&rnd);
   // TestLstmAutoencoderLayer(&rnd);
   // TestRnnLayer(&rnd);
   // TestMaxRnnLayer(&rnd);
@@ -5353,8 +5658,9 @@ int main(int argc, char *argv[]) {
   // TestMatchLayer(&rnd);
   // TestMatchTensorLayer(&rnd);
   // TestMatchTopKPoolingLayer(&rnd);
-  // TestLstmD2Layer(&rnd);
-  // TestGruD2Layer(&rnd);
+   TestLstmD2Layer(&rnd);
+   //TestGruD2Layer(&rnd);
+  //TestBGruD2Layer(&rnd);
   // TestWholePooling2DLayer(&rnd);
   // TestGateWholePoolingLayer(&rnd);
   // TestGateWholePoolingD2Layer(&rnd);

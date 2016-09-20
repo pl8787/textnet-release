@@ -12,6 +12,7 @@
 #include <sstream>
 
 #include "./net/net.h"
+#include "./utils/utils.h"
 #include "./layer/layer.h"
 #include "./statistic/statistic.h"
 #include "./io/json/json.h"
@@ -100,7 +101,7 @@ void run_cv(Json::Value &cfg_root, int netTagType, int cv_fold) {
     data_file_layer_idx.push_back(1);
     data_file_layer_idx.push_back(2);
   } else {
-      mshadow::utils::Check(false, "CV: need to set cv data file layer idx.");
+      textnet::utils::Check(false, "CV: need to set cv data file layer idx.");
   }
 
   for (int i = 0; i < cv_fold; ++i) {
@@ -111,7 +112,7 @@ void run_cv(Json::Value &cfg_root, int netTagType, int cv_fold) {
     for (size_t j = 0; j < data_file_layer_idx.size(); ++j) {
       int layer_idx = data_file_layer_idx[j];
       if (cv_cfg["layers"][layer_idx]["setting"]["data_file"].isNull()) {
-        mshadow::utils::Check(false, "CV: no data file section in this layer.");
+        textnet::utils::Check(false, "CV: no data file section in this layer.");
       }
       string data_file = cfg_root["layers"][layer_idx]["setting"]["data_file"].asString();
       data_file += "."+ss.str();

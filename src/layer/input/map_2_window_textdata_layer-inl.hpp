@@ -62,6 +62,13 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(),
                   "Map2WindowTextDataLayer:top size problem.");
 
+    if (!Layer<xpu>::global_data.count("data1")) {
+        Layer<xpu>::global_data["data1"] = vector<string>();
+    }
+    if (!Layer<xpu>::global_data.count("data2")) {
+        Layer<xpu>::global_data["data2"] = vector<string>();
+    }
+
     data1_file = setting["data1_file"].sVal();
     data2_file = setting["data2_file"].sVal();
     rel_file = setting["rel_file"].sVal();
@@ -314,6 +321,8 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
     if (mode == "batch") {
         utils::Check(0,"map_2_window_datatext: reshape, batch not ready.");
     } else if (mode == "pair") {
+      Layer<xpu>::global_data["data1"].clear();
+      Layer<xpu>::global_data["data2"].clear();
       top[2]->Resize(2 * batch_size, 1, 1, 1, true); //record label for each document
       top[3]->Resize(2 * batch_size, 1, 1, 1, true); // record the window size for each document
       top[2]->data = -1;
@@ -351,6 +360,12 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
       for(int i = 0 ; i < batch_size; ++ i){
         int pos_idx = pair_set[vbatches[i]][0];
         int neg_idx = pair_set[vbatches[i]][1];
+
+        Layer<xpu>::global_data["data1"].push_back(rel_set[pos_idx][0]);
+        Layer<xpu>::global_data["data2"].push_back(rel_set[pos_idx][1]);
+        Layer<xpu>::global_data["data1"].push_back(rel_set[neg_idx][0]);
+        Layer<xpu>::global_data["data2"].push_back(rel_set[neg_idx][1]);
+
         FillData(top[0]->data, top[0]->length, top[1]->data, top[1]->length, idx_top, top[3]->data[2*i][0][0][0], pos_idx);
         idx_top += top[3]->data[2*i][0][0][0];
         FillData(top[0]->data, top[0]->length, top[1]->data, top[1]->length, idx_top, top[3]->data[2*i+1][0][0][0], neg_idx);
@@ -359,6 +374,8 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
       //if(idx_top != wbatch_size)    printf("idx_top:%d\t,wbatch_size:%d\n",idx_top,wbatch_size);
       utils::Check(idx_top == wbatch_size, "idx_top not equal to wbatch_size.");
     } else if (mode == "list") {
+      Layer<xpu>::global_data["data1"].clear();
+      Layer<xpu>::global_data["data2"].clear();
       int cline_ptr = line_ptr % list_set.size() ;
       if (max_list != list_set[cline_ptr].size()) {
         max_list = list_set[cline_ptr].size();
@@ -402,6 +419,10 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
         for (int i = 0; i < list_set[vbatches[s]].size(); ++i) {
           int out_idx = s * max_list + i;
           int idx = list_set[vbatches[s]][i];
+
+          Layer<xpu>::global_data["data1"].push_back(rel_set[idx][0]);
+          Layer<xpu>::global_data["data2"].push_back(rel_set[idx][1]);
+
           FillData(top[0]->data, top[0]->length, top[1]->data, top[1]->length, idx_top, top[3]->data[out_idx][0][0][0], idx);
           idx_top += top[3]->data[out_idx][0][0][0];
         }
