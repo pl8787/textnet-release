@@ -24,8 +24,7 @@ class ConvolutionLayer : public Layer<xpu> {
     // default value, just set the value you want
     this->defaults["pad_x"] = SettingV(0);
     this->defaults["pad_y"] = SettingV(0);
-    this->defaults["stride_x"] = SettingV(1);
-    this->defaults["stride_y"] = SettingV(1);
+    this->defaults["stride"] = SettingV(1);
     this->defaults["no_bias"] = SettingV(false);
     this->defaults["d1_var_len"] = SettingV(false);
 	this->defaults["ignore_len"] = SettingV(false);
@@ -58,8 +57,7 @@ class ConvolutionLayer : public Layer<xpu> {
     kernel_y = setting["kernel_y"].iVal();
     pad_x = setting["pad_x"].iVal();
     pad_y = setting["pad_y"].iVal();
-    stride_x = setting["stride_x"].iVal();
-    stride_y = setting["stride_y"].iVal();
+    stride = setting["stride"].iVal();
     channel_in = bottom[0]->data.size(1);
     channel_out = setting["channel_out"].iVal();
     no_bias = setting["no_bias"].bVal();
@@ -102,8 +100,8 @@ class ConvolutionLayer : public Layer<xpu> {
     
     mshadow::Shape<4> shape_in = bottom[0]->data.shape_;
     mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in[0], channel_out, 
-                   (shape_in[2] + pad_y * 2 - kernel_y) / stride_y + 1,
-                   (shape_in[3] + pad_x * 2 - kernel_x) / stride_x + 1);
+                   (shape_in[2] + pad_y * 2 - kernel_y) / stride + 1,
+                   (shape_in[3] + pad_x * 2 - kernel_x) / stride + 1);
 
     // std::cout << shape_in[0] << "x" << shape_in[1] << "x" << shape_in[2] << "x" << shape_in[3] << std::endl;
     // std::cout << shape_out[0] << "x" << shape_out[1] << "x" << shape_out[2] << "x" << shape_out[3] << std::endl;
@@ -135,8 +133,8 @@ class ConvolutionLayer : public Layer<xpu> {
     bool need_reshape = false;
     mshadow::Shape<4> shape_in = bottom[0]->data.shape_;
     mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in[0], channel_out, 
-                   (shape_in[2] + pad_y * 2 - kernel_y) / stride_y + 1,
-                   (shape_in[3] + pad_x * 2 - kernel_x) / stride_x + 1);
+                   (shape_in[2] + pad_y * 2 - kernel_y) / stride + 1,
+                   (shape_in[3] + pad_x * 2 - kernel_x) / stride + 1);
     if (! (shape_out == top[0]->data.shape_)) {
         need_reshape = true;
     }
@@ -167,7 +165,7 @@ class ConvolutionLayer : public Layer<xpu> {
     }
     for (index_t i = 0; i < nbatch; ++i) {
       if (d1_var_len) {
-          top_len[i][0] = (bottom_len[i][0] + pad_y * 2 - kernel_y)/stride_y + 1; // all input channels shoud have the same length
+          top_len[i][0] = (bottom_len[i][0] + pad_y * 2 - kernel_y)/stride + 1; // all input channels shoud have the same length
 		  
 		  if (ignore_len && top_len[i][0] <= 0) {
 		     top_len[i][0] = 1;
@@ -175,8 +173,8 @@ class ConvolutionLayer : public Layer<xpu> {
 
 		  utils::Check(top_len[i][0] > 0, "top_len must positive.");
       } else {
-		  top_len[i][0] = (bottom_len[i][0] + pad_x * 2 - kernel_x) / stride_x + 1;
-		  top_len[i][1] = (bottom_len[i][1] + pad_y * 2 - kernel_y) / stride_y + 1;
+		  top_len[i][0] = (bottom_len[i][0] + pad_x * 2 - kernel_x) / stride + 1;
+		  top_len[i][1] = (bottom_len[i][1] + pad_y * 2 - kernel_y) / stride + 1;
 
 		  if (ignore_len && top_len[i][0] <= 0) {
 		       top_len[i][0] = 1;
@@ -188,10 +186,10 @@ class ConvolutionLayer : public Layer<xpu> {
 		  utils::Check(top_len[i][0] > 0 && top_len[i][1] > 0, "top_len must positive.");
 	  }
       if (pad_x == 0 && pad_y == 0) {
-        temp_col_ = unpack_patch2col(bottom_data[i], kernel_y, kernel_x, stride_y, stride_x);
+        temp_col_ = unpack_patch2col(bottom_data[i], kernel_y, kernel_x, stride);
       } else {
         temp_col_ = unpack_patch2col(pad(bottom_data[i], pad_y, pad_x),
-                                     kernel_y, kernel_x, stride_y, stride_x);
+                                     kernel_y, kernel_x, stride);
       }
       temp_data_ = dot(weight_data, temp_col_);
       top_data.Slice(i,i+1) = reshape(temp_data_, top_data.Slice(i,i+1).shape_);
@@ -219,10 +217,10 @@ class ConvolutionLayer : public Layer<xpu> {
     
     for (int i = 0; i < nbatch; ++i) {
       if (pad_x == 0 && pad_y == 0) {
-        temp_col_ = unpack_patch2col(bottom_data[i], kernel_y, kernel_x, stride_y, stride_x);
+        temp_col_ = unpack_patch2col(bottom_data[i], kernel_y, kernel_x, stride);
       }else{
         temp_col_ = unpack_patch2col(pad(bottom_data[i], pad_y, pad_x),
-                                     kernel_y, kernel_x, stride_y, stride_x);
+                                     kernel_y, kernel_x, stride);
       }
       
       if (this->prop_grad[0]) {
@@ -234,13 +232,13 @@ class ConvolutionLayer : public Layer<xpu> {
         mshadow::Tensor<xpu, 3> one_diff = bottom_diff[i];
         if (pad_x == 0 && pad_y == 0) {
           one_diff += pack_col2patch(temp_dif_, one_diff.shape_, 
-              kernel_y, kernel_x, stride_y, stride_x);
+              kernel_y, kernel_x, stride);
         } else {
           mshadow::Shape<3> pshape = one_diff.shape_;
           pshape[1] += 2*pad_y; 
           pshape[2] += 2*pad_x;
           one_diff += crop(pack_col2patch(temp_dif_, pshape, 
-              kernel_y, kernel_x, stride_y, stride_x), one_diff[0].shape_);
+              kernel_y, kernel_x, stride), one_diff[0].shape_);
         }
       }
       
@@ -252,8 +250,7 @@ class ConvolutionLayer : public Layer<xpu> {
   int kernel_y;
   int pad_x;
   int pad_y;
-  int stride_x;
-  int stride_y;
+  int stride;
   int channel_in;
   int channel_out;
   bool no_bias, d1_var_len, ignore_len;

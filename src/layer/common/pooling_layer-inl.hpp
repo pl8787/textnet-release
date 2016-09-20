@@ -21,8 +21,7 @@ class PoolingLayer : public Layer<xpu> {
   
   virtual void Require() {
     // default value, just set the value you want
-    this->defaults["stride_x"] = SettingV(1);
-    this->defaults["stride_y"] = SettingV(1);
+    this->defaults["stride"] = SettingV(1);
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["kernel_x"] = SettingV();
@@ -44,8 +43,7 @@ class PoolingLayer : public Layer<xpu> {
                            
     kernel_x = setting["kernel_x"].iVal();
     kernel_y = setting["kernel_y"].iVal();
-    stride_x = setting["stride_x"].iVal();
-    stride_y = setting["stride_y"].iVal();
+    stride = setting["stride"].iVal();
     
   }
   
@@ -61,8 +59,8 @@ class PoolingLayer : public Layer<xpu> {
     
     mshadow::Shape<4> shape_in = bottom[0]->data.shape_;
     mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in[0], shape_in[1], 
-                   (shape_in[2] - kernel_y) / stride_y + 1,
-                   (shape_in[3] - kernel_x) / stride_x + 1);
+                   (shape_in[2] - kernel_y) / stride + 1,
+                   (shape_in[3] - kernel_x) / stride + 1);
 	mshadow::Shape<2> shape_len = bottom[0]->length.shape_;
     top[0]->Resize(shape_out, shape_len);   
     // std::cout << shape_in[0] << "x" << shape_in[1] << "x" << shape_in[2] << "x" << shape_in[3] << std::endl;
@@ -79,8 +77,8 @@ class PoolingLayer : public Layer<xpu> {
     bool need_reshape = false;
     mshadow::Shape<4> shape_in = bottom[0]->data.shape_;
     mshadow::Shape<4> shape_out = mshadow::Shape4(shape_in[0], shape_in[1], 
-                   (shape_in[2] - kernel_y) / stride_y + 1,
-                   (shape_in[3] - kernel_x) / stride_x + 1);
+                   (shape_in[2] - kernel_y) / stride + 1,
+                   (shape_in[3] - kernel_x) / stride + 1);
     if (! (shape_out == top[0]->data.shape_)) {
         need_reshape = true;
     }
@@ -102,12 +100,12 @@ class PoolingLayer : public Layer<xpu> {
     mshadow::Shape<2> pshape = top_data[0][0].shape_;
 
 	for (int i = 0; i < top_len.shape_[0]; ++i) {
-	  top_len[i][0] = ((int)bottom_len[i][0] - kernel_y) / stride_y + 1;
+	  top_len[i][0] = ((int)bottom_len[i][0] - kernel_y) / stride + 1;
 	  if (top_len[i][0] <= 0) {
 		top_len[i][0] = 1;
 	  }
 	  if (bottom_len.shape_[1] == 2) {
-	    top_len[i][1] = ((int)bottom_len[i][1] - kernel_x) / stride_x + 1;
+	    top_len[i][1] = ((int)bottom_len[i][1] - kernel_x) / stride + 1;
 	    if (top_len[i][1] <= 0) {
 		  top_len[i][1] = 1;
 	    }
@@ -115,12 +113,12 @@ class PoolingLayer : public Layer<xpu> {
 	}
 
     if (this->layer_type == kMaxPooling) {
-      top_data = pool<Reducer>(bottom_data, pshape, kernel_y, kernel_x, stride_y, stride_x);
+      top_data = pool<Reducer>(bottom_data, pshape, kernel_y, kernel_x, stride);
     } else if (this->layer_type == kAvgPooling) {
-      top_data = pool<Reducer>(bottom_data, pshape, kernel_y, kernel_x, stride_y, stride_x)
+      top_data = pool<Reducer>(bottom_data, pshape, kernel_y, kernel_x, stride)
           * (1.0f / (kernel_y*kernel_x));
     } else if (this->layer_type == kSumPooling) {
-      top_data = pool<Reducer>(bottom_data, pshape, kernel_y, kernel_x, stride_y, stride_x);
+      top_data = pool<Reducer>(bottom_data, pshape, kernel_y, kernel_x, stride);
     } else {
       utils::Error("Unknown pooling mode");
     }
@@ -136,12 +134,12 @@ class PoolingLayer : public Layer<xpu> {
     
     if (this->prop_error[0]) {
       if (this->layer_type == kMaxPooling) {
-        bottom_diff += unpool<Reducer>(bottom_data, top_data, top_diff, kernel_y, kernel_x, stride_y, stride_x);
+        bottom_diff += unpool<Reducer>(bottom_data, top_data, top_diff, kernel_y, kernel_x, stride);
       } else if (this->layer_type == kAvgPooling) {
-        bottom_diff += unpool<Reducer>(bottom_data, top_data, top_diff, kernel_y, kernel_x, stride_y, stride_x)
+        bottom_diff += unpool<Reducer>(bottom_data, top_data, top_diff, kernel_y, kernel_x, stride)
             * (1.0f / (kernel_y*kernel_x));
       } else if (this->layer_type == kSumPooling) {
-        bottom_diff += unpool<Reducer>(bottom_data, top_data, top_diff, kernel_y, kernel_x, stride_y, stride_x);
+        bottom_diff += unpool<Reducer>(bottom_data, top_data, top_diff, kernel_y, kernel_x, stride);
       } else {
         utils::Error("Unknown pooling mode");
       }
@@ -150,8 +148,7 @@ class PoolingLayer : public Layer<xpu> {
  protected:
   int kernel_x;
   int kernel_y;
-  int stride_x;
-  int stride_y;
+  int stride;
   int channel;
   
 };   // class PoolingLayer
