@@ -98,7 +98,7 @@ class ListwiseMeasureLayer : public Layer<xpu>{
       lines.push_back(s);
     }
     fin.close();
-	list_count = lines.size();
+	  list_count = lines.size();
     utils::Printf("Line count in file: %d\n", lines.size());
 
     std::istringstream iss;

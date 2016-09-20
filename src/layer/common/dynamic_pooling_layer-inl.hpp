@@ -282,10 +282,10 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 
     top_data = 0;
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
-      // if (nbottom == 1) { // top len is not variable length
-      //   top_len[batch_idx][0] = row;
-	  //   top_len[batch_idx][1] = col;
-	  // }
+      if (nbottom == 1) { // top len is not variable length
+        top_len[batch_idx][0] = row;
+	    top_len[batch_idx][1] = col;
+	  }
       for (index_t channel_idx = 0; channel_idx < bottom_data.size(1); ++channel_idx) {
         int len_r = 0, len_l = 0;
 		if (nbottom == 3) {

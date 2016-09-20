@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <set>
+#include <random>
 
 #include <mshadow/tensor.h>
 #include "../layer.h"
@@ -79,6 +80,8 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
     // default value, just set the value you want
     this->defaults["group_snip"] = SettingV(0);
     this->defaults["snip_len_out"] = SettingV(true); 
+    this->defaults["random_pick"] = SettingV(-1);
+    this->defaults["input_snip_doc"] = SettingV(false);
     
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -103,7 +106,12 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
     group_snip = setting["group_snip"].iVal();
     snip_size = setting["snip_size"].iVal();
     snip_len_out = setting["snip_len_out"].bVal();
+    random_pick = setting["random_pick"].iVal();
+    input_snip_doc = setting["input_snip_doc"].bVal();
 
+    if (input_snip_doc) {
+      utils::Printf("KeySnipLayer will change the value of bottom!");
+    }
   }
 
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -187,42 +195,95 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
       int d_cnt = bottom0_len[i];
       int q_cnt = bottom1_len[i];
 
-      if (group_snip == 0) {
-        for (int j = 0; j < q_cnt; ++j) {
-          for (int k = 0; k < d_cnt; ++k) {
-            if ( fabs(bottom0_data[i][k]-bottom1_data[i][j]) < 1e-5 ) {
-              if (snip_len_out) {
-                top1_data[i][j] += 1;
-              } else {
-                top1_data[i][s] = j;
-                top1_len[i][s] = 1;
+      if (input_snip_doc) {
+        if (group_snip == 0) {
+          for (int j = 0; j < q_cnt; ++j) {
+            for (int k = 0; k < d_cnt; ++k) {
+              if ( fabs(bottom0_data[i][k]+j+10) < 1e-5 ) {
+                // Recover doc word
+                bottom0_data[i][k] = bottom1_data[i][j];
+                if (snip_len_out) {
+                  top1_data[i][j] += 1;
+                } else {
+                  top1_data[i][s] = j;
+                  top1_len[i][s] = 1;
+                }
+                snip_center_[i][s] = k;
+                ++s;
+                if (s >= max_snip) break;
               }
-              snip_center_[i][s] = k;
-              ++s;
-              if (s >= max_snip) break;
+            }
+            if (s >= max_snip) break;
+          }
+        } else {
+          for (int j = 0; j < q_cnt; ++j) {
+            s = j * group_snip;
+            for (int k = 0; k < d_cnt; ++k) {
+              if ( fabs(bottom0_data[i][k]+j+10) < 1e-5 ) {
+                // Recover doc word
+                bottom0_data[i][k] = bottom1_data[i][j];
+                if (s >= (j+1) * group_snip) {
+                    break;
+                } else {
+                  snip_center_[i][s] = k;
+                  ++s;
+                  if (snip_len_out) {
+                    top1_data[i][j] += 1;
+                  } else {
+                    top1_data[i][s] = j;
+                    top1_len[i][s] = 1;
+                  }
+                }
+              }
             }
           }
-          if (s >= max_snip) break;
         }
       } else {
-        for (int j = 0; j < q_cnt; ++j) {
-          s = j * group_snip;
-          for (int k = 0; k < d_cnt; ++k) {
-            if ( fabs(bottom0_data[i][k]-bottom1_data[i][j]) < 1e-5 ) {
-              if (snip_len_out) {
-                top1_data[i][j] += 1;
-              } else {
-                top1_data[i][s] = j;
-                top1_len[i][s] = 1;
+        if (group_snip == 0) {
+          for (int j = 0; j < q_cnt; ++j) {
+            for (int k = 0; k < d_cnt; ++k) {
+              if ( fabs(bottom0_data[i][k]-bottom1_data[i][j]) < 1e-5 ) {
+                if (snip_len_out) {
+                  top1_data[i][j] += 1;
+                } else {
+                  top1_data[i][s] = j;
+                  top1_len[i][s] = 1;
+                }
+                snip_center_[i][s] = k;
+                ++s;
+                if (s >= max_snip) break;
               }
-              snip_center_[i][s] = k;
-              ++s;
-              if (s >= (j+1) * group_snip) break;
+            }
+            if (s >= max_snip) break;
+          }
+        } else {
+          for (int j = 0; j < q_cnt; ++j) {
+            s = j * group_snip;
+            for (int k = 0; k < d_cnt; ++k) {
+              if ( fabs(bottom0_data[i][k]-bottom1_data[i][j]) < 1e-5 ) {
+                if (s >= (j+1) * group_snip) {
+                  if (random_pick > 0) {
+                    if (rand() % 100 < random_pick) {
+                      snip_center_[i][j * group_snip + rand() % group_snip] = k;
+                    }
+                  } else {
+                    break;
+                  }
+                } else {
+                  snip_center_[i][s] = k;
+                  ++s;
+                  if (snip_len_out) {
+                    top1_data[i][j] += 1;
+                  } else {
+                    top1_data[i][s] = j;
+                    top1_len[i][s] = 1;
+                  }
+                }
+              }
             }
           }
         }
-      }
-       
+      } 
       // crop snipping
       for (int j = 0; j < s; ++j) {
         if (snip_center_[i][j] == -1) continue;
@@ -254,7 +315,9 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
   int max_snip;
   int max_query;
   int group_snip;
+  int random_pick;
   bool snip_len_out;
+  bool input_snip_doc;
   mshadow::TensorContainer<xpu, 2> snip_center_;
 
 };

@@ -3,6 +3,9 @@
 
 #include "./layer.h"
 #include "./common/activation_layer-inl.hpp"
+#include "./common/xelu_layer-inl.hpp"
+#include "./common/elu_layer-inl.hpp"
+#include "./common/append_feature_layer-inl.hpp"
 #include "./common/convolution_layer-inl.hpp"
 #include "./common/convolution_var_layer-inl.hpp"
 #include "./common/convolution_param_layer-inl.hpp"
@@ -49,6 +52,8 @@
 #include "./common/convolutional_lstm_layer-inl.hpp"
 #include "./common/whole_pooling_layer-inl.hpp"
 #include "./common/whole_pooling_2d_layer-inl.hpp"
+#include "./common/blstm_layer-inl.hpp"
+#include "./common/bgru_d2_layer-inl.hpp"
 
 #ifdef CPU_ONLY
 #include "./common/gate_whole_pooling_layer-inl.hpp"
@@ -256,6 +261,11 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kReshape: return new ReshapeLayer<xpu>(type);
     case kMatchHistogram: return new MatchHistogramLayer<xpu>(type);
     case kSortAxis: return new SortAxisLayer<cpu>(type);
+    case kBLstm: return new BLstmLayer<cpu>(type);
+    case kBGruD2: return new BGruD2Layer<cpu>(type);
+    case kXeLU: return new XeLULayer<xpu>(type);
+    case kELU: return new ELULayer<xpu>(type);
+    case kAppendFeature: return new AppendFeatureLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }
