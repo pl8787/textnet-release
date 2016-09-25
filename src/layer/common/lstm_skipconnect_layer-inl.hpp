@@ -1,5 +1,5 @@
-#ifndef TEXTNET_LAYER_LSTM_LAYER_INL_HPP_
-#define TEXTNET_LAYER_LSTM_LAYER_INL_HPP_
+#ifndef TEXTNET_LAYER_LSTM_SKIPCONNECT_LAYER_INL_HPP_
+#define TEXTNET_LAYER_LSTM_SKIPCONNECT_LAYER_INL_HPP_
 
 #include <iostream>
 
@@ -13,10 +13,10 @@ namespace textnet {
 namespace layer {
 
 template<typename xpu>
-class LstmLayer : public Layer<xpu> {
+class LstmSkipconnectLayer : public Layer<xpu> {
  public:
-  LstmLayer(LayerType type) { this->layer_type = type; }
-  virtual ~LstmLayer(void) {}
+  LstmSkipconnectLayer(LayerType type) { this->layer_type = type; }
+  virtual ~LstmSkipconnectLayer(void) {}
   
   virtual int BottomNodeNum() { return 1; }
   virtual int TopNodeNum() { return 1; }
@@ -41,6 +41,7 @@ class LstmLayer : public Layer<xpu> {
     this->defaults["max_norm2"] = SettingV();
     this->defaults["grad_norm2"] = SettingV();
     this->defaults["d_mem"] = SettingV();
+    this->defaults["skip_step"] = SettingV();
     //this->defaults["d_input"] = SettingV();
     this->defaults["w_filler"] = SettingV();
     this->defaults["u_filler"] = SettingV();
@@ -60,10 +61,12 @@ class LstmLayer : public Layer<xpu> {
                           mshadow::Random<xpu> *prnd) {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);                        
     
-    utils::Check(bottom.size() == BottomNodeNum(), "LstmLayer:bottom size problem."); 
-    utils::Check(top.size() == TopNodeNum(), "LstmLayer:top size problem.");
+    utils::Check(bottom.size() == BottomNodeNum(), "LstmSkipconnectLayer:bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(), "LstmSkipconnectLayer:top size problem.");
                   
     d_mem   = setting["d_mem"].iVal();
+    skip_step   = setting["skip_step"].iVal();
+    utils::Check(skip_step > 0, "LstmSkipconnectLayer:skip_step should be above zero."); 
     //d_input   = setting["d_input"].iVal();
     d_input = bottom[0]->data.size(3);
     no_bias = setting["no_bias"].bVal();
@@ -138,8 +141,8 @@ class LstmLayer : public Layer<xpu> {
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top,
 					   bool show_info = false) {
-    utils::Check(bottom.size() == BottomNodeNum(), "LstmLayer:bottom size problem."); 
-    utils::Check(top.size() == TopNodeNum(), "LstmLayer:top size problem.");
+    utils::Check(bottom.size() == BottomNodeNum(), "LstmSkipconnectLayer:bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(), "LstmSkipconnectLayer:top size problem.");
       //utils::ShowMemoryUse();
     
     mshadow::Shape<4> shape_in  = bottom[0]->data.shape_;
@@ -157,10 +160,10 @@ class LstmLayer : public Layer<xpu> {
     g_er.Resize(shape_gate, 0.f);
       //utils::ShowMemoryUse();
 
-	if (show_info) {
-	  bottom[0]->PrintShape("bottom0");
-	  top[0]->PrintShape("top0");
-	}
+    if (show_info) {
+      bottom[0]->PrintShape("bottom0");
+      top[0]->PrintShape("top0");
+    }
   }
 
   virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,
@@ -196,6 +199,7 @@ class LstmLayer : public Layer<xpu> {
 
   virtual void ForwardOneStep(Tensor2D pre_c, 
                               Tensor2D pre_h,
+                              Tensor2D skip_h,
                               Tensor2D x,
                               Tensor2D cur_g,
                               Tensor2D cur_c,
@@ -207,6 +211,7 @@ class LstmLayer : public Layer<xpu> {
       Tensor2D i, f, o, cc;
       cur_g = dot(x, w_data);
       cur_g += dot(pre_h, u_data);
+      cur_g += dot(skip_h, u_data);
       if (!no_bias) {
         cur_g += b_data;
       }
@@ -254,7 +259,7 @@ class LstmLayer : public Layer<xpu> {
   }
   void ForwardLeft2Right(Tensor2D in, Tensor2D g, Tensor2D c, Tensor2D out) {
       int begin = 0, end = in.size(0);
-      Tensor2D pre_c, pre_h;
+      Tensor2D pre_c, pre_h, skip_h;
       // not need any padding, begin h and c are set to 0
       for (index_t row_idx = begin; row_idx < end; ++row_idx) {
         if (row_idx == begin) {
@@ -264,8 +269,13 @@ class LstmLayer : public Layer<xpu> {
           pre_c = c.Slice(row_idx-1, row_idx);
           pre_h = out.Slice(row_idx-1, row_idx);
         }
+        skip_h = begin_h;
+        if(row_idx != begin && ( row_idx % skip_step == 0)){
+          skip_h = out.Slice(row_idx-skip_step, row_idx-skip_step + 1);
+        }
         ForwardOneStep(pre_c,
                        pre_h,
+                       skip_h,
                        in.Slice(row_idx, row_idx+1),
                        g.Slice(row_idx, row_idx+1), 
                        c.Slice(row_idx, row_idx+1), 
@@ -274,7 +284,7 @@ class LstmLayer : public Layer<xpu> {
   }
   void ForwardRight2Left(Tensor2D in, Tensor2D g, Tensor2D c, Tensor2D out) {
       int begin = 0, end = in.size(0);
-      Tensor2D pre_c, pre_h;
+      Tensor2D pre_c, pre_h, skip_h;
       // not need any padding, begin h and c are set to 0
       for (int row_idx = end-1; row_idx >= begin; --row_idx) {
         if (row_idx == end-1) {
@@ -284,8 +294,13 @@ class LstmLayer : public Layer<xpu> {
           pre_c = c.Slice(row_idx+1, row_idx+2);
           pre_h = out.Slice(row_idx+1, row_idx+2);
         }
+        skip_h = begin_h;
+        if(end - 1 - row_idx > 0 && ( (end-1-row_idx) % skip_step == 0)){
+          skip_h = out.Slice(row_idx + skip_step, row_idx + skip_step + 1);
+        }
         ForwardOneStep(pre_c,
                        pre_h,
+                       skip_h,
                        in.Slice(row_idx, row_idx+1),
                        g.Slice(row_idx, row_idx+1), 
                        c.Slice(row_idx, row_idx+1), 
@@ -305,7 +320,7 @@ class LstmLayer : public Layer<xpu> {
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
         int len = bottom[0]->length[batch_idx][seq_idx];
-        utils::Assert(len >= 0, "LstmLayer: sequence length error.");
+        utils::Assert(len >= 0, "LstmSkipconnectLayer: sequence length error.");
         if (!reverse) {
           ForwardLeft2Right(bottom_data[batch_idx][seq_idx].Slice(0,len), 
                             g[batch_idx][seq_idx].Slice(0,len), 
@@ -326,7 +341,7 @@ class LstmLayer : public Layer<xpu> {
 
   // too tricky, may bring errors
   void SplitGate(Tensor2D g, Tensor2D &i, Tensor2D &f, Tensor2D &o, Tensor2D &cc) {
-    utils::Check(g.size(0) == 1, "LstmLayer: gate problem."); 
+    utils::Check(g.size(0) == 1, "LstmSkipconnectLayer: gate problem."); 
     i = Tensor2D(g.dptr_, mshadow::Shape2(1, d_mem));
     f = Tensor2D(g.dptr_ + 1 * d_mem, mshadow::Shape2(1, d_mem));
     o = Tensor2D(g.dptr_ + 2 * d_mem, mshadow::Shape2(1, d_mem));
@@ -406,6 +421,7 @@ class LstmLayer : public Layer<xpu> {
                                  Tensor2D bottom_data, Tensor2D bottom_diff) {
       int begin = 0, end = top_data.size(0);
 
+      Tensor2D u_data = this->params[1].data[0][0];
       Tensor2D pre_c, pre_h, pre_c_er, pre_h_er;
       for (int row_idx = end-1; row_idx >= begin; --row_idx) {
         if (row_idx == begin) {
@@ -426,10 +442,14 @@ class LstmLayer : public Layer<xpu> {
                   g.Slice(row_idx, row_idx+1), 
                   c.Slice(row_idx, row_idx+1), 
                   top_data.Slice(row_idx, row_idx+1),
-                  c_er.Slice(row_idx, row_idx+1), g_er.Slice(row_idx, row_idx+1),
+                  c_er.Slice(row_idx, row_idx+1), 
+                  g_er.Slice(row_idx, row_idx+1),
                   pre_c_er,
                   pre_h_er,
                   bottom_diff.Slice(row_idx, row_idx+1));
+        if( row_idx % skip_step == 0 && ( row_idx-skip_step >= 0)){
+          top_diff.Slice(row_idx-skip_step, row_idx-skip_step+1) += dot( g_er.Slice(row_idx, row_idx+1), u_data.T());
+        }
       }
   }
   void BackpropForRight2LeftLstm(Tensor2D top_data, Tensor2D top_diff, 
@@ -438,6 +458,7 @@ class LstmLayer : public Layer<xpu> {
                                  Tensor2D bottom_data, Tensor2D bottom_diff) {
       int begin = 0, end = top_data.size(0);
 
+      Tensor2D u_data = this->params[1].data[0][0];
       Tensor2D pre_c, pre_h, pre_c_er, pre_h_er;
       for (int row_idx = begin; row_idx < end; ++row_idx) {
         if (row_idx == end-1) {
@@ -463,6 +484,9 @@ class LstmLayer : public Layer<xpu> {
                   pre_c_er,
                   pre_h_er,
                   bottom_diff.Slice(row_idx, row_idx+1));
+        if( ((end - 1 - row_idx) % skip_step == 0) && (row_idx + skip_step <= end - 1)){
+          top_diff.Slice(row_idx+skip_step, row_idx+skip_step+1) += dot( g_er.Slice(row_idx, row_idx+1), u_data.T());
+        }
       }
   }
 
@@ -482,7 +506,7 @@ class LstmLayer : public Layer<xpu> {
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
         int len = bottom[0]->length[batch_idx][seq_idx];
-        utils::Assert(len >= 0, "LstmLayer: sequence length error.");
+        utils::Assert(len >= 0, "LstmSkipconnectLayer: sequence length error.");
         if (!reverse) {
             BackpropForLeft2RightLstm(top_data[batch_idx][seq_idx].Slice(0,len), 
                                       top_diff[batch_idx][seq_idx].Slice(0,len), 
@@ -522,14 +546,14 @@ class LstmLayer : public Layer<xpu> {
     int s2 = data_root["shape"][2].asInt();
     int s3 = data_root["shape"][3].asInt();
     utils::Check(t.size(0) == s0 && t.size(1) == s1 && t.size(2) == s2 && t.size(3) == s3, 
-                 "LstmLayer: load tensor error.");
+                 "LstmSkipconnectLayer: load tensor error.");
     int size = s0*s1*s2*s3;
     for (int i = 0; i < size; ++i) {
       t.dptr_[i] = data_root["value"][i].asFloat();
     }
   }
   void LoadParam() {
-    utils::Printf("LstmLayer: load params...\n");
+    utils::Printf("LstmSkipconnectLayer: load params...\n");
     Json::Value param_root;
     ifstream ifs(param_file.c_str());
     ifs >> param_root;
@@ -543,6 +567,7 @@ class LstmLayer : public Layer<xpu> {
 // protected:
   float max_norm2;
   int d_mem, d_input;
+  int skip_step;
   bool no_bias, reverse, no_out_tanh; 
   float grad_norm2;
   float o_gate_bias_init;

@@ -795,6 +795,58 @@ void TestAppendFeatureLayer(mshadow::Random<cpu>* prnd) {
   cout << "Check Error." << endl;
   cker->CheckError(layer_conv, bottoms, tops);
 }
+void TestReadFeatureLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Read Feature Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(2,2,3,2), Shape2(1,2), true);
+
+  float bottom_data_[] = {5,5,9,1,
+						  1,1,1,2,
+						  1,4,1,9,
+						  1,1,2,1,
+						  8,1,1,1,
+                          1,1,1,1};
+  
+  vector<float> bottom_data(bottom_data_, bottom_data_ + sizeof(bottom_data_) / sizeof(float));
+  FillTensor(bottom.data, bottom_data);
+  bottom.data *= 0.2;
+
+  // Setting global data
+  Layer<cpu>::global_data["data2"] = vector<string>();
+  Layer<cpu>::global_data["data2"].push_back("S1");
+  Layer<cpu>::global_data["data2"].push_back("S3");
+
+  map<string, SettingV> setting;
+  setting["feature_size"] = SettingV(2);
+  setting["feature_file"] = SettingV("test_data/feature1.dat");
+  setting["key"] = SettingV("data2");
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_conv = CreateLayer<cpu>(kReadFeature);
+  layer_conv->PropAll();
+  layer_conv->SetupLayer(setting, bottoms, tops, prnd);
+  layer_conv->Reshape(bottoms, tops, true);
+  layer_conv->Forward(bottoms, tops);
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("top", top.data);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.01f);
+  setting_checker["range_max"] = SettingV(0.01f);
+  setting_checker["delta"] = SettingV(0.1f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_conv, bottoms, tops);
+}
 
 void TestBatchNormLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check BatchNorm Layer." << endl;
@@ -3684,9 +3736,10 @@ void TestLstmLayer(mshadow::Random<cpu>* prnd) {
   tops.push_back(&top);
   
   bottom.Resize(Shape4(2,1,4,5), true);
-    //prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+    prnd->SampleUniform(&bottom.data, -1.0, 1.0);
     bottom.length[0][0] = 3;
     bottom.length[1][0] = 2;
+    /*
     bottom.data[0][0][0][0] = 0.01;
     bottom.data[0][0][0][1] = 0.02;
     bottom.data[0][0][0][2] = 0.02;
@@ -3712,6 +3765,7 @@ void TestLstmLayer(mshadow::Random<cpu>* prnd) {
     bottom.data[1][0][1][2] = 0.09;
     bottom.data[1][0][1][3] = 0.41;
     bottom.data[1][0][1][4] = 0.23;
+    */
   
   map<string, SettingV> setting;
   {
@@ -3772,6 +3826,210 @@ void TestLstmLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckGrad(layer_fc, bottoms, tops);
 }
 
+void TestLstmPeepholeLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Lstm-Peephole Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(2,1,4,5), true);
+    prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+    bottom.length[0][0] = 3;
+    bottom.length[1][0] = 2;
+    /*
+    bottom.data[0][0][0][0] = 0.01;
+    bottom.data[0][0][0][1] = 0.02;
+    bottom.data[0][0][0][2] = 0.02;
+    bottom.data[0][0][0][3] = 0.001;
+    bottom.data[0][0][0][4] = 0.004;
+    bottom.data[0][0][1][0] = 0.05;
+    bottom.data[0][0][1][0] = 0.2;
+    bottom.data[0][0][1][0] = 0.01;
+    bottom.data[0][0][1][0] = 0.002;
+    bottom.data[0][0][1][0] = 0.01;
+    bottom.data[0][0][2][0] = 0.005;
+    bottom.data[0][0][2][0] = 0.08;
+    bottom.data[0][0][2][0] = 0.33;
+    bottom.data[0][0][2][0] = 0.01;
+    bottom.data[0][0][2][0] = 0.13;
+    bottom.data[1][0][0][0] = 0.01;
+    bottom.data[1][0][0][1] = 0.09;
+    bottom.data[1][0][0][2] = 0.25;
+    bottom.data[1][0][0][3] = 0.31;
+    bottom.data[1][0][0][4] = 0.01;
+    bottom.data[1][0][1][0] = 0.18;
+    bottom.data[1][0][1][1] = 0.01;
+    bottom.data[1][0][1][2] = 0.09;
+    bottom.data[1][0][1][3] = 0.41;
+    bottom.data[1][0][1][4] = 0.23;
+    */
+  
+  map<string, SettingV> setting;
+  {
+    setting["d_input"] = SettingV(5);
+    setting["d_mem"] = SettingV(3);
+    setting["no_out_tanh"] = SettingV(false);
+    setting["no_bias"] = SettingV(true);
+    setting["reverse"] = SettingV(false);
+    setting["grad_cut_off"] = SettingV(10000.f);
+    setting["grad_norm2"] = SettingV(10000.f);
+    setting["max_norm2"] = SettingV(10000.f);
+    setting["f_gate_bias_init"] = SettingV(0.f);
+    setting["o_gate_bias_init"] = SettingV(0.f);
+      
+    map<string, SettingV> &w_filler = *(new map<string, SettingV>());
+      w_filler["init_type"] = SettingV(initializer::kUniform);
+      w_filler["range"] = SettingV(0.1f);
+      //w_filler["init_type"] = SettingV(initializer::kConstant);
+      //w_filler["value"] = SettingV(0.1f);
+      setting["w_filler"] = SettingV(&w_filler);
+      setting["u_filler"] = SettingV(&w_filler);
+      setting["t_filler"] = SettingV(&w_filler);
+
+      map<string, SettingV> &b_filler = *(new map<string, SettingV>());
+      b_filler["init_type"] = SettingV(initializer::kZero);
+      setting["b_filler"] = SettingV(&b_filler);
+      
+      map<string, SettingV> &w_updater = *(new map<string, SettingV>());
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["eps"] = SettingV(0.01f);
+      w_updater["max_iter"] = SettingV(10000);
+      w_updater["lr"] = SettingV(0.1f);
+      setting["w_updater"] = SettingV(&w_updater);
+      setting["u_updater"] = SettingV(&w_updater);
+      setting["t_updater"] = SettingV(&w_updater);
+      setting["b_updater"] = SettingV(&w_updater);
+  }
+
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_fc = CreateLayer<cpu>(kLstmPeephole);
+  //layer_fc->PropAll();
+  layer_fc->SetupLayer(setting, bottoms, tops, prnd);
+  layer_fc->Reshape(bottoms, tops);
+  layer_fc->Forward(bottoms, tops);
+  PrintTensor("bottom-data",bottom.data);
+  PrintTensor("top-data",top.data);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.001f);
+  setting_checker["range_max"] = SettingV(0.001f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_fc, bottoms, tops);
+
+  cout << "Check Grad." << endl;
+  cker->CheckGrad(layer_fc, bottoms, tops);
+}
+
+void TestLstmSkipconnectLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Lstm-Skipconnect Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(2,1,10,5), true);
+    prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+    bottom.length[0][0] = 8;
+    bottom.length[1][0] = 9;
+    /*
+    bottom.data[0][0][0][0] = 0.01;
+    bottom.data[0][0][0][1] = 0.02;
+    bottom.data[0][0][0][2] = 0.02;
+    bottom.data[0][0][0][3] = 0.001;
+    bottom.data[0][0][0][4] = 0.004;
+    bottom.data[0][0][1][0] = 0.05;
+    bottom.data[0][0][1][0] = 0.2;
+    bottom.data[0][0][1][0] = 0.01;
+    bottom.data[0][0][1][0] = 0.002;
+    bottom.data[0][0][1][0] = 0.01;
+    bottom.data[0][0][2][0] = 0.005;
+    bottom.data[0][0][2][0] = 0.08;
+    bottom.data[0][0][2][0] = 0.33;
+    bottom.data[0][0][2][0] = 0.01;
+    bottom.data[0][0][2][0] = 0.13;
+    bottom.data[1][0][0][0] = 0.01;
+    bottom.data[1][0][0][1] = 0.09;
+    bottom.data[1][0][0][2] = 0.25;
+    bottom.data[1][0][0][3] = 0.31;
+    bottom.data[1][0][0][4] = 0.01;
+    bottom.data[1][0][1][0] = 0.18;
+    bottom.data[1][0][1][1] = 0.01;
+    bottom.data[1][0][1][2] = 0.09;
+    bottom.data[1][0][1][3] = 0.41;
+    bottom.data[1][0][1][4] = 0.23;
+    */
+  
+  map<string, SettingV> setting;
+  {
+    setting["d_input"] = SettingV(5);
+    setting["d_mem"] = SettingV(3);
+    setting["skip_step"] = SettingV(3);
+    setting["no_out_tanh"] = SettingV(true);
+    setting["no_bias"] = SettingV(false);
+    setting["reverse"] = SettingV(false);
+    setting["grad_cut_off"] = SettingV(10000.f);
+    setting["grad_norm2"] = SettingV(10000.f);
+    setting["max_norm2"] = SettingV(10000.f);
+    setting["f_gate_bias_init"] = SettingV(0.f);
+    setting["o_gate_bias_init"] = SettingV(0.f);
+      
+    map<string, SettingV> &w_filler = *(new map<string, SettingV>());
+      w_filler["init_type"] = SettingV(initializer::kUniform);
+      w_filler["range"] = SettingV(0.1f);
+      //w_filler["init_type"] = SettingV(initializer::kConstant);
+      //w_filler["value"] = SettingV(0.1f);
+      setting["w_filler"] = SettingV(&w_filler);
+      setting["u_filler"] = SettingV(&w_filler);
+
+      map<string, SettingV> &b_filler = *(new map<string, SettingV>());
+      b_filler["init_type"] = SettingV(initializer::kZero);
+      setting["b_filler"] = SettingV(&b_filler);
+      
+      map<string, SettingV> &w_updater = *(new map<string, SettingV>());
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["eps"] = SettingV(0.01f);
+      w_updater["max_iter"] = SettingV(10000);
+      w_updater["lr"] = SettingV(0.1f);
+      setting["w_updater"] = SettingV(&w_updater);
+      setting["u_updater"] = SettingV(&w_updater);
+      setting["b_updater"] = SettingV(&w_updater);
+  }
+
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_fc = CreateLayer<cpu>(kLstmSkipconnect);
+  //layer_fc->PropAll();
+  layer_fc->SetupLayer(setting, bottoms, tops, prnd);
+  layer_fc->Reshape(bottoms, tops);
+  layer_fc->Forward(bottoms, tops);
+  PrintTensor("bottom-data",bottom.data);
+  PrintTensor("top-data",top.data);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_fc, bottoms, tops);
+
+  cout << "Check Grad." << endl;
+  cker->CheckGrad(layer_fc, bottoms, tops);
+}
 void TestBLstmLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check BLstm Layer." << endl;
   Node<cpu> bottom;
@@ -5644,6 +5902,8 @@ int main(int argc, char *argv[]) {
   // TestCrossLayer(&rnd);
   // TestDropoutLayer(&rnd);
   // TestLstmLayer(&rnd);
+  // TestLstmPeepholeLayer(&rnd);
+  TestLstmSkipconnectLayer(&rnd);
   //TestBLstmLayer(&rnd);
   // TestLstmAutoencoderLayer(&rnd);
   // TestRnnLayer(&rnd);
@@ -5658,7 +5918,7 @@ int main(int argc, char *argv[]) {
   // TestMatchLayer(&rnd);
   // TestMatchTensorLayer(&rnd);
   // TestMatchTopKPoolingLayer(&rnd);
-   TestLstmD2Layer(&rnd);
+  // TestLstmD2Layer(&rnd);
    //TestGruD2Layer(&rnd);
   //TestBGruD2Layer(&rnd);
   // TestWholePooling2DLayer(&rnd);
@@ -5718,6 +5978,7 @@ int main(int argc, char *argv[]) {
   // TestSortAxisLayer(&rnd);
   // TestXeLULayer(&rnd);
   // TestELULayer(&rnd);
-  TestAppendFeatureLayer(&rnd);
+  // TestAppendFeatureLayer(&rnd);
+  // TestReadFeatureLayer(&rnd);
   return 0;
 }

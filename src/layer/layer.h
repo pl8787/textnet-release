@@ -128,6 +128,9 @@ const int kMatchHistogram = 20002;
 const int kSortAxis = 20003;
 const int kBLstm = 20004;
 const int kBGruD2 = 20005;
+const int kLstmPeephole = 20006;
+const int kReadFeature = 20007;
+const int kLstmSkipconnect = 20008;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;

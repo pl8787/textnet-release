@@ -1,5 +1,5 @@
-#ifndef TEXTNET_LAYER_LSTM_LAYER_INL_HPP_
-#define TEXTNET_LAYER_LSTM_LAYER_INL_HPP_
+#ifndef TEXTNET_LAYER_LSTMPEEPHOLE_LAYER_INL_HPP_
+#define TEXTNET_LAYER_LSTMPEEPHOLE_LAYER_INL_HPP_
 
 #include <iostream>
 
@@ -13,10 +13,10 @@ namespace textnet {
 namespace layer {
 
 template<typename xpu>
-class LstmLayer : public Layer<xpu> {
+class LstmPeepholeLayer : public Layer<xpu> {
  public:
-  LstmLayer(LayerType type) { this->layer_type = type; }
-  virtual ~LstmLayer(void) {}
+  LstmPeepholeLayer(LayerType type) { this->layer_type = type; }
+  virtual ~LstmPeepholeLayer(void) {}
   
   virtual int BottomNodeNum() { return 1; }
   virtual int TopNodeNum() { return 1; }
@@ -60,8 +60,8 @@ class LstmLayer : public Layer<xpu> {
                           mshadow::Random<xpu> *prnd) {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);                        
     
-    utils::Check(bottom.size() == BottomNodeNum(), "LstmLayer:bottom size problem."); 
-    utils::Check(top.size() == TopNodeNum(), "LstmLayer:top size problem.");
+    utils::Check(bottom.size() == BottomNodeNum(), "LstmPeepholeLayer:bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(), "LstmPeepholeLayer:top size problem.");
                   
     d_mem   = setting["d_mem"].iVal();
     //d_input   = setting["d_input"].iVal();
@@ -81,23 +81,38 @@ class LstmLayer : public Layer<xpu> {
     begin_h_er.Resize(mshadow::Shape2(1, d_mem), 0.f);
     begin_c_er.Resize(mshadow::Shape2(1, d_mem), 0.f);
 
-    this->params.resize(3);
+    this->params.resize(6);
     this->params[0].Resize(1, 1, d_input, 4*d_mem, true); // w
     this->params[1].Resize(1, 1, d_mem,   4*d_mem, true); // u
-    this->params[2].Resize(1, 1, 1,       4*d_mem, true); // b
+
+    this->params[2].Resize(1, 1, d_mem,   d_mem, true); // t_i
+    this->params[3].Resize(1, 1, d_mem,   d_mem, true); // t_f
+    this->params[4].Resize(1, 1, d_mem,   d_mem, true); // t_o
+
+    this->params[5].Resize(1, 1, 1,       4*d_mem, true); // b
     
     std::map<std::string, SettingV> &w_setting = *setting["w_filler"].mVal();
     std::map<std::string, SettingV> &u_setting = *setting["u_filler"].mVal();
+    std::map<std::string, SettingV> &t_setting = *setting["t_filler"].mVal();
     std::map<std::string, SettingV> &b_setting = *setting["b_filler"].mVal();
     this->params[0].initializer_ = 
         initializer::CreateInitializer<xpu, 4>(w_setting["init_type"].iVal(), w_setting, this->prnd_);
     this->params[1].initializer_ = 
         initializer::CreateInitializer<xpu, 4>(u_setting["init_type"].iVal(), u_setting, this->prnd_);
     this->params[2].initializer_ = 
+        initializer::CreateInitializer<xpu, 4>(b_setting["init_type"].iVal(), t_setting, this->prnd_);
+    this->params[3].initializer_ = 
+        initializer::CreateInitializer<xpu, 4>(b_setting["init_type"].iVal(), t_setting, this->prnd_);
+    this->params[4].initializer_ = 
+        initializer::CreateInitializer<xpu, 4>(b_setting["init_type"].iVal(), t_setting, this->prnd_);
+    this->params[5].initializer_ = 
         initializer::CreateInitializer<xpu, 4>(b_setting["init_type"].iVal(), b_setting, this->prnd_);
     this->params[0].Init();
     this->params[1].Init();
     this->params[2].Init();
+    this->params[3].Init();
+    this->params[4].Init();
+    this->params[5].Init();
     if (f_gate_bias_init != 0.f) {
         init_f_gate_bias(); // this must be after init()
     }
@@ -111,6 +126,7 @@ class LstmLayer : public Layer<xpu> {
     
     std::map<std::string, SettingV> &w_updater = *setting["w_updater"].mVal();
     std::map<std::string, SettingV> &u_updater = *setting["u_updater"].mVal();
+    std::map<std::string, SettingV> &t_updater = *setting["t_updater"].mVal();
     std::map<std::string, SettingV> &b_updater = *setting["b_updater"].mVal();
 
     this->params[0].updater_ = 
@@ -118,18 +134,24 @@ class LstmLayer : public Layer<xpu> {
     this->params[1].updater_ = 
         updater::CreateUpdater<xpu, 4>(u_updater["updater_type"].iVal(), u_updater, this->prnd_);
     this->params[2].updater_ = 
+        updater::CreateUpdater<xpu, 4>(u_updater["updater_type"].iVal(), t_updater, this->prnd_);
+    this->params[3].updater_ = 
+        updater::CreateUpdater<xpu, 4>(u_updater["updater_type"].iVal(), t_updater, this->prnd_);
+    this->params[4].updater_ = 
+        updater::CreateUpdater<xpu, 4>(u_updater["updater_type"].iVal(), t_updater, this->prnd_);
+    this->params[5].updater_ = 
         updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].iVal(), b_updater, this->prnd_);
   }
 
   // if want to capture long term dependency, should init as a positive value
   void init_f_gate_bias() {
-    Tensor1D bias_data = this->params[2].data_d1();
+    Tensor1D bias_data = this->params[5].data_d1();
     Tensor1D f_bias = Tensor1D(bias_data.dptr_ + 1*d_mem, mshadow::Shape1(d_mem));
     f_bias = f_gate_bias_init;
   }
 
   void init_o_gate_bias() {
-    Tensor1D bias_data = this->params[2].data_d1();
+    Tensor1D bias_data = this->params[5].data_d1();
     Tensor1D o_bias = Tensor1D(bias_data.dptr_ + 2*d_mem, mshadow::Shape1(d_mem));
     o_bias = o_gate_bias_init;
   }
@@ -138,8 +160,8 @@ class LstmLayer : public Layer<xpu> {
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top,
 					   bool show_info = false) {
-    utils::Check(bottom.size() == BottomNodeNum(), "LstmLayer:bottom size problem."); 
-    utils::Check(top.size() == TopNodeNum(), "LstmLayer:top size problem.");
+    utils::Check(bottom.size() == BottomNodeNum(), "LstmPeepholeLayer:bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(), "LstmPeepholeLayer:top size problem.");
       //utils::ShowMemoryUse();
     
     mshadow::Shape<4> shape_in  = bottom[0]->data.shape_;
@@ -157,10 +179,10 @@ class LstmLayer : public Layer<xpu> {
     g_er.Resize(shape_gate, 0.f);
       //utils::ShowMemoryUse();
 
-	if (show_info) {
-	  bottom[0]->PrintShape("bottom0");
-	  top[0]->PrintShape("top0");
-	}
+    if (show_info) {
+      bottom[0]->PrintShape("bottom0");
+      top[0]->PrintShape("top0");
+    }
   }
 
   virtual void CheckReshape(const std::vector<Node<xpu>*> &bottom,
@@ -186,12 +208,24 @@ class LstmLayer : public Layer<xpu> {
   void checkNanParams() {
       Tensor2D w_data = this->params[0].data[0][0];
       Tensor2D u_data = this->params[1].data[0][0];
+      Tensor2D t_i_data = this->params[2].data[0][0];
+      Tensor2D t_f_data = this->params[3].data[0][0];
+      Tensor2D t_o_data = this->params[4].data[0][0];
       Tensor2D w_diff = this->params[0].diff[0][0];
       Tensor2D u_diff = this->params[1].diff[0][0];
+      Tensor2D t_i_diff = this->params[2].diff[0][0];
+      Tensor2D t_f_diff = this->params[3].diff[0][0];
+      Tensor2D t_o_diff = this->params[4].diff[0][0];
       checkNan(w_data.dptr_, w_data.size(0) * w_data.size(1));
       checkNan(u_data.dptr_, u_data.size(0) * u_data.size(1));
+      checkNan(t_i_data.dptr_, t_i_data.size(0) * t_i_data.size(1));
+      checkNan(t_f_data.dptr_, t_f_data.size(0) * t_f_data.size(1));
+      checkNan(t_o_data.dptr_, t_o_data.size(0) * t_o_data.size(1));
       checkNan(w_diff.dptr_, w_diff.size(0) * w_diff.size(1));
       checkNan(u_diff.dptr_, u_diff.size(0) * u_diff.size(1));
+      checkNan(t_i_diff.dptr_, t_i_diff.size(0) * t_i_diff.size(1));
+      checkNan(t_f_diff.dptr_, t_f_diff.size(0) * t_f_diff.size(1));
+      checkNan(t_o_diff.dptr_, t_o_diff.size(0) * t_o_diff.size(1));
   }
 
   virtual void ForwardOneStep(Tensor2D pre_c, 
@@ -202,7 +236,10 @@ class LstmLayer : public Layer<xpu> {
                               Tensor2D cur_h) {
       Tensor2D w_data = this->params[0].data[0][0];
       Tensor2D u_data = this->params[1].data[0][0];
-      Tensor2D b_data = this->params[2].data[0][0];
+      Tensor2D t_i_data = this->params[2].data[0][0];
+      Tensor2D t_f_data = this->params[3].data[0][0];
+      Tensor2D t_o_data = this->params[4].data[0][0];
+      Tensor2D b_data = this->params[5].data[0][0];
 
       Tensor2D i, f, o, cc;
       cur_g = dot(x, w_data);
@@ -211,12 +248,16 @@ class LstmLayer : public Layer<xpu> {
         cur_g += b_data;
       }
       SplitGate(cur_g, i, f, o, cc);
+      i += dot( pre_c, t_i_data);
       i = mshadow::expr::F<op::sigmoid>(i); // logi
+      f += dot( pre_c, t_f_data);
       f = mshadow::expr::F<op::sigmoid>(f); // logi
-      o = mshadow::expr::F<op::sigmoid>(o); // logi
       cc= mshadow::expr::F<op::tanh>(cc);   // tanh 
 
       cur_c = f * pre_c + i * cc;
+
+      o += dot( cur_c, t_o_data);
+      o = mshadow::expr::F<op::sigmoid>(o); // logi
       if (!no_out_tanh) {
         cur_h = o * mshadow::expr::F<op::tanh>(cur_c); // tanh
       } else {
@@ -305,7 +346,7 @@ class LstmLayer : public Layer<xpu> {
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
         int len = bottom[0]->length[batch_idx][seq_idx];
-        utils::Assert(len >= 0, "LstmLayer: sequence length error.");
+        utils::Assert(len >= 0, "LstmPeepholeLayer: sequence length error.");
         if (!reverse) {
           ForwardLeft2Right(bottom_data[batch_idx][seq_idx].Slice(0,len), 
                             g[batch_idx][seq_idx].Slice(0,len), 
@@ -326,7 +367,7 @@ class LstmLayer : public Layer<xpu> {
 
   // too tricky, may bring errors
   void SplitGate(Tensor2D g, Tensor2D &i, Tensor2D &f, Tensor2D &o, Tensor2D &cc) {
-    utils::Check(g.size(0) == 1, "LstmLayer: gate problem."); 
+    utils::Check(g.size(0) == 1, "LstmPeepholeLayer: gate problem."); 
     i = Tensor2D(g.dptr_, mshadow::Shape2(1, d_mem));
     f = Tensor2D(g.dptr_ + 1 * d_mem, mshadow::Shape2(1, d_mem));
     o = Tensor2D(g.dptr_ + 2 * d_mem, mshadow::Shape2(1, d_mem));
@@ -359,9 +400,15 @@ class LstmLayer : public Layer<xpu> {
 
     Tensor2D w_data = this->params[0].data[0][0];
     Tensor2D u_data = this->params[1].data[0][0];
+    Tensor2D t_i_data = this->params[2].data[0][0];
+    Tensor2D t_f_data = this->params[3].data[0][0];
+    Tensor2D t_o_data = this->params[4].data[0][0];
     Tensor2D w_er = this->params[0].diff[0][0];
     Tensor2D u_er = this->params[1].diff[0][0];
-    Tensor2D b_er = this->params[2].diff[0][0];
+    Tensor2D t_i_er = this->params[2].diff[0][0];
+    Tensor2D t_f_er = this->params[3].diff[0][0];
+    Tensor2D t_o_er = this->params[4].diff[0][0];
+    Tensor2D b_er = this->params[5].diff[0][0];
 
     // gradient normalization by norm 2
     float n2 = norm2(cur_h_er);
@@ -384,10 +431,15 @@ class LstmLayer : public Layer<xpu> {
       cur_c_er += cur_h_er * o;
     }
 
+    cur_c_er += dot(o_er, t_o_data.T()); // o_er is new calculate
+
     i_er = mshadow::expr::F<op::sigmoid_grad>(i) * (cur_c_er * cc);    // logi
     cc_er = mshadow::expr::F<op::tanh_grad>(cc) * (cur_c_er * i);      // tanh
-    pre_c_er = cur_c_er * f;
     f_er = mshadow::expr::F<op::sigmoid_grad>(f) * (cur_c_er * pre_c); // logi
+
+    pre_c_er = cur_c_er * f;
+    pre_c_er += dot(i_er, t_i_data.T());
+    pre_c_er += dot(f_er, t_f_data.T());
 
     pre_h_er += dot(cur_g_er, u_data.T());
     x_er += dot(cur_g_er, w_data.T());
@@ -398,6 +450,9 @@ class LstmLayer : public Layer<xpu> {
     }
     w_er += dot(x.T(), cur_g_er); 
     u_er += dot(pre_h.T(), cur_g_er);
+    t_i_er += dot(pre_c.T(), i_er);
+    t_f_er += dot(pre_c.T(), f_er);
+    t_o_er += dot(cur_c.T(), o_er);
   }
 
   void BackpropForLeft2RightLstm(Tensor2D top_data, Tensor2D top_diff, 
@@ -482,7 +537,7 @@ class LstmLayer : public Layer<xpu> {
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
         int len = bottom[0]->length[batch_idx][seq_idx];
-        utils::Assert(len >= 0, "LstmLayer: sequence length error.");
+        utils::Assert(len >= 0, "LstmPeepholeLayer: sequence length error.");
         if (!reverse) {
             BackpropForLeft2RightLstm(top_data[batch_idx][seq_idx].Slice(0,len), 
                                       top_diff[batch_idx][seq_idx].Slice(0,len), 
@@ -507,11 +562,17 @@ class LstmLayer : public Layer<xpu> {
     this->params[0].CutOffGradient(grad_cut_off);
     this->params[1].CutOffGradient(grad_cut_off);
     this->params[2].CutOffGradient(grad_cut_off);
+    this->params[3].CutOffGradient(grad_cut_off);
+    this->params[4].CutOffGradient(grad_cut_off);
+    this->params[5].CutOffGradient(grad_cut_off);
 
 #if DEBUG
     this->params[0].PrintStatistic("LSTM W");
     this->params[1].PrintStatistic("LSTM U");
-    this->params[2].PrintStatistic("LSTM b");
+    this->params[2].PrintStatistic("LSTM T-i");
+    this->params[3].PrintStatistic("LSTM T-f");
+    this->params[4].PrintStatistic("LSTM T-o");
+    this->params[5].PrintStatistic("LSTM b");
     checkNanParams();
 #endif
   }
@@ -522,14 +583,14 @@ class LstmLayer : public Layer<xpu> {
     int s2 = data_root["shape"][2].asInt();
     int s3 = data_root["shape"][3].asInt();
     utils::Check(t.size(0) == s0 && t.size(1) == s1 && t.size(2) == s2 && t.size(3) == s3, 
-                 "LstmLayer: load tensor error.");
+                 "LstmPeepholeLayer: load tensor error.");
     int size = s0*s1*s2*s3;
     for (int i = 0; i < size; ++i) {
       t.dptr_[i] = data_root["value"][i].asFloat();
     }
   }
   void LoadParam() {
-    utils::Printf("LstmLayer: load params...\n");
+    utils::Printf("LstmPeepholeLayer: load params...\n");
     Json::Value param_root;
     ifstream ifs(param_file.c_str());
     ifs >> param_root;

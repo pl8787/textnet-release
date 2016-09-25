@@ -130,6 +130,9 @@
 #include "./loss/activation_norm_loss_layer-inl.hpp"
 #include "./common/match_histogram_layer-inl.hpp"
 #include "./common/sort_axis_layer-inl.hpp"
+#include "./common/lstm_peephole_layer-inl.hpp"
+#include "./common/lstm_skipconnect_layer-inl.hpp"
+#include "./common/read_feature_layer-inl.hpp"
 
 namespace textnet {
 namespace layer {
@@ -266,6 +269,9 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kXeLU: return new XeLULayer<xpu>(type);
     case kELU: return new ELULayer<xpu>(type);
     case kAppendFeature: return new AppendFeatureLayer<xpu>(type);
+    case kReadFeature: return new ReadFeatureLayer<xpu>(type);
+    case kLstmPeephole: return new LstmPeepholeLayer<xpu>(type);
+    case kLstmSkipconnect: return new LstmSkipconnectLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }
