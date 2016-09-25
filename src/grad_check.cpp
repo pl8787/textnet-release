@@ -3873,7 +3873,7 @@ void TestLstmPeepholeLayer(mshadow::Random<cpu>* prnd) {
     setting["d_input"] = SettingV(5);
     setting["d_mem"] = SettingV(3);
     setting["no_out_tanh"] = SettingV(false);
-    setting["no_bias"] = SettingV(true);
+    setting["no_bias"] = SettingV(false);
     setting["reverse"] = SettingV(false);
     setting["grad_cut_off"] = SettingV(10000.f);
     setting["grad_norm2"] = SettingV(10000.f);
@@ -5902,8 +5902,8 @@ int main(int argc, char *argv[]) {
   // TestCrossLayer(&rnd);
   // TestDropoutLayer(&rnd);
   // TestLstmLayer(&rnd);
-  // TestLstmPeepholeLayer(&rnd);
-  TestLstmSkipconnectLayer(&rnd);
+   TestLstmPeepholeLayer(&rnd);
+  // TestLstmSkipconnectLayer(&rnd);
   //TestBLstmLayer(&rnd);
   // TestLstmAutoencoderLayer(&rnd);
   // TestRnnLayer(&rnd);

@@ -20,7 +20,7 @@ class LstmPeepholeLayer : public Layer<xpu> {
   
   virtual int BottomNodeNum() { return 1; }
   virtual int TopNodeNum() { return 1; }
-  virtual int ParamNodeNum() { return 3; }
+  virtual int ParamNodeNum() { return 6; }
 
   typedef mshadow::Tensor<xpu, 1> Tensor1D;
   typedef mshadow::Tensor<xpu, 2> Tensor2D;
@@ -44,9 +44,11 @@ class LstmPeepholeLayer : public Layer<xpu> {
     //this->defaults["d_input"] = SettingV();
     this->defaults["w_filler"] = SettingV();
     this->defaults["u_filler"] = SettingV();
+    this->defaults["t_filler"] = SettingV();
     this->defaults["b_filler"] = SettingV();
     this->defaults["w_updater"] = SettingV();
     this->defaults["u_updater"] = SettingV();
+    this->defaults["t_updater"] = SettingV();
     this->defaults["b_updater"] = SettingV();
     this->defaults["reverse"] = SettingV();
     this->defaults["grad_cut_off"] = SettingV();
@@ -598,6 +600,9 @@ class LstmPeepholeLayer : public Layer<xpu> {
     LoadTensor(param_root[0], this->params[0].data);
     LoadTensor(param_root[1], this->params[1].data);
     LoadTensor(param_root[2], this->params[2].data);
+    LoadTensor(param_root[3], this->params[3].data);
+    LoadTensor(param_root[4], this->params[4].data);
+    LoadTensor(param_root[5], this->params[5].data);
   }
 
  public:
