@@ -38,6 +38,7 @@ class GruD2Layer : public Layer<xpu> {
     // default value, just set the value you want
     this->defaults["no_bias"] = SettingV(false);
     this->defaults["is_use_reset_gate"] = SettingV(true);
+    this->defaults["reverse_y"] = SettingV(false);
     // this->defaults["no_out_tanh"] = SettingV(false);
     // this->defaults["param_file"] = SettingV("");
     // this->defaults["o_gate_bias_init"] = SettingV(0.f);
@@ -58,7 +59,6 @@ class GruD2Layer : public Layer<xpu> {
     this->defaults["w_c_updater"] = SettingV();
     this->defaults["b_c_updater"] = SettingV();
     this->defaults["reverse"] = SettingV();
-    this->defaults["reverse_y"] = SettingV();
     // this->defaults["grad_cut_off"] = SettingV();
     
     Layer<xpu>::Require();
@@ -79,7 +79,7 @@ class GruD2Layer : public Layer<xpu> {
     is_use_reset_gate = setting["is_use_reset_gate"].bVal();
     // no_out_tanh = setting["no_out_tanh"].bVal();
     reverse = setting["reverse"].bVal();
-    reverse_y = setting["reverse_x"].bVal();
+    reverse_y = setting["reverse_y"].bVal();
     is_diag_connection = setting["is_diag_connection"].bVal();
     // grad_norm2 = setting["grad_norm2"].fVal();
     // param_file = setting["param_file"].sVal();

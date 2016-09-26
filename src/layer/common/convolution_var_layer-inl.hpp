@@ -256,7 +256,9 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
     for (index_t i = 0; i < nbatch; ++i) {
       if (dim == 1) {
           top_len[i][0] = (bottom_len[i][0] + pad_y * 2 - kernel_y) / stride_y + 1; // all input channels shoud have the same length
-		  utils::Check(top_len[i][0] > 0, "ConvolutionVarLayer: top_len must positive. i=%d, bottom_len=%f, top_len=%f", i, bottom_len[i][0], top_len[i][0]);
+          if (top_len[i][0] == 0)
+            continue;
+		  utils::Check(top_len[i][0] >= 0, "ConvolutionVarLayer: top_len must positive. i=%d, bottom_len=%f, top_len=%f", i, bottom_len[i][0], top_len[i][0]);
 		  utils::Check(pad_x == 0, "ConvolutionVarLayer: dim=1 pad_x!=0.");
 		  top_len_x = 1;
 		  top_len_y = top_len[i][0];
@@ -310,6 +312,8 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
       if (dim == 1) {
 		  top_len_x = 1;
 		  top_len_y = top_len[i][0];
+          if (top_len[i][0] == 0)
+            continue;
 		  bottom_len_x = kernel_x;
 		  bottom_len_y = bottom_len[i][0];
 	  } else {
