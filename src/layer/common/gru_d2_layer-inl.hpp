@@ -38,6 +38,7 @@ class GruD2Layer : public Layer<xpu> {
     // default value, just set the value you want
     this->defaults["no_bias"] = SettingV(false);
     this->defaults["is_use_reset_gate"] = SettingV(true);
+    this->defaults["reverse_x"] = SettingV(false);
     this->defaults["reverse_y"] = SettingV(false);
     // this->defaults["no_out_tanh"] = SettingV(false);
     // this->defaults["param_file"] = SettingV("");
@@ -79,6 +80,7 @@ class GruD2Layer : public Layer<xpu> {
     is_use_reset_gate = setting["is_use_reset_gate"].bVal();
     // no_out_tanh = setting["no_out_tanh"].bVal();
     reverse = setting["reverse"].bVal();
+    reverse_x = setting["reverse_x"].bVal();
     reverse_y = setting["reverse_y"].bVal();
     is_diag_connection = setting["is_diag_connection"].bVal();
     // grad_norm2 = setting["grad_norm2"].fVal();
@@ -617,6 +619,42 @@ class GruD2Layer : public Layer<xpu> {
     }
   }
 
+  void ForwardLeftBottom2RightTop(Tensor3D x, int x_len, int y_len, 
+                                  Tensor3D g, Tensor3D reset_h,
+                                  Tensor3D hi, Tensor3D h) {
+    utils::Check(x_len >= 0 && y_len >= 0 && x_len <= x.size(0) && y_len <= x.size(1), "GruD2Layer: input size error. x_len: %d, y_len: %d, x.size: %d x %d", x_len, y_len, x.size(0), x.size(1));
+    Tensor2D pre_h_l, pre_h_m, pre_h_t;
+    // not need any padding, begin h and c are set to 0
+    for (int row_idx = x_len-1; row_idx >= 0; --row_idx) {
+      for (index_t col_idx = 0; col_idx < y_len; ++col_idx) {
+        if (row_idx == x_len-1) {
+          pre_h_t = begin_h;
+        } else {
+          pre_h_t = h[row_idx+1].Slice(col_idx, col_idx+1);
+        }
+        if (col_idx == 0) {
+          pre_h_l = begin_h;
+        } else {
+          pre_h_l = h[row_idx].Slice(col_idx-1, col_idx);
+        }
+        if (row_idx == x_len-1 || col_idx == 0) {
+          pre_h_m = begin_h;
+        } else {
+          pre_h_m = h[row_idx+1].Slice(col_idx-1, col_idx);
+        }
+
+        ForwardOneStep(pre_h_l, 
+                       pre_h_m,
+                       pre_h_t,
+                       x[row_idx].Slice(col_idx, col_idx+1),
+                       g[row_idx].Slice(col_idx, col_idx+1),
+                       reset_h[row_idx].Slice(col_idx, col_idx+1),
+                       hi[row_idx].Slice(col_idx, col_idx+1),
+                       h[row_idx].Slice(col_idx, col_idx+1));
+      }
+    }
+  }
+
   void ForwardRightTop2LeftBottom(Tensor3D x, int x_len, int y_len, 
                                   Tensor3D g, Tensor3D reset_h,
                                   Tensor3D hi, Tensor3D h) {
@@ -672,7 +710,14 @@ class GruD2Layer : public Layer<xpu> {
       int x_len = bottom_len[batch_idx][0];
       int y_len = bottom_len[batch_idx][1];
       utils::Assert(x_len >= 0 && y_len >= 0, "GruD2Layer: sequence length error.");
-      if (reverse_y) {
+      if (reverse_x) {
+        ForwardLeftBottom2RightTop(bottom_data[batch_idx],
+                                   x_len, y_len,
+                                   g[batch_idx], 
+                                   reset_h[batch_idx],
+                                   hi[batch_idx],
+                                   top_data[batch_idx]);
+      } else if (reverse_y) {
         ForwardRightTop2LeftBottom(bottom_data[batch_idx],
                                    x_len, y_len,
                                    g[batch_idx], 
@@ -856,6 +901,67 @@ class GruD2Layer : public Layer<xpu> {
     }
   }
   
+  void BackpropForLeftBottom2RightTopGru(int x_len,        int y_len,
+                                         Tensor3D h,       Tensor3D h_er, 
+                                         Tensor3D hi,      Tensor3D hi_er, 
+                                         Tensor3D reset_h, Tensor3D reset_h_er, 
+                                         Tensor3D g,       Tensor3D g_er, 
+                                         Tensor3D x,       Tensor3D x_er) {
+    Tensor2D cur_x, cur_g, cur_reset_h, cur_hi,  cur_h;
+    Tensor2D cur_x_er, cur_g_er, cur_reset_h_er, cur_hi_er, cur_h_er; 
+    Tensor2D pre_h_l, pre_h_m, pre_h_t;
+    Tensor2D pre_h_l_er, pre_h_m_er, pre_h_t_er;
+    for (index_t row_idx = 0; row_idx < x_len; ++row_idx) {
+      for (int col_idx = y_len-1; col_idx >= 0; --col_idx) {
+        if (row_idx == x_len-1) {
+          pre_h_t = begin_h;
+          pre_h_t_er = begin_h_er;
+        } else {
+          pre_h_t = h[row_idx+1].Slice(col_idx, col_idx+1);
+          pre_h_t_er = h_er[row_idx+1].Slice(col_idx, col_idx+1);
+        }
+        if (col_idx == 0) {
+          pre_h_l = begin_h;
+          pre_h_l_er = begin_h_er;
+        } else {
+          pre_h_l = h[row_idx].Slice(col_idx-1, col_idx);
+          pre_h_l_er = h_er[row_idx].Slice(col_idx-1, col_idx);
+        }
+        if (row_idx == x_len-1 || col_idx == 0) {
+          pre_h_m = begin_h;
+          pre_h_m_er = begin_h_er;
+        } else {
+          pre_h_m = h[row_idx+1].Slice(col_idx-1, col_idx);
+          pre_h_m_er = h_er[row_idx+1].Slice(col_idx-1, col_idx);
+        }
+        cur_x          = x[row_idx].Slice(col_idx, col_idx+1);
+        cur_g          = g[row_idx].Slice(col_idx, col_idx+1);
+        cur_reset_h    = reset_h[row_idx].Slice(col_idx, col_idx+1);
+        cur_hi         = hi[row_idx].Slice(col_idx, col_idx+1);
+        cur_h          = h[row_idx].Slice(col_idx, col_idx+1);
+        cur_x_er       = x_er[row_idx].Slice(col_idx, col_idx+1);
+        cur_g_er       = g_er[row_idx].Slice(col_idx, col_idx+1);
+        cur_reset_h_er = reset_h_er[row_idx].Slice(col_idx, col_idx+1);
+        cur_hi_er      = hi_er[row_idx].Slice(col_idx, col_idx+1);
+        cur_h_er       = h_er[row_idx].Slice(col_idx, col_idx+1);
+        BpOneStep(cur_h_er,
+                  pre_h_l,
+                  pre_h_m,
+                  pre_h_t,
+                  cur_x,
+                  cur_reset_h,
+                  cur_g,
+                  cur_hi,
+                  cur_hi_er,
+                  cur_g_er,
+                  pre_h_l_er,
+                  pre_h_m_er,
+                  pre_h_t_er,
+                  cur_x_er);
+      }
+    }
+  }
+  
   void BackpropForRightTop2LeftBottomGru(int x_len,        int y_len,
                                          Tensor3D h,       Tensor3D h_er, 
                                          Tensor3D hi,      Tensor3D hi_er, 
@@ -934,7 +1040,19 @@ class GruD2Layer : public Layer<xpu> {
     for (index_t batch_idx = 0; batch_idx < x.size(0); ++batch_idx) {
       int x_len = len[batch_idx][0];
       int y_len = len[batch_idx][1];
-      if (reverse_y) {
+      if (reverse_x) {
+        BackpropForLeftBottom2RightTopGru(x_len, y_len,
+                                          h[batch_idx],
+                                          h_er[batch_idx], 
+                                          hi[batch_idx],
+                                          hi_er[batch_idx],
+                                          reset_h[batch_idx], 
+                                          reset_h_er[batch_idx], 
+                                          g[batch_idx],
+                                          g_er[batch_idx],
+                                          x[batch_idx],
+                                          x_er[batch_idx]);
+      } else if (reverse_y) {
         BackpropForRightTop2LeftBottomGru(x_len, y_len,
                                           h[batch_idx],
                                           h_er[batch_idx], 
@@ -992,6 +1110,7 @@ class GruD2Layer : public Layer<xpu> {
   // float max_norm2;
   int d_mem, d_input;
   bool no_bias, reverse, is_use_reset_gate, is_diag_connection; //, no_out_tanh; 
+  bool reverse_x;
   bool reverse_y;
   // float grad_norm2;
   // float o_gate_bias_init;
