@@ -373,6 +373,66 @@ void TestMatchWeightedDotLayer(mshadow::Random<cpu>* prnd) {
   cout << "Check Error." << endl;
   cker->CheckError(layer_match, bottoms, tops);
 }
+void TestMatchWeightedRadialLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Match Weightd Radial Layer." << endl;
+  Node<cpu> bottom1;
+  Node<cpu> bottom2;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+
+  bottoms.push_back(&bottom1);
+  bottoms.push_back(&bottom2);
+  tops.push_back(&top);
+
+  bottom1.Resize(2, 1, 5, 3);
+  bottom2.Resize(2, 1, 5, 3);
+
+  prnd->SampleUniform(&bottom1.data, -1.0, 1.0);
+  prnd->SampleUniform(&bottom2.data, -1.0, 1.0);
+
+  bottom1.length = 5;
+  bottom2.length = 5;
+
+  map<string, SettingV> setting;
+  {
+    map<string, SettingV> &t_filler = *(new map<string, SettingV>());
+      t_filler["init_type"] = SettingV(initializer::kUniform);
+      t_filler["range"] = SettingV(1.f);
+    setting["w_filler"] = SettingV(&t_filler);
+
+      
+    map<string, SettingV> &t_updater = *(new map<string, SettingV>());
+      t_updater["updater_type"] = SettingV(updater::kAdagrad);
+      t_updater["eps"] = SettingV(0.01f);
+      t_updater["batch_size"] = SettingV(1);
+      t_updater["max_iter"] = SettingV(10000);
+      t_updater["lr"] = SettingV(0.1f);
+    setting["w_updater"] = SettingV(&t_updater);
+  }
+
+  // Test Match Layer
+  Layer<cpu> * layer_match = CreateLayer<cpu>(kMatchWeightedRadial);
+  layer_match->PropAll();
+  layer_match->SetupLayer(setting, bottoms, tops, prnd);
+  layer_match->Reshape(bottoms, tops);
+
+  layer_match->Forward(bottoms, tops);
+  PrintTensor("bottom1", bottom1.data);
+  PrintTensor("bottom2", bottom2.data);
+  PrintTensor("top", top.data);
+
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.001f);
+  cker->SetupChecker(setting_checker, prnd);
+
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_match, bottoms, tops);
+}
 
 void TestMatchTensorLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Match Tensor Layer." << endl;
@@ -5902,7 +5962,7 @@ int main(int argc, char *argv[]) {
   // TestCrossLayer(&rnd);
   // TestDropoutLayer(&rnd);
   // TestLstmLayer(&rnd);
-   TestLstmPeepholeLayer(&rnd);
+  // TestLstmPeepholeLayer(&rnd);
   // TestLstmSkipconnectLayer(&rnd);
   //TestBLstmLayer(&rnd);
   // TestLstmAutoencoderLayer(&rnd);
@@ -5926,7 +5986,8 @@ int main(int argc, char *argv[]) {
   // TestGateWholePoolingD2Layer(&rnd);
   // TestGateDynamicPoolingD2Layer(&rnd);
   // TestSelectSubRepByTokenLayer(&rnd);
-  // TestMatchWeightedDotLayer(&rnd);
+  TestMatchWeightedDotLayer(&rnd);
+  // TestMatchWeightedRadialLayer(&rnd);
   // TestGruLayer(&rnd);
   // TestMatchMultiLayer(&rnd);
   // TestDynamicKMaxPoolingLayer(&rnd);

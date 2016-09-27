@@ -26,6 +26,7 @@
 #include "./common/match_tensor_layer-inl.hpp"
 #include "./common/match_tensor_fact_layer-inl.hpp"
 #include "./common/match_weighted_dot_layer-inl.hpp"
+#include "./common/match_weighted_radial_layer-inl.hpp"
 #include "./common/match_multi_layer-inl.hpp"
 #include "./common/batch_combine_layer-inl.hpp"
 #include "./common/batch_select_layer-inl.hpp"
@@ -272,6 +273,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kReadFeature: return new ReadFeatureLayer<xpu>(type);
     case kLstmPeephole: return new LstmPeepholeLayer<xpu>(type);
     case kLstmSkipconnect: return new LstmSkipconnectLayer<xpu>(type);
+    case kMatchWeightedRadial: return new MatchWeightedRadialLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }

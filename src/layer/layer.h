@@ -131,6 +131,7 @@ const int kBGruD2 = 20005;
 const int kLstmPeephole = 20006;
 const int kReadFeature = 20007;
 const int kLstmSkipconnect = 20008;
+const int kMatchWeightedRadial = 20009;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;
