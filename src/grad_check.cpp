@@ -4569,15 +4569,18 @@ void TestWholePoolingLayer(mshadow::Random<cpu>* prnd) {
   bottom.Resize(Shape4(2,1,6,3), true);
   prnd->SampleUniform(&bottom.data, -0.1, 0.1);
 
-  bottom.data[0][0].Slice(0, 2) = NAN; // padding
-  bottom.data[0][0].Slice(4, 6) = NAN; // padding
-  bottom.data[1][0].Slice(0, 1) = NAN; // padding
-  bottom.data[1][0].Slice(4, 6) = NAN; // padding
+  //bottom.data[0][0].Slice(0, 2) = NAN; // padding
+  //bottom.data[0][0].Slice(4, 6) = NAN; // padding
+  //bottom.data[1][0].Slice(0, 1) = NAN; // padding
+  //bottom.data[1][0].Slice(4, 6) = NAN; // padding
+  bottom.length[0][0] = 6;
+  bottom.length[1][0] = 6;
   
   map<string, SettingV> setting;
   {
-    setting["pool_type"] = SettingV("last");
-    setting["pad_value"] = SettingV((float)(NAN));
+    setting["pool_type"] = SettingV("maxk");
+    setting["k"] = SettingV(2);
+    //setting["pad_value"] = SettingV((float)(NAN));
   }
 
   
@@ -4587,29 +4590,29 @@ void TestWholePoolingLayer(mshadow::Random<cpu>* prnd) {
   layer->SetupLayer(setting, bottoms, tops, prnd);
   layer->Reshape(bottoms, tops);
   prnd->SampleUniform(&top.diff, -0.1, 0.1);
-  
-  using namespace checker;
-  // Checker<cpu> * cker = CreateChecker<cpu>();
+  //
+  //using namespace checker;
+  //Checker<cpu> * cker = CreateChecker<cpu>();
 
-  // map<string, SettingV> setting_checker;
-  // setting_checker["range_min"] = SettingV(-0.001f);
-  // setting_checker["range_max"] = SettingV(0.001f);
-  // setting_checker["delta"] = SettingV(0.0001f);
-  // cker->SetupChecker(setting_checker, prnd);
+  //map<string, SettingV> setting_checker;
+  //setting_checker["range_min"] = SettingV(-0.001f);
+  //setting_checker["range_max"] = SettingV(0.001f);
+  //setting_checker["delta"] = SettingV(0.0001f);
+  //cker->SetupChecker(setting_checker, prnd);
 
-  // cout << "Check Error." << endl;
-  // cker->CheckError(layer, bottoms, tops);
+  //cout << "Check Error." << endl;
+  //cker->CheckError(layer, bottoms, tops);
 
   // cout << "Check Grad." << endl;
   // cker->CheckGrad(layer, bottoms, tops);
 
+  PrintTensor("b_data", bottoms[0]->data);
 
   layer->Forward(bottoms, tops);
-  layer->Backprop(bottoms, tops);
-  PrintTensor("b_data", bottoms[0]->data);
   PrintTensor("t_data", tops[0]->data);
-  PrintTensor("b_diff", bottoms[0]->diff);
   PrintTensor("t_diff", tops[0]->diff);
+  layer->Backprop(bottoms, tops);
+  PrintTensor("b_diff", bottoms[0]->diff);
   cout << "Done." << endl;
 }
 
@@ -5971,7 +5974,7 @@ int main(int argc, char *argv[]) {
   // TestTensorLayer(&rnd);
   // TestConvolutionalLstmLayer(&rnd);
   // TestSequenceDimReductionLayer(&rnd);
-  // TestWholePoolingLayer(&rnd);
+  TestWholePoolingLayer(&rnd);
   // TestConcatLayer(&rnd);
   // TestConvResultTransformLayer(&rnd);
   // TestConvolutionLayer(&rnd);
@@ -5986,7 +5989,7 @@ int main(int argc, char *argv[]) {
   // TestGateWholePoolingD2Layer(&rnd);
   // TestGateDynamicPoolingD2Layer(&rnd);
   // TestSelectSubRepByTokenLayer(&rnd);
-  TestMatchWeightedDotLayer(&rnd);
+  // TestMatchWeightedDotLayer(&rnd);
   // TestMatchWeightedRadialLayer(&rnd);
   // TestGruLayer(&rnd);
   // TestMatchMultiLayer(&rnd);
