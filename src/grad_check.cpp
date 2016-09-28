@@ -4574,12 +4574,12 @@ void TestWholePoolingLayer(mshadow::Random<cpu>* prnd) {
   //bottom.data[1][0].Slice(0, 1) = NAN; // padding
   //bottom.data[1][0].Slice(4, 6) = NAN; // padding
   bottom.length[0][0] = 6;
-  bottom.length[1][0] = 6;
+  bottom.length[1][0] = 2;
   
   map<string, SettingV> setting;
   {
     setting["pool_type"] = SettingV("maxk");
-    setting["k"] = SettingV(2);
+    setting["k"] = SettingV(3);
     //setting["pad_value"] = SettingV((float)(NAN));
   }
 

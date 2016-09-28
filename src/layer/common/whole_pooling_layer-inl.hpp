@@ -21,6 +21,7 @@ class WholePoolingLayer : public Layer<xpu>{
   virtual void Require() {
     // default value, just set the value you want
     this->defaults["pool_type"] = SettingV("max"); //max, maxk, first, last, ave, sum
+    this->defaults["pool_pad"] = SettingV(0.f); //max, maxk, first, last, ave, sum
     this->defaults["k"] = SettingV(1);
 
     // require value, set to SettingV(),
@@ -36,6 +37,7 @@ class WholePoolingLayer : public Layer<xpu>{
                           mshadow::Random<xpu> *prnd) {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
     pool_type = setting["pool_type"].sVal();
+    pool_pad = setting["pool_pad"].fVal();
     maxk      = setting["k"].iVal();
   }
   
@@ -47,7 +49,7 @@ class WholePoolingLayer : public Layer<xpu>{
 
     int pool_k = 1;
     if(pool_type == "maxk") { // pool max-k for every row ( row*col)=>( k*col)
-      utils::Check(maxk > 0 && maxk <= bottom[0]->data.shape_[2], "WholePoolingLayer:maxk pool with k error.");
+      utils::Check(maxk > 0 , "WholePoolingLayer:maxk pool with k error.");
       pool_k = maxk;
     }
     mshadow::Shape<4> shape_in = bottom[0]->data.shape_;
@@ -122,7 +124,6 @@ class WholePoolingLayer : public Layer<xpu>{
   }
   void wholeLastPooling(Tensor2D in, Tensor2D out) {
     utils::Check(in.size(1) == out.size(1) && out.size(0) == 1, "WholePoolingLayer:pooling io size error");
-    printf("wholelastpooling\n");
     out = mshadow::expr::F<op::identity>(in.Slice(in.size(0)-1,in.size(0)));
   }
   void wholeUnLastPooling(Tensor2D in, Tensor2D out) {
@@ -152,7 +153,7 @@ class WholePoolingLayer : public Layer<xpu>{
     }
   }
   void wholeMaxKPooling(Tensor2D in, Tensor2DInt pos, Tensor2D out) {
-    utils::Check(in.size(1) == out.size(1) && out.size(0) == maxk && in.size(0) >= maxk, "WholePoolingLayer:pooling io size error");
+    utils::Check(in.size(1) == out.size(1) && out.size(0) == maxk, "WholePoolingLayer:pooling io size error");
     utils::Check(in.size(1) == pos.size(1) && pos.size(0) == maxk, "WholePoolingLayer:pooling io size error");
     out = -1000000;
     for (index_t col = 0; col < in.size(1); ++col) {
@@ -161,9 +162,14 @@ class WholePoolingLayer : public Layer<xpu>{
         all.push_back(ValidIdx(in[row][col], row, col));
       }
       std::sort(all.begin(), all.end(), CmpVal());
-      for(int i = 0 ; i < maxk; ++ i){
-        out[i][col] = all[i].val;
-        pos[i][col] = int(all[i].x);
+      int iindex = 0;
+      for(iindex = 0 ; iindex < maxk && iindex < in.size(0); ++ iindex){
+        out[iindex][col] = all[iindex].val;
+        pos[iindex][col] = int(all[iindex].x);
+      }
+      for( ; iindex < maxk; ++ iindex){
+        out[iindex][col] = pool_pad;
+        //pos[iindex][col] = -1;
       }
     }
   }
@@ -171,7 +177,7 @@ class WholePoolingLayer : public Layer<xpu>{
     utils::Check(in.size(1) == out.size(1) && in.size(0) == maxk, "WholePoolingLayer:pooling io size error");
     utils::Check(in.size(1) == pos.size(1) && pos.size(0) == maxk, "WholePoolingLayer:pooling io size error");
     for (index_t col = 0; col < in.size(1); ++col) {
-      for(int i = 0 ; i < maxk; ++ i){
+      for(int i = 0 ; i < maxk && i < out.size(0); ++ i){
         int row = pos[i][col];
         out[row][col] += in[i][col];
       }
@@ -198,7 +204,6 @@ class WholePoolingLayer : public Layer<xpu>{
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
         int begin = 0, end = bottom_len[batch_idx][seq_idx]; 
-        printf("batch_idx:%d, seq_idx:%d, begin:%d, end:%d\n", batch_idx, seq_idx, begin, end);
 		    top_len[batch_idx][seq_idx] = 1;
         utils::Assert(end >= 0 && begin <= end, "WholePoolingLayer: sequence length error.");
 
@@ -288,6 +293,7 @@ class WholePoolingLayer : public Layer<xpu>{
   }
  protected:
   int maxk;
+  float pool_pad;
   mshadow::TensorContainer<xpu, 4, int> pos;
   std::string pool_type;
 };
