@@ -341,6 +341,7 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
         //int pos_doc_window_num = int((pos_doc_len * 2 - 2 + window_size) / window_size);
         int pos_doc_window_num = int((pos_doc_len  - 1 + window_size) / window_size);
         int neg_doc_len = data2_set[rel_set[neg_idx][1]].size();
+        //int neg_doc_window_num = int((neg_doc_len * 2 - 2 + window_size) / window_size);
         int neg_doc_window_num = int((neg_doc_len  - 1 + window_size) / window_size);
         wbatch_size += (pos_doc_window_num + neg_doc_window_num);
         top[2]->data[2*i][0][0][0] = 1;
