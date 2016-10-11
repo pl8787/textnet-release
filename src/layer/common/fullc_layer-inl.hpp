@@ -48,6 +48,7 @@ class FullConnectLayer : public Layer<xpu> {
     num_hidden = setting["num_hidden"].iVal();
     no_bias = setting["no_bias"].bVal();
     keep_length = setting["keep_length"].bVal();
+    this->param_file = setting["param_file"].sVal();
 
     mshadow::Tensor<xpu, 2> bottom_data = bottom[0]->data_d2();
     num_input = bottom_data.size(1);
@@ -75,7 +76,9 @@ class FullConnectLayer : public Layer<xpu> {
     this->params[1].updater_ = 
         updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].iVal(),
           b_updater, this->prnd_);
-    
+    if (!this->param_file.empty()) {
+      this->LoadParams();
+    }
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -159,6 +162,7 @@ class FullConnectLayer : public Layer<xpu> {
   bool no_bias;
   bool keep_length;
   int nbatch;
+  //string param_file;
 
 };
 }  // namespace layer

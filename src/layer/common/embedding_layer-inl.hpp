@@ -50,6 +50,7 @@ class EmbeddingLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(),
                   "EmbeddingLayer:top size problem.");
                   
+    this->param_file = setting["param_file"].sVal();
     embedding_file = setting["embedding_file"].sVal();
     update_indication_file = setting["update_indication_file"].sVal();
     feat_size = setting["feat_size"].iVal();
@@ -91,6 +92,9 @@ class EmbeddingLayer : public Layer<xpu>{
 
     if(!update_indication_file.empty()) {
       ReadUpdateIndicationFile();
+    }
+    if (!this->param_file.empty()) {
+      this->LoadParams();
     }
 
   }

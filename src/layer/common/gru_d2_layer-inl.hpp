@@ -39,7 +39,6 @@ class GruD2Layer : public Layer<xpu> {
     this->defaults["no_bias"] = SettingV(false);
     this->defaults["is_use_reset_gate"] = SettingV(true);
     // this->defaults["no_out_tanh"] = SettingV(false);
-    // this->defaults["param_file"] = SettingV("");
     // this->defaults["o_gate_bias_init"] = SettingV(0.f);
     // this->defaults["f_gate_bias_init"] = SettingV(0.f);
     
@@ -80,7 +79,7 @@ class GruD2Layer : public Layer<xpu> {
     reverse = setting["reverse"].bVal();
     is_diag_connection = setting["is_diag_connection"].bVal();
     // grad_norm2 = setting["grad_norm2"].fVal();
-    // param_file = setting["param_file"].sVal();
+    this->param_file = setting["param_file"].sVal();
     // o_gate_bias_init = setting["o_gate_bias_init"].fVal();
     // f_gate_bias_init = setting["f_gate_bias_init"].fVal();
     // grad_cut_off = setting["grad_cut_off"].fVal();
@@ -118,9 +117,9 @@ class GruD2Layer : public Layer<xpu> {
     //     init_o_gate_bias(); // this must be after init()
     // }
 
-    // if (!param_file.empty()) {
-    //   LoadParam();
-    // }
+    if (!this->param_file.empty()) {
+       this->LoadParams();
+    }
     
     std::map<std::string, SettingV> &w_g_updater = *setting["w_g_updater"].mVal();
     std::map<std::string, SettingV> &b_g_updater = *setting["b_g_updater"].mVal();

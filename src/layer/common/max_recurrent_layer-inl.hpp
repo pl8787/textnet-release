@@ -57,6 +57,7 @@ class MaxRecurrentLayer : public Layer<xpu> {
     utils::Check(bottom.size() == BottomNodeNum(), "MaxRecurrentLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "MaxRecurrentLayer:top size problem.");
                   
+    this->param_file   = setting["param_file"].sVal();
     d_mem   = setting["d_mem"].iVal();
     d_input = bottom[0]->data.size(3);
     no_bias = setting["no_bias"].bVal();
@@ -106,6 +107,9 @@ class MaxRecurrentLayer : public Layer<xpu> {
         updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].iVal(), b_updater, this->prnd_);
     this->params[3].updater_ = 
         updater::CreateUpdater<xpu, 4>(t_updater["updater_type"].iVal(), t_updater, this->prnd_);
+    if (!this->param_file.empty()) {
+      this->LoadParams();
+    }
   }
   
   // bottom should be padded with only one zero on both sides

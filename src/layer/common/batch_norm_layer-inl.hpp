@@ -46,6 +46,7 @@ class BatchNormLayer : public Layer<xpu> {
     utils::Check(top.size() == TopNodeNum(),
                   "BatchNormLayer:top size problem.");
                             
+    this->param_file = setting["param_file"].sVal();
     moving_average_fraction = setting["moving_average_fraction"].fVal();
     eps = setting["eps"].fVal();
     ignore_len = setting["ignore_len"].bVal();
@@ -88,6 +89,9 @@ class BatchNormLayer : public Layer<xpu> {
           b_updater, this->prnd_);
     
     // Ignore setting parameter 2 and 3
+    if (!this->param_file.empty()) {
+      this->LoadParams();
+    }
   }
   
   void PrintParamSample() {

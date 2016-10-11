@@ -31,7 +31,6 @@ class LstmLayer : public Layer<xpu> {
     // default value, just set the value you want
     this->defaults["no_bias"] = SettingV(false);
     this->defaults["no_out_tanh"] = SettingV(false);
-    this->defaults["param_file"] = SettingV("");
     this->defaults["o_gate_bias_init"] = SettingV(0.f);
     this->defaults["f_gate_bias_init"] = SettingV(0.f);
     // this->defaults["reverse"] = SettingV(false);
@@ -63,6 +62,7 @@ class LstmLayer : public Layer<xpu> {
     utils::Check(bottom.size() == BottomNodeNum(), "LstmLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "LstmLayer:top size problem.");
                   
+    this->param_file = setting["param_file"].sVal();
     d_mem   = setting["d_mem"].iVal();
     //d_input   = setting["d_input"].iVal();
     d_input = bottom[0]->data.size(3);
@@ -70,7 +70,6 @@ class LstmLayer : public Layer<xpu> {
     no_out_tanh = setting["no_out_tanh"].bVal();
     reverse = setting["reverse"].bVal();
     grad_norm2 = setting["grad_norm2"].fVal();
-    param_file = setting["param_file"].sVal();
     o_gate_bias_init = setting["o_gate_bias_init"].fVal();
     f_gate_bias_init = setting["f_gate_bias_init"].fVal();
     grad_cut_off = setting["grad_cut_off"].fVal();
@@ -105,8 +104,8 @@ class LstmLayer : public Layer<xpu> {
         init_o_gate_bias(); // this must be after init()
     }
 
-    if (!param_file.empty()) {
-      LoadParam();
+    if (!this->param_file.empty()) {
+      this->LoadParams();
     }
     
     std::map<std::string, SettingV> &w_updater = *setting["w_updater"].mVal();
@@ -515,6 +514,7 @@ class LstmLayer : public Layer<xpu> {
     checkNanParams();
 #endif
   }
+  /*
   void LoadTensor(Json::Value &tensor_root, mshadow::TensorContainer<xpu, 4> &t) {
     Json::Value data_root = tensor_root["data"];
     int s0 = data_root["shape"][0].asInt();
@@ -531,13 +531,14 @@ class LstmLayer : public Layer<xpu> {
   void LoadParam() {
     utils::Printf("LstmLayer: load params...\n");
     Json::Value param_root;
-    ifstream ifs(param_file.c_str());
+    ifstream ifs(this->param_file.c_str());
     ifs >> param_root;
     ifs.close();
     LoadTensor(param_root[0], this->params[0].data);
     LoadTensor(param_root[1], this->params[1].data);
     LoadTensor(param_root[2], this->params[2].data);
   }
+  */
 
  public:
 // protected:
@@ -548,7 +549,6 @@ class LstmLayer : public Layer<xpu> {
   float o_gate_bias_init;
   float f_gate_bias_init;
   float grad_cut_off;
-  string param_file;
   mshadow::TensorContainer<xpu, 4> c, g, c_er, g_er;
   mshadow::TensorContainer<xpu, 2> begin_h, begin_c, begin_c_er, begin_h_er;
 };

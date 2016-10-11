@@ -49,6 +49,7 @@ class TensorFullConnectLayer : public Layer<xpu> {
     utils::Check(bottom.size() == BottomNodeNum(), "TensorFullConnectionLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "TensorFullConnectionLayer:top size problem.");
                             
+    this->param_file = setting["param_file"].sVal();
     std::string mode = setting["mode"].sVal();
     if (mode[1] == '1') {
       is_t = true;
@@ -110,6 +111,9 @@ class TensorFullConnectLayer : public Layer<xpu> {
     this->params[2].updater_ = 
         updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].iVal(),
           b_updater, this->prnd_);
+    if (!this->param_file.empty()) {
+      this->LoadParams();
+    }
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,

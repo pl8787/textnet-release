@@ -52,6 +52,7 @@ class MatchWeightedRadialLayer : public Layer<xpu>{
     utils::Check(bottom.size() == BottomNodeNum(), "MatchWeightedRadialLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "MatchWeightedRadialLayer:top size problem.");
 
+    this->param_file = setting["param_file"].sVal();
     is_var_len = setting["is_var_len"].bVal();
     interval = setting["interval"].iVal();
 	  feat_size = bottom[0]->data.size(3);
@@ -66,6 +67,9 @@ class MatchWeightedRadialLayer : public Layer<xpu>{
     std::map<std::string, SettingV> &w_updater = *setting["w_updater"].mVal();
     this->params[0].updater_ = updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].iVal(),
                                                               w_updater, this->prnd_);
+    if (!this->param_file.empty()) {
+      this->LoadParams();
+    }
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,

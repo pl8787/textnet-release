@@ -1,5 +1,5 @@
-#ifndef TEXTNET_LAYER_MERGE_2_WINDOWDATA_LAYER_INL_HPP_
-#define TEXTNET_LAYER_MERGE_2_WINDOWDATA_LAYER_INL_HPP_
+#ifndef TEXTNET_LAYER_MERGE_WINDOW_LAYER_INL_HPP_
+#define TEXTNET_LAYER_MERGE_WINDOW_LAYER_INL_HPP_
 
 #include <iostream>
 #include <fstream>
@@ -23,16 +23,16 @@ namespace textnet {
 namespace layer {
 
 /*
-   * Merge2WindowDataLayer : split each document into several passages
+   * MergeWindowLayer : split each document into several passages
    * param 0 : bottom[0] records query infomation: ( batch-size, 1, 1, 1)
    * param 1 : bottom[1] records doc information:  ( old-batch-size, 1, 1, 1)
    * out 0  :  top[0] : match infotmation:  (old-batch-size, 1, 1, k)
 */
 template<typename xpu>
-class Merge2WindowDataLayer : public Layer<xpu>{
+class MergeWindowLayer : public Layer<xpu>{
  public:
-  Merge2WindowDataLayer(LayerType type) { this->layer_type = type; }
-  virtual ~Merge2WindowDataLayer(void) {}
+  MergeWindowLayer(LayerType type) { this->layer_type = type; }
+  virtual ~MergeWindowLayer(void) {}
   
   virtual int BottomNodeNum() { return 2; }
   virtual int TopNodeNum() { return 1; }
@@ -51,9 +51,9 @@ class Merge2WindowDataLayer : public Layer<xpu>{
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
     
     utils::Check(bottom.size() == BottomNodeNum(),
-                  "Merge2WindowDataLayer:bottom size problem."); 
+                  "MergeWindowLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
-                  "Merge2WindowDataLayer:top size problem.");
+                  "MergeWindowLayer:top size problem.");
     max_len   = setting["max_len"].iVal();
     dim   = setting["dim"].iVal();
   }
@@ -67,17 +67,17 @@ class Merge2WindowDataLayer : public Layer<xpu>{
                        const std::vector<Node<xpu>*> &top,
                        bool show_info = false) {
     utils::Check(bottom.size() == BottomNodeNum(),
-                  "Merge2WindowDataLayer:bottom size problem."); 
+                  "MergeWindowLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(),
-                  "Merge2WindowDataLayer:top size problem.");
+                  "MergeWindowLayer:top size problem.");
     Tensor2D bottom0_length = bottom[0]->length;
 
     int idim = max_len;
     for(index_t i = 0 ; i < bottom[1]->data.size(0); ++ i){
-        utils::Check(bottom[1]->data[i][0][0][0] > 0,"Merge2WindowDataLayer:: Reshape error, window size equals zero.");
+        utils::Check(bottom[1]->data[i][0][0][0] > 0,"MergeWindowLayer:: Reshape error, window size equals zero.");
         idim = idim > bottom[1]->data[i][0][0][0] ? idim : bottom[1]->data[i][0][0][0];
     }
-    utils::Check(idim > 0, "Merge2WindowDataLayer:: Reshape idim problem.");
+    utils::Check(idim > 0, "MergeWindowLayer:: Reshape idim problem.");
     int batch_size  = bottom[1]->data.size(0);
 
     assert(bottom[0]->data.size(dim) == 1);
@@ -111,14 +111,14 @@ class Merge2WindowDataLayer : public Layer<xpu>{
     Tensor1D bottom0_data1 = bottom[0]->data_d1();
     Tensor2D top0_data2 = top[0]->data_d2();
     //printf("bottom[0]:%d,%d,%d,%d\n",bottom[0]->data.size(0),bottom[0]->data.size(1),bottom[0]->data.size(2),bottom[0]->data.size(3));
-    utils::Check(bottom[0]->data.size(dim) == 1, " Merge2WindowDataLayer:: bottom[%d] size problem.",dim);
+    utils::Check(bottom[0]->data.size(dim) == 1, " MergeWindowLayer:: bottom[%d] size problem.",dim);
 
     top0_data = 0.0;
     int batch_size = top0_data.size(0);
     index_t k = 0;
     for(index_t i = 0 ; i < batch_size; ++ i){
         int curr_len = bottom[1]->data[i][0][0][0];
-        utils::Check(curr_len > 0," Merge2WindowDataLayer: curr_len must be above 0.");
+        utils::Check(curr_len > 0," MergeWindowLayer: curr_len must be above 0.");
         top0_length[i][0] = curr_len;
         if(dim == 1){
             for(index_t j = 0 ; j < curr_len; ++ j){

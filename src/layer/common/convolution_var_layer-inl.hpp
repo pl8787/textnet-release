@@ -27,7 +27,7 @@ class ConvolutionVarLayer : public Layer<xpu> {
     this->defaults["stride_x"] = SettingV(1);
     this->defaults["stride_y"] = SettingV(1);
     this->defaults["no_bias"] = SettingV(false);
-	this->defaults["dim"] = SettingV(2);
+	  this->defaults["dim"] = SettingV(2);
     
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -53,6 +53,7 @@ class ConvolutionVarLayer : public Layer<xpu> {
     utils::Check(top.size() == TopNodeNum(),
                   "ConvolutionVarLayer: top size problem.");
                   
+    this->param_file = setting["param_file"].sVal();
     kernel_x = setting["kernel_x"].iVal();
     kernel_y = setting["kernel_y"].iVal();
     pad_x = setting["pad_x"].iVal();
@@ -87,7 +88,9 @@ class ConvolutionVarLayer : public Layer<xpu> {
     this->params[1].updater_ = 
         updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].iVal(),
           b_updater, this->prnd_);
-          
+    if (!this->param_file.empty()) {
+      this->LoadParams();
+    }
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,

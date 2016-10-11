@@ -35,7 +35,6 @@ class LstmAutoencoderLayer : public Layer<xpu> {
     this->defaults["encoder_u_file"] = SettingV("");
     this->defaults["decoder_w_file"] = SettingV("");
     this->defaults["decoder_u_file"] = SettingV("");
-    // this->defaults["param_file"] = SettingV("");
     // this->defaults["o_gate_bias_init"] = SettingV(0.f);
     // this->defaults["f_gate_bias_init"] = SettingV(0.f);
     // this->defaults["reverse"] = SettingV(false);
@@ -88,7 +87,7 @@ class LstmAutoencoderLayer : public Layer<xpu> {
     decoder_u_file = setting["decoder_u_file"].sVal();
     // reverse = setting["reverse"].bVal();
     // grad_norm2 = setting["grad_norm2"].fVal();
-    // param_file = setting["param_file"].sVal();
+    this->param_file = setting["param_file"].sVal();
     // o_gate_bias_init = setting["o_gate_bias_init"].fVal();
     // f_gate_bias_init = setting["f_gate_bias_init"].fVal();
     // grad_cut_off = setting["grad_cut_off"].fVal();
@@ -137,9 +136,9 @@ class LstmAutoencoderLayer : public Layer<xpu> {
     //     init_o_gate_bias(); // this must be after init()
     // }
 
-    // if (!param_file.empty()) {
-    //   LoadParam();
-    // }
+    if (!this->param_file.empty()) {
+      this->LoadParams();
+    }
     
     std::map<std::string, SettingV> &w_ec_updater = *setting["w_ec_updater"].mVal();
     std::map<std::string, SettingV> &u_ec_updater = *setting["u_ec_updater"].mVal();

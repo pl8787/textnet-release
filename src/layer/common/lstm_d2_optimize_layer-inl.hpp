@@ -65,6 +65,7 @@ class LstmD2OptimizeLayer : public Layer<xpu> {
     utils::Check(bottom.size() == BottomNodeNum(), "LstmD2OptimizeLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "LstmD2OptimizeLayer:top size problem.");
 
+    this->param_file = setting["param_file"].sVal();
     d_mem   = setting["d_mem"].iVal();
     d_input = bottom[0]->data.size(3);
     no_bias = setting["no_bias"].bVal();
@@ -95,9 +96,9 @@ class LstmD2OptimizeLayer : public Layer<xpu> {
       init_o_gate_bias(); // this must be after init()
     }
 
-    // if (!param_file.empty()) {
-    //   LoadParam();
-    // }
+    if (!this->param_file.empty()) {
+      this->LoadParams();
+    }
     
     std::map<std::string, SettingV> &w_updater = *setting["w_updater"].mVal();
     std::map<std::string, SettingV> &b_updater = *setting["b_updater"].mVal();
@@ -1444,7 +1445,6 @@ class LstmD2OptimizeLayer : public Layer<xpu> {
                      // 这个保存相对于run开始位置的相对位置
 
   // float grad_cut_off;
-  // string param_file;
   duration<double> time_1, time_2, time_3, time_4, time_5, time_6;
   vector<int> run_max_len, run_begin_idx, run_real_len; // run_real_len是因为每个run都是变长的，这个记录他的真实长度
 };

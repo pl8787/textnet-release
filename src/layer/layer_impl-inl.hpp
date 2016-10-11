@@ -96,7 +96,7 @@
 #include "./common/axis_split_layer-inl.hpp"
 #include "./common/key_snip_layer-inl.hpp"
 #include "./common/reshape_layer-inl.hpp"
-#include "./common/merge_2_window_data_layer-inl.hpp"
+#include "./common/merge_window_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/lcs_toy_data_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
@@ -238,7 +238,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kMap2TextData: return new Map2TextDataLayer<xpu>(type);
     case kMap3TextData: return new Map3TextDataLayer<xpu>(type);
     case kMap2WindowTextData:    return new Map2WindowTextDataLayer<xpu>(type);
-    case kMerge2WindowData:    return new Merge2WindowDataLayer<xpu>(type);
+    case kMergeWindow:    return new MergeWindowLayer<xpu>(type);
     case kSelectSubRepByToken: return new SelectSubRepByTokenLayer<xpu>(type);
     case kWordRepInput: return new WordRepInputLayer<xpu>(type);
     case kEuclidDistanceLoss: return new EuclidDistanceLossLayer<xpu>(type);

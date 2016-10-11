@@ -44,6 +44,7 @@ class ParameterLayer : public Layer<xpu> {
                           mshadow::Random<xpu> *prnd) {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
 
+    this->param_file = setting["param_file"].sVal();
     d0 = setting["d0"].iVal();
     d1 = setting["d1"].iVal();
     d2 = setting["d2"].iVal();
@@ -76,6 +77,9 @@ class ParameterLayer : public Layer<xpu> {
     this->params[0].updater_ = 
         updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].iVal(),
           w_updater, this->prnd_);
+    if (!this->param_file.empty()) {
+      this->LoadParams();
+    }
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,

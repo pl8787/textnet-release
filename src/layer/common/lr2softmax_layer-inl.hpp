@@ -39,6 +39,7 @@ class Lr2softmaxLayer : public Layer<xpu> {
     
     utils::Check(bottom.size() == BottomNodeNum(), "Lr2softmaxLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "Lr2softmaxLayer:top size problem.");
+    this->param_file = setting["param_file"].sVal();
     score_class = setting["score_class"].iVal();
     rescale = setting["rescale"].fVal();
     utils::Check(0 == score_class || 1 == score_class, "Lr2softmaxLayer: score class setting error.");
@@ -55,6 +56,9 @@ class Lr2softmaxLayer : public Layer<xpu> {
     this->params[0].updater_ = 
         updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].iVal(),
           b_updater, this->prnd_);
+    if (!this->param_file.empty()) {
+      this->LoadParams();
+    }
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,

@@ -54,6 +54,7 @@ class MatchWeightedDotLayer : public Layer<xpu>{
     utils::Check(top.size() == TopNodeNum(), "MatchWeightedDotLayer:top size problem.");
     utils::Check(bottom[0]->data.size(3) == bottom[1]->data.size(3), "MatchWeightedDotLayer:feat_size problem.");
 
+    this->param_file = setting["param_file"].sVal();
     d_hidden = setting["d_hidden"].iVal();
     is_var_len = setting["is_var_len"].bVal();
     interval = setting["interval"].iVal();
@@ -70,6 +71,9 @@ class MatchWeightedDotLayer : public Layer<xpu>{
     std::map<std::string, SettingV> &w_updater = *setting["w_updater"].mVal();
     this->params[0].updater_ = updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].iVal(),
                                                               w_updater, this->prnd_);
+    if (!this->param_file.empty()) {
+      this->LoadParams();
+    }
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,

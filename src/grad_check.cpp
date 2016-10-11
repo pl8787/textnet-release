@@ -5780,8 +5780,8 @@ void TestParameterLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckGrad(layer, bottoms, tops);
 }
 
-void TestMerge2WindowDataLayer(mshadow::Random<cpu> * prnd){
-    cout<<" G Check Merge-2-Window-Data Layer."<<endl;
+void TestMergeWindowLayer(mshadow::Random<cpu> * prnd){
+    cout<<" G Check Merge-Window Layer."<<endl;
     Node<cpu> bottom0;
     Node<cpu> bottom1;
     Node<cpu> top0;
@@ -5807,7 +5807,7 @@ void TestMerge2WindowDataLayer(mshadow::Random<cpu> * prnd){
     PrintTensor("bottom1-data", bottom1.data);
 
     //Test Merge2WindowDataLayer
-    Layer<cpu> * layer_merge2window = CreateLayer<cpu>(kMerge2WindowData);
+    Layer<cpu> * layer_merge2window = CreateLayer<cpu>(kMergeWindow);
     layer_merge2window->PropAll();
     layer_merge2window->SetupLayer(setting, bottoms, tops, prnd);
     layer_merge2window->Reshape(bottoms, tops);
@@ -6037,7 +6037,7 @@ int main(int argc, char *argv[]) {
   // TestLengthTransLayer(&rnd);
   // TestLengthFillLayer(&rnd);
   // TestAxisSplitLayer(&rnd);
-  // TestMerge2WindowDataLayer(&rnd);
+  // TestMergeWindowLayer(&rnd);
   // TestMatchHistogramLayer(&rnd);
   // TestSortAxisLayer(&rnd);
   // TestXeLULayer(&rnd);

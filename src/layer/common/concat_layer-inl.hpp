@@ -39,8 +39,9 @@ class ConcatLayer : public Layer<xpu>{
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
-    Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
     nBottomNode = setting["bottom_node_num"].iVal();
+    // pay attention: nBottomNode setting should set before Layer<xpu>::SetupLayer()
+    Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
     concat_dim_index = setting["concat_dim_index"].iVal();
     is_concat_by_length = setting["is_concat_by_length"].bVal();
 	copy_length = setting["copy_length"].bVal();

@@ -38,7 +38,6 @@ class LstmD2Layer : public Layer<xpu> {
     // default value, just set the value you want
     this->defaults["no_bias"] = SettingV(false);
     // this->defaults["no_out_tanh"] = SettingV(false);
-    // this->defaults["param_file"] = SettingV("");
     this->defaults["o_gate_bias_init"] = SettingV(0.f);
     this->defaults["f_gate_bias_init"] = SettingV(0.f);
     
@@ -72,7 +71,7 @@ class LstmD2Layer : public Layer<xpu> {
     // no_out_tanh = setting["no_out_tanh"].bVal();
     reverse = setting["reverse"].bVal();
     // grad_norm2 = setting["grad_norm2"].fVal();
-    // param_file = setting["param_file"].sVal();
+    this->param_file = setting["param_file"].sVal();
     o_gate_bias_init = setting["o_gate_bias_init"].fVal();
     f_gate_bias_init = setting["f_gate_bias_init"].fVal();
     // grad_cut_off = setting["grad_cut_off"].fVal();
@@ -102,9 +101,9 @@ class LstmD2Layer : public Layer<xpu> {
     //     init_o_gate_bias(); // this must be after init()
     // }
 
-    // if (!param_file.empty()) {
-    //   LoadParam();
-    // }
+    if (!this->param_file.empty()) {
+      this->LoadParams();
+    }
     
     std::map<std::string, SettingV> &w_updater = *setting["w_updater"].mVal();
     std::map<std::string, SettingV> &b_updater = *setting["b_updater"].mVal();

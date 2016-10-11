@@ -21,18 +21,18 @@ class GatingLayer : public Layer<xpu> {
   
   virtual void Require() {
     // default value, just set the value you want
-	this->defaults["gate_type"] = SettingV("word-wise");
-	// word-wise : each word has a gate weight
-	// word-share : weight depended on word vector
-	this->defaults["activefun_type"] = SettingV("linear");
-	// linear : indentity
-	// sigmoid : sigmoid * 2
-	// tanh : tanh + 1
+    this->defaults["gate_type"] = SettingV("word-wise");
+    // word-wise : each word has a gate weight
+    // word-share : weight depended on word vector
+    this->defaults["activefun_type"] = SettingV("linear");
+    // linear : indentity
+    // sigmoid : sigmoid * 2
+    // tanh : tanh + 1
 
-    // require value, set to SettingV(),
-    // it will force custom to set in config
-	this->defaults["word_count"] = SettingV();
-	this->defaults["feat_size"] = SettingV();
+      // require value, set to SettingV(),
+      // it will force custom to set in config
+    this->defaults["word_count"] = SettingV();
+    this->defaults["feat_size"] = SettingV();
     this->defaults["w_filler"] = SettingV();
     this->defaults["w_updater"] = SettingV();
     
@@ -48,24 +48,25 @@ class GatingLayer : public Layer<xpu> {
     utils::Check(bottom.size() == BottomNodeNum(), "GatingLayer: bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "GatingLayer: top size problem.");
                             
+    this->param_file = setting["param_file"].sVal();
     gate_type = setting["gate_type"].sVal();
-	word_count = setting["word_count"].iVal();
-	feat_size = setting["feat_size"].iVal();
-	activefun_type = setting["activefun_type"].sVal();
+    word_count = setting["word_count"].iVal();
+    feat_size = setting["feat_size"].iVal();
+    activefun_type = setting["activefun_type"].sVal();
 
-	utils::Check(feat_size == bottom[0]->data.size(3), "GatingLayer: feat size not fit");
-	utils::Check(gate_type == "word-wise" || gate_type == "word-share", 
+    utils::Check(feat_size == bottom[0]->data.size(3), "GatingLayer: feat size not fit");
+    utils::Check(gate_type == "word-wise" || gate_type == "word-share", 
 			"GatingLayer: Only support word-wise or word-share.");
-	utils::Check(activefun_type == "linear" || activefun_type == "sigmoid" 
+	  utils::Check(activefun_type == "linear" || activefun_type == "sigmoid" 
 			     || activefun_type == "tanh" || activefun_type == "relu",
 			"GatingLayer: Only support linear or sigmoid or tanh or relu.");
 
     this->params.resize(1);
-	if (gate_type == "word-wise") {
-      this->params[0].Resize(word_count, 1, 1, 1, true);
-	} else if (gate_type == "word-share") {
-      this->params[0].Resize(feat_size, 1, 1, 1, true);
-	}
+    if (gate_type == "word-wise") {
+        this->params[0].Resize(word_count, 1, 1, 1, true);
+    } else if (gate_type == "word-share") {
+        this->params[0].Resize(feat_size, 1, 1, 1, true);
+    }
     
     std::map<std::string, SettingV> &w_setting = *setting["w_filler"].mVal();
     this->params[0].initializer_ = 
@@ -77,6 +78,9 @@ class GatingLayer : public Layer<xpu> {
     this->params[0].updater_ = 
         updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].iVal(),
           w_updater, this->prnd_);
+    if (!this->param_file.empty()) {
+      this->LoadParams();
+    }
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
