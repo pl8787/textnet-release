@@ -123,11 +123,16 @@ const int kGruD2 = 10010;
 const int kGruD2Optimize = 10011;
 const int kGruD2OneGate = 10012;
 
-const int kMerge2WindowData = 20001;
+const int kMergeWindow = 20001;
 const int kMatchHistogram = 20002;
 const int kSortAxis = 20003;
 const int kBLstm = 20004;
 const int kBGruD2 = 20005;
+const int kLstmPeephole = 20006;
+const int kReadFeature = 20007;
+const int kLstmSkipconnect = 20008;
+const int kMatchWeightedRadial = 20009;
+const int kMatchCombine = 20010;
 
 // Loss Layer 51-70
 const int kSoftmax = 51;
@@ -195,7 +200,7 @@ class Layer {
     phrase_type = this->settings["phrase_type"].iVal();
     prnd_ = prnd;
 
-	setting = this->settings;
+	  setting = this->settings;
 
     for (int i = 0; i < this->BottomNodeNum(); ++i) {
       prop_error.push_back(true);
@@ -236,6 +241,7 @@ class Layer {
   // To implement this function you need call base function in the end
   virtual void Require() {
     defaults["phrase_type"] = SettingV(kTrain);
+    defaults["param_file"] = SettingV("");
     for (std::map<std::string, SettingV>::iterator it = defaults.begin();
           it != defaults.end(); ++it) {
       std::string name = it->first;
@@ -441,6 +447,28 @@ class Layer {
     }
   }
 
+  virtual void LoadParams() {
+    Json::Value param_root;
+    ifstream ifs(this->param_file.c_str());
+    ifs >> param_root;
+    ifs.close();
+    utils::Check(param_root.size() == this->ParamNodeNum(), "layer:%s load params from file problem.", layer_name.c_str());
+
+    for (int i = 0; i < param_root.size(); ++i) {
+      Json::Value param_data_root = param_root[i]["data"];
+      Json::Value param_value_root = param_data_root["value"];
+      Json::Value param_shape_root = param_data_root["shape"];
+      utils::Check(param_shape_root[0].asInt() == params[i].data.size(0) &&
+          param_shape_root[1].asInt() == params[i].data.size(1) &&
+          param_shape_root[2].asInt() == params[i].data.size(2) &&
+          param_shape_root[3].asInt() == params[i].data.size(3),
+          "layer:%s load param %d, size problem.", layer_name.c_str(), i);
+      for (int j = 0; j < params[i].data.shape_.Size(); ++j) {
+        params[i].data.dptr_[j] = param_value_root[j].asFloat();
+      }
+    }
+  }
+
   virtual void LoadModel(Json::Value &layer_root) {
     // Set Layer type
 	if (layer_root["layer_type"].isInt()) {
@@ -532,6 +560,7 @@ class Layer {
   // For Debug
   // If implement net.hpp move to protected
   std::string layer_name;
+  std::string param_file;
   int layer_idx;
   std::vector<std::string> bottom_nodes;
   std::vector<std::string> top_nodes; 

@@ -26,6 +26,7 @@
 #include "./common/match_tensor_layer-inl.hpp"
 #include "./common/match_tensor_fact_layer-inl.hpp"
 #include "./common/match_weighted_dot_layer-inl.hpp"
+#include "./common/match_weighted_radial_layer-inl.hpp"
 #include "./common/match_multi_layer-inl.hpp"
 #include "./common/batch_combine_layer-inl.hpp"
 #include "./common/batch_select_layer-inl.hpp"
@@ -54,6 +55,7 @@
 #include "./common/whole_pooling_2d_layer-inl.hpp"
 #include "./common/blstm_layer-inl.hpp"
 #include "./common/bgru_d2_layer-inl.hpp"
+#include "./common/match_combine_layer-inl.hpp"
 
 #ifdef CPU_ONLY
 #include "./common/gate_whole_pooling_layer-inl.hpp"
@@ -95,7 +97,7 @@
 #include "./common/axis_split_layer-inl.hpp"
 #include "./common/key_snip_layer-inl.hpp"
 #include "./common/reshape_layer-inl.hpp"
-#include "./common/merge_2_window_data_layer-inl.hpp"
+#include "./common/merge_window_layer-inl.hpp"
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/lcs_toy_data_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
@@ -130,6 +132,9 @@
 #include "./loss/activation_norm_loss_layer-inl.hpp"
 #include "./common/match_histogram_layer-inl.hpp"
 #include "./common/sort_axis_layer-inl.hpp"
+#include "./common/lstm_peephole_layer-inl.hpp"
+#include "./common/lstm_skipconnect_layer-inl.hpp"
+#include "./common/read_feature_layer-inl.hpp"
 
 namespace textnet {
 namespace layer {
@@ -234,7 +239,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kMap2TextData: return new Map2TextDataLayer<xpu>(type);
     case kMap3TextData: return new Map3TextDataLayer<xpu>(type);
     case kMap2WindowTextData:    return new Map2WindowTextDataLayer<xpu>(type);
-    case kMerge2WindowData:    return new Merge2WindowDataLayer<xpu>(type);
+    case kMergeWindow:    return new MergeWindowLayer<xpu>(type);
     case kSelectSubRepByToken: return new SelectSubRepByTokenLayer<xpu>(type);
     case kWordRepInput: return new WordRepInputLayer<xpu>(type);
     case kEuclidDistanceLoss: return new EuclidDistanceLossLayer<xpu>(type);
@@ -266,6 +271,11 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kXeLU: return new XeLULayer<xpu>(type);
     case kELU: return new ELULayer<xpu>(type);
     case kAppendFeature: return new AppendFeatureLayer<xpu>(type);
+    case kReadFeature: return new ReadFeatureLayer<xpu>(type);
+    case kLstmPeephole: return new LstmPeepholeLayer<xpu>(type);
+    case kLstmSkipconnect: return new LstmSkipconnectLayer<xpu>(type);
+    case kMatchWeightedRadial: return new MatchWeightedRadialLayer<xpu>(type);
+    case kMatchCombine: return new MatchCombineLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }

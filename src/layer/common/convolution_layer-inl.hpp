@@ -27,7 +27,7 @@ class ConvolutionLayer : public Layer<xpu> {
     this->defaults["stride"] = SettingV(1);
     this->defaults["no_bias"] = SettingV(false);
     this->defaults["d1_var_len"] = SettingV(false);
-	this->defaults["ignore_len"] = SettingV(false);
+	  this->defaults["ignore_len"] = SettingV(false);
     
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -53,6 +53,7 @@ class ConvolutionLayer : public Layer<xpu> {
     utils::Check(top.size() == TopNodeNum(),
                   "ConvolutionLayer:top size problem.");
                   
+    this->param_file = setting["param_file"].sVal();
     kernel_x = setting["kernel_x"].iVal();
     kernel_y = setting["kernel_y"].iVal();
     pad_x = setting["pad_x"].iVal();
@@ -62,7 +63,7 @@ class ConvolutionLayer : public Layer<xpu> {
     channel_out = setting["channel_out"].iVal();
     no_bias = setting["no_bias"].bVal();
     d1_var_len = setting["d1_var_len"].bVal();
-	ignore_len = setting["ignore_len"].bVal();
+	  ignore_len = setting["ignore_len"].bVal();
     
     this->params.resize(2);
     this->params[0].Resize(channel_out, channel_in * kernel_x * kernel_y, 1, 1, true);
@@ -87,7 +88,9 @@ class ConvolutionLayer : public Layer<xpu> {
     this->params[1].updater_ = 
         updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].iVal(),
           b_updater, this->prnd_);
-          
+    if (!this->param_file.empty()) {
+      this->LoadParams();
+    }
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,

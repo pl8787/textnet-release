@@ -62,6 +62,7 @@ class MatchTensorLayer : public Layer<xpu>{
     utils::Check(bottom.size() == BottomNodeNum(), "MatchTensorLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "MatchTensorLayer:top size problem.");
 
+    this->param_file = setting["param_file"].sVal();
     d_hidden = setting["d_hidden"].iVal();
     is_var_len = setting["is_var_len"].bVal();
     is_init_as_I = setting["is_init_as_I"].bVal();
@@ -104,6 +105,9 @@ class MatchTensorLayer : public Layer<xpu>{
                                                               w_updater, this->prnd_);
     this->params[2].updater_ = updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].iVal(),
                                                               b_updater, this->prnd_);
+    if (!this->param_file.empty()) {
+      this->LoadParams();
+    }
   }
 
   // init t nearly with I

@@ -27,7 +27,7 @@ class LocalLayer : public Layer<xpu> {
     this->defaults["stride_x"] = SettingV(1);
     this->defaults["stride_y"] = SettingV(1);
     this->defaults["no_bias"] = SettingV(false);
-	this->defaults["dim"] = SettingV(2);
+	  this->defaults["dim"] = SettingV(2);
     
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -53,6 +53,7 @@ class LocalLayer : public Layer<xpu> {
     utils::Check(top.size() == TopNodeNum(),
                   "LocalLayer:top size problem.");
                   
+    this->param_file = setting["param_file"].sVal();
     kernel_x = setting["kernel_x"].iVal();
     kernel_y = setting["kernel_y"].iVal();
     pad_x = setting["pad_x"].iVal();
@@ -62,21 +63,21 @@ class LocalLayer : public Layer<xpu> {
     channel_in = bottom[0]->data.size(1);
     channel_out = setting["channel_out"].iVal();
     no_bias = setting["no_bias"].bVal();
-	dim = setting["dim"].iVal();
+	  dim = setting["dim"].iVal();
     
     shape_in = bottom[0]->data.shape_;
-	if (dim == 1) {
-		shape_out = mshadow::Shape4(shape_in[0], channel_out,
-				(shape_in[2] + pad_y * 2 - kernel_y) / stride_y + 1,
-				1);
-	} else {
-		shape_out = mshadow::Shape4(shape_in[0], channel_out, 
-                (shape_in[2] + pad_y * 2 - kernel_y) / stride_y + 1,
-                (shape_in[3] + pad_x * 2 - kernel_x) / stride_x + 1);
-	}
+    if (dim == 1) {
+      shape_out = mshadow::Shape4(shape_in[0], channel_out,
+          (shape_in[2] + pad_y * 2 - kernel_y) / stride_y + 1,
+          1);
+    } else {
+      shape_out = mshadow::Shape4(shape_in[0], channel_out, 
+                  (shape_in[2] + pad_y * 2 - kernel_y) / stride_y + 1,
+                  (shape_in[3] + pad_x * 2 - kernel_x) / stride_x + 1);
+    }
 
 	// Set Length
-	top_len_x = 0, top_len_y = 0, bottom_len_x = 0, bottom_len_y = 0;
+	  top_len_x = 0, top_len_y = 0, bottom_len_x = 0, bottom_len_y = 0;
     if (dim == 1) {
 	    bottom_len_x = kernel_x;
 	    bottom_len_y = shape_in[2];
@@ -84,13 +85,13 @@ class LocalLayer : public Layer<xpu> {
 	    top_len_y = shape_out[2];
 	    utils::Check(top_len_y > 0, "top_len must positive.");
 	    utils::Check(pad_x == 0, "dim=1 pad_x!=0.");
-	} else {
+	  } else {
 	    bottom_len_x = shape_in[2];
 	    bottom_len_y = shape_in[3];
 	    top_len_x = shape_out[2];
 	    top_len_y = shape_out[3];
 	    utils::Check(top_len_x > 0 && top_len_y > 0, "top_len must positive.");
-	}
+	  }
 
     this->params.resize(2);
     this->params[0].Resize(channel_out, shape_out[2] * shape_out[3], channel_in * kernel_x * kernel_y, 1, true);
@@ -116,6 +117,9 @@ class LocalLayer : public Layer<xpu> {
         updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].iVal(),
           b_updater, this->prnd_);
           
+    if (!this->param_file.empty()) {
+      this->LoadParams();
+    }
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,

@@ -25,9 +25,11 @@ class LengthFillLayer : public Layer<xpu>{
   
   virtual void Require() {
     // default value, just set the value you want
-	
+    this->defaults["mode"] = SettingV("data"); // data or length
+
     // require value, set to SettingV(),
     // it will force custom to set in config
+    
     
     Layer<xpu>::Require();
   }
@@ -37,6 +39,8 @@ class LengthFillLayer : public Layer<xpu>{
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
+
+    mode = setting["mode"].sVal();
     
   }
   
@@ -79,12 +83,19 @@ class LengthFillLayer : public Layer<xpu>{
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 4> bottom0_data = bottom[0]->data;
     mshadow::Tensor<xpu, 2> bottom1_data = bottom[1]->data_d2();
+    mshadow::Tensor<xpu, 2> bottom1_len = bottom[1]->length;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
     mshadow::Tensor<xpu, 2> top_len = top[0]->length;
 
     // Directly copy data
     top_data = F<op::identity>(bottom0_data);
-    top_len = F<op::identity>(bottom1_data);
+    if( mode == "data") {
+      top_len = F<op::identity>(bottom1_data);
+    }else if(mode == "length") {
+      top_len = F<op::identity>(bottom1_len);
+    }else {
+      utils::Check(0, "LengthFillLayer: mode should be data or length.");
+    }
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
@@ -100,6 +111,7 @@ class LengthFillLayer : public Layer<xpu>{
   
  protected:
   int nbatch;
+  string mode;
 
 };
 }  // namespace layer

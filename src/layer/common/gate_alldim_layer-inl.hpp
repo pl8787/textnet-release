@@ -41,6 +41,7 @@ class GateAlldimLayer : public Layer<xpu> {
     utils::Check(bottom.size() == BottomNodeNum(), "GateAlldimLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "GateAlldimLayer:top size problem.");
                             
+    this->param_file = setting["param_file"].sVal();
     no_bias = setting["no_bias"].bVal();
     num_input = bottom[0]->data.size(3);
 
@@ -67,6 +68,9 @@ class GateAlldimLayer : public Layer<xpu> {
     this->params[1].updater_ = 
         updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].iVal(),
           b_updater, this->prnd_);
+    if (!this->param_file.empty()) {
+      this->LoadParams();
+    }
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,

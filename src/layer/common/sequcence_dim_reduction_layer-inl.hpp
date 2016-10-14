@@ -39,6 +39,7 @@ class SequenceDimReductionLayer : public Layer<xpu> {
     utils::Check(bottom.size() == BottomNodeNum(), "SequenceDimReductionLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "SequenceDimReductionLayer:top size problem.");
                             
+    this->param_file = setting["param_file"].sVal();
     num_hidden = setting["num_hidden"].iVal();
     num_input = bottom[0]->data.size(3);
 
@@ -55,6 +56,9 @@ class SequenceDimReductionLayer : public Layer<xpu> {
     this->params[0].updater_ = 
         updater::CreateUpdater<xpu, 4>(w_updater["updater_type"].iVal(),
           w_updater, this->prnd_);
+    if (!this->param_file.empty()) {
+      this->LoadParams();
+    }
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,

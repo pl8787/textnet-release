@@ -1,5 +1,5 @@
-#ifndef TEXTNET_LAYER_MATCH_WEIGHTED_DOT_LAYER_INL_HPP_
-#define TEXTNET_LAYER_MATCH_WEIGHTED_DOT_LAYER_INL_HPP_
+#ifndef TEXTNET_LAYER_MATCH_WEIGHTED_RADIAL_LAYER_INL_HPP_
+#define TEXTNET_LAYER_MATCH_WEIGHTED_RADIAL_LAYER_INL_HPP_
 
 #include <iostream>
 #include <fstream>
@@ -14,10 +14,10 @@ namespace textnet {
 namespace layer {
 
 template<typename xpu>
-class MatchWeightedDotLayer : public Layer<xpu>{
+class MatchWeightedRadialLayer : public Layer<xpu>{
  public:
-  MatchWeightedDotLayer(LayerType type) { this->layer_type = type; }
-  virtual ~MatchWeightedDotLayer(void) {}
+  MatchWeightedRadialLayer(LayerType type) { this->layer_type = type; }
+  virtual ~MatchWeightedRadialLayer(void) {}
   
   virtual int BottomNodeNum() { return 2; }
   virtual int TopNodeNum() { return 1; }
@@ -30,7 +30,6 @@ class MatchWeightedDotLayer : public Layer<xpu>{
     
     // require value, set to SettingV(),
     // it will force custom to set in config
-    this->defaults["d_hidden"] = SettingV();
 
     this->defaults["w_filler"] = SettingV();
     this->defaults["w_updater"] = SettingV();
@@ -50,18 +49,15 @@ class MatchWeightedDotLayer : public Layer<xpu>{
                           mshadow::Random<xpu> *prnd) {
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
     
-    utils::Check(bottom.size() == BottomNodeNum(), "MatchWeightedDotLayer:bottom size problem."); 
-    utils::Check(top.size() == TopNodeNum(), "MatchWeightedDotLayer:top size problem.");
-    utils::Check(bottom[0]->data.size(3) == bottom[1]->data.size(3), "MatchWeightedDotLayer:feat_size problem.");
+    utils::Check(bottom.size() == BottomNodeNum(), "MatchWeightedRadialLayer:bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(), "MatchWeightedRadialLayer:top size problem.");
 
     this->param_file = setting["param_file"].sVal();
-    d_hidden = setting["d_hidden"].iVal();
     is_var_len = setting["is_var_len"].bVal();
     interval = setting["interval"].iVal();
 	  feat_size = bottom[0]->data.size(3);
-    
     this->params.resize(1);
-    this->params[0].Resize(d_hidden, feat_size, 1, 1, true); 
+    this->params[0].Resize(feat_size, 1, 1, 1, true); 
 
     std::map<std::string, SettingV> &w_setting = *setting["w_filler"].mVal();
     this->params[0].initializer_ = 
@@ -79,16 +75,16 @@ class MatchWeightedDotLayer : public Layer<xpu>{
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
                        const std::vector<Node<xpu>*> &top,
 					   bool show_info = false) {
-    utils::Check(bottom.size() == BottomNodeNum(), "MatchWeightedDotLayer:bottom size problem."); 
-    utils::Check(top.size() == TopNodeNum(), "MatchWeightedDotLayer:top size problem.");
+    utils::Check(bottom.size() == BottomNodeNum(), "MatchWeightedRadialLayer:bottom size problem."); 
+    utils::Check(top.size() == TopNodeNum(), "MatchWeightedRadialLayer:top size problem.");
+    utils::Check(bottom[0]->data.size(0) == bottom[1]->data.size(0) &&
+        bottom[0]->data.size(3) == bottom[1]->data.size(3), "MatchWeightedRadialLayer:batch_size or feat_size problem.");
                   
     batch_size = bottom[0]->data.size(0); 
     doc_len0 = bottom[0]->data.size(2);
-    doc_len1 = bottom[0]->data.size(2);
+    doc_len1 = bottom[1]->data.size(2);
                   
-    // out_product.Resize(batch_size*doc_len*doc_len, feat_size, feat_size, 1, true);
-    // top_data_swap.Resize(batch_size, doc_len, doc_len, d_hidden, true);
-    top[0]->Resize(batch_size, d_hidden, doc_len0, doc_len1, batch_size, 2, true);
+    top[0]->Resize(batch_size, 1, doc_len0, doc_len1, batch_size, 2, true);
 
     if (show_info) {
       bottom[0]->PrintShape("bottom0");
@@ -117,10 +113,10 @@ class MatchWeightedDotLayer : public Layer<xpu>{
     Tensor4D bottom0_data = bottom[0]->data;
     Tensor4D bottom1_data = bottom[1]->data;
 	  Tensor1D bottom0_len  = bottom[0]->length_d1();
-	  Tensor1D bottom1_len  = bottom[1]->length_d1();
+    Tensor1D bottom1_len  = bottom[1]->length_d1();
     Tensor4D top_data     = top[0]->data;
-    Tensor2D top_len      = top[0]->length;
-    Tensor2D w_data       = this->params[0].data_d2();
+	  Tensor2D top_len      = top[0]->length;
+    Tensor1D w_data       = this->params[0].data_d1();
 
 	  top_data = 0.f;
 
@@ -129,8 +125,8 @@ class MatchWeightedDotLayer : public Layer<xpu>{
       if (is_var_len) {
         len_0 = bottom0_len[batch_idx];
         len_1 = bottom1_len[batch_idx];
-        top_len[batch_idx][0] = len_0;
-        top_len[batch_idx][1] = len_1;
+		    top_len[batch_idx][0] = len_0;
+		    top_len[batch_idx][1] = len_1;
       } else {
         len_0 = doc_len0;
         len_1 = doc_len1;
@@ -139,14 +135,20 @@ class MatchWeightedDotLayer : public Layer<xpu>{
         Tensor1D rep_0 = bottom0_data[batch_idx][0][i];
         for (int j = 0; j < len_1; j+=interval) {
           Tensor1D rep_1 = bottom1_data[batch_idx][0][j];
-          for (int h = 0; h < d_hidden; ++h) {
-            for (int f = 0; f < feat_size; ++f) {
-              top_data[batch_idx][h][i][j] += rep_0[f]*rep_1[f]*w_data[h][f];
-            }
+
+          float sigma = 0.f;
+          float sub_elem_square = 0.f;
+          for(int f = 0 ; f < feat_size; ++ f){
+            sigma += w_data[f] * rep_0[f];
+            float sub_elem = rep_0[f] - rep_1[f];
+            sub_elem_square += sub_elem * sub_elem;
           }
+          sigma *= sigma; 
+          top_data[batch_idx][0][i][j] = - sub_elem_square / sigma / 4.f;
         }
       }
     }
+    top_data = F<op::exp_lookup>(top_data);
   }
   
   virtual void Backprop(const std::vector<Node<xpu>*> &bottom,
@@ -160,8 +162,8 @@ class MatchWeightedDotLayer : public Layer<xpu>{
     Tensor4D bottom1_diff = bottom[1]->diff;
     Tensor1D bottom0_len  = bottom[0]->length_d1();
     Tensor1D bottom1_len  = bottom[1]->length_d1();
-    Tensor2D w_data       = this->params[0].data_d2();
-    Tensor2D w_diff       = this->params[0].diff_d2();
+    Tensor1D w_data       = this->params[0].data_d1();
+    Tensor1D w_diff       = this->params[0].diff_d1();
 
     for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
       int len_0 = -1, len_1 = -1;
@@ -178,12 +180,20 @@ class MatchWeightedDotLayer : public Layer<xpu>{
         for (int j = 0; j < len_1; j+=interval) {
           Tensor1D rep_data_1 = bottom1_data[batch_idx][0][j];
           Tensor1D rep_diff_1 = bottom1_diff[batch_idx][0][j];
-          for (int h = 0; h < d_hidden; ++h) {
-            for (int f = 0; f < feat_size; ++f) {
-              rep_diff_0[f] += top_diff[batch_idx][h][i][j]*rep_data_1[f]*w_data[h][f];
-              rep_diff_1[f] += top_diff[batch_idx][h][i][j]*rep_data_0[f]*w_data[h][f];
-              w_diff[h][f]  += top_diff[batch_idx][h][i][j]*rep_data_0[f]*rep_data_1[f];
-            }
+
+          float sigma = 0.f;
+          float sub_elem_square = 0.f;
+          float simi = top_data[batch_idx][0][i][j];
+          for(int f = 0 ; f < feat_size; ++ f){
+            sigma += w_data[f] * rep_data_0[f];
+            float sub_elem = rep_data_0[f] - rep_data_1[f];
+            sub_elem_square += sub_elem * sub_elem;
+          }
+
+          for(int f = 0 ; f < feat_size; ++ f){
+            w_diff[f] += top_diff[batch_idx][0][i][j] * simi * sub_elem_square / 2.f / sigma / sigma / sigma * rep_data_0[f];
+            rep_diff_0[f] += top_diff[batch_idx][0][i][j] * simi / sigma / sigma / 2.f * (sub_elem_square / sigma * w_data[f] - (rep_data_0[f] - rep_data_1[f]));
+            rep_diff_1[f] += top_diff[batch_idx][0][i][j] * simi / sigma / sigma / 2.f * ( rep_data_0[f] - rep_data_1[f]);
           }
         }
       }
@@ -191,7 +201,7 @@ class MatchWeightedDotLayer : public Layer<xpu>{
   }
   
  protected:
-  int doc_len0, doc_len1, feat_size, batch_size, interval, d_hidden;
+  int doc_len0, doc_len1, feat_size, batch_size, interval;
   bool is_var_len;
   // Node<xpu> out_product, top_data_swap;
 };

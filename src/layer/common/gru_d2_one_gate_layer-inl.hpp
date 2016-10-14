@@ -38,7 +38,6 @@ class GruD2OneGateLayer : public Layer<xpu> {
     // default value, just set the value you want
     this->defaults["no_bias"] = SettingV(false);
     // this->defaults["no_out_tanh"] = SettingV(false);
-    // this->defaults["param_file"] = SettingV("");
     // this->defaults["o_gate_bias_init"] = SettingV(0.f);
     // this->defaults["f_gate_bias_init"] = SettingV(0.f);
     
@@ -71,6 +70,7 @@ class GruD2OneGateLayer : public Layer<xpu> {
     utils::Check(bottom.size() == BottomNodeNum(), "GruD2OneGateLayer:bottom size problem."); 
     utils::Check(top.size() == TopNodeNum(), "GruD2OneGateLayer:top size problem.");
 
+    this->param_file = setting["param_file"].sVal();
     d_mem   = setting["d_mem"].iVal();
     d_input = bottom[0]->data.size(3);
     no_bias = setting["no_bias"].bVal();
@@ -78,7 +78,6 @@ class GruD2OneGateLayer : public Layer<xpu> {
     // no_out_tanh = setting["no_out_tanh"].bVal();
     reverse = setting["reverse"].bVal();
     // grad_norm2 = setting["grad_norm2"].fVal();
-    // param_file = setting["param_file"].sVal();
     // o_gate_bias_init = setting["o_gate_bias_init"].fVal();
     // f_gate_bias_init = setting["f_gate_bias_init"].fVal();
     // grad_cut_off = setting["grad_cut_off"].fVal();
@@ -116,9 +115,9 @@ class GruD2OneGateLayer : public Layer<xpu> {
     //     init_o_gate_bias(); // this must be after init()
     // }
 
-    // if (!param_file.empty()) {
-    //   LoadParam();
-    // }
+    if (!this->param_file.empty()) {
+      this->LoadParams();
+    }
     
     std::map<std::string, SettingV> &w_g_updater = *setting["w_g_updater"].mVal();
     std::map<std::string, SettingV> &b_g_updater = *setting["b_g_updater"].mVal();

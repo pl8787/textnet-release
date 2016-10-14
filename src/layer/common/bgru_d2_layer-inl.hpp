@@ -39,7 +39,6 @@ class BGruD2Layer : public Layer<xpu> {
     this->defaults["no_bias"] = SettingV(false);
     this->defaults["is_use_reset_gate"] = SettingV(true);
     // this->defaults["no_out_tanh"] = SettingV(false);
-    // this->defaults["param_file"] = SettingV("");
     // this->defaults["o_gate_bias_init"] = SettingV(0.f);
     // this->defaults["f_gate_bias_init"] = SettingV(0.f);
     
@@ -80,7 +79,7 @@ class BGruD2Layer : public Layer<xpu> {
     reverse = setting["reverse"].bVal();
     is_diag_connection = setting["is_diag_connection"].bVal();
     // grad_norm2 = setting["grad_norm2"].fVal();
-    // param_file = setting["param_file"].sVal();
+    this->param_file = setting["param_file"].sVal();
     // o_gate_bias_init = setting["o_gate_bias_init"].fVal();
     // f_gate_bias_init = setting["f_gate_bias_init"].fVal();
     // grad_cut_off = setting["grad_cut_off"].fVal();
@@ -114,10 +113,6 @@ class BGruD2Layer : public Layer<xpu> {
     // if (o_gate_bias_init != 0.f) {
     //     init_o_gate_bias(); // this must be after init()
     // }
-
-    // if (!param_file.empty()) {
-    //   LoadParam();
-    // }
     
     std::map<std::string, SettingV> &w_g_updater = *setting["w_g_updater"].mVal();
     std::map<std::string, SettingV> &b_g_updater = *setting["b_g_updater"].mVal();
@@ -132,6 +127,10 @@ class BGruD2Layer : public Layer<xpu> {
         updater::CreateUpdater<xpu, 4>(w_c_updater["updater_type"].iVal(), w_c_updater, this->prnd_);
     this->params[3].updater_ = 
         updater::CreateUpdater<xpu, 4>(b_c_updater["updater_type"].iVal(), b_c_updater, this->prnd_);
+
+    if (!this->param_file.empty()) {
+      this->LoadParams();
+    }
   }
 
   // if want to capture long term dependency, should init as a positive value
@@ -586,6 +585,7 @@ class BGruD2Layer : public Layer<xpu> {
     int y_steps = rd_bottom_data.size(1);
 
     //rd_bottom_data = swapaxis<3,2>(swapaxis<2,1>(swapaxis<1,0>(bottom_data))); //slow
+    // pay attention : bottom data may be cut by length info, so, length is crucial important
     for(index_t bid = 0 ; bid < nbatch; ++ bid){
       for(index_t idx = 0 ; idx < bottom[0]->length[bid][0]; ++ idx){
         for(index_t idy = 0 ; idy < bottom[0]->length[bid][1]; ++ idy){
@@ -820,6 +820,32 @@ class BGruD2Layer : public Layer<xpu> {
 //     checkNanParams();
 // #endif
   }
+  /*
+  void LoadTensor(Json::Value &tensor_root, mshadow::TensorContainer<xpu, 4> &t) {
+    Json::Value data_root = tensor_root["data"];
+    int s0 = data_root["shape"][0].asInt();
+    int s1 = data_root["shape"][1].asInt();
+    int s2 = data_root["shape"][2].asInt();
+    int s3 = data_root["shape"][3].asInt();
+    utils::Check(t.size(0) == s0 && t.size(1) == s1 && t.size(2) == s2 && t.size(3) == s3, 
+                 "BGRU_D2_Layer: load tensor error.");
+    int size = s0*s1*s2*s3;
+    for (int i = 0; i < size; ++i) {
+      t.dptr_[i] = data_root["value"][i].asFloat();
+    }
+  }
+  void LoadParam() {
+    utils::Printf("BGRU_D2_Layer: load params...\n");
+    Json::Value param_root;
+    ifstream ifs(param_file.c_str());
+    ifs >> param_root;
+    ifs.close();
+    LoadTensor(param_root[0], this->params[0].data);
+    LoadTensor(param_root[1], this->params[1].data);
+    LoadTensor(param_root[2], this->params[2].data);
+    LoadTensor(param_root[3], this->params[3].data);
+  }
+  */
 
  public:
 // protected:
@@ -830,7 +856,7 @@ class BGruD2Layer : public Layer<xpu> {
   // float o_gate_bias_init;
   // float f_gate_bias_init;
   // float grad_cut_off;
-  // string param_file;
+  //string param_file;
   mshadow::TensorContainer<xpu, 4> mask_data; // mask_g, mask_reset_h, mask_diff, rd_bottom_data, rd_top_data, rd_bottom_diff, rd_top_diff; 
   mshadow::TensorContainer<xpu, 4> mask_diff, rd_bottom_data, rd_top_data, rd_bottom_diff, rd_top_diff; 
   mshadow::TensorContainer<xpu, 4> hi, g, reset_h, hi_er, g_er; //reset_h_er;

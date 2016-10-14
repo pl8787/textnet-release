@@ -373,6 +373,66 @@ void TestMatchWeightedDotLayer(mshadow::Random<cpu>* prnd) {
   cout << "Check Error." << endl;
   cker->CheckError(layer_match, bottoms, tops);
 }
+void TestMatchWeightedRadialLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Match Weightd Radial Layer." << endl;
+  Node<cpu> bottom1;
+  Node<cpu> bottom2;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+
+  bottoms.push_back(&bottom1);
+  bottoms.push_back(&bottom2);
+  tops.push_back(&top);
+
+  bottom1.Resize(2, 1, 5, 3);
+  bottom2.Resize(2, 1, 5, 3);
+
+  prnd->SampleUniform(&bottom1.data, -1.0, 1.0);
+  prnd->SampleUniform(&bottom2.data, -1.0, 1.0);
+
+  bottom1.length = 5;
+  bottom2.length = 5;
+
+  map<string, SettingV> setting;
+  {
+    map<string, SettingV> &t_filler = *(new map<string, SettingV>());
+      t_filler["init_type"] = SettingV(initializer::kUniform);
+      t_filler["range"] = SettingV(1.f);
+    setting["w_filler"] = SettingV(&t_filler);
+
+      
+    map<string, SettingV> &t_updater = *(new map<string, SettingV>());
+      t_updater["updater_type"] = SettingV(updater::kAdagrad);
+      t_updater["eps"] = SettingV(0.01f);
+      t_updater["batch_size"] = SettingV(1);
+      t_updater["max_iter"] = SettingV(10000);
+      t_updater["lr"] = SettingV(0.1f);
+    setting["w_updater"] = SettingV(&t_updater);
+  }
+
+  // Test Match Layer
+  Layer<cpu> * layer_match = CreateLayer<cpu>(kMatchWeightedRadial);
+  layer_match->PropAll();
+  layer_match->SetupLayer(setting, bottoms, tops, prnd);
+  layer_match->Reshape(bottoms, tops);
+
+  layer_match->Forward(bottoms, tops);
+  PrintTensor("bottom1", bottom1.data);
+  PrintTensor("bottom2", bottom2.data);
+  PrintTensor("top", top.data);
+
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.001f);
+  cker->SetupChecker(setting_checker, prnd);
+
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_match, bottoms, tops);
+}
 
 void TestMatchTensorLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Match Tensor Layer." << endl;
@@ -778,6 +838,58 @@ void TestAppendFeatureLayer(mshadow::Random<cpu>* prnd) {
   
   /// Test Activation Layer
   Layer<cpu> * layer_conv = CreateLayer<cpu>(kAppendFeature);
+  layer_conv->PropAll();
+  layer_conv->SetupLayer(setting, bottoms, tops, prnd);
+  layer_conv->Reshape(bottoms, tops, true);
+  layer_conv->Forward(bottoms, tops);
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("top", top.data);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.01f);
+  setting_checker["range_max"] = SettingV(0.01f);
+  setting_checker["delta"] = SettingV(0.1f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_conv, bottoms, tops);
+}
+void TestReadFeatureLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Read Feature Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(2,2,3,2), Shape2(1,2), true);
+
+  float bottom_data_[] = {5,5,9,1,
+						  1,1,1,2,
+						  1,4,1,9,
+						  1,1,2,1,
+						  8,1,1,1,
+                          1,1,1,1};
+  
+  vector<float> bottom_data(bottom_data_, bottom_data_ + sizeof(bottom_data_) / sizeof(float));
+  FillTensor(bottom.data, bottom_data);
+  bottom.data *= 0.2;
+
+  // Setting global data
+  Layer<cpu>::global_data["data2"] = vector<string>();
+  Layer<cpu>::global_data["data2"].push_back("S1");
+  Layer<cpu>::global_data["data2"].push_back("S3");
+
+  map<string, SettingV> setting;
+  setting["feature_size"] = SettingV(2);
+  setting["feature_file"] = SettingV("test_data/feature1.dat");
+  setting["key"] = SettingV("data2");
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_conv = CreateLayer<cpu>(kReadFeature);
   layer_conv->PropAll();
   layer_conv->SetupLayer(setting, bottoms, tops, prnd);
   layer_conv->Reshape(bottoms, tops, true);
@@ -2675,6 +2787,39 @@ void TestMatchTopKPoolingLayer(mshadow::Random<cpu>* prnd) {
   cout << "Done." << endl;
 }
 
+void TestMatchCombineLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check MatchCombineLayer." << endl;
+  Node<cpu> bottom0, bottom1, bottom2;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom0);
+  bottoms.push_back(&bottom1);
+  tops.push_back(&top);
+  
+  bottom0.Resize(Shape4(1,1,3,3), true);
+  bottom1.Resize(Shape4(1,1,3,3), true);
+  bottom0.length = 3;
+  bottom1.length = 3;
+  prnd->SampleUniform(&bottom0.data, -0.1, 0.1);
+  bottom1.data[0][0][0][0] = 1.0;
+  bottom1.data[0][0][1][1] = 1.0;
+  bottom1.data[0][0][2][2] = 1.0;
+  bottom1.data[0][0][2][0] = 1.0;
+  bottom1.data[0][0][0][2] = 1.0;
+  
+  Layer<cpu> *layer = CreateLayer<cpu>(kMatchCombine);
+  layer->PropAll();
+  map<string, SettingV> setting;
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+  layer->Forward(bottoms, tops);
+  PrintTensor("bottom0", bottom0.data);
+  PrintTensor("bottom1", bottom1.data);
+  PrintTensor("top", top.data);
+  cout << "Done." << endl;
+}
 
 
 void TestDynamicPoolingLayer(mshadow::Random<cpu>* prnd) {
@@ -3684,9 +3829,10 @@ void TestLstmLayer(mshadow::Random<cpu>* prnd) {
   tops.push_back(&top);
   
   bottom.Resize(Shape4(2,1,4,5), true);
-    //prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+    prnd->SampleUniform(&bottom.data, -1.0, 1.0);
     bottom.length[0][0] = 3;
     bottom.length[1][0] = 2;
+    /*
     bottom.data[0][0][0][0] = 0.01;
     bottom.data[0][0][0][1] = 0.02;
     bottom.data[0][0][0][2] = 0.02;
@@ -3712,6 +3858,7 @@ void TestLstmLayer(mshadow::Random<cpu>* prnd) {
     bottom.data[1][0][1][2] = 0.09;
     bottom.data[1][0][1][3] = 0.41;
     bottom.data[1][0][1][4] = 0.23;
+    */
   
   map<string, SettingV> setting;
   {
@@ -3772,6 +3919,210 @@ void TestLstmLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckGrad(layer_fc, bottoms, tops);
 }
 
+void TestLstmPeepholeLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Lstm-Peephole Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(2,1,4,5), true);
+    prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+    bottom.length[0][0] = 3;
+    bottom.length[1][0] = 2;
+    /*
+    bottom.data[0][0][0][0] = 0.01;
+    bottom.data[0][0][0][1] = 0.02;
+    bottom.data[0][0][0][2] = 0.02;
+    bottom.data[0][0][0][3] = 0.001;
+    bottom.data[0][0][0][4] = 0.004;
+    bottom.data[0][0][1][0] = 0.05;
+    bottom.data[0][0][1][0] = 0.2;
+    bottom.data[0][0][1][0] = 0.01;
+    bottom.data[0][0][1][0] = 0.002;
+    bottom.data[0][0][1][0] = 0.01;
+    bottom.data[0][0][2][0] = 0.005;
+    bottom.data[0][0][2][0] = 0.08;
+    bottom.data[0][0][2][0] = 0.33;
+    bottom.data[0][0][2][0] = 0.01;
+    bottom.data[0][0][2][0] = 0.13;
+    bottom.data[1][0][0][0] = 0.01;
+    bottom.data[1][0][0][1] = 0.09;
+    bottom.data[1][0][0][2] = 0.25;
+    bottom.data[1][0][0][3] = 0.31;
+    bottom.data[1][0][0][4] = 0.01;
+    bottom.data[1][0][1][0] = 0.18;
+    bottom.data[1][0][1][1] = 0.01;
+    bottom.data[1][0][1][2] = 0.09;
+    bottom.data[1][0][1][3] = 0.41;
+    bottom.data[1][0][1][4] = 0.23;
+    */
+  
+  map<string, SettingV> setting;
+  {
+    setting["d_input"] = SettingV(5);
+    setting["d_mem"] = SettingV(3);
+    setting["no_out_tanh"] = SettingV(false);
+    setting["no_bias"] = SettingV(false);
+    setting["reverse"] = SettingV(false);
+    setting["grad_cut_off"] = SettingV(10000.f);
+    setting["grad_norm2"] = SettingV(10000.f);
+    setting["max_norm2"] = SettingV(10000.f);
+    setting["f_gate_bias_init"] = SettingV(0.f);
+    setting["o_gate_bias_init"] = SettingV(0.f);
+      
+    map<string, SettingV> &w_filler = *(new map<string, SettingV>());
+      w_filler["init_type"] = SettingV(initializer::kUniform);
+      w_filler["range"] = SettingV(0.1f);
+      //w_filler["init_type"] = SettingV(initializer::kConstant);
+      //w_filler["value"] = SettingV(0.1f);
+      setting["w_filler"] = SettingV(&w_filler);
+      setting["u_filler"] = SettingV(&w_filler);
+      setting["t_filler"] = SettingV(&w_filler);
+
+      map<string, SettingV> &b_filler = *(new map<string, SettingV>());
+      b_filler["init_type"] = SettingV(initializer::kZero);
+      setting["b_filler"] = SettingV(&b_filler);
+      
+      map<string, SettingV> &w_updater = *(new map<string, SettingV>());
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["eps"] = SettingV(0.01f);
+      w_updater["max_iter"] = SettingV(10000);
+      w_updater["lr"] = SettingV(0.1f);
+      setting["w_updater"] = SettingV(&w_updater);
+      setting["u_updater"] = SettingV(&w_updater);
+      setting["t_updater"] = SettingV(&w_updater);
+      setting["b_updater"] = SettingV(&w_updater);
+  }
+
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_fc = CreateLayer<cpu>(kLstmPeephole);
+  //layer_fc->PropAll();
+  layer_fc->SetupLayer(setting, bottoms, tops, prnd);
+  layer_fc->Reshape(bottoms, tops);
+  layer_fc->Forward(bottoms, tops);
+  PrintTensor("bottom-data",bottom.data);
+  PrintTensor("top-data",top.data);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.001f);
+  setting_checker["range_max"] = SettingV(0.001f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_fc, bottoms, tops);
+
+  cout << "Check Grad." << endl;
+  cker->CheckGrad(layer_fc, bottoms, tops);
+}
+
+void TestLstmSkipconnectLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Lstm-Skipconnect Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(2,1,10,5), true);
+    prnd->SampleUniform(&bottom.data, -1.0, 1.0);
+    bottom.length[0][0] = 8;
+    bottom.length[1][0] = 9;
+    /*
+    bottom.data[0][0][0][0] = 0.01;
+    bottom.data[0][0][0][1] = 0.02;
+    bottom.data[0][0][0][2] = 0.02;
+    bottom.data[0][0][0][3] = 0.001;
+    bottom.data[0][0][0][4] = 0.004;
+    bottom.data[0][0][1][0] = 0.05;
+    bottom.data[0][0][1][0] = 0.2;
+    bottom.data[0][0][1][0] = 0.01;
+    bottom.data[0][0][1][0] = 0.002;
+    bottom.data[0][0][1][0] = 0.01;
+    bottom.data[0][0][2][0] = 0.005;
+    bottom.data[0][0][2][0] = 0.08;
+    bottom.data[0][0][2][0] = 0.33;
+    bottom.data[0][0][2][0] = 0.01;
+    bottom.data[0][0][2][0] = 0.13;
+    bottom.data[1][0][0][0] = 0.01;
+    bottom.data[1][0][0][1] = 0.09;
+    bottom.data[1][0][0][2] = 0.25;
+    bottom.data[1][0][0][3] = 0.31;
+    bottom.data[1][0][0][4] = 0.01;
+    bottom.data[1][0][1][0] = 0.18;
+    bottom.data[1][0][1][1] = 0.01;
+    bottom.data[1][0][1][2] = 0.09;
+    bottom.data[1][0][1][3] = 0.41;
+    bottom.data[1][0][1][4] = 0.23;
+    */
+  
+  map<string, SettingV> setting;
+  {
+    setting["d_input"] = SettingV(5);
+    setting["d_mem"] = SettingV(3);
+    setting["skip_step"] = SettingV(3);
+    setting["no_out_tanh"] = SettingV(true);
+    setting["no_bias"] = SettingV(false);
+    setting["reverse"] = SettingV(false);
+    setting["grad_cut_off"] = SettingV(10000.f);
+    setting["grad_norm2"] = SettingV(10000.f);
+    setting["max_norm2"] = SettingV(10000.f);
+    setting["f_gate_bias_init"] = SettingV(0.f);
+    setting["o_gate_bias_init"] = SettingV(0.f);
+      
+    map<string, SettingV> &w_filler = *(new map<string, SettingV>());
+      w_filler["init_type"] = SettingV(initializer::kUniform);
+      w_filler["range"] = SettingV(0.1f);
+      //w_filler["init_type"] = SettingV(initializer::kConstant);
+      //w_filler["value"] = SettingV(0.1f);
+      setting["w_filler"] = SettingV(&w_filler);
+      setting["u_filler"] = SettingV(&w_filler);
+
+      map<string, SettingV> &b_filler = *(new map<string, SettingV>());
+      b_filler["init_type"] = SettingV(initializer::kZero);
+      setting["b_filler"] = SettingV(&b_filler);
+      
+      map<string, SettingV> &w_updater = *(new map<string, SettingV>());
+      w_updater["updater_type"] = SettingV(updater::kAdagrad);
+      w_updater["eps"] = SettingV(0.01f);
+      w_updater["max_iter"] = SettingV(10000);
+      w_updater["lr"] = SettingV(0.1f);
+      setting["w_updater"] = SettingV(&w_updater);
+      setting["u_updater"] = SettingV(&w_updater);
+      setting["b_updater"] = SettingV(&w_updater);
+  }
+
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_fc = CreateLayer<cpu>(kLstmSkipconnect);
+  //layer_fc->PropAll();
+  layer_fc->SetupLayer(setting, bottoms, tops, prnd);
+  layer_fc->Reshape(bottoms, tops);
+  layer_fc->Forward(bottoms, tops);
+  PrintTensor("bottom-data",bottom.data);
+  PrintTensor("top-data",top.data);
+  
+  using namespace checker;
+  Checker<cpu> * cker = CreateChecker<cpu>();
+  map<string, SettingV> setting_checker;
+  setting_checker["range_min"] = SettingV(-0.0001f);
+  setting_checker["range_max"] = SettingV(0.0001f);
+  setting_checker["delta"] = SettingV(0.0001f);
+  cker->SetupChecker(setting_checker, prnd);
+  cout << "Check Error." << endl;
+  cker->CheckError(layer_fc, bottoms, tops);
+
+  cout << "Check Grad." << endl;
+  cker->CheckGrad(layer_fc, bottoms, tops);
+}
 void TestBLstmLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check BLstm Layer." << endl;
   Node<cpu> bottom;
@@ -4251,15 +4602,18 @@ void TestWholePoolingLayer(mshadow::Random<cpu>* prnd) {
   bottom.Resize(Shape4(2,1,6,3), true);
   prnd->SampleUniform(&bottom.data, -0.1, 0.1);
 
-  bottom.data[0][0].Slice(0, 2) = NAN; // padding
-  bottom.data[0][0].Slice(4, 6) = NAN; // padding
-  bottom.data[1][0].Slice(0, 1) = NAN; // padding
-  bottom.data[1][0].Slice(4, 6) = NAN; // padding
+  //bottom.data[0][0].Slice(0, 2) = NAN; // padding
+  //bottom.data[0][0].Slice(4, 6) = NAN; // padding
+  //bottom.data[1][0].Slice(0, 1) = NAN; // padding
+  //bottom.data[1][0].Slice(4, 6) = NAN; // padding
+  bottom.length[0][0] = 6;
+  bottom.length[1][0] = 2;
   
   map<string, SettingV> setting;
   {
-    setting["pool_type"] = SettingV("last");
-    setting["pad_value"] = SettingV((float)(NAN));
+    setting["pool_type"] = SettingV("maxk");
+    setting["k"] = SettingV(3);
+    //setting["pad_value"] = SettingV((float)(NAN));
   }
 
   
@@ -4269,29 +4623,29 @@ void TestWholePoolingLayer(mshadow::Random<cpu>* prnd) {
   layer->SetupLayer(setting, bottoms, tops, prnd);
   layer->Reshape(bottoms, tops);
   prnd->SampleUniform(&top.diff, -0.1, 0.1);
-  
-  using namespace checker;
-  // Checker<cpu> * cker = CreateChecker<cpu>();
+  //
+  //using namespace checker;
+  //Checker<cpu> * cker = CreateChecker<cpu>();
 
-  // map<string, SettingV> setting_checker;
-  // setting_checker["range_min"] = SettingV(-0.001f);
-  // setting_checker["range_max"] = SettingV(0.001f);
-  // setting_checker["delta"] = SettingV(0.0001f);
-  // cker->SetupChecker(setting_checker, prnd);
+  //map<string, SettingV> setting_checker;
+  //setting_checker["range_min"] = SettingV(-0.001f);
+  //setting_checker["range_max"] = SettingV(0.001f);
+  //setting_checker["delta"] = SettingV(0.0001f);
+  //cker->SetupChecker(setting_checker, prnd);
 
-  // cout << "Check Error." << endl;
-  // cker->CheckError(layer, bottoms, tops);
+  //cout << "Check Error." << endl;
+  //cker->CheckError(layer, bottoms, tops);
 
   // cout << "Check Grad." << endl;
   // cker->CheckGrad(layer, bottoms, tops);
 
+  PrintTensor("b_data", bottoms[0]->data);
 
   layer->Forward(bottoms, tops);
-  layer->Backprop(bottoms, tops);
-  PrintTensor("b_data", bottoms[0]->data);
   PrintTensor("t_data", tops[0]->data);
-  PrintTensor("b_diff", bottoms[0]->diff);
   PrintTensor("t_diff", tops[0]->diff);
+  layer->Backprop(bottoms, tops);
+  PrintTensor("b_diff", bottoms[0]->diff);
   cout << "Done." << endl;
 }
 
@@ -5459,8 +5813,8 @@ void TestParameterLayer(mshadow::Random<cpu>* prnd) {
   cker->CheckGrad(layer, bottoms, tops);
 }
 
-void TestMerge2WindowDataLayer(mshadow::Random<cpu> * prnd){
-    cout<<" G Check Merge-2-Window-Data Layer."<<endl;
+void TestMergeWindowLayer(mshadow::Random<cpu> * prnd){
+    cout<<" G Check Merge-Window Layer."<<endl;
     Node<cpu> bottom0;
     Node<cpu> bottom1;
     Node<cpu> top0;
@@ -5486,7 +5840,7 @@ void TestMerge2WindowDataLayer(mshadow::Random<cpu> * prnd){
     PrintTensor("bottom1-data", bottom1.data);
 
     //Test Merge2WindowDataLayer
-    Layer<cpu> * layer_merge2window = CreateLayer<cpu>(kMerge2WindowData);
+    Layer<cpu> * layer_merge2window = CreateLayer<cpu>(kMergeWindow);
     layer_merge2window->PropAll();
     layer_merge2window->SetupLayer(setting, bottoms, tops, prnd);
     layer_merge2window->Reshape(bottoms, tops);
@@ -5644,6 +5998,8 @@ int main(int argc, char *argv[]) {
   // TestCrossLayer(&rnd);
   // TestDropoutLayer(&rnd);
   // TestLstmLayer(&rnd);
+  // TestLstmPeepholeLayer(&rnd);
+  // TestLstmSkipconnectLayer(&rnd);
   //TestBLstmLayer(&rnd);
   // TestLstmAutoencoderLayer(&rnd);
   // TestRnnLayer(&rnd);
@@ -5658,7 +6014,7 @@ int main(int argc, char *argv[]) {
   // TestMatchLayer(&rnd);
   // TestMatchTensorLayer(&rnd);
   // TestMatchTopKPoolingLayer(&rnd);
-   TestLstmD2Layer(&rnd);
+  // TestLstmD2Layer(&rnd);
    //TestGruD2Layer(&rnd);
   //TestBGruD2Layer(&rnd);
   // TestWholePooling2DLayer(&rnd);
@@ -5667,6 +6023,7 @@ int main(int argc, char *argv[]) {
   // TestGateDynamicPoolingD2Layer(&rnd);
   // TestSelectSubRepByTokenLayer(&rnd);
   // TestMatchWeightedDotLayer(&rnd);
+  // TestMatchWeightedRadialLayer(&rnd);
   // TestGruLayer(&rnd);
   // TestMatchMultiLayer(&rnd);
   // TestDynamicKMaxPoolingLayer(&rnd);
@@ -5713,11 +6070,13 @@ int main(int argc, char *argv[]) {
   // TestLengthTransLayer(&rnd);
   // TestLengthFillLayer(&rnd);
   // TestAxisSplitLayer(&rnd);
-  // TestMerge2WindowDataLayer(&rnd);
+  // TestMergeWindowLayer(&rnd);
   // TestMatchHistogramLayer(&rnd);
   // TestSortAxisLayer(&rnd);
   // TestXeLULayer(&rnd);
   // TestELULayer(&rnd);
-  TestAppendFeatureLayer(&rnd);
+  // TestAppendFeatureLayer(&rnd);
+  // TestReadFeatureLayer(&rnd);
+  TestMatchCombineLayer(&rnd);
   return 0;
 }
