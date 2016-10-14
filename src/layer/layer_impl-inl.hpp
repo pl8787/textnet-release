@@ -55,6 +55,7 @@
 #include "./common/whole_pooling_2d_layer-inl.hpp"
 #include "./common/blstm_layer-inl.hpp"
 #include "./common/bgru_d2_layer-inl.hpp"
+#include "./common/match_combine_layer-inl.hpp"
 
 #ifdef CPU_ONLY
 #include "./common/gate_whole_pooling_layer-inl.hpp"
@@ -274,6 +275,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kLstmPeephole: return new LstmPeepholeLayer<xpu>(type);
     case kLstmSkipconnect: return new LstmSkipconnectLayer<xpu>(type);
     case kMatchWeightedRadial: return new MatchWeightedRadialLayer<xpu>(type);
+    case kMatchCombine: return new MatchCombineLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }

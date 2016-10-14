@@ -2787,6 +2787,39 @@ void TestMatchTopKPoolingLayer(mshadow::Random<cpu>* prnd) {
   cout << "Done." << endl;
 }
 
+void TestMatchCombineLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check MatchCombineLayer." << endl;
+  Node<cpu> bottom0, bottom1, bottom2;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom0);
+  bottoms.push_back(&bottom1);
+  tops.push_back(&top);
+  
+  bottom0.Resize(Shape4(1,1,3,3), true);
+  bottom1.Resize(Shape4(1,1,3,3), true);
+  bottom0.length = 3;
+  bottom1.length = 3;
+  prnd->SampleUniform(&bottom0.data, -0.1, 0.1);
+  bottom1.data[0][0][0][0] = 1.0;
+  bottom1.data[0][0][1][1] = 1.0;
+  bottom1.data[0][0][2][2] = 1.0;
+  bottom1.data[0][0][2][0] = 1.0;
+  bottom1.data[0][0][0][2] = 1.0;
+  
+  Layer<cpu> *layer = CreateLayer<cpu>(kMatchCombine);
+  layer->PropAll();
+  map<string, SettingV> setting;
+  layer->SetupLayer(setting, bottoms, tops, prnd);
+  layer->Reshape(bottoms, tops);
+  layer->Forward(bottoms, tops);
+  PrintTensor("bottom0", bottom0.data);
+  PrintTensor("bottom1", bottom1.data);
+  PrintTensor("top", top.data);
+  cout << "Done." << endl;
+}
 
 
 void TestDynamicPoolingLayer(mshadow::Random<cpu>* prnd) {
@@ -5974,7 +6007,7 @@ int main(int argc, char *argv[]) {
   // TestTensorLayer(&rnd);
   // TestConvolutionalLstmLayer(&rnd);
   // TestSequenceDimReductionLayer(&rnd);
-  TestWholePoolingLayer(&rnd);
+  // TestWholePoolingLayer(&rnd);
   // TestConcatLayer(&rnd);
   // TestConvResultTransformLayer(&rnd);
   // TestConvolutionLayer(&rnd);
@@ -6044,5 +6077,6 @@ int main(int argc, char *argv[]) {
   // TestELULayer(&rnd);
   // TestAppendFeatureLayer(&rnd);
   // TestReadFeatureLayer(&rnd);
+  TestMatchCombineLayer(&rnd);
   return 0;
 }
