@@ -154,7 +154,7 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
 
       // Check sentence length
       utils::Check(data_set[key].size() > 0 , 
-              "Map2WindowTextDataLayer: Doc length %d less than %d, on line %d.", data_set[key].size(), cmin_doc_len, data_set.size());
+              "Map2WindowTextDataLayer: Doc length %d less than 1, on line %d.", data_set[key].size(), data_set.size());
     }
     fin.close();
 
@@ -473,7 +473,7 @@ class Map2WindowTextDataLayer : public Layer<xpu>{
             top0_length[top_idx+i][0] = max_doc1_len;
         } else {
             top0_length[top_idx+i][0] = data1.size();
-            utils::Check(data1.size() > 1, "Map2WindowTextDataLayer: data1 size:%d\n",data1.size());
+            utils::Check(data1.size() > 0, "Map2WindowTextDataLayer: data1 size:%d\n",data1.size());
         }
 
         //int curr_beg = i * window_size / 2;
