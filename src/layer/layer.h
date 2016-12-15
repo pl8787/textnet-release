@@ -110,6 +110,8 @@ const int kLengthFill = 1033;
 const int kXeLU = 1034;
 const int kELU = 1035;
 const int kAppendFeature = 1036;
+const int kLetterTrigram = 1037;
+
 const int kDynamicKMaxPooling = 10001;
 const int kMatchTopKPooling = 10002;
 const int kSelectSubRepByToken = 10003;
