@@ -149,12 +149,13 @@ class LetterTrigramLayer : public Layer<xpu>{
       top_len = 1;
     } else {
       if (length_mode == "1d") {
-        top_len = F<op::identity>(bottom_len);
-        top_len -= (win_size - 1);
+        for (int i = 0; i < bottom_len.size(0); ++i) {
+          top_len[i][0] = bottom_len[i][0]==0 ? 0 : max(1.0f, bottom_len[i][0] - win_size + 1);
+        }
       } else if (length_mode == "2d") {
         top_len = 1;
         for (int i = 0; i < bottom_len.size(0); ++i) {
-          top_len[i][1] = bottom_len[i][0] - win_size + 1;
+          top_len[i][1] = bottom_len[i][0]==0 ? 0 : max(1.0f, bottom_len[i][0] - win_size + 1);
         }
       }
     }
@@ -172,18 +173,19 @@ class LetterTrigramLayer : public Layer<xpu>{
             if (w_idx != -1) {
               for (int p = 0; p < word_trigram_map[w_idx].size(); ++p) {
                 t_idx = word_trigram_map[w_idx][p];
-                top_data[i][j][0][t_idx] += 1;
+                top_data[i][j][0][t_idx] += 0.1;
               }
             }
           }
         } else {
-          for (int k = 0; k < doc_len - win_size + 1; ++k) {
+          for (int k = 0; k < max(1, doc_len - win_size + 1); ++k) {
             for (int c = 0; c < win_size; ++c) {
+              if (k+c >= doc_len) break;
               w_idx = (int)bottom_data[i][j][0][k+c];
               if (w_idx != -1) {
                 for (int p = 0; p < word_trigram_map[w_idx].size(); ++p) {
                   t_idx = word_trigram_map[w_idx][p];
-                  top_data[i][j][k][c * trigram_count + t_idx] += 1;
+                  top_data[i][j][k][c * trigram_count + t_idx] += 0.1;
                 }
               }
             }
