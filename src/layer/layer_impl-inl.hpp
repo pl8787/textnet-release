@@ -98,6 +98,8 @@
 #include "./common/key_snip_layer-inl.hpp"
 #include "./common/reshape_layer-inl.hpp"
 #include "./common/merge_window_layer-inl.hpp"
+#include "./common/letter_trigram_layer-inl.hpp"
+
 #include "./input/textdata_layer-inl.hpp"
 #include "./input/lcs_toy_data_layer-inl.hpp"
 #include "./input/next_basket_data_layer-inl.hpp"
@@ -276,6 +278,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kLstmSkipconnect: return new LstmSkipconnectLayer<xpu>(type);
     case kMatchWeightedRadial: return new MatchWeightedRadialLayer<xpu>(type);
     case kMatchCombine: return new MatchCombineLayer<xpu>(type);
+    case kLetterTrigram: return new LetterTrigramLayer<xpu>(type);
     default: utils::Error("unknown layer type id : \"%d\"", type); return NULL;
   }
 }

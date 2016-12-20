@@ -204,8 +204,9 @@ class WholePoolingLayer : public Layer<xpu>{
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
         int begin = 0, end = bottom_len[batch_idx][seq_idx]; 
-		    top_len[batch_idx][seq_idx] = 1;
-        utils::Assert(end >= 0 && begin <= end, "WholePoolingLayer: sequence length error.");
+		top_len[batch_idx][seq_idx] = 1;
+        if (end == 0) continue;
+        utils::Check(end >= 0 && begin <= end, "WholePoolingLayer: sequence length error.");
 
         if (pool_type == "max") {
             if (begin == end) continue;
@@ -255,7 +256,8 @@ class WholePoolingLayer : public Layer<xpu>{
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
         int begin = 0, end = bottom_len[batch_idx][seq_idx]; 
-        utils::Assert(end >= 0, "WholePoolingLayer: sequence length error.");
+        if (end == 0) continue;
+        utils::Check(end >= 0, "WholePoolingLayer: sequence length error.");
 
         if (this->prop_error[0]) {
           if (pool_type == "max") {
