@@ -206,8 +206,8 @@ class WholePoolingLayer : public Layer<xpu>{
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
         int begin = 0, end = bottom_len[batch_idx][seq_idx]; 
-        if (begin == end) continue;
         if(ignore_len)  end = bottom_data.size(2);
+        if (begin == end) continue;
 		    
         top_len[batch_idx][seq_idx] = 1;
         utils::Check(end >= 0 && begin <= end, "WholePoolingLayer: sequence length error.");
@@ -260,6 +260,7 @@ class WholePoolingLayer : public Layer<xpu>{
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
         int begin = 0, end = bottom_len[batch_idx][seq_idx]; 
+        if(ignore_len)  end = bottom_data.size(2);
         if (end == 0) continue;
         utils::Check(end >= 0, "WholePoolingLayer: sequence length error.");
 
