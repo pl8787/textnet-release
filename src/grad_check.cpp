@@ -6125,9 +6125,6 @@ int main(int argc, char *argv[]) {
   // TestAppendFeatureLayer(&rnd);
   // TestReadFeatureLayer(&rnd);
   // TestMatchCombineLayer(&rnd);
-<<<<<<< HEAD
-=======
   TestLetterTrigramLayer(&rnd);
->>>>>>> master
   return 0;
 }
