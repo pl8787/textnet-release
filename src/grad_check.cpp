@@ -5953,6 +5953,51 @@ void TestSortAxisLayer(mshadow::Random<cpu> * prnd){
     cout<<" Check Error."<<endl;
     cker->CheckError(layer_sortaxis,bottoms,tops);
 }
+
+void TestLetterTrigramLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Letter Trigram Layer." << endl;
+  Node<cpu> bottom0;
+  Node<cpu> top0;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom0);
+  tops.push_back(&top0);
+  
+  bottom0.Resize(Shape4(2,1,1,5), true);
+
+  bottom0.data[0][0][0][0] = 1;
+  bottom0.data[0][0][0][1] = 2;
+  bottom0.data[0][0][0][2] = 3;
+  bottom0.data[0][0][0][3] = 4;
+  bottom0.data[0][0][0][4] = 1;
+  bottom0.data[1][0][0][0] = 0;
+  bottom0.data[1][0][0][1] = 1;
+  bottom0.data[1][0][0][2] = 3;
+  bottom0.data[1][0][0][3] = -1;
+  bottom0.data[1][0][0][4] = -1;
+  
+  bottom0.length[0][0] = 5;
+  bottom0.length[1][0] = 3;
+
+  map<string, SettingV> setting;
+  setting["trigram_count"] = SettingV(10);
+  setting["win_size"] = SettingV(3);
+  setting["trigram_file"] = SettingV("test_data/word_trigram.txt");
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_conv = CreateLayer<cpu>(kLetterTrigram);
+  layer_conv->PropAll();
+  layer_conv->SetupLayer(setting, bottoms, tops, prnd);
+  layer_conv->Reshape(bottoms, tops, true);
+
+  layer_conv->Forward(bottoms, tops);
+  PrintTensor("bottom0", bottom0.data);
+  PrintTensor("top0", top0.data);
+  PrintTensor("top0", top0.length);
+}
+
+
 float SIGMOID_MAX_INPUT = 20;
 int SIGMOID_TABLE_SIZE = 10000;
 float *p_sigmoid_lookup_table;
@@ -6080,5 +6125,9 @@ int main(int argc, char *argv[]) {
   // TestAppendFeatureLayer(&rnd);
   // TestReadFeatureLayer(&rnd);
   // TestMatchCombineLayer(&rnd);
+<<<<<<< HEAD
+=======
+  TestLetterTrigramLayer(&rnd);
+>>>>>>> master
   return 0;
 }

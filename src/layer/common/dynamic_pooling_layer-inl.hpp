@@ -44,7 +44,7 @@ class DynamicPoolingLayer : public Layer<xpu>{
                           const std::vector<Node<xpu>*> &bottom,
                           const std::vector<Node<xpu>*> &top,
                           mshadow::Random<xpu> *prnd) {
-	nbottom = bottom.size(); // pay attention!!!, nbottom should be set before SetupLayer
+    nbottom = bottom.size(); // pay attention!!!, nbottom should be set before SetupLayer
     Layer<xpu>::SetupLayer(setting, bottom, top, prnd);
     row = setting["row"].iVal();
     col = setting["col"].iVal();
@@ -56,7 +56,7 @@ class DynamicPoolingLayer : public Layer<xpu>{
   }
   
 void PrintTensor(const char * name, mshadow::Tensor<xpu, 1> x) {
-	mshadow::Shape<1> s = x.shape_;
+    mshadow::Shape<1> s = x.shape_;
     cout << name << " shape " << s[0] << endl;
     for (unsigned int d1 = 0; d1 < s[0]; ++d1) {
       cout << x[d1] << " ";
@@ -125,10 +125,10 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 
     if (show_info) {
       bottom[0]->PrintShape("bottom0");
-	  if (nbottom == 3) {
+      if (nbottom == 3) {
         bottom[1]->PrintShape("bottom1");
         bottom[2]->PrintShape("bottom2");
-	  }
+      }
       top[0]->PrintShape("top0");
     }
   }
@@ -264,31 +264,31 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
                        const std::vector<Node<xpu>*> &top) {
     using namespace mshadow::expr;
     mshadow::Tensor<xpu, 4> bottom_data = bottom[0]->data;
-	mshadow::Tensor<xpu, 2> bottom_len;
+    mshadow::Tensor<xpu, 2> bottom_len;
     mshadow::Tensor<xpu, 2> bottom_len_l;
     mshadow::Tensor<xpu, 2> bottom_len_r;
     mshadow::Tensor<xpu, 4> top_data = top[0]->data;
-	mshadow::Tensor<xpu, 2> top_len = top[0]->length;
+    mshadow::Tensor<xpu, 2> top_len = top[0]->length;
 
     // PrintTensor("bottom_data", bottom[0]->data);
     // PrintTensor("bottom_len", bottom[0]->length);
 
-	if (nbottom == 1) {
-	  bottom_len = bottom[0]->length;
-	} else if (nbottom == 3) {
-	  bottom_len_l = bottom[1]->length;
-	  bottom_len_r = bottom[2]->length;
-	}
+    if (nbottom == 1) {
+      bottom_len = bottom[0]->length;
+    } else if (nbottom == 3) {
+      bottom_len_l = bottom[1]->length;
+      bottom_len_r = bottom[2]->length;
+    }
 
     top_data = 0;
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       if (nbottom == 1) { // top len is not variable length
         top_len[batch_idx][0] = row;
-	    top_len[batch_idx][1] = col;
-	  }
+        top_len[batch_idx][1] = col;
+      }
       for (index_t channel_idx = 0; channel_idx < bottom_data.size(1); ++channel_idx) {
         int len_r = 0, len_l = 0;
-		if (nbottom == 3) {
+        if (nbottom == 3) {
           if (dim==1) {
             len_l = 1;
             len_r = bottom_len_l[batch_idx][0];
@@ -296,16 +296,19 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
             len_l = bottom_len_l[batch_idx][0];
             len_r = bottom_len_r[batch_idx][0];
           } 
-		} else {
+        } else {
           if (dim==1) {
-			len_l = 1;
-			len_r = bottom_len[batch_idx][0];
-		  } else {
+            len_l = 1;
+            len_r = bottom_len[batch_idx][0];
+          } else {
             len_l = bottom_len[batch_idx][0];
-			len_r = bottom_len[batch_idx][1];
-		  }
-		}
-        //printf("batch_idex:%d,channel_idx:%d,len_l:%d,len_r:%d,row:%d,col:%d\n",batch_idx,channel_idx,len_l,len_r,row,col);
+            len_r = bottom_len[batch_idx][1];
+          }
+        }
+        // printf("batch_idex:%d,channel_idx:%d,len_l:%d,len_r:%d,row:%d,col:%d\n",batch_idx,channel_idx,len_l,len_r,row,col);
+        
+        if (len_l == 0 || len_r == 0) continue;
+
         pooling_one_matrix(bottom_data[batch_idx][channel_idx], top_data[batch_idx][channel_idx],
                            len_l, len_r,
                            row, col,

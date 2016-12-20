@@ -23,7 +23,7 @@ class WholePooling2dLayer : public Layer<xpu>{
 
     // require value, set to SettingV(),
     // it will force custom to set in config
-    this->defaults["pool_type"] = SettingV(); // last, ave, sum, first
+    this->defaults["pool_type"] = SettingV(); // last, ave, sum, first, rev_first, rev_last
 
     Layer<xpu>::Require();
   }
@@ -120,6 +120,26 @@ class WholePooling2dLayer : public Layer<xpu>{
     utils::Check(in.size(1) == out.size(2) && in.size(0) == 1, "WholePooling2dLayer:pooling io size error");
     out[out.size(0)-1][out.size(1)-1] += in[0];
   }
+  // in (x, y, d), out (1, d)
+  void wholeRevFirstPooling(Tensor3D in, Tensor2D out) {
+    utils::Check(in.size(2) == out.size(1) && out.size(0) == 1, "WholePooling2dLayer:pooling io size error");
+    out[0] = mshadow::expr::F<op::identity>(in[0][in.size(1)-1]);
+  }
+  // in (1, d), out (x, y, d)
+  void wholeUnRevFirstPooling(Tensor2D in, Tensor3D out) {
+    utils::Check(in.size(1) == out.size(2) && in.size(0) == 1, "WholePooling2dLayer:pooling io size error");
+    out[0][out.size(1)-1] += in[0];
+  }
+  // in (x, y, d), out (1, d)
+  void wholeRevLastPooling(Tensor3D in, Tensor2D out) {
+    utils::Check(in.size(2) == out.size(1) && out.size(0) == 1, "WholePooling2dLayer:pooling io size error");
+    out[0] = mshadow::expr::F<op::identity>(in[in.size(0)-1][0]);
+  }
+  // in (1, d), out (x, y, d)
+  void wholeUnRevLastPooling(Tensor2D in, Tensor3D out) {
+    utils::Check(in.size(1) == out.size(2) && in.size(0) == 1, "WholePooling2dLayer:pooling io size error");
+    out[out.size(0)-1][0] += in[0];
+  }
 
   // to do
   // void wholeMaxPooling(Tensor2D in, Tensor2DInt pos, Tensor2D out) {
@@ -214,6 +234,12 @@ class WholePooling2dLayer : public Layer<xpu>{
       } else if (pool_type == "last") {
         // if (begin == end) continue;
         wholeLastPooling(sub_tensor, top_data[batch_idx][0]);
+      } else if (pool_type == "rev_first") {
+        // if (begin == end) continue;
+        wholeRevFirstPooling(sub_tensor, top_data[batch_idx][0]);
+      } else if (pool_type == "rev_last") {
+        // if (begin == end) continue;
+        wholeRevLastPooling(sub_tensor, top_data[batch_idx][0]);
       } else {
         utils::Check(false, "WholePoolLayer: pool type error.");
       }
@@ -254,6 +280,12 @@ class WholePooling2dLayer : public Layer<xpu>{
         } else if (pool_type == "last") {
           // if (begin == end) continue;
           wholeUnLastPooling(top_diff[batch_idx][0], sub_tensor);
+        } else if (pool_type == "rev_first") {
+          // if (begin == end) continue;
+          wholeUnRevFirstPooling(top_diff[batch_idx][0], sub_tensor);
+        } else if (pool_type == "rev_last") {
+          // if (begin == end) continue;
+          wholeUnRevLastPooling(top_diff[batch_idx][0], sub_tensor);
         } else {
           utils::Check(false, "WholePoolLayer: pool type error.");
         }
