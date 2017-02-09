@@ -270,6 +270,9 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 	  } else {
 		  top_len[i][0] = (bottom_len[i][0] + pad_y * 2 - kernel_y) / stride_y + 1;
 		  top_len[i][1] = (bottom_len[i][1] + pad_x * 2 - kernel_x) / stride_x + 1;
+          if (bottom_len[i][0] == 0 || bottom_len[i][1] == 0) {
+            continue;
+          }
 		  utils::Check(top_len[i][0] > 0 && top_len[i][1] > 0, "ConvolutionVarLayer: top_len must positive. i=%d, bottom_len=(%f,%f), top_len=(%f,%f)",
 				  i, bottom_len[i][0], bottom_len[i][1], top_len[i][0], top_len[i][1]);
 		  top_len_y = top_len[i][0];
@@ -322,6 +325,9 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
 	  } else {
 		  top_len_y = top_len[i][0];
 		  top_len_x = top_len[i][1];
+          if (bottom_len[i][0] == 0 || bottom_len[i][1] == 0) {
+            continue;
+          }
 		  bottom_len_y = bottom_len[i][0];
 		  bottom_len_x = bottom_len[i][1];
 	  }
