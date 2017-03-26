@@ -444,6 +444,8 @@ class Map2TextDataLayer : public Layer<xpu>{
     top2_data = -1;
 
     if (mode == "batch") {
+      Layer<xpu>::global_data["data1"].clear();
+      Layer<xpu>::global_data["data2"].clear();
       for (int i = 0; i < batch_size; ++i) {
         if (shuffle) {
           line_ptr = rand() % line_count;
@@ -451,6 +453,9 @@ class Map2TextDataLayer : public Layer<xpu>{
         FillData(top0_data, top0_length, top1_data, top1_length, i, line_ptr);
         top2_data[i] = label_set[line_ptr];
         line_ptr = (line_ptr + 1) % line_count;
+
+        Layer<xpu>::global_data["data1"].push_back(rel_set[line_ptr][0]);
+        Layer<xpu>::global_data["data2"].push_back(rel_set[line_ptr][1]);
       }
     } else if (mode == "pair") {
       Layer<xpu>::global_data["data1"].clear();

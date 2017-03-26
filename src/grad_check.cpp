@@ -855,6 +855,53 @@ void TestAppendFeatureLayer(mshadow::Random<cpu>* prnd) {
   cout << "Check Error." << endl;
   cker->CheckError(layer_conv, bottoms, tops);
 }
+void TestFeatureLayer(mshadow::Random<cpu>* prnd) {
+  cout << "G Check Feature Layer." << endl;
+  Node<cpu> bottom;
+  Node<cpu> top;
+  vector<Node<cpu>*> bottoms;
+  vector<Node<cpu>*> tops;
+  
+  bottoms.push_back(&bottom);
+  tops.push_back(&top);
+  
+  bottom.Resize(Shape4(2,2,3,2), Shape2(1,2), true);
+
+  float bottom_data_[] = {5,5,9,1,
+						  1,1,1,2,
+						  1,4,1,9,
+						  1,1,2,1,
+						  8,1,1,1,
+                          1,1,1,1};
+  
+  vector<float> bottom_data(bottom_data_, bottom_data_ + sizeof(bottom_data_) / sizeof(float));
+  FillTensor(bottom.data, bottom_data);
+  bottom.data *= 0.2;
+
+  // Setting global data
+  Layer<cpu>::global_data["data2"] = vector<string>();
+  Layer<cpu>::global_data["data2"].push_back("S1");
+  Layer<cpu>::global_data["data2"].push_back("S3");
+
+  map<string, SettingV> setting;
+  setting["D1"] = SettingV(1);
+  setting["D2"] = SettingV(1);
+  setting["D3"] = SettingV(3);
+  setting["max_len"] = SettingV(2);
+  setting["feature_mode"] = SettingV("var");
+  setting["feature_file"] = SettingV("test_data/feature2.dat");
+  setting["key"] = SettingV("data2");
+  
+  /// Test Activation Layer
+  Layer<cpu> * layer_conv = CreateLayer<cpu>(kFeature);
+  layer_conv->PropAll();
+  layer_conv->SetupLayer(setting, bottoms, tops, prnd);
+  layer_conv->Reshape(bottoms, tops, true);
+  layer_conv->Forward(bottoms, tops);
+  PrintTensor("bottom", bottom.data);
+  PrintTensor("top", top.data);
+}
+
 void TestReadFeatureLayer(mshadow::Random<cpu>* prnd) {
   cout << "G Check Read Feature Layer." << endl;
   Node<cpu> bottom;
@@ -6122,7 +6169,8 @@ int main(int argc, char *argv[]) {
   // TestELULayer(&rnd);
   // TestAppendFeatureLayer(&rnd);
   // TestReadFeatureLayer(&rnd);
+  TestFeatureLayer(&rnd);
   // TestMatchCombineLayer(&rnd);
-  TestLetterTrigramLayer(&rnd);
+  // TestLetterTrigramLayer(&rnd);
   return 0;
 }

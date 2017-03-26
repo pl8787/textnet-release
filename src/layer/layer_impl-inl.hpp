@@ -6,6 +6,7 @@
 #include "./common/xelu_layer-inl.hpp"
 #include "./common/elu_layer-inl.hpp"
 #include "./common/append_feature_layer-inl.hpp"
+#include "./common/feature_layer-inl.hpp"
 #include "./common/convolution_layer-inl.hpp"
 #include "./common/convolution_var_layer-inl.hpp"
 #include "./common/convolution_param_layer-inl.hpp"
@@ -273,6 +274,7 @@ Layer<xpu>* CreateLayer_(LayerType type) {
     case kXeLU: return new XeLULayer<xpu>(type);
     case kELU: return new ELULayer<xpu>(type);
     case kAppendFeature: return new AppendFeatureLayer<xpu>(type);
+    case kFeature: return new FeatureLayer<xpu>(type);
     case kReadFeature: return new ReadFeatureLayer<xpu>(type);
     case kLstmPeephole: return new LstmPeepholeLayer<xpu>(type);
     case kLstmSkipconnect: return new LstmSkipconnectLayer<xpu>(type);
