@@ -134,7 +134,7 @@ class MatchTensorFactLayer : public Layer<xpu>{
     bottom_1_transform.Resize(batch_size, doc_len, d_hidden, d_factor, true);
     bottom_0_transform_linear.Resize(batch_size, 1, doc_len, d_hidden, true);
     bottom_1_transform_linear.Resize(batch_size, 1, doc_len, d_hidden, true);
-    top[0]->Resize(batch_size, d_hidden, doc_len, doc_len, true);
+    top[0]->Resize(batch_size, d_hidden, doc_len, doc_len, batch_size, 2, true);
 
 	if (show_info) {
 		bottom[0]->PrintShape("bottom0");
@@ -163,6 +163,7 @@ class MatchTensorFactLayer : public Layer<xpu>{
 	Tensor1D bottom0_len = bottom[0]->length_d1();
 	Tensor1D bottom1_len = bottom[1]->length_d1();
     Tensor4D top_data = top[0]->data;
+	Tensor2D top_len = top[0]->length;
 
 	top_data = 0.f;
 
@@ -189,6 +190,8 @@ class MatchTensorFactLayer : public Layer<xpu>{
         len_0 = doc_len;
         len_1 = doc_len;
       }
+	  top_len[batch_idx][0] = bottom0_len[batch_idx];
+	  top_len[batch_idx][1] = bottom1_len[batch_idx];
       for (int i = 0; i < len_0; i+=interval) {
         for (int j = 0; j < len_1; j+=interval) {
           for (int d = 0; d < d_hidden; ++d) {

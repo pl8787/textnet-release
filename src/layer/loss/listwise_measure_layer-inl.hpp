@@ -37,6 +37,7 @@ class ListwiseMeasureLayer : public Layer<xpu>{
     this->defaults["batch_size"] = SettingV(1);
     this->defaults["pos_count_file"] = SettingV("");
     this->defaults["nearest_one"] = SettingV(false);
+    this->defaults["ndcg_type"] = SettingV(1);
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["method"] = SettingV();
@@ -60,6 +61,7 @@ class ListwiseMeasureLayer : public Layer<xpu>{
     batch_size = setting["batch_size"].iVal();
     pos_count_file = setting["pos_count_file"].sVal();
     nearest_one = setting["nearest_one"].bVal();
+    ndcg_type = setting["ndcg_type"].iVal();
     
     utils::Check(method == "MRR" || method == "P@k" || method == "R@k" || method == "nDCG@k" || method == "MAP" || method == "P@R" || method == "Rank", 
                   "Parameter [method] must be MRR or P@k or R@k or nDCG@k or MAP or P@R or Rank.");
@@ -194,10 +196,15 @@ class ListwiseMeasureLayer : public Layer<xpu>{
         if (!is_pos_count_file) {
           sort(score_list.begin(), score_list.end(), list_cmp_label);
           for (int i = 0; i < min(k, score_list_len); ++i) {
-            //idcg += score_list[i].second / rank_log(i+1);
-            //start by fanyixing
-            idcg += (pow(2.0, score_list[i].second) - 1.0 ) / rank_log(1.0 + i);
-            //end by fanyixing
+            if (ndcg_type == 0) {
+                idcg += (pow(2.0, score_list[i].second) - 1.0 ) / rank_log(2.0 + i);
+            } else if (ndcg_type == 1) {
+                //start by fanyixing
+                idcg += (pow(2.0, score_list[i].second) - 1.0 ) / rank_log(1.0 + i);
+                //end by fanyixing
+            } else {
+                utils::Check(false, "ndcg type invalid.");
+            }
           }
         } else {
           idcg = pos_count[list_ptr];
@@ -290,10 +297,15 @@ class ListwiseMeasureLayer : public Layer<xpu>{
         }
       } else if (method == "nDCG@k") {
         for (int i = 0; i < min(k, score_list_len); ++i) {
-          //score += pow(2,score_list[i].second - 1) / rank_log(i+2);
-          //start by fanyixing
-          score += (pow(2.0,score_list[i].second) - 1.0) / rank_log(1.0 + i);
-          //end by fanyixing
+          if (ndcg_type == 0) {
+            score += (pow(2.0,score_list[i].second) - 1.0) / rank_log(2.0 + i);
+          } else if (ndcg_type == 1) {
+            //start by fanyixing
+            score += (pow(2.0,score_list[i].second) - 1.0) / rank_log(1.0 + i);
+            //end by fanyixing
+          } else {
+            utils::Check(false, "ndcg type invalid.");
+          }
         }
         //start by fanyixing
         /*
@@ -370,6 +382,7 @@ class ListwiseMeasureLayer : public Layer<xpu>{
   int list_size;
   int list_count;
   float idcg;
+  int ndcg_type;
 
 };
 }  // namespace layer

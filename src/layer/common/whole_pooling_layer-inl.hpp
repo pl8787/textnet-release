@@ -22,6 +22,7 @@ class WholePoolingLayer : public Layer<xpu>{
     // default value, just set the value you want
     this->defaults["pool_type"] = SettingV("max"); //max, maxk, first, last, ave, sum
     this->defaults["pool_pad"] = SettingV(0.f); //max, maxk, first, last, ave, sum
+    this->defaults["ignore_len"] = SettingV(false);
     this->defaults["k"] = SettingV(1);
 
     // require value, set to SettingV(),
@@ -39,6 +40,7 @@ class WholePoolingLayer : public Layer<xpu>{
     pool_type = setting["pool_type"].sVal();
     pool_pad = setting["pool_pad"].fVal();
     maxk      = setting["k"].iVal();
+    ignore_len = setting["ignore_len"].bVal();
   }
   
   virtual void Reshape(const std::vector<Node<xpu>*> &bottom,
@@ -204,8 +206,10 @@ class WholePoolingLayer : public Layer<xpu>{
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
         int begin = 0, end = bottom_len[batch_idx][seq_idx]; 
-		top_len[batch_idx][seq_idx] = 1;
-        if (end == 0) continue;
+        if(ignore_len)  end = bottom_data.size(2);
+        if (begin == end) continue;
+		    
+        top_len[batch_idx][seq_idx] = 1;
         utils::Check(end >= 0 && begin <= end, "WholePoolingLayer: sequence length error.");
 
         if (pool_type == "max") {
@@ -256,6 +260,7 @@ class WholePoolingLayer : public Layer<xpu>{
     for (index_t batch_idx = 0; batch_idx < bottom_data.size(0); ++batch_idx) {
       for (index_t seq_idx = 0; seq_idx < bottom_data.size(1); ++seq_idx) {
         int begin = 0, end = bottom_len[batch_idx][seq_idx]; 
+        if(ignore_len)  end = bottom_data.size(2);
         if (end == 0) continue;
         utils::Check(end >= 0, "WholePoolingLayer: sequence length error.");
 
@@ -298,6 +303,7 @@ class WholePoolingLayer : public Layer<xpu>{
   float pool_pad;
   mshadow::TensorContainer<xpu, 4, int> pos;
   std::string pool_type;
+  bool ignore_len;
 };
 }  // namespace layer
 }  // namespace textnet

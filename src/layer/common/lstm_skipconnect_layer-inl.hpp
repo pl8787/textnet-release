@@ -20,7 +20,7 @@ class LstmSkipconnectLayer : public Layer<xpu> {
   
   virtual int BottomNodeNum() { return 1; }
   virtual int TopNodeNum() { return 1; }
-  virtual int ParamNodeNum() { return 3; }
+  virtual int ParamNodeNum() { return 4; }
 
   typedef mshadow::Tensor<xpu, 1> Tensor1D;
   typedef mshadow::Tensor<xpu, 2> Tensor2D;
@@ -44,9 +44,11 @@ class LstmSkipconnectLayer : public Layer<xpu> {
     //this->defaults["d_input"] = SettingV();
     this->defaults["w_filler"] = SettingV();
     this->defaults["u_filler"] = SettingV();
+    this->defaults["v_filler"] = SettingV();
     this->defaults["b_filler"] = SettingV();
     this->defaults["w_updater"] = SettingV();
     this->defaults["u_updater"] = SettingV();
+    this->defaults["v_updater"] = SettingV();
     this->defaults["b_updater"] = SettingV();
     this->defaults["reverse"] = SettingV();
     this->defaults["grad_cut_off"] = SettingV();
@@ -83,23 +85,28 @@ class LstmSkipconnectLayer : public Layer<xpu> {
     begin_h_er.Resize(mshadow::Shape2(1, d_mem), 0.f);
     begin_c_er.Resize(mshadow::Shape2(1, d_mem), 0.f);
 
-    this->params.resize(3);
+    this->params.resize(4);
     this->params[0].Resize(1, 1, d_input, 4*d_mem, true); // w
     this->params[1].Resize(1, 1, d_mem,   4*d_mem, true); // u
-    this->params[2].Resize(1, 1, 1,       4*d_mem, true); // b
+    this->params[2].Resize(1, 1, d_mem,   4*d_mem, true); // v  skip parameters
+    this->params[3].Resize(1, 1, 1,       4*d_mem, true); // b
     
     std::map<std::string, SettingV> &w_setting = *setting["w_filler"].mVal();
     std::map<std::string, SettingV> &u_setting = *setting["u_filler"].mVal();
+    std::map<std::string, SettingV> &v_setting = *setting["v_filler"].mVal();
     std::map<std::string, SettingV> &b_setting = *setting["b_filler"].mVal();
     this->params[0].initializer_ = 
         initializer::CreateInitializer<xpu, 4>(w_setting["init_type"].iVal(), w_setting, this->prnd_);
     this->params[1].initializer_ = 
         initializer::CreateInitializer<xpu, 4>(u_setting["init_type"].iVal(), u_setting, this->prnd_);
     this->params[2].initializer_ = 
+        initializer::CreateInitializer<xpu, 4>(v_setting["init_type"].iVal(), v_setting, this->prnd_);
+    this->params[3].initializer_ = 
         initializer::CreateInitializer<xpu, 4>(b_setting["init_type"].iVal(), b_setting, this->prnd_);
     this->params[0].Init();
     this->params[1].Init();
     this->params[2].Init();
+    this->params[3].Init();
     if (f_gate_bias_init != 0.f) {
         init_f_gate_bias(); // this must be after init()
     }
@@ -113,6 +120,7 @@ class LstmSkipconnectLayer : public Layer<xpu> {
     
     std::map<std::string, SettingV> &w_updater = *setting["w_updater"].mVal();
     std::map<std::string, SettingV> &u_updater = *setting["u_updater"].mVal();
+    std::map<std::string, SettingV> &v_updater = *setting["v_updater"].mVal();
     std::map<std::string, SettingV> &b_updater = *setting["b_updater"].mVal();
 
     this->params[0].updater_ = 
@@ -120,18 +128,20 @@ class LstmSkipconnectLayer : public Layer<xpu> {
     this->params[1].updater_ = 
         updater::CreateUpdater<xpu, 4>(u_updater["updater_type"].iVal(), u_updater, this->prnd_);
     this->params[2].updater_ = 
+        updater::CreateUpdater<xpu, 4>(v_updater["updater_type"].iVal(), v_updater, this->prnd_);
+    this->params[3].updater_ = 
         updater::CreateUpdater<xpu, 4>(b_updater["updater_type"].iVal(), b_updater, this->prnd_);
   }
 
   // if want to capture long term dependency, should init as a positive value
   void init_f_gate_bias() {
-    Tensor1D bias_data = this->params[2].data_d1();
+    Tensor1D bias_data = this->params[3].data_d1();
     Tensor1D f_bias = Tensor1D(bias_data.dptr_ + 1*d_mem, mshadow::Shape1(d_mem));
     f_bias = f_gate_bias_init;
   }
 
   void init_o_gate_bias() {
-    Tensor1D bias_data = this->params[2].data_d1();
+    Tensor1D bias_data = this->params[3].data_d1();
     Tensor1D o_bias = Tensor1D(bias_data.dptr_ + 2*d_mem, mshadow::Shape1(d_mem));
     o_bias = o_gate_bias_init;
   }
@@ -188,12 +198,16 @@ class LstmSkipconnectLayer : public Layer<xpu> {
   void checkNanParams() {
       Tensor2D w_data = this->params[0].data[0][0];
       Tensor2D u_data = this->params[1].data[0][0];
+      Tensor2D v_data = this->params[2].data[0][0];
       Tensor2D w_diff = this->params[0].diff[0][0];
       Tensor2D u_diff = this->params[1].diff[0][0];
+      Tensor2D v_diff = this->params[2].diff[0][0];
       checkNan(w_data.dptr_, w_data.size(0) * w_data.size(1));
       checkNan(u_data.dptr_, u_data.size(0) * u_data.size(1));
+      checkNan(v_data.dptr_, v_data.size(0) * v_data.size(1));
       checkNan(w_diff.dptr_, w_diff.size(0) * w_diff.size(1));
       checkNan(u_diff.dptr_, u_diff.size(0) * u_diff.size(1));
+      checkNan(v_diff.dptr_, v_diff.size(0) * v_diff.size(1));
   }
 
   virtual void ForwardOneStep(Tensor2D pre_c, 
@@ -205,12 +219,13 @@ class LstmSkipconnectLayer : public Layer<xpu> {
                               Tensor2D cur_h) {
       Tensor2D w_data = this->params[0].data[0][0];
       Tensor2D u_data = this->params[1].data[0][0];
-      Tensor2D b_data = this->params[2].data[0][0];
+      Tensor2D v_data = this->params[2].data[0][0];
+      Tensor2D b_data = this->params[3].data[0][0];
 
       Tensor2D i, f, o, cc;
       cur_g = dot(x, w_data);
       cur_g += dot(pre_h, u_data);
-      cur_g += dot(skip_h, u_data);
+      cur_g += dot(skip_h, v_data);
       if (!no_bias) {
         cur_g += b_data;
       }
@@ -361,6 +376,7 @@ class LstmSkipconnectLayer : public Layer<xpu> {
   void BpOneStep(Tensor2D cur_h_er,
                  Tensor2D pre_c,
                  Tensor2D pre_h,
+                 Tensor2D pre_h_k,
                  Tensor2D x,
                  Tensor2D cur_g,
                  Tensor2D cur_c,
@@ -373,9 +389,11 @@ class LstmSkipconnectLayer : public Layer<xpu> {
 
     Tensor2D w_data = this->params[0].data[0][0];
     Tensor2D u_data = this->params[1].data[0][0];
+    Tensor2D v_data = this->params[2].data[0][0];
     Tensor2D w_er = this->params[0].diff[0][0];
     Tensor2D u_er = this->params[1].diff[0][0];
-    Tensor2D b_er = this->params[2].diff[0][0];
+    Tensor2D v_er = this->params[2].diff[0][0];
+    Tensor2D b_er = this->params[3].diff[0][0];
 
     // gradient normalization by norm 2
     float n2 = norm2(cur_h_er);
@@ -412,6 +430,7 @@ class LstmSkipconnectLayer : public Layer<xpu> {
     }
     w_er += dot(x.T(), cur_g_er); 
     u_er += dot(pre_h.T(), cur_g_er);
+    v_er += dot(pre_h_k.T(), cur_g_er);
   }
 
   void BackpropForLeft2RightLstm(Tensor2D top_data, Tensor2D top_diff, 
@@ -420,8 +439,8 @@ class LstmSkipconnectLayer : public Layer<xpu> {
                                  Tensor2D bottom_data, Tensor2D bottom_diff) {
       int begin = 0, end = top_data.size(0);
 
-      Tensor2D u_data = this->params[1].data[0][0];
-      Tensor2D pre_c, pre_h, pre_c_er, pre_h_er;
+      Tensor2D v_data = this->params[2].data[0][0];
+      Tensor2D pre_c, pre_h, pre_h_k, pre_c_er, pre_h_er;
       for (int row_idx = end-1; row_idx >= begin; --row_idx) {
         if (row_idx == begin) {
             pre_c = begin_c;
@@ -434,9 +453,15 @@ class LstmSkipconnectLayer : public Layer<xpu> {
             pre_c_er = c_er.Slice(row_idx-1, row_idx);
             pre_h_er = top_diff.Slice(row_idx-1, row_idx);
         }
+        if( row_idx % skip_step == 0 && ( row_idx-skip_step >= 0)){
+            pre_h_k = top_data.Slice(row_idx-skip_step, row_idx-skip_step+1);
+        }else{
+            pre_h_k = begin_h;
+        }
         BpOneStep(top_diff.Slice(row_idx, row_idx+1), 
                   pre_c,
                   pre_h,
+                  pre_h_k,
                   bottom_data.Slice(row_idx, row_idx+1), 
                   g.Slice(row_idx, row_idx+1), 
                   c.Slice(row_idx, row_idx+1), 
@@ -447,7 +472,7 @@ class LstmSkipconnectLayer : public Layer<xpu> {
                   pre_h_er,
                   bottom_diff.Slice(row_idx, row_idx+1));
         if( row_idx % skip_step == 0 && ( row_idx-skip_step >= 0)){
-          top_diff.Slice(row_idx-skip_step, row_idx-skip_step+1) += dot( g_er.Slice(row_idx, row_idx+1), u_data.T());
+          top_diff.Slice(row_idx-skip_step, row_idx-skip_step+1) += dot( g_er.Slice(row_idx, row_idx+1), v_data.T());
         }
       }
   }
@@ -457,8 +482,8 @@ class LstmSkipconnectLayer : public Layer<xpu> {
                                  Tensor2D bottom_data, Tensor2D bottom_diff) {
       int begin = 0, end = top_data.size(0);
 
-      Tensor2D u_data = this->params[1].data[0][0];
-      Tensor2D pre_c, pre_h, pre_c_er, pre_h_er;
+      Tensor2D v_data = this->params[2].data[0][0];
+      Tensor2D pre_c, pre_h, pre_h_k, pre_c_er, pre_h_er;
       for (int row_idx = begin; row_idx < end; ++row_idx) {
         if (row_idx == end-1) {
             pre_c = begin_c;
@@ -471,9 +496,15 @@ class LstmSkipconnectLayer : public Layer<xpu> {
             pre_c_er = c_er.Slice(row_idx+1, row_idx+2);
             pre_h_er = top_diff.Slice(row_idx+1, row_idx+2);
         }
+        if( row_idx % skip_step == 0 && ( row_idx-skip_step >= 0)){
+            pre_h_k = top_data.Slice(row_idx-skip_step, row_idx-skip_step+1);
+        }else{
+            pre_h_k = begin_h;
+        }
         BpOneStep(top_diff.Slice(row_idx, row_idx+1), 
                   pre_c,
                   pre_h,
+                  pre_h_k,
                   bottom_data.Slice(row_idx, row_idx+1), 
                   g.Slice(row_idx, row_idx+1), 
                   c.Slice(row_idx, row_idx+1), 
@@ -484,7 +515,7 @@ class LstmSkipconnectLayer : public Layer<xpu> {
                   pre_h_er,
                   bottom_diff.Slice(row_idx, row_idx+1));
         if( ((end - 1 - row_idx) % skip_step == 0) && (row_idx + skip_step <= end - 1)){
-          top_diff.Slice(row_idx+skip_step, row_idx+skip_step+1) += dot( g_er.Slice(row_idx, row_idx+1), u_data.T());
+          top_diff.Slice(row_idx+skip_step, row_idx+skip_step+1) += dot( g_er.Slice(row_idx, row_idx+1), v_data.T());
         }
       }
   }
@@ -530,11 +561,13 @@ class LstmSkipconnectLayer : public Layer<xpu> {
     this->params[0].CutOffGradient(grad_cut_off);
     this->params[1].CutOffGradient(grad_cut_off);
     this->params[2].CutOffGradient(grad_cut_off);
+    this->params[3].CutOffGradient(grad_cut_off);
 
 #if DEBUG
     this->params[0].PrintStatistic("LSTM W");
     this->params[1].PrintStatistic("LSTM U");
-    this->params[2].PrintStatistic("LSTM b");
+    this->params[2].PrintStatistic("LSTM V");
+    this->params[3].PrintStatistic("LSTM b");
     checkNanParams();
 #endif
   }

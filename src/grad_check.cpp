@@ -4132,6 +4132,7 @@ void TestLstmSkipconnectLayer(mshadow::Random<cpu>* prnd) {
       //w_filler["value"] = SettingV(0.1f);
       setting["w_filler"] = SettingV(&w_filler);
       setting["u_filler"] = SettingV(&w_filler);
+      setting["v_filler"] = SettingV(&w_filler);
 
       map<string, SettingV> &b_filler = *(new map<string, SettingV>());
       b_filler["init_type"] = SettingV(initializer::kZero);
@@ -4144,6 +4145,7 @@ void TestLstmSkipconnectLayer(mshadow::Random<cpu>* prnd) {
       w_updater["lr"] = SettingV(0.1f);
       setting["w_updater"] = SettingV(&w_updater);
       setting["u_updater"] = SettingV(&w_updater);
+      setting["v_updater"] = SettingV(&w_updater);
       setting["b_updater"] = SettingV(&w_updater);
   }
 
@@ -6091,7 +6093,7 @@ int main(int argc, char *argv[]) {
   // TestDropoutLayer(&rnd);
   // TestLstmLayer(&rnd);
   // TestLstmPeepholeLayer(&rnd);
-  // TestLstmSkipconnectLayer(&rnd);
+  TestLstmSkipconnectLayer(&rnd);
   //TestBLstmLayer(&rnd);
   // TestLstmAutoencoderLayer(&rnd);
   // TestRnnLayer(&rnd);

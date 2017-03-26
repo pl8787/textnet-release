@@ -140,6 +140,13 @@ class Map2TextDataLayer : public Layer<xpu>{
           continue;
 
       last_key = key;
+
+      // Check sentence length
+      utils::Check(s_len >= min_doc_len, 
+              "Map2TextDataLayer: [Length] Doc length %d less than %d, on line %d.", s_len, min_doc_len, data_set.size());
+
+      if (s_len == 0) continue;
+
       while(!iss.eof()) {
         iss >> value;
         data_set[key].push_back(value);
@@ -152,7 +159,7 @@ class Map2TextDataLayer : public Layer<xpu>{
 
       // Check sentence length
       utils::Check(data_set[key].size() >= min_doc_len, 
-              "Map2TextDataLayer: Doc length %d less than %d, on line %d.", data_set[key].size(), min_doc_len, data_set.size());
+              "Map2TextDataLayer: [Read] Doc length %d less than %d, on line %d.", data_set[key].size(), min_doc_len, data_set.size());
     }
     fin.close();
 
