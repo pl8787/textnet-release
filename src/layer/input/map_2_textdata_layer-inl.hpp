@@ -164,7 +164,7 @@ class Map2TextDataLayer : public Layer<xpu>{
     fin.close();
 
     std::cout << last_key.c_str() << " ";
-    for (int i = 0; i < data_set[last_key].size(); ++i) {
+    for (int i = 0; i < int(data_set[last_key].size()); ++i) {
         std::cout << data_set[last_key][i] << " ";
     }
     std::cout << std::endl;
@@ -459,10 +459,10 @@ class Map2TextDataLayer : public Layer<xpu>{
         } 
         FillData(top0_data, top0_length, top1_data, top1_length, i, line_ptr);
         top2_data[i] = label_set[line_ptr];
-        line_ptr = (line_ptr + 1) % line_count;
-
         Layer<xpu>::global_data["data1"].push_back(rel_set[line_ptr][0]);
         Layer<xpu>::global_data["data2"].push_back(rel_set[line_ptr][1]);
+
+        line_ptr = (line_ptr + 1) % line_count;
       }
     } else if (mode == "pair") {
       Layer<xpu>::global_data["data1"].clear();

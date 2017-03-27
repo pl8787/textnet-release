@@ -240,7 +240,7 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
       top0_len[i] = int(cur_feature_map.size());
       utils::Check(top0_len[i] == bottom0_len[i],
             "FeatureLayer: sentence [%s] length different top: %f, bottom: %f", 
-            top0_len[i], bottom0_len[i], cur_key.c_str());
+            cur_key.c_str(), top0_len[i], bottom0_len[i]);
     }
   }
   
