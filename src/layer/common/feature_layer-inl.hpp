@@ -83,6 +83,7 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
     this->defaults["D3"] = SettingV(0);
     this->defaults["feature_mode"] = SettingV("var"); // var or fix
     this->defaults["max_len"] = SettingV(0);
+    this->defaults["fill_value"] = SettingV(0.0f);
     
     // require value, set to SettingV(),
     // it will force custom to set in config
@@ -113,6 +114,7 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
     feature_mode = setting["feature_mode"].sVal();
     feature_file = setting["feature_file"].sVal();
     key = setting["key"].sVal();
+    fill_value = setting["fill_value"].fVal();
 
     ReadFeatureMap(feature_file, feature_map);
 
@@ -143,7 +145,7 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
       feature_map[key] = vector<float>();
 
       last_key = key;
-      while(!iss.eof()) {
+      for (int i = 0; i < len; ++i) {
         iss >> value;
         feature_map[key].push_back(value);
         if (max_len != 0 && int(feature_map[key].size()) >= max_len) {
@@ -220,7 +222,7 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
     mshadow::Tensor<xpu, 1> top0_len = top[0]->length_d1();
     
     top0_len = F<op::identity>(bottom0_len);
-    top0_data = 0;
+    top0_data = fill_value;
     
     // Check for global data
     utils::Check(Layer<xpu>::global_data.count(key), 
@@ -236,6 +238,9 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
         top0_data[i][k] = cur_feature_map[k];
       }
       top0_len[i] = int(cur_feature_map.size());
+      utils::Check(top0_len[i] == bottom0_len[i],
+            "FeatureLayer: sentence [%s] length different top: %f, bottom: %f", 
+            top0_len[i], bottom0_len[i], cur_key.c_str());
     }
   }
   
@@ -251,6 +256,7 @@ void PrintTensor(const char * name, mshadow::Tensor<xpu, 4> x) {
     int D2;
     int D3;
     int max_len;
+    float fill_value;
     string feature_file;
     string feature_mode;
     string key;

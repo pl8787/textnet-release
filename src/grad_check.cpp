@@ -877,6 +877,8 @@ void TestFeatureLayer(mshadow::Random<cpu>* prnd) {
   vector<float> bottom_data(bottom_data_, bottom_data_ + sizeof(bottom_data_) / sizeof(float));
   FillTensor(bottom.data, bottom_data);
   bottom.data *= 0.2;
+  bottom.length[0][0] = 2;
+  bottom.length[0][1] = 1;
 
   // Setting global data
   Layer<cpu>::global_data["data2"] = vector<string>();
@@ -6093,7 +6095,7 @@ int main(int argc, char *argv[]) {
   // TestDropoutLayer(&rnd);
   // TestLstmLayer(&rnd);
   // TestLstmPeepholeLayer(&rnd);
-  TestLstmSkipconnectLayer(&rnd);
+  // TestLstmSkipconnectLayer(&rnd);
   //TestBLstmLayer(&rnd);
   // TestLstmAutoencoderLayer(&rnd);
   // TestRnnLayer(&rnd);
