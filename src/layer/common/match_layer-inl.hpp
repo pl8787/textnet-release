@@ -62,7 +62,7 @@ class MatchLayer : public Layer<xpu>{
 
     utils::Check(op=="xor" || op=="mul" || op=="plus" || op=="cos" || op == "minus" ||\
                  op=="elemwise_product" || op=="elemwise_plus" || op=="elemwise_cat" ||\
-                 op=="euc" || op=="euc_exp" || op=="order",
+                 op=="euc" || op=="euc_exp" || op=="order" || op=="diag_mul" || op=="diag_xor",
                  "MatchLayer: one of xor, mul, plus, cos, minus, elemwise_product, euc or euc_exp.");
   }
   
@@ -75,7 +75,7 @@ class MatchLayer : public Layer<xpu>{
                   "MatchLayer:top size problem.");
                   
     nbatch = bottom[0]->data.size(0); 
-    if (op == "xor") {
+    if (op == "xor" || op == "diag_xor") {
       doc0_len = bottom[0]->data.size(3);
       doc1_len = bottom[1]->data.size(3);
     } else if (op == "elemwise_cat") {
@@ -239,7 +239,19 @@ class MatchLayer : public Layer<xpu>{
             } else {
                 top_data[i][0][j][k] = (bottom0_data2[i][j] == bottom1_data2[i][k]) ? 1 : 0;
             }
+          } else if (op == "diag_xor") {
+            if (j != k) continue;
+            if(bottom0_data2[i][j]==-1 || bottom1_data2[i][k]==-1){
+                top_data[i][0][j][k] = 0;
+            } else {
+                top_data[i][0][j][k] = (bottom0_data2[i][j] == bottom1_data2[i][k]) ? 1 : 0;
+            }
           } else if (op == "mul") {
+            for (int m = 0; m < feat_size; ++m) {
+              top_data[i][0][j][k] += bottom0_data4[i][0][j][m] * bottom1_data4[i][0][k][m];
+            }
+          } else if (op == "diag_mul") {
+            if (j != k) continue;
             for (int m = 0; m < feat_size; ++m) {
               top_data[i][0][j][k] += bottom0_data4[i][0][j][m] * bottom1_data4[i][0][k][m];
             }
@@ -362,6 +374,12 @@ class MatchLayer : public Layer<xpu>{
         for (int k = 0; k < len_1; k+=interval_1) {
           for (int m = 0; m < feat_size; ++m) {
             if (op == "mul") {  
+              if (this->prop_error[0])
+                bottom0_diff[i][0][j][m] += bottom1_data[i][0][k][m] * top_diff[i][0][j][k];
+              if (this->prop_error[1])
+                bottom1_diff[i][0][k][m] += bottom0_data[i][0][j][m] * top_diff[i][0][j][k];
+            } else if (op == "diag_mul") { 
+              if (j != k) continue; 
               if (this->prop_error[0])
                 bottom0_diff[i][0][j][m] += bottom1_data[i][0][k][m] * top_diff[i][0][j][k];
               if (this->prop_error[1])

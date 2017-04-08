@@ -42,6 +42,7 @@ class Map2TextDataLayer : public Layer<xpu>{
     this->defaults["min_doc2_len"] = SettingV(1);
     this->defaults["fix_length"] = SettingV(false);
     this->defaults["bi_direct"] = SettingV(false);
+    this->defaults["disturb_label"] = SettingV(-1.0f);
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["data1_file"] = SettingV();
@@ -84,6 +85,7 @@ class Map2TextDataLayer : public Layer<xpu>{
     speedup_list = setting["speedup_list"].bVal();
     fix_length = setting["fix_length"].bVal();
     bi_direct = setting["bi_direct"].bVal();
+    disturb_label = setting["disturb_label"].fVal();
     
     utils::Check(mode == "batch" || mode == "pair" || mode == "list" || mode == "inner_pair" || mode == "inner_list",
                   "Map2TextDataLayer: mode is one of batch, pair or list.");
@@ -459,6 +461,9 @@ class Map2TextDataLayer : public Layer<xpu>{
         } 
         FillData(top0_data, top0_length, top1_data, top1_length, i, line_ptr);
         top2_data[i] = label_set[line_ptr];
+        if (disturb_label > 0.0f && (rand() % 100) < (disturb_label*100)) {
+            top2_data[i] = 1.0f - top2_data[i];
+        }
         Layer<xpu>::global_data["data1"].push_back(rel_set[line_ptr][0]);
         Layer<xpu>::global_data["data2"].push_back(rel_set[line_ptr][1]);
 
@@ -597,6 +602,7 @@ class Map2TextDataLayer : public Layer<xpu>{
   bool speedup_list;
   bool fix_length;
   bool bi_direct;
+  float disturb_label;
   
   vector<vector<string> > rel_set;
   vector<int> label_set;
