@@ -43,6 +43,9 @@ class Map2TextDataLayer : public Layer<xpu>{
     this->defaults["fix_length"] = SettingV(false);
     this->defaults["bi_direct"] = SettingV(false);
     this->defaults["disturb_label"] = SettingV(-1.0f);
+    this->defaults["augment_data"] = SettingV(false);
+    this->defaults["augment_ratio"] = SettingV(0.0f);
+    this->defaults["rmchar_ratio"] = SettingV(0.0f);
     // require value, set to SettingV(),
     // it will force custom to set in config
     this->defaults["data1_file"] = SettingV();
@@ -89,6 +92,9 @@ class Map2TextDataLayer : public Layer<xpu>{
     fix_length = setting["fix_length"].bVal();
     bi_direct = setting["bi_direct"].bVal();
     disturb_label = setting["disturb_label"].fVal();
+    augment_data = setting["augment_data"].bVal();
+    augment_ratio = setting["augment_ratio"].fVal();
+    rmchar_ratio = setting["rmchar_ratio"].fVal();
     
     utils::Check(mode == "batch" || mode == "pair" || mode == "list" || mode == "inner_pair" || mode == "inner_list",
                   "Map2TextDataLayer: mode is one of batch, pair or list.");
@@ -468,6 +474,32 @@ class Map2TextDataLayer : public Layer<xpu>{
         if (disturb_label > 0.0f && (rand() % 100) < (disturb_label*100)) {
             top2_data[i] = 1.0f - top2_data[i];
         }
+        if (augment_data && (rand() % 100) < (augment_ratio*100)) {
+            // cout << "start aug for " << i << endl;
+            int k0 = top0_length[i][0];
+            int k1 = top1_length[i][0];
+            int p = 0;
+            for (int k = 0; k < max(k0, k1); ++k) {
+                if (top0_data[i][0][0][k] == top1_data[i][0][0][k] && (rand() % 100) < (rmchar_ratio*100)) {
+                    // remove
+                    // cout << "rm " << k << endl;
+                    --top0_length[i][0];
+                    --top1_length[i][0];
+                } else {
+                    // cout << "map " << k << " to " << p << endl;
+                    top0_data[i][0][0][p] = top0_data[i][0][0][k];
+                    top1_data[i][0][0][p] = top1_data[i][0][0][k];
+                    ++p;
+                }
+            }
+            for (int k = p; k < k0; ++k) {
+                top0_data[i][0][0][k] = -1;
+            }
+            for (int k = p; k < k1; ++k) {
+                top1_data[i][0][0][k] = -1;
+            }
+            // cout << "over." << endl;
+        }
         Layer<xpu>::global_data["data1"].push_back(rel_set[line_ptr][0]);
         Layer<xpu>::global_data["data2"].push_back(rel_set[line_ptr][1]);
         Layer<xpu>::global_data["data12"].push_back(rel_set[line_ptr][0]+string("_")+rel_set[line_ptr][1]);
@@ -613,6 +645,10 @@ class Map2TextDataLayer : public Layer<xpu>{
   bool fix_length;
   bool bi_direct;
   float disturb_label;
+
+  bool augment_data;
+  float augment_ratio;
+  float rmchar_ratio;
   
   vector<vector<string> > rel_set;
   vector<int> label_set;

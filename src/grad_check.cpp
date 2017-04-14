@@ -5016,13 +5016,17 @@ void TestMap2TextDataLayer(mshadow::Random<cpu>* prnd) {
   map<string, SettingV> setting;
   setting["data1_file"] = SettingV("test_data/data1.wid");
   setting["data2_file"] = SettingV("test_data/data2.wid");
-  setting["rel_file"] = SettingV("test_data/rel.dat");
+  setting["rel_file"] = SettingV("test_data/rel1.dat");
   setting["batch_size"] = SettingV(4);
-  setting["max_doc1_len"] = SettingV(3);
-  setting["max_doc2_len"] = SettingV(3);
-  setting["mode"] = SettingV("pair");
+  setting["max_doc1_len"] = SettingV(5);
+  setting["max_doc2_len"] = SettingV(5);
+  setting["mode"] = SettingV("batch");
+  // setting["mode"] = SettingV("pair");
   // setting["mode"] = SettingV("inner_list");
-  setting["shuffle"] = SettingV(true);
+  // setting["shuffle"] = SettingV(true);
+  setting["augment_data"] = SettingV(true);
+  setting["augment_ratio"] = SettingV(0.9f);
+  setting["rmchar_ratio"] = SettingV(0.8f);
   // setting["bi_direct"] = SettingV(true);
   
   /// Test Map2TextData Layer
@@ -6150,7 +6154,7 @@ int main(int argc, char *argv[]) {
   // TestListwiseMeasureForNearestOneLayer(&rnd);
   // TestQATextDataLayer(&rnd);
   // TestMapTextDataLayer(&rnd);
-  // TestMap2TextDataLayer(&rnd);
+  TestMap2TextDataLayer(&rnd);
   // TestMap3TextDataLayer(&rnd);
   // TestKeySnipLayer(&rnd);
   // TestReshapeLayer(&rnd);
@@ -6173,7 +6177,7 @@ int main(int argc, char *argv[]) {
   // TestELULayer(&rnd);
   // TestAppendFeatureLayer(&rnd);
   // TestReadFeatureLayer(&rnd);
-  TestFeatureLayer(&rnd);
+  // TestFeatureLayer(&rnd);
   // TestMatchCombineLayer(&rnd);
   // TestLetterTrigramLayer(&rnd);
   return 0;
