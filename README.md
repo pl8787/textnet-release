@@ -1,5 +1,7 @@
-TextNet - A Deep Neural Network Framework for Text Matching
+TextNet
 ======
+
+TextNet is a deep neural netwrok framework for text matching tasks. 
 
 * [Contributors](https://github.com/pl8787/textnet-release/graphs/contributors)
 
