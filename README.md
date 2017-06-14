@@ -51,3 +51,25 @@ Related Projects
 =====
 * cxxnet: [CXXNET](https://github.com/dmlc/cxxnet)
 * Caffe: [Caffe](https://github.com/BVLC/caffe)
+
+Acknowledgements
+=====
+The following people contributed to the development of the TextNet project：
+
+- **Liang Pang** 
+    - Institute of Computing Technolgy, Chinese Academy of Sciences
+    - [Google Scholar](https://scholar.google.com/citations?user=1dgQHBkAAAAJ&hl=zh-CN)
+- **Sengxian Wan**
+    - Institute of Computing Technolgy, Chinese Academy of Sciences
+- **Yixing Fan**
+    - Institute of Computing Technolgy, Chinese Academy of Sciences
+    - [Google Scholar](https://scholar.google.com/citations?user=w5kGcUsAAAAJ&hl=en)
+- **Yanyan Lan**
+    - Institute of Computing Technolgy, Chinese Academy of Sciences
+    - [HomePage](http://www.bigdatalab.ac.cn/~lanyanyan/)
+- **Jiafeng Guo**
+    - Institute of Computing Technolgy, Chinese Academy of Sciences
+    - [HomePage](http://www.bigdatalab.ac.cn/~gjf/)
+- **Xueqi Cheng**
+    - Institute of Computing Technolgy, Chinese Academy of Sciences 
+    - [HomePage](http://www.bigdatalab.ac.cn/~cxq/)
