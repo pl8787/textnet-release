@@ -6,12 +6,18 @@ Net Name
 ====
 - net_name : set the name of the net.
 - log: the log file for redirecting all screen outputs, default unsetted.
-- cross_validation : the # of folds if cross validation is used, default unsetted. If setted, all data file for all folds must be splited advanced and named as ($FILE_PREFIX).($i), where FILE_PREFIX is setted in input layers and i is the index of the fold.
+- need_reshape: if train / test have different batch_size, set it to true.
+- var_batch: if each iteration have different batch_size, set it to true.
+- model_test_initial: whether test model before start training
+- model_save_initial: whether save model before start training
 
 ```json
-"net_name" : "simple_net"
-"log" : "log.simple_net"
-"cross_validation" : 10
+"net_name" : "simple_net",
+"log" : "log.simple_net",
+"need_reshape" : true,
+"var_batch" : false,
+"model_test_initial" : true,
+"model_save_initial" : false
 ```
 
 Net Configuration Section
@@ -19,8 +25,6 @@ Net Configuration Section
 - tag : the name of tag
 - max_iters : the maximum iterations count
 - display_interval : the interval of display this net result
-- save_interval : the interval of saving this net model
-- save_name : the path and prefix name of the saving model file
 - out_nodes : the output node name list
 
 Set all tagged networks. Here we set ```Train``` and ```Valid``` networks.
@@ -31,16 +35,12 @@ Set all tagged networks. Here we set ```Train``` and ```Valid``` networks.
     "tag" : "Train",
     "max_iters" : 10000,
     "display_interval": 1,
-    "save_interval": 1000,
-    "save_name": "weights/matching_net_arc2",
     "out_nodes" : ["loss"]
   },
   {
     "tag" : "Valid",
     "max_iters" : 34,
     "display_interval" : 100,
-    "save_interval" : 0,
-    "save_name" : "",
     "out_nodes" : ["loss", "acc"]
   }
 ]
@@ -119,7 +119,7 @@ In this section, we configure how to save intermediate models and node activatio
      "save_interval": 500, 
      "save_iter_num": 1, 
      "tag": "Test",
-     "save_nodes" : ["gaussian_mask", "conv1", "data_attention", "data", "label", "gaussian_mean", "gaussian_var", "fc2"]
+     "save_nodes" : ["conv1", "data", "label", "fc2"]
     } 
    ]
 ```
@@ -187,6 +187,7 @@ Finally, let's list a simple example here:
 ![Image of Simple Net](simple.png)
 
 ```json
+"net_name" : "simple_net",
 {
    "global" : {
       "w_updater_ph" : {
@@ -209,31 +210,23 @@ Finally, let's list a simple example here:
         }
       }
    },
-   
-   "net_name" : "simple_net",
    "net_config" : [
       {
           "tag" : "Train",
           "max_iters" : 10000,
           "display_interval": 1,
-          "save_interval": 1000,
-          "save_name": "weights/matching_net_arc2",
           "out_nodes" : ["loss"]
       },
       {
           "tag" : "Valid",
           "max_iters" : 34,
           "display_interval" : 100,
-          "save_interval" : 0,
-          "save_name" : "",
           "out_nodes" : ["loss", "acc"]
       },
       {
           "tag" : "Test",
           "max_iters" : 34,
           "display_interval" : 100,
-          "save_interval" : 0,
-          "save_name" : "",
           "out_nodes" : ["loss", "acc"]
       }
    ],
