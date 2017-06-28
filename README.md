@@ -70,6 +70,9 @@ The following people contributed to the development of the TextNet project：
 - **Jiafeng Guo**
     - Institute of Computing Technolgy, Chinese Academy of Sciences
     - [HomePage](http://www.bigdatalab.ac.cn/~gjf/)
+- **Jun Xu**
+    - Institute of Computing Technolgy, Chinese Academy of Sciences
+    - [HomePage](http://www.bigdatalab.ac.cn/~junxu/)
 - **Xueqi Cheng**
     - Institute of Computing Technolgy, Chinese Academy of Sciences 
     - [HomePage](http://www.bigdatalab.ac.cn/~cxq/)
