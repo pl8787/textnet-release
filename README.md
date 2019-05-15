@@ -58,9 +58,11 @@ The following people contributed to the development of the TextNet project：
 
 - **Liang Pang** 
     - Institute of Computing Technolgy, Chinese Academy of Sciences
-    - [Google Scholar](https://scholar.google.com/citations?user=1dgQHBkAAAAJ&hl=zh-CN)
-- **Sengxian Wan**
+    - [Google Scholar](https://scholar.google.com/citations?user=1dgQHBkAAAAJ&hl=en)
+    - [HomePage](http://www.bigdatalab.ac.cn/~pangliang/)
+- **Shengxian Wan**
     - Institute of Computing Technolgy, Chinese Academy of Sciences
+    - [Google Scholar](https://scholar.google.com/citations?user=ue3ca0AAAAAJ&hl=en)
 - **Yixing Fan**
     - Institute of Computing Technolgy, Chinese Academy of Sciences
     - [Google Scholar](https://scholar.google.com/citations?user=w5kGcUsAAAAJ&hl=en)
